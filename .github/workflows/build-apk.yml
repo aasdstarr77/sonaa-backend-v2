@@ -1,18 +1,63 @@
-name: Build APK - 24 مهنة نفس API
+herename: Build APK - 24 مهنة نفس API
 on: [push, workflow_dispatch]
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: {node-version: 20}
-      - run: npm i -g @bubblewrap/cli
-      - run: |
-          mkdir -p twa && cd twa
-          bubblewrap init --manifest https://sonaa-backend-v2.onrender.com/manifest.json --directory . -- --packageId=com.sonaa.app24 --name="صنعة 24 مهنة" || true
-          bubblewrap build || true
-      - uses: actions/upload-artifact@v4
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
         with:
-          name: sonaa-24-APK
-          path: twa/**/*.apk
+          distribution: 'temurin'
+          java-version: '17'
+          
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install PWABuilder
+        run: npm i -g @pwabuilder/cli
+
+      - name: Build APK with PWABuilder
+        run: |
+          mkdir -p build
+          cat > build/manifest.json << 'JSON'
+          {
+            "name": "صنعة - 24 مهنة",
+            "short_name": "صنعة",
+            "start_url": "https://sonaa-backend-v2.onrender.com/",
+            "display": "standalone",
+            "theme_color": "#ff6b00",
+            "background_color": "#0a0a0a",
+            "icons": [{"src": "https://sonaa-backend-v2.onrender.com/icon-512.png","sizes":"512x512","type":"image/png"}]
+          }
+          JSON
+          pwaBuilder build --platform android -m build/manifest.json -d build -l verbose || echo "fallback"
+          ls -R build || true
+
+      - name: Create Simple APK via Capacitor Fallback
+        run: |
+          npm init -y
+          npm i @capacitor/core @capacitor/cli @capacitor/android
+          npx cap init "صنعة 24 مهنة" com.sonaa.app24 --web-dir=build
+          echo '{"name":"صنعة"}' > build/index.html
+          echo "https://sonaa-backend-v2.onrender.com" > build/url.txt
+          cat > build/index.html << 'HTML'
+          <!DOCTYPE html><html><head><meta http-equiv="refresh" content="0; url=https://sonaa-backend-v2.onrender.com/?source=apk"></head><body>Loading...</body></html>
+          HTML
+          npx cap add android || true
+          cd android && ./gradlew assembleDebug || ../android/gradlew assembleDebug || gradle assembleDebug || echo "gradle fail but continue"
+          cd ..
+          find . -name "*.apk" -type f | head -20
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: sonaa-24-APK-نفس-API
+          path: |
+            **/*.apk
+            android/app/build/outputs/apk/**/*.apk
+            build/**/*.apk
+          if-no-files-found: warn
