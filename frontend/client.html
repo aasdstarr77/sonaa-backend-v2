@@ -183,7 +183,7 @@ function render(){
   </header>
 
   <main class="mx-auto max-w-[480px] px-4 pt-5 pb-[100px]">
-    <!-- تبديل الأقسام (Tabs) بشكل أنيق -->
+    <!-- تبديل الأقسام -->
     <div class="flex p-1.5 bg-slate-200/60 rounded-2xl shadow-inner">
       ${[
         {id:'new', label:'طلب جديد', icon:'➕'},
@@ -200,7 +200,7 @@ function render(){
     ${state.tab==='new' ? `
       ${!state.sn ? `
       <div class="mt-5 space-y-4 animate-fade">
-        <!-- بانر ترحيبي للفنيين -->
+        <!-- بانر الفنيين -->
         <div class="rounded-3xl bg-gradient-to-br from-slate-900 to-slate-800 p-5 text-white shadow-xl shadow-slate-900/10 relative overflow-hidden">
           <div class="absolute -left-4 -bottom-4 w-24 h-24 bg-orange-500/10 rounded-full blur-xl"></div>
           <div class="flex items-center justify-between gap-4 relative z-10">
@@ -227,7 +227,7 @@ function render(){
                 <span class="text-xs text-slate-400 font-bold transition-transform ${state.showService?'rotate-180':''}">&#9660;</span>
               </button>
               
-              <!-- القائمة المنسدلة للخدمات -->
+              <!-- القائمة المنسدلة -->
               ${state.showService?`<div class="mt-2 rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden animate-fade">
                 <div class="p-2.5 bg-slate-50 border-b border-slate-100">
                   <input value="${escapeHTML(state.searchService)}" oninput="searchService(this.value)" placeholder="ابحث عن الخدمة..." class="w-full h-11 rounded-xl border border-slate-200 bg-white px-4 text-[13px] font-bold focus:outline-none focus:border-orange-500">
@@ -270,7 +270,7 @@ function render(){
         </div>
       </div>
       ` : `
-      <!-- شاشة نجاح الطلب -->
+      <!-- نجاح الطلب -->
       <div class="mt-5 rounded-3xl bg-white border border-slate-100 p-8 text-center shadow-xl shadow-slate-200/50 animate-fade">
         <div class="mx-auto h-20 w-20 rounded-3xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 text-3xl shadow-inner">✓</div>
         <h3 class="mt-5 text-[22px] font-black text-slate-900">تم إنشاء طلبك بنجاح!</h3>
@@ -281,7 +281,7 @@ function render(){
             <p class="text-[11px] font-bold text-slate-400">كود التتبع الخاص بك</p>
             <p class="mt-1 text-[24px] font-black tracking-wider text-white">${escapeHTML(state.sn)}</p>
           </div>
-          <button onclick="navigator.clipboard.writeText('${escapeHTML(state.sn)}')" class="h-12 px-5 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-extrabold text-[13px] shadow transition-colors shrink->نسخ الكود</button>
+          <button onclick="navigator.clipboard.writeText('${escapeHTML(state.sn)}')" class="h-12 px-5 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-extrabold text-[13px] shadow transition-colors shrink-0">نسخ الكود</button>
         </div>
 
         <div class="mt-6 space-y-2.5">
