@@ -1,0 +1,32 @@
+name: Build APK - 24 مهنة - نفس API
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Bubblewrap
+        run: npm i -g @bubblewrap/cli
+
+      - name: Build PWA APK - 24 مهنة
+        run: |
+          mkdir -p twa
+          cd twa
+          bubblewrap init --manifest https://sonaa-backend-v2.onrender.com/manifest.json --directory. -- --packageId=com.sonaa.app24 --name="صنعة - 24 مهنة" --launcherName="صنعة" --themeColor="#ff6b00" --backgroundColor="#0a0a0a" --enableNotifications --alphaDependencies --webManifest='{"name":"صنعة - 24 مهنة - URL+APK نفس API","short_name":"صنعة","start_url":"/?source=apk","display":"standalone","theme_color":"#ff6b00","background_color":"#0a0a0a","icons":[{"src":"/icon-512.png","sizes":"512x512","type":"image/png"}]}'
+          bubblewrap build
+
+      - name: Upload APK - 24 مهنة
+        uses: actions/upload-artifact@v4
+        with:
+          name: sonaa-24-مهنة-APK-نفس-API
+          path: twa/app/build/outputs/apk/release/*.apk
