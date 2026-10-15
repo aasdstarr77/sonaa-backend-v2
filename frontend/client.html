@@ -18,39 +18,110 @@ html,body{overflow-x:hidden; max-width:100vw; margin:0}
 </head>
 <body class="min-h-screen bg-[#f8fafc] text-[#0f172a]">
 <div id="app"></div>
+<div id="debug" class="fixed bottom-[80px] left-2 right-2 z-[100] hidden"></div>
 
 <script>
+const ENDPOINTS = {
+  create: [
+    '/api/client/orders',
+    '/api/orders',
+    '/api/client/order',
+    '/api/order',
+    '/api/orders/client',
+    '/api/client/create-order'
+  ],
+  get: [
+    (sn)=>`/api/client/orders/${sn}`,
+    (sn)=>`/api/orders/${sn}`,
+    (sn)=>`/api/client/order/${sn}`,
+    (sn)=>`/api/orders/sn/${sn}`,
+    (sn)=>`/api/orders/by-sn/${sn}`
+  ],
+  accept: [
+    (sn,id)=>`/api/client/orders/${sn}/accept`,
+    (sn,id)=>`/api/orders/${sn}/accept`,
+    (sn,id)=>`/api/client/orders/${sn}/offers/${id}/accept`,
+    (sn,id)=>`/api/orders/${sn}/accept-offer`
+  ],
+  complaint: [
+    '/api/complaints',
+    '/api/client/complaints',
+    '/api/complaint',
+    '/api/orders/complaint'
+  ]
+};
+
+async function tryFetch(urls, options){
+  let lastError = null;
+  for(let u of urls){
+    let url = typeof u==='function'?u(options.sn||options.offerId):u;
+    // لو options فيها sn و url function بتحتاج id
+    if(typeof u==='function' && options.offerId) url = u(options.sn, options.offerId);
+    if(typeof u==='function' && !options.offerId && options.sn) url = u(options.sn);
+    try{
+      console.log('🔄 Trying:', url);
+      let r = await fetch(url, options.fetchOptions);
+      let text = await r.text();
+      let data;
+      try{ data = JSON.parse(text); }catch{ data={raw:text}; }
+      console.log('📥 Response from', url, ':', r.status, data);
+      if(r.ok) return {ok:true, data, url, status:r.status};
+      lastError = {url, status:r.status, data, text};
+    }catch(err){
+      console.log('❌ Failed', url, err);
+      lastError = {url, error: err.message};
+    }
+  }
+  return {ok:false, lastError};
+}
+
 const API = {
   createOrder: async (payload) => {
-    let r = await fetch('/api/client/orders', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
-    let data = await r.json().catch(()=>({})); if(!r.ok) throw new Error(data.message||'فشل إنشاء الطلب');
-    return data;
+    // جرب payload مختلفة حسب الـ backend
+    const payloads = [
+      payload, // service, area, address, phone, description
+      {service: payload.service, area: payload.area, address: payload.area, phone: payload.phone, clientPhone: payload.phone, description: payload.description, clientName: 'عميل'},
+      {serviceType: payload.service, area: payload.area, clientName: 'عميل', clientPhone: payload.phone, phone: payload.phone, description: payload.description},
+      {title: payload.service, service: payload.service, area: payload.area, address: payload.area, clientPhone: payload.phone, description: payload.description}
+    ];
+
+    for(let p of payloads){
+      for(let endpoint of ENDPOINTS.create){
+        try{
+          console.log('🚀 Creating order at', endpoint, 'with', p);
+          let r = await fetch(endpoint, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(p)});
+          let txt = await r.text();
+          let data;
+          try{ data = JSON.parse(txt); }catch{ data={raw:txt}; }
+          console.log('📦 Create response', endpoint, r.status, data);
+          if(r.ok){
+            return data;
+          }
+          // لو 404 جرب اللي بعده، لو 400/500 اعرض السبب
+          if(r.status!==404){
+            throw new Error(data.message||data.error||`خطأ ${r.status}: ${txt.slice(0,200)}`);
+          }
+        }catch(e){
+          if(!e.message.includes('404')) throw e; // لو مش 404 يبقى ده السبب الحقيقي
+        }
+      }
+    }
+    throw new Error('السيرفر لا يستجيب - تأكد أن الـ backend شغال على نفس الدومين وأن المسار /api/orders موجود. افتح Console (F12) لمعرفة التفاصيل');
   },
   getOrder: async (sn) => {
-    let r = await fetch('/api/client/orders/'+encodeURIComponent(sn));
-    let data = await r.json().catch(()=>({})); if(!r.ok) throw new Error(data.message||'الكود غير موجود');
-    return data.order||data;
+    let res = await tryFetch(ENDPOINTS.get, {sn, fetchOptions:{method:'GET'}});
+    if(res.ok) return res.data.order||res.data.data||res.data;
+    throw new Error(res.lastError?.data?.message||`الكود ${sn} غير موجود`);
   },
   acceptOffer: async (sn, offerId) => {
-    // يجرب مسارين حسب الـ backend الموجود
-    let urls = [`/api/client/orders/${sn}/accept`, `/api/client/orders/${sn}/offers/${offerId}/accept`, `/api/orders/${sn}/accept-offer`];
-    for(let u of urls){
-      try{
-        let r = await fetch(u, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({offerId})});
-        let d = await r.json().catch(()=>({})); if(r.ok) return d;
-      }catch{}
-    }
+    let res = await tryFetch(ENDPOINTS.accept, {sn, offerId, fetchOptions:{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({offerId})}});
+    if(res.ok) return res.data;
     throw new Error('فشل قبول العرض');
   },
   sendComplaint: async (payload) => {
-    let urls = ['/api/complaints', '/api/client/complaints', '/api/client/orders/'+payload.sn+'/complaint'];
-    for(let u of urls){
-      try{
-        let r = await fetch(u, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
-        let d = await r.json().catch(()=>({})); if(r.ok) return d;
-      }catch{}
-    }
-    throw new Error('فشل إرسال الشكوى - تأكد من الاتصال');
+    let res = await tryFetch(ENDPOINTS.complaint, {fetchOptions:{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)}});
+    if(res.ok) return res.data;
+    throw new Error('فشل إرسال الشكوى');
   }
 };
 
@@ -59,22 +130,19 @@ const CATEGORIES = [
   {label:'كهرباء', emoji:'⚡', services:['كهربائي منازل','كهربائي سيارات']},
   {label:'سباكة', emoji:'🚿', services:['سباك','سباكة صرف صحي']},
   {label:'نجارة', emoji:'🪚', services:['نجار موبيليا','نجار باب وشباك']},
-  {label:'نقاشة وديكور', emoji:'🎨', services:['نقاش','جبس بورد','فني ديكور']},
-  {label:'تكييف وتبريد', emoji:'❄', services:['فني تكييف','فني تبريد وثلاجات']},
-  {label:'بناء', emoji:'🏗', services:['بنا - محارة','مبلط سيراميك','حداد']},
+  {label:'نقاشة', emoji:'🎨', services:['نقاش','جبس بورد','فني ديكور']},
+  {label:'تكييف', emoji:'❄', services:['فني تكييف','فني تبريد وثلاجات']},
 ];
 
 const ALL_SERVICES = CATEGORIES.flatMap(c=>c.services);
 const STATUSES = ["قيد المراجعة","تم النشر","وصلتك عروض","تم اختيار فني","تم الانتهاء","منتهي"];
 
 let state = {
-  tab: 'new', // new | track | complaint
+  tab: 'new',
   service: ALL_SERVICES[0],
   address: '',
   phone: '',
   desc: '',
-  image: null,
-  imageName: '',
   loading: false,
   sn: null,
   trackInput: '',
@@ -84,305 +152,167 @@ let state = {
   complaintText: '',
   complaintLoading: false,
   complaintDone: false,
-  offers: [],
   showService: false,
-  searchService: ''
+  searchService: '',
+  debugMsg: ''
 };
 
-function getCategory(service){
-  return CATEGORIES.find(c=>c.services.includes(service)) || CATEGORIES[0];
+function getCat(s){return CATEGORIES.find(c=>c.services.includes(s))||CATEGORIES[0];}
+
+function showDebug(msg, type='error'){
+  const el = document.getElementById('debug');
+  el.classList.remove('hidden');
+  el.innerHTML = `<div class="rounded-xl p-3 text-[11px] font-bold ${type==='error'?'bg-red-600 text-white':'bg-emerald-600 text-white'} shadow-xl">${msg}<button onclick="document.getElementById('debug').classList.add('hidden')" class="mr-2 underline">إغلاق</button></div>`;
+  setTimeout(()=>el.classList.add('hidden'), 6000);
 }
 
 function render(){
-  const cat = getCategory(state.service);
-  const filtered = state.searchService.trim() ? ALL_SERVICES.filter(s=>s.includes(state.searchService.trim())) : null;
-
+  const cat = getCat(state.service);
   document.getElementById('app').innerHTML = `
-  <header class="sticky top-0 z-40 border-b border-slate-200/60 bg-white/90 backdrop-blur-xl">
+  <header class="sticky top-0 z-40 border-b bg-white/90 backdrop-blur-xl">
     <div class="mx-auto max-w-[480px] px-4 h-[64px] flex items-center justify-between">
       <div class="flex items-center gap-3">
         <div class="h-9 w-9 rounded-xl bg-[#0f172a] flex items-center justify-center text-white font-black">📡</div>
-        <div>
-          <h1 class="font-extrabold text-[17px] leading-none">صُنّاع</h1>
-          <p class="text-[11px] text-slate-500 font-bold mt-[2px]">القاهرة - كل الصنايعية</p>
-        </div>
+        <div><h1 class="font-extrabold text-[17px] leading-none">صُنّاع</h1><p class="text-[11px] text-slate-500 font-bold mt-[2px]">القاهرة</p></div>
       </div>
       <div class="flex items-center gap-2">
-        <a href="./fanni.html" class="h-9 px-4 rounded-full bg-[#f97316] text-white text-[12px] font-extrabold flex items-center gap-1.5 shadow-[0_4px_12px_rgba(249,115,22,0.3)]">🧑‍🔧 لوحة الفني</a>
-        <button onclick="setTab('new'); window.scrollTo({top:0,behavior:'smooth'})" class="h-9 px-3 rounded-full bg-[#0f172a] text-white text-[11px] font-bold">طلب جديد +</button>
+        <a href="./fanni.html" class="h-9 px-4 rounded-full bg-[#f97316] text-white text-[12px] font-extrabold flex items-center gap-1.5 shadow">🧑‍🔧 لوحة الفني</a>
+        <button onclick="setTab('new')" class="h-9 px-3 rounded-full bg-[#0f172a] text-white text-[11px] font-bold">طلب جديد +</button>
       </div>
     </div>
   </header>
 
   <main class="mx-auto max-w-[480px] px-4 pb-[96px]">
-    <div class="mt-4 flex p-1 bg-white rounded-[16px] shadow-sm border border-slate-200">
-      ${[{id:'new',label:'طلب جديد'},{id:'track',label:'تتبع طلبك'},{id:'complaint',label:'شكوى'}].map(t=>`
-        <button onclick="setTab('${t.id}')" class="flex-1 h-11 rounded-[12px] flex items-center justify-center gap-2 text-[13px] font-bold transition-all ${state.tab===t.id?'bg-[#0f172a] text-white shadow':'text-slate-500'}">${t.label}</button>
-      `).join('')}
+    <div class="mt-4 flex p-1 bg-white rounded-[16px] shadow-sm border">
+      ${[{id:'new',label:'طلب جديد'},{id:'track',label:'تتبع طلبك'},{id:'complaint',label:'شكوى'}].map(t=>`<button onclick="setTab('${t.id}')" class="flex-1 h-11 rounded-[12px] text-[13px] font-bold ${state.tab===t.id?'bg-[#0f172a] text-white shadow':'text-slate-500'}">${t.label}</button>`).join('')}
     </div>
 
     ${state.tab==='new' ? `
       ${!state.sn ? `
       <div class="mt-5 space-y-4 animate-fade">
-        <!-- بانر فني واضح -->
-        <div class="rounded-[20px] bg-[#0f172a] p-4 flex items-center justify-between gap-3 text-white relative overflow-hidden">
-          <div class="absolute -top-10 -left-10 h-32 w-32 rounded-full bg-[#f97316]/20 blur-xl"></div>
-          <div class="relative">
-            <div class="text-[13px] font-extrabold">هل أنت فني؟</div>
-            <div class="text-[11px] opacity-70 mt-1 leading-5">سجل وابدأ استقبال طلبات حقيقية من منطقتك</div>
-          </div>
-          <a href="./fanni.html" class="relative h-10 px-4 rounded-xl bg-[#f97316] text-white font-extrabold text-[12px] flex items-center justify-center shrink-0">دخول اللوحة</a>
+        <div class="rounded-[20px] bg-[#0f172a] p-4 flex items-center justify-between gap-3 text-white">
+          <div><div class="text-[13px] font-extrabold">هل أنت فني؟</div><div class="text-[11px] opacity-70 mt-1">استقبل طلبات حقيقية الآن</div></div>
+          <a href="./fanni.html" class="h-10 px-4 rounded-xl bg-[#f97316] text-white font-extrabold text-[12px] flex items-center justify-center">دخول اللوحة</a>
         </div>
 
-        <div class="rounded-[20px] bg-white border border-slate-200 p-4 shadow-sm">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="font-extrabold text-[15px]">بيانات الطلب</h3>
-            <span class="text-[11px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">مطلوب</span>
-          </div>
-
+        <div class="rounded-[20px] bg-white border p-4 shadow-sm">
+          <h3 class="font-extrabold text-[15px] mb-4">بيانات الطلب</h3>
           <div class="space-y-4">
             <div>
-              <label class="text-[12px] font-bold text-slate-700 mb-1.5 flex items-center justify-between">
-                <span>نوع الخدمة - كل المهن</span>
-                <span class="text-[10px] font-bold text-[#f97316] bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-full">+25 مهنة</span>
-              </label>
-              <button onclick="toggleService()" class="w-full h-[52px] rounded-xl border bg-slate-50 px-4 text-right flex items-center justify-between gap-2 ${state.showService?'border-[#f97316] bg-white':'border-slate-200'}">
-                <div class="flex items-center gap-2.5 min-w-0">
-                  <span class="h-9 w-9 rounded-xl bg-white border flex items-center justify-center text-[18px] shrink-0">${cat.emoji}</span>
-                  <div class="text-right min-w-0">
-                    <p class="text-[13px] font-extrabold truncate max-w-[170px]">${state.service}</p>
-                    <p class="text-[10px] font-bold text-slate-500 truncate max-w-[170px]">${cat.label}</p>
-                  </div>
-                </div>
-                <span class="text-slate-400">▼</span>
+              <label class="text-[12px] font-bold mb-1.5 block">نوع الخدمة</label>
+              <button onclick="toggleService()" class="w-full h-[52px] rounded-xl border bg-slate-50 px-4 text-right flex items-center justify-between ${state.showService?'border-[#f97316] bg-white':'border-slate-200'}">
+                <span class="flex items-center gap-2"><span class="h-8 w-8 rounded-lg bg-white border flex items-center justify-center">${cat.emoji}</span><span class="text-[13px] font-bold">${state.service}</span></span>
+                <span>▼</span>
               </button>
-
-              ${state.showService ? `
-              <div class="mt-2 rounded-[16px] border border-slate-200 bg-white shadow-2xl overflow-hidden animate-fade">
-                <div class="p-2 border-b bg-slate-50">
-                  <input value="${state.searchService}" oninput="searchService(this.value)" placeholder="ابحث: كهربائي، سباك، تكييف..." class="w-full h-[42px] rounded-xl border px-4 text-[13px] font-bold">
-                </div>
-                <div class="max-h-[300px] overflow-y-auto p-2 space-y-2">
-                  ${(filtered||ALL_SERVICES).map(s=>{
-                    const c = getCategory(s);
-                    const active = s===state.service;
-                    return `<button onclick="selectService('${s}')" class="w-full h-[40px] px-3 rounded-[10px] flex items-center justify-between text-right ${active?'bg-[#0f172a] text-white':'bg-white border hover:bg-slate-50'}">
-                      <span class="flex items-center gap-2"><span class="h-6 w-6 rounded-full bg-slate-50 border flex items-center justify-center text-[12px]">${c.emoji}</span><span class="text-[13px] font-bold truncate">${s}</span></span>
-                      ${active?'<span class="text-[12px]">✓</span>':''}
-                    </button>`;
-                  }).join('')}
-                </div>
-              </div>
-              ` : ''}
-
-              <div class="mt-2.5 flex gap-1.5 overflow-x-auto pb-1">
-                ${CATEGORIES.slice(0,4).flatMap(c=>c.services.slice(0,1)).map(s=>`
-                  <button onclick="selectService('${s}')" class="shrink-0 h-7 px-3 rounded-full text-[11px] font-bold border ${state.service===s?'bg-[#0f172a] text-white border-[#0f172a]':'bg-white text-slate-600 border-slate-200'}">${getCategory(s).emoji} ${s}</button>
-                `).join('')}
-              </div>
+              ${state.showService?`<div class="mt-2 rounded-[16px] border bg-white shadow-xl overflow-hidden">
+                <div class="p-2 bg-slate-50 border-b"><input value="${state.searchService}" oninput="searchService(this.value)" placeholder="ابحث..." class="w-full h-10 rounded-xl border px-3 text-[12px] font-bold"></div>
+                <div class="max-h-[250px] overflow-y-auto p-2">${ALL_SERVICES.filter(s=>!state.searchService||s.includes(state.searchService)).map(s=>`<button onclick="selectService('${s}')" class="w-full h-10 px-3 rounded-xl text-right text-[13px] font-bold ${state.service===s?'bg-[#0f172a] text-white':'hover:bg-slate-50'}">${getCat(s).emoji} ${s}</button>`).join('')}</div>
+              </div>`:''}
             </div>
+            <div><label class="text-[12px] font-bold mb-1.5 block">📍 العنوان بالتفصيل</label><input value="${state.address}" oninput="state.address=this.value" placeholder="المعادي، شارع 9..." class="w-full h-[48px] rounded-xl border px-4 text-[14px] font-bold"></div>
+            <div><label class="text-[12px] font-bold mb-1.5 block">📞 رقم تليفونك</label><input value="${state.phone}" oninput="state.phone=this.value" placeholder="01xxxxxxxxx" class="w-full h-[48px] rounded-xl border px-4 text-[14px] font-bold tracking-widest"></div>
+            <div><label class="text-[12px] font-bold mb-1.5 block">وصف المشكلة</label><textarea oninput="state.desc=this.value" placeholder="احكي المشكلة..." class="w-full min-h-[96px] rounded-xl border p-4 text-[13px] font-bold">${state.desc}</textarea></div>
 
-            <div>
-              <label class="text-[12px] font-bold text-slate-700 mb-1.5 flex items-center gap-1">📍 العنوان بالتفصيل</label>
-              <input value="${state.address}" oninput="state.address=this.value" placeholder="مثال: المعادي، شارع 9، عمارة 12..." class="w-full h-[48px] rounded-xl border border-slate-200 bg-white px-4 text-[14px] font-semibold focus:outline-none focus:ring-2 focus:ring-orange-100">
-            </div>
-
-            <div>
-              <label class="text-[12px] font-bold text-slate-700 mb-1.5 flex items-center gap-1">📞 رقم تليفونك</label>
-              <input value="${state.phone}" oninput="state.phone=this.value" placeholder="01xxxxxxxxx" inputmode="numeric" class="w-full h-[48px] rounded-xl border border-slate-200 bg-white px-4 text-[14px] font-bold tracking-widest">
-            </div>
-
-            <div>
-              <label class="text-[12px] font-bold text-slate-700 mb-1.5 block">وصف المشكلة</label>
-              <textarea oninput="state.desc=this.value" placeholder="احكي المشكلة باختصار..." class="w-full min-h-[96px] rounded-xl border border-slate-200 bg-white p-4 text-[13px] font-semibold leading-6">${state.desc}</textarea>
-            </div>
-
-            <button onclick="createOrder()" ${state.loading?'disabled':''} class="w-full h-[52px] rounded-xl bg-[#f97316] hover:bg-[#ea6d0f] text-white font-extrabold text-[15px] shadow-lg flex items-center justify-center gap-2 disabled:opacity-60">
+            <button onclick="createOrder()" ${state.loading?'disabled':''} class="w-full h-[52px] rounded-xl bg-[#f97316] text-white font-extrabold text-[15px] flex items-center justify-center gap-2 disabled:opacity-60">
               ${state.loading?'<span class="h-5 w-5 rounded-full border-2 border-white/30 border-t-white animate-spin"></span> جاري الإرسال...':'إنشاء الطلب والحصول على كود التتبع'}
             </button>
-            <p class="text-[11px] text-center text-slate-500 font-semibold">سيتم إرسال الطلب للفنيين الحقيقيين فوراً</p>
+            ${state.debugMsg?`<div class="rounded-xl bg-red-50 border border-red-200 p-3 text-[11px] font-bold text-red-700 leading-5">⚠️ ${state.debugMsg}<br><span class="text-[10px] opacity-80">افتح F12 > Console لمعرفة المسار الصحيح. تأكد أن السيرفر شغال.</span></div>`:''}
           </div>
         </div>
       </div>
       ` : `
-      <div class="mt-5 rounded-[24px] bg-white border p-6 text-center shadow-xl relative overflow-hidden animate-fade">
-        <div class="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-[#0f172a] via-[#f97316] to-[#0f172a]"></div>
+      <div class="mt-5 rounded-[24px] bg-white border p-6 text-center shadow-xl animate-fade">
         <div class="mx-auto h-16 w-16 rounded-2xl bg-emerald-50 border flex items-center justify-center text-[28px]">✓</div>
         <h3 class="mt-4 text-[20px] font-extrabold">تم إنشاء طلبك بنجاح!</h3>
-        <p class="mt-2 text-[13px] text-slate-600 font-bold leading-6">احتفظ بهذا الكود لتتبع طلبك<br><span class="text-slate-500">هتقدر تشوف العروض من تبويب التتبع</span></p>
         <div class="mt-6 rounded-[16px] bg-[#0f172a] p-4 flex items-center justify-between gap-3">
-          <div class="text-right">
-            <p class="text-[11px] font-bold text-slate-400 tracking-widest">كود التتبع</p>
-            <p class="mt-1 text-[22px] font-black tracking-[0.15em] text-white">${state.sn}</p>
-          </div>
-          <button onclick="navigator.clipboard.writeText('${state.sn}'); this.textContent='✓ تم النسخ'" class="h-12 px-5 rounded-xl bg-white text-[#0f172a] font-extrabold text-[13px]">نسخ الكود</button>
+          <div class="text-right"><p class="text-[11px] text-slate-400">كود التتبع</p><p class="mt-1 text-[22px] font-black text-white">${state.sn}</p></div>
+          <button onclick="navigator.clipboard.writeText('${state.sn}')" class="h-12 px-5 rounded-xl bg-white font-extrabold text-[13px]">نسخ الكود</button>
         </div>
-        <div class="mt-4 grid grid-cols-3 gap-2 text-[11px] font-bold">
-          <div class="rounded-xl bg-slate-50 border p-2.5">قيد المراجعة الآن</div>
-          <div class="rounded-xl bg-orange-50 border border-orange-200 p-2.5 text-orange-700">هننشره خلال دقائق</div>
-          <div class="rounded-xl bg-emerald-50 border border-emerald-200 p-2.5 text-emerald-700">هتوصلك عروض</div>
-        </div>
-        <button onclick="trackNow()" class="mt-6 w-full h-[48px] rounded-xl bg-[#0f172a] text-white font-bold text-[14px]">تتبع الطلب الآن</button>
-        <button onclick="resetForm()" class="mt-3 w-full h-[44px] rounded-xl bg-slate-100 text-slate-700 font-bold text-[13px]">إنشاء طلب آخر</button>
+        <button onclick="trackNow()" class="mt-6 w-full h-[48px] rounded-xl bg-[#0f172a] text-white font-bold">تتبع الطلب الآن</button>
+        <button onclick="resetForm()" class="mt-3 w-full h-[44px] rounded-xl bg-slate-100 font-bold">طلب آخر</button>
       </div>
       `}
-    ` : ''}
+    `:''}
 
     ${state.tab==='track' ? `
-      <div class="mt-5 space-y-4 animate-fade">
+      <div class="mt-5 space-y-4">
         <div class="rounded-[20px] bg-white border p-4 shadow-sm">
           <h3 class="font-extrabold text-[15px]">تتبع طلبك بكود SN</h3>
           <div class="mt-3 flex gap-2">
-            <input value="${state.trackInput}" oninput="state.trackInput=this.value.toUpperCase()" placeholder="SN123456" class="flex-1 h-[48px] rounded-xl border bg-slate-50 px-4 text-[15px] font-black tracking-widest">
-            <button onclick="doTrack()" class="h-[48px] px-6 rounded-xl bg-[#0f172a] text-white font-extrabold text-[13px]">تتبع</button>
+            <input value="${state.trackInput}" oninput="state.trackInput=this.value.toUpperCase()" placeholder="SN123456" class="flex-1 h-[48px] rounded-xl border bg-slate-50 px-4 text-[15px] font-black">
+            <button onclick="doTrack()" class="h-[48px] px-6 rounded-xl bg-[#0f172a] text-white font-extrabold">تتبع</button>
           </div>
           ${state.trackError?`<p class="mt-2 text-[12px] font-bold text-red-600 bg-red-50 border border-red-200 rounded-xl p-2.5">${state.trackError}</p>`:''}
-          <div class="mt-3 flex items-center justify-between">
-            <p class="text-[11px] text-slate-500 font-bold">ادخل الكود اللي استلمته بعد إنشاء الطلب</p>
-            <a href="./fanni.html" class="text-[11px] font-extrabold text-[#f97316]">لوحة الفني →</a>
-          </div>
         </div>
-
-        ${state.tracked ? `
-          <div class="rounded-[20px] bg-white border p-4 shadow-sm">
-            <div class="flex items-center justify-between">
-              <h4 class="font-extrabold text-[14px]">حالة الطلب: ${state.tracked.sn}</h4>
-              <span class="text-[11px] font-black px-3 py-1 rounded-full border bg-orange-50 text-orange-700 border-orange-200">${state.tracked.status||'بانتظار عروض'}</span>
-            </div>
-
-            <div class="mt-4 flex gap-1.5">
-              ${STATUSES.map((s,i)=>{
-                const currentIdx = STATUSES.indexOf(state.tracked.status||'قيد المراجعة');
-                const done = i<=currentIdx;
-                const active = s===state.tracked.status;
-                return `<div class="flex-1"><div class="h-2 rounded-full ${done?'bg-[#0f172a]':'bg-slate-200'} ${active?'ring-2 ring-[#f97316] ring-offset-1':''}"></div><p class="mt-2 text-[9px] font-bold text-center ${done?'text-[#0f172a]':'text-slate-400'}">${s}</p></div>`;
-              }).join('')}
-            </div>
-
-            <div class="mt-4 grid grid-cols-2 gap-2 text-[12px] font-semibold">
-              <div class="rounded-xl bg-slate-50 border p-3"><p class="text-[11px] text-slate-500">نوع الخدمة</p><p class="font-extrabold mt-1">${state.tracked.service||''}</p></div>
-              <div class="rounded-xl bg-slate-50 border p-3"><p class="text-[11px] text-slate-500">العنوان</p><p class="font-bold mt-1 truncate">${state.tracked.area||state.tracked.address||''}</p></div>
-            </div>
-
-            <div class="mt-4">
-              <h4 class="font-extrabold text-[14px]">العروض من الفنيين الحقيقيين</h4>
-              ${(state.tracked.offers||[]).length===0?'<p class="mt-3 text-[12px] text-slate-400 font-bold bg-slate-50 border rounded-xl p-3">لسه مفيش عروض - الفنيين شايفين طلبك في لوحة الفني وهيقدموا عروض قريب</p>':(state.tracked.offers||[]).map(o=>`
-                <div class="mt-3 rounded-[16px] bg-white border p-4">
-                  <div class="flex items-start justify-between gap-3">
-                    <div class="flex items-center gap-3">
-                      <div class="h-10 w-10 rounded-xl bg-[#0f172a] text-white flex items-center justify-center font-black">${(o.fanniName||'ف')[0]}</div>
-                      <div>
-                        <div class="font-extrabold text-[13px]">${o.fanniName||'فني'}</div>
-                        <div class="text-[11px] text-slate-500">${o.fanniPhone||''}</div>
-                      </div>
-                    </div>
-                    <div class="text-[14px] font-black">${o.price?o.price+'ج':''}</div>
-                  </div>
-                  ${o.message?`<p class="mt-3 text-[12px] bg-slate-50 border rounded-xl p-3">${o.message}</p>`:''}
-                  <button onclick="acceptOffer('${state.tracked.sn}','${o._id||o.id}')" class="mt-3 w-full h-10 rounded-xl bg-[#f97316] text-white font-bold text-[12px]">قبول هذا العرض</button>
-                </div>
-              `).join('')}
-            </div>
+        ${state.tracked?`
+          <div class="rounded-[20px] bg-white border p-4">
+            <div class="flex justify-between"><h4 class="font-extrabold text-[14px]">${state.tracked.sn||state.tracked._id}</h4><span class="text-[11px] font-black px-3 py-1 rounded-full bg-orange-50 border">${state.tracked.status||''}</span></div>
+            <div class="mt-4 grid grid-cols-2 gap-2 text-[12px]"><div class="rounded-xl bg-slate-50 border p-3"><p class="text-[11px] text-slate-500">خدمة</p><p class="font-bold mt-1">${state.tracked.service||''}</p></div><div class="rounded-xl bg-slate-50 border p-3"><p class="text-[11px] text-slate-500">عنوان</p><p class="font-bold mt-1 truncate">${state.tracked.area||state.tracked.address||''}</p></div></div>
+            <div class="mt-4"><h4 class="font-extrabold text-[14px]">العروض</h4>${(state.tracked.offers||[]).length===0?'<p class="mt-2 text-[12px] text-slate-400 bg-slate-50 border rounded-xl p-3">لسه مفيش عروض - الفنيين شايفين طلبك في لوحة الفني</p>':(state.tracked.offers||[]).map(o=>`<div class="mt-3 rounded-xl border p-4"><div class="flex justify-between"><span class="font-bold">${o.fanniName||'فني'}</span><span class="font-black">${o.price||''}ج</span></div><p class="mt-2 text-[12px] bg-slate-50 border rounded-xl p-2">${o.message||''}</p><button onclick="acceptOffer('${state.tracked.sn||state.tracked._id}','${o._id||''}')" class="mt-3 w-full h-10 rounded-xl bg-[#f97316] text-white font-bold">قبول</button></div>`).join('')}</div>
           </div>
         `:''}
       </div>
-    ` : ''}
+    `:''}
 
     ${state.tab==='complaint' ? `
-      <div class="mt-5 space-y-4 animate-fade">
-        <div class="rounded-[20px] bg-white border p-5 shadow-sm">
-          <div class="flex items-start gap-3">
-            <div class="h-10 w-10 rounded-xl bg-red-50 border border-red-200 flex items-center justify-center text-red-600 font-black">!</div>
-            <div>
-              <h3 class="font-extrabold text-[15px]">تقديم شكوى على طلب</h3>
-              <p class="mt-1 text-[12px] font-bold text-slate-500 leading-5">سنراجع الكود والفني لا يتوقف إلا بقرار الإدارة. اكتب الشكوى بوضوح.</p>
-            </div>
-          </div>
-          <div class="mt-5 space-y-3">
-            <div>
-              <label class="text-[12px] font-bold block mb-1.5">كود الطلب SN</label>
-              <input value="${state.complaintSn}" oninput="state.complaintSn=this.value.toUpperCase()" placeholder="SN123456" class="w-full h-[48px] rounded-xl border bg-slate-50 px-4 text-[14px] font-black tracking-widest">
-            </div>
-            <div>
-              <label class="text-[12px] font-bold block mb-1.5">نص الشكوى</label>
-              <textarea oninput="state.complaintText=this.value" placeholder="احكي اللي حصل بالتفصيل..." class="w-full min-h-[120px] rounded-xl border bg-white p-4 text-[13px] font-bold leading-6">${state.complaintText}</textarea>
-            </div>
-            <button onclick="sendComplaint()" ${state.complaintLoading?'disabled':''} class="w-full h-[48px] rounded-xl bg-red-600 hover:bg-red-700 text-white font-extrabold text-[14px] flex items-center justify-center gap-2 disabled:opacity-60">
-              ${state.complaintLoading?'جاري الإرسال...':'إرسال الشكوى للإدارة'}
-            </button>
-            ${state.complaintDone?'<div class="rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-[12px] font-bold text-emerald-700">تم استلام الشكوى - هنكلمك خلال 24 ساعة</div>':''}
-            <div class="rounded-xl bg-slate-50 border p-3 text-[11px] font-bold text-slate-600 leading-5">ملاحظة: الشكاوى تراجع يدوياً والفني لا يتم إيقافه إلا بقرار الأدمن بعد المراجعة.</div>
-            <a href="./fanni.html" class="flex h-11 rounded-xl bg-[#0f172a] text-white font-bold text-[12px] items-center justify-center gap-2">🧑‍🔧 لوحة الفني</a>
+      <div class="mt-5">
+        <div class="rounded-[20px] bg-white border p-5">
+          <h3 class="font-extrabold text-[15px]">تقديم شكوى على طلب</h3>
+          <div class="mt-4 space-y-3">
+            <input value="${state.complaintSn}" oninput="state.complaintSn=this.value.toUpperCase()" placeholder="SN123456" class="w-full h-[48px] rounded-xl border bg-slate-50 px-4 text-[14px] font-black">
+            <textarea oninput="state.complaintText=this.value" placeholder="احكي اللي حصل..." class="w-full min-h-[120px] rounded-xl border p-4 text-[13px] font-bold">${state.complaintText}</textarea>
+            <button onclick="sendComplaint()" ${state.complaintLoading?'disabled':''} class="w-full h-[48px] rounded-xl bg-red-600 text-white font-extrabold disabled:opacity-60">${state.complaintLoading?'جاري الإرسال...':'إرسال الشكوى'}</button>
+            ${state.complaintDone?'<div class="rounded-xl bg-emerald-50 border p-3 text-[12px] font-bold text-emerald-700">تم استلام الشكوى</div>':''}
+            <a href="./fanni.html" class="flex h-11 rounded-xl bg-[#0f172a] text-white font-bold items-center justify-center">🧑‍🔧 لوحة الفني</a>
           </div>
         </div>
       </div>
-    ` : ''}
+    `:''}
   </main>
+`;
 
-  <div class="fixed bottom-0 inset-x-0 z-30 border-t bg-white/90 backdrop-blur-xl">
-    <div class="mx-auto max-w-[480px] px-4 h-[68px] flex items-center justify-between text-[11px] font-bold text-slate-500">
-      <span>شغالين من 9 صباحاً لـ 11 مساءً</span>
-      <div class="flex items-center gap-1.5">
-        <a href="./fanni.html" class="px-3 py-1 rounded-full bg-[#f97316] text-white font-black">لوحة الفني</a>
-        <span class="px-3 py-1 rounded-full bg-slate-100 border">صناع</span>
-      </div>
-    </div>
-  </div>
-  `;
 }
 
-function setTab(t){ state.tab=t; if(t!=='track'){ state.tracked=null; state.trackError=''; } render(); window.scrollTo({top:0, behavior:'smooth'}); }
+function setTab(t){ state.tab=t; render(); }
 function toggleService(){ state.showService=!state.showService; render(); }
 function searchService(v){ state.searchService=v; render(); }
 function selectService(s){ state.service=s; state.showService=false; state.searchService=''; render(); }
-function resetForm(){ state.sn=null; state.address=''; state.phone=''; state.desc=''; state.image=null; render(); }
+function resetForm(){ state.sn=null; state.address=''; state.phone=''; state.desc=''; state.debugMsg=''; render(); }
 function trackNow(){ state.tab='track'; state.trackInput=state.sn; doTrack(); }
 
 async function createOrder(){
-  if(!state.address || !state.phone || !state.desc){ alert('كمل البيانات المطلوبة'); return; }
-  state.loading=true; render();
+  if(!state.address || !state.phone || !state.desc){ alert('كمل البيانات'); return; }
+  state.loading=true; state.debugMsg=''; render();
   try{
-    let payload = {
-      service: state.service,
-      area: state.address,
-      address: state.address,
-      clientPhone: state.phone,
-      phone: state.phone,
-      clientName: 'عميل',
-      description: state.desc,
-      desc: state.desc
-    };
+    let payload = {service: state.service, area: state.address, address: state.address, phone: state.phone, clientPhone: state.phone, clientName: 'عميل', description: state.desc, desc: state.desc};
+    console.log('📤 Sending order payload:', payload);
     let data = await API.createOrder(payload);
-    state.sn = data.sn || data.order?.sn || data.data?.sn;
+    state.sn = data.sn || data.order?.sn || data.data?.sn || data.orderId || data._id;
+    if(!state.sn) throw new Error('السيرفر رجع بدون SN - شوف الـ Console');
     state.loading=false;
+    showDebug('تم إنشاء الطلب بنجاح: '+state.sn, 'success');
     render();
   }catch(e){
     state.loading=false;
-    alert(e.message);
+    state.debugMsg = e.message + ' - افتح Console (F12) وشوف المسارات اللي جربناها';
+    console.error('❌ Create failed:', e);
+    showDebug('فشل: '+e.message, 'error');
     render();
   }
 }
 
 async function doTrack(){
-  if(!state.trackInput.trim()){ state.trackError='دخل كود التتبع'; render(); return; }
+  if(!state.trackInput.trim()){ state.trackError='دخل الكود'; render(); return; }
   state.trackError=''; state.tracked=null; render();
   try{
     let order = await API.getOrder(state.trackInput.trim());
-    state.tracked = order;
-    render();
-  }catch(e){
-    state.trackError = e.message;
-    render();
-  }
+    state.tracked=order; render();
+  }catch(e){ state.trackError=e.message; render(); }
 }
 
-async function acceptOffer(sn, offerId){
-  if(!confirm('تأكيد قبول هذا العرض؟')) return;
-  try{
-    await API.acceptOffer(sn, offerId);
-    alert('تم قبول العرض - سيتم التواصل معك');
-    doTrack();
-  }catch(e){ alert(e.message); }
+async function acceptOffer(sn, id){
+  if(!confirm('تأكيد قبول العرض؟')) return;
+  try{ await API.acceptOffer(sn,id); alert('تم قبول العرض'); doTrack(); }catch(e){ alert(e.message); }
 }
 
 async function sendComplaint(){
@@ -390,16 +320,9 @@ async function sendComplaint(){
   state.complaintLoading=true; render();
   try{
     await API.sendComplaint({sn: state.complaintSn, text: state.complaintText, complaint: state.complaintText, orderSn: state.complaintSn});
-    state.complaintDone=true;
-    state.complaintSn=''; state.complaintText='';
-    state.complaintLoading=false;
-    render();
+    state.complaintDone=true; state.complaintSn=''; state.complaintText=''; state.complaintLoading=false; render();
     setTimeout(()=>{ state.complaintDone=false; render(); }, 4000);
-  }catch(e){
-    state.complaintLoading=false;
-    alert(e.message);
-    render();
-  }
+  }catch(e){ state.complaintLoading=false; alert(e.message); render(); }
 }
 
 render();
