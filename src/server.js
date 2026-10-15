@@ -54,10 +54,10 @@ function loadDB() {
     if (DB.admins.length === 0) {
       DB.admins.push({
         _id: 'admin_default',
-        email: 'admin@sonaa.com',
-        phone: '01012345678',
-        password: 'Admin@123456',
-        name: 'الادمن الرئيسي',
+        email: 'aasdstarr77@gmail.com',
+        phone: '01152822263',
+        password: 'aasd25254655',
+        name: 'حمزاوي',
         role: 'admin'
       });
       saveDB();
