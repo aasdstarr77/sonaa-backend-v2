@@ -12,13 +12,11 @@
 html{scroll-behavior:smooth; -webkit-text-size-adjust:100%}
 body{margin:0; background:#f8fafc; color:#0f172a; overflow-x:hidden; -webkit-tap-highlight-color:transparent}
 *,*::before,*::after{box-sizing:border-box}
-/* امنع تمدد افقي */
 img,video,input,textarea,button{max-width:100%}
 ::-webkit-scrollbar{width:0;height:0}
 @keyframes fadeIn{from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:translateY(0)}}
 .animate-fade{animation:fadeIn .28s ease both}
 .safe-bottom{padding-bottom:env(safe-area-inset-bottom)}
-/* تحسين الموبايل */
 @media (max-width:480px){
   main{padding-left:max(12px, env(safe-area-inset-right)); padding-right:max(12px, env(safe-area-inset-left))}
 }
@@ -29,25 +27,18 @@ img,video,input,textarea,button{max-width:100%}
 <div id="toast" class="fixed bottom-[88px] left-3 right-3 z-[200] pointer-events-none"></div>
 
 <script>
-// ================== CONFIG & SECURITY ==================
 const IS_DEV = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
 const log = (...a)=>{ if(IS_DEV) console.log(...a); };
 
-// حماية XSS: هروب كل قيم المستخدم قبل وضعها في HTML
 function escHtml(s){
   if(s==null) return '';
-  return String(s)
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;').replace(/"/g,'&quot;')
-    .replace(/'/g,'&#39;');
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 function escAttr(s){ return escHtml(s).replace(/`/g,'&#96;'); }
 
-// تنظيف وتحقق مدخلات
 const VALIDATORS = {
   phone: (v)=>{
     const clean = String(v).replace(/\D/g,'').slice(0,11);
-    // مصر: 01xxxxxxxxx
     return /^01[0-25]\d{8}$/.test(clean);
   },
   text: (v,min,max)=>{
@@ -79,7 +70,7 @@ async function tryFetch(urls, opts){
       let data; try{ data=JSON.parse(text);}catch{ data={raw:text.slice(0,500)}; }
       if(r.ok) return {ok:true, data, url, status:r.status};
       lastError={url, status:r.status, data};
-      if(r.status!==404 && r.status!==405) break; // لو مش 404 جربش الباقي عبثا
+      if(r.status!==404 && r.status!==405) break;
     }catch(err){ lastError={url, error:err.message}; }
   }
   return {ok:false, lastError};
@@ -87,11 +78,9 @@ async function tryFetch(urls, opts){
 
 const API = {
   createOrder: async (payload)=>{
-    // تحقق قبل الارسال
     if(!VALIDATORS.text(payload.address,10,250)) throw new Error('العنوان قصير جداً (10 حروف على الأقل)');
     if(!VALIDATORS.phone(payload.phone)) throw new Error('رقم التليفون غير صحيح - لازم يبدأ بـ 01 ويكون 11 رقم');
     if(!VALIDATORS.text(payload.description,10,1000)) throw new Error('وصف المشكلة لازم 10 حروف على الأقل');
-
     const payloads = [
       {service:payload.service, area:payload.area, address:payload.address, phone:payload.phone, description:payload.description},
       {service:payload.service, area:payload.area, address:payload.area, phone:payload.phone, clientPhone:payload.phone, description:payload.description, clientName:'عميل'},
@@ -138,7 +127,7 @@ const CATEGORIES = [
   {label:'سباكة', emoji:'🚿', services:['سباك','سباكة صرف صحي']},
   {label:'نجارة', emoji:'🪚', services:['نجار موبيليا','نجار باب وشباك']},
   {label:'نقاشة', emoji:'🎨', services:['نقاش','جبس بورد','فني ديكور']},
-  {label:'تكييف', emoji:'❄️', services:['فني تكييف','فني تبريد وثلاجات']},
+  {label:'تكييف', emoji:'❄', services:['فني تكييف','فني تبريد وثلاجات']},
 ];
 const ALL_SERVICES = CATEGORIES.flatMap(c=>c.services);
 
@@ -158,7 +147,6 @@ function showToast(msg, type='error'){
   setTimeout(()=>{ el.innerHTML=''; }, 4000);
 }
 
-// ===== RENDER - منظم ومحمي =====
 function render(){
   const cat = getCat(state.service);
   const filteredServices = ALL_SERVICES.filter(s=> !state.searchService || s.includes(state.searchService.trim()));
@@ -171,7 +159,7 @@ function render(){
         <div class="min-w-0"><h1 class="font-extrabold text-[16px] leading-none truncate">صُنّاع</h1><p class="text-[11px] text-slate-500 font-bold mt-[2px]">القاهرة - لوحة العملاء</p></div>
       </div>
       <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
-        <a href="./fanni.html" class="h-9 px-3 sm:px-4 rounded-full bg-[#f97316] text-white text-[11px] sm:text-[12px] font-extrabold flex items-center gap-1 shadow hover:bg-[#ea6a0f] transition">🧑‍🔧 لوحة الفني</a>
+        <a href="./fanni.html" class="h-9 px-3 sm:px-4 rounded-full bg-[#f97316] text-white text-[11px] sm:text-[12px] font-extrabold flex items-center gap-1 shadow hover:bg-[#ea6a0f] transition">🧑🔧 لوحة الفني</a>
         <button onclick="setTab('new')" class="h-9 px-3 rounded-full bg-[#0f172a] text-white text-[11px] font-bold hover:bg-black transition">طلب جديد +</button>
       </div>
     </div>
@@ -210,17 +198,17 @@ function render(){
             </div>
 
             <div>
-              <label class="text-[12px] font-bold mb-1.5 flex justify-between"><span>📍 العنوان بالتفصيل</span><span class="text-[10px] text-slate-400">${state.address.length}/250</span></label>
+              <label class="text-[12px] font-bold mb-1.5 flex justify-between"><span>📍 العنوان بالتفصيل</span><span class="text-[10px] text-slate-400" id="addrCounter">${state.address.length}/250</span></label>
               <input id="addrInput" value="${escAttr(state.address)}" oninput="onAddressInput(this.value)" maxlength="250" placeholder="المعادي، شارع 9، عمارة 12..." class="w-full h-[50px] rounded-xl border border-slate-200 bg-white px-4 text-[14px] font-bold outline-none focus:border-[#0f172a] focus:ring-2 focus:ring-slate-100 transition">
             </div>
 
             <div>
-              <label class="text-[12px] font-bold mb-1.5 flex justify-between"><span>📞 رقم تليفونك</span><span class="text-[10px] ${VALIDATORS.phone(state.phone)?'text-emerald-600':'text-slate-400'}">${VALIDATORS.phone(state.phone)?'✓ صحيح':'01xxxxxxxxx'}</span></label>
-              <input value="${escAttr(state.phone)}" oninput="onPhoneInput(this.value)" inputmode="numeric" maxlength="11" placeholder="01012345678" class="w-full h-[50px] rounded-xl border border-slate-200 bg-white px-4 text-[15px] font-bold tracking-widest outline-none focus:border-[#0f172a] focus:ring-2 focus:ring-slate-100 transition ltr" dir="ltr">
+              <label class="text-[12px] font-bold mb-1.5 flex justify-between"><span>📞 رقم تليفونك</span><span id="phoneStatus" class="text-[10px] ${VALIDATORS.phone(state.phone)?'text-emerald-600':'text-slate-400'}">${VALIDATORS.phone(state.phone)?'✓ صحيح':'01xxxxxxxxx'}</span></label>
+              <input id="phoneInput" value="${escAttr(state.phone)}" oninput="onPhoneInput(this.value)" inputmode="numeric" type="tel" maxlength="11" placeholder="01012345678" class="w-full h-[50px] rounded-xl border border-slate-200 bg-white px-4 text-[15px] font-bold tracking-widest outline-none focus:border-[#0f172a] focus:ring-2 focus:ring-slate-100 transition ltr" dir="ltr" autocomplete="tel">
             </div>
 
             <div>
-              <label class="text-[12px] font-bold mb-1.5 flex justify-between"><span>وصف المشكلة</span><span class="text-[10px] text-slate-400">${state.desc.length}/1000</span></label>
+              <label class="text-[12px] font-bold mb-1.5 flex justify-between"><span>وصف المشكلة</span><span class="text-[10px] text-slate-400" id="descCounter">${state.desc.length}/1000</span></label>
               <textarea id="descInput" oninput="onDescInput(this.value)" maxlength="1000" placeholder="احكي المشكلة بالتفصيل، مثال: الدش فاصل من الصبح..." class="w-full min-h-[110px] rounded-xl border border-slate-200 bg-white p-4 text-[13px] font-bold outline-none focus:border-[#0f172a] focus:ring-2 focus:ring-slate-100 transition resize-none leading-6">${escHtml(state.desc)}</textarea>
             </div>
 
@@ -302,11 +290,9 @@ function render(){
     </div>
   </nav>
   `;
-  // تركيز تلقائي لحقل البحث عند فتح الخدمات
   if(state.showService) setTimeout(()=>document.getElementById('svcSearch')?.focus(), 50);
 }
 
-// ===== HANDLERS منظمة وآمنة =====
 function setTab(t){ state.tab=t; render(); }
 function toggleService(){ state.showService=!state.showService; render(); }
 function searchService(v){ state.searchService = sanitizeInput(v,50); render(); }
@@ -319,9 +305,32 @@ function selectService(s){
   }
   state.showService=false; state.searchService=''; render();
 }
-function onAddressInput(v){ state.address = sanitizeInput(v,250); document.getElementById('addrInput')?.setAttribute('value', state.address); }
-function onPhoneInput(v){ state.phone = String(v).replace(/\D/g,'').slice(0,11); render(); }
-function onDescInput(v){ state.desc = sanitizeInput(v,1000); }
+
+// ✅ تم إصلاح المشكلة هنا - لا نعمل render كامل عند كتابة الهاتف
+function onAddressInput(v){ 
+  state.address = sanitizeInput(v,250); 
+  const el = document.getElementById('addrCounter');
+  if(el) el.textContent = state.address.length + '/250';
+}
+
+function onPhoneInput(v){ 
+  state.phone = String(v).replace(/\D/g,'').slice(0,11);
+  // تحديث حالة التحقق فقط بدون render كامل
+  const statusEl = document.getElementById('phoneStatus');
+  if(statusEl){
+    const isValid = VALIDATORS.phone(state.phone);
+    statusEl.textContent = isValid ? '✓ صحيح' : '01xxxxxxxxx';
+    statusEl.className = 'text-[10px] ' + (isValid ? 'text-emerald-600' : 'text-slate-400');
+  }
+  // لا نعمل render هنا لتجنب فقدان التركيز
+}
+
+function onDescInput(v){ 
+  state.desc = sanitizeInput(v,1000); 
+  const el = document.getElementById('descCounter');
+  if(el) el.textContent = state.desc.length + '/1000';
+}
+
 function onTrackInput(v){ state.trackInput = sanitizeInput(v,20).toUpperCase(); }
 function onComplaintSn(v){ state.complaintSn = sanitizeInput(v,20).toUpperCase(); render(); }
 function onComplaintText(v){ state.complaintText = sanitizeInput(v,1000); }
@@ -380,7 +389,6 @@ async function sendComplaint(){
 }
 
 render();
-// منع سحب الصفحة افقيا في iOS
 let startX=0; document.addEventListener('touchstart',e=>startX=e.touches[0].clientX,{passive:true});
 document.addEventListener('touchmove',e=>{ if(Math.abs(e.touches[0].clientX-startX)>10 && e.touches[0].clientY < 200) e.preventDefault(); },{passive:false});
 </script>
