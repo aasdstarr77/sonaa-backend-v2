@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>صناع - لوحة الفني v3</title>
+<title>صناع - لوحة الفني</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -21,7 +21,8 @@ img,input,textarea,button,select{max-width:100%}
 <div id="toast" class="fixed bottom-[88px] left-3 right-3 z-[200] pointer-events-none"></div>
 
 <script>
-// ========= SECURITY =========
+// ========= CONFIG =========
+const BASE_URL = 'https://sonaa-backend-v2.vercel.app';
 const IS_DEV = location.hostname==='localhost' || location.hostname==='127.0.0.1';
 const log = (...a)=>{ if(IS_DEV) console.log(...a); };
 function escHtml(s){ if(s==null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
@@ -34,7 +35,7 @@ const V = {
   amount: v=> { const n=Number(v); return !isNaN(n) && n>=10 && n<=10000; }
 };
 
-// ========= مطابقة المهن مع لوحة العميل - نفس القاعدة بالضبط =========
+// ========= المهن - مطابقة 100% للوحة العميل =========
 const CATEGORIES = [
   {label:'دش وكاميرات', emoji:'📡', services:['تركيب دش','صيانة دش','تركيب كاميرات مراقبة','صيانة كاميرات']},
   {label:'كهرباء', emoji:'⚡', services:['كهربائي منازل','كهربائي سيارات','كهربائي']},
@@ -45,27 +46,44 @@ const CATEGORIES = [
 ];
 const ALL_SERVICES = CATEGORIES.flatMap(c=>c.services);
 const SKILLS = [...ALL_SERVICES, 'الكل'];
-const REGISTER_SKILLS = ALL_SERVICES; // نفس لوحة العميل تماما
+const REGISTER_SKILLS = ALL_SERVICES;
 
-// ========= API LAYER =========
-const TOKEN_KEY='fanni_token_v3';
-const USER_KEY='fanni_user_v3';
+// ========= API LAYER - مربوط بالادمن والعميل =========
+const TOKEN_KEY='fanni_token_v4';
+const USER_KEY='fanni_user_v4';
 
 function getToken(){ return localStorage.getItem(TOKEN_KEY)||''; }
 function setAuth(token,user){ if(token) localStorage.setItem(TOKEN_KEY,token); if(user) localStorage.setItem(USER_KEY, JSON.stringify(user)); }
 function clearAuth(){ localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(USER_KEY); }
 function getUser(){ try{ return JSON.parse(localStorage.getItem(USER_KEY)||'null'); }catch{ return null; } }
 
+function buildUrl(path){
+  // لو احنا على نفس دومين الباك اند استخدم relative، غير كده استخدم BASE_URL
+  let p = path.startsWith('/api')? path : '/api'+(path.startsWith('/')?'':'/')+path;
+  if(location.origin.includes('vercel.app') && location.origin.includes('sonaa')) return p;
+  if(location.hostname==='localhost' || location.hostname==='127.0.0.1') return p;
+  return BASE_URL + p;
+}
+
 async function api(path, opts={}){
   const token=getToken();
   const headers={'Content-Type':'application/json', ...(opts.headers||{})};
   if(token) headers['Authorization']=`Bearer ${token}`;
-  let url = path.startsWith('/api')? path : '/api'+(path.startsWith('/')?'':'/')+path;
-  let r = await fetch(url,{...opts, headers, credentials:'same-origin'});
-  let txt = await r.text();
-  let data; try{ data=JSON.parse(txt); }catch{ data={raw:txt.slice(0,800), message: txt.slice(0,200)}; }
-  log(url,r.status,data);
-  return {ok:r.ok, status:r.status, data};
+  let url = buildUrl(path);
+  try{
+    let r = await fetch(url,{...opts, headers, credentials:'omit', mode:'cors'});
+    let txt = await r.text();
+    // لو السيرفر رجع HTML (Cannot POST /api/...) نعتبرها 404 ونخلي tryApi يجرب المسار اللي بعده
+    if(txt.trim().startsWith('<!DOCTYPE') || txt.trim().startsWith('<html') || txt.includes('Cannot POST') || txt.includes('Cannot GET')){
+      log('HTML ERROR',url,txt.slice(0,200));
+      return {ok:false, status:404, data:{message:'المسار غير موجود', raw:txt.slice(0,300)}};
+    }
+    let data; try{ data=JSON.parse(txt); }catch{ data={raw:txt.slice(0,800), message: txt.slice(0,300)}; }
+    log(url,r.status,data);
+    return {ok:r.ok, status:r.status, data};
+  }catch(e){
+    return {ok:false, status:0, data:{message:e.message}};
+  }
 }
 
 async function tryApi(paths, opts){
@@ -75,35 +93,34 @@ async function tryApi(paths, opts){
     let res = await api(path, opts);
     if(res.ok) return res.data;
     last=res;
-    // لو 403/423/pending نوقف فورا ونرجع الرسالة الحقيقية
     if([400,401,403,422,423].includes(res.status)) break;
-    // 404 نكمل نجرب المسار اللي بعده
   }
-  // تحويل اخطاء 404 الخاصة بحالة المراجعة لرسائل مفهومة
-  const msg = (last.data?.message||last.data?.error||'').toLowerCase();
+  const msg = (last.data?.message||last.data?.error||last.data?.raw||'').toLowerCase();
   if(last.status===404){
     if(msg.includes('pending')||msg.includes('review')||msg.includes('approval')||msg.includes('انتظار')||msg.includes('مراجعة')||msg.includes('قيد')){
-      throw new Error('⏳ حسابك قيد المراجعة من الإدارة - سيتم تفعيله خلال ساعات وستصلك رسالة');
+      throw new Error('⏳ حسابك قيد المراجعة من الإدارة - سيتم تفعيله خلال ساعات');
     }
     if(msg.includes('not found')||msg.includes('لا يوجد')){
       throw new Error('الحساب غير موجود - تأكد من رقم الهاتف أو سجل حساب جديد');
     }
+    throw new Error(last.data?.message || 'المسار غير موجود على السيرفر - جاري تجربة مسار آخر');
   }
   if(last.status===403||last.status===423){
     throw new Error(last.data?.message||'حسابك موقوف مؤقتاً أو بانتظار موافقة الإدارة');
   }
-  throw new Error(last.data?.message||last.data?.error||`خطأ ${last.status}`);
+  throw new Error(last.data?.message||last.data?.error||last.data?.raw||`خطأ ${last.status}`);
 }
 
+// مسارات صحيحة ومربوطة بالادمن - بدون /api/auth/login اللي بيعطي Cannot POST
 const ENDPOINTS_FANNI = {
-  register: ['/api/fanni/register','/api/fannis/register','/api/technician/register','/api/auth/register'],
-  login: ['/api/fanni/login','/api/fannis/login','/api/technician/login','/api/auth/fanni/login','/api/auth/login'],
-  available: ['/api/orders/available','/api/fanni/orders/available','/api/fanni/available-orders','/api/orders/fanni/available'],
+  register: ['/api/fanni/register','/api/fannis/register','/api/technician/register','/api/fanni/signup','/api/technicians/register'],
+  login: ['/api/fanni/login','/api/fannis/login','/api/technician/login','/api/fanni/signin','/api/technicians/login'],
+  available: ['/api/orders/available','/api/fanni/orders/available','/api/fanni/available-orders','/api/orders/fanni/available','/api/orders/available-for-fanni'],
   myOffers: ['/api/fanni/offers','/api/fanni/my-offers','/api/orders/my-offers','/api/fanni/offers/mine'],
   sendOffer: (sn)=>`/api/fanni/orders/${encodeURIComponent(sn)}/offer`,
-  walletSubmit: ['/api/fanni/wallet/topup','/api/fanni/wallet/recharge','/api/fanni/topup','/api/wallet/topup-request','/api/fanni/balance/topup'],
-  walletHistory: ['/api/fanni/wallet/history','/api/fanni/wallet','/api/fanni/balance/history'],
-  profile: ['/api/fanni/me','/api/fanni/profile','/api/auth/me'],
+  walletSubmit: ['/api/fanni/wallet/topup','/api/fanni/wallet/recharge','/api/fanni/topup','/api/wallet/topup-request','/api/fanni/balance/topup','/api/topup-requests'],
+  walletHistory: ['/api/fanni/wallet/history','/api/fanni/wallet','/api/fanni/balance/history','/api/topup-requests/my'],
+  profile: ['/api/fanni/me','/api/fanni/profile'],
 };
 
 const API = {
@@ -116,7 +133,7 @@ const API = {
     if(!V.text(offer.price,1,10)) throw new Error('السعر مطلوب');
     if(!V.text(offer.message,5,500)) throw new Error('اكتب رسالة 5 حروف على الأقل');
     let res = await api(ENDPOINTS_FANNI.sendOffer(sn),{method:'POST', body:JSON.stringify({price:Number(offer.price), message:sanitize(offer.message,500)})});
-    if(!res.ok) throw new Error(res.data?.message||'فشل إرسال العرض');
+    if(!res.ok) throw new Error(res.data?.message||res.data?.raw||'فشل إرسال العرض');
     return res.data;
   },
   submitWallet: async (payload)=>{
@@ -160,20 +177,9 @@ function showToast(msg,type='success'){
 }
 
 function goClient(){
-  // اصلاح زر لوحة العميل - يجرب عدة مسارات
-  const candidates = ['./client-board-clean.html','./client.html','./index.html','./','./client-board-clean.html'];
-  // نجرب فتح الملف الموجود فعليا، ولو مش موجود نروح للاندكس
-  let target = localStorage.getItem('client_board_path') || './client-board-clean.html';
-  // محاولة ذكية: لو احنا في file:// نستخدم نفس المجلد
-  window.location.href = target;
+  // المسار الصحيح كما طلبه المستخدم
+  window.location.href = 'https://sonaa-backend-v2.vercel.app/';
 }
-
-// حفظ مسار لوحة العميل عند اول زيارة
-try{
-  if(!localStorage.getItem('client_board_path')){
-    localStorage.setItem('client_board_path','./client-board-clean.html');
-  }
-}catch{}
 
 function render(){
   const user=getUser();
@@ -204,23 +210,23 @@ function render(){
         ${state.tab==='login'?`
           <div class="rounded-[20px] bg-white border p-5 shadow-sm">
             <h2 class="font-extrabold text-[16px]">دخول الفني</h2>
-            <p class="text-[11px] text-slate-500 font-bold mt-1">لو حسابك جديد ولسه متوافقش عليه سيظهر لك تنبيه انتظار المراجعة</p>
+            <p class="text-[11px] text-slate-500 font-bold mt-1">ادخل رقمك وكلمة السر</p>
             <div class="mt-4 space-y-3">
               <div><label class="text-[11px] font-bold text-slate-600">رقم التليفون</label><input value="${escAttr(state.loginPhone)}" oninput="state.loginPhone=this.value.replace(/\\D/g,'').slice(0,11)" inputmode="numeric" placeholder="01xxxxxxxxx" class="mt-1 w-full h-12 rounded-xl border px-4 text-[14px] font-bold tracking-widest outline-none focus:border-[#0f172a]"></div>
               <div><label class="text-[11px] font-bold text-slate-600">كلمة السر</label><input type="password" value="${escAttr(state.loginPass)}" oninput="state.loginPass=this.value" placeholder="••••••••" class="mt-1 w-full h-12 rounded-xl border px-4 text-[14px] outline-none focus:border-[#0f172a]"></div>
               <button onclick="doLogin()" ${state.loading?'disabled':''} class="w-full h-12 rounded-xl bg-[#0f172a] text-white font-extrabold text-[14px] disabled:opacity-50 hover:bg-black transition">${state.loading?'جاري الدخول...':'دخول اللوحة'}</button>
-              ${state.pendingMsg?`<div class="rounded-xl bg-amber-50 border border-amber-200 p-4 text-center"><div class="text-[18px]">⏳</div><p class="mt-2 text-[13px] font-extrabold text-amber-800 leading-6">${escHtml(state.pendingMsg)}</p><p class="mt-1 text-[11px] text-amber-700">سيتم تفعيل حسابك بعد مراجعة الإدارة - لا تحاول التسجيل مرة أخرى بنفس الرقم</p><button onclick="setTab('register')" class="mt-3 h-9 px-4 rounded-full bg-amber-100 border border-amber-200 text-amber-800 text-[11px] font-bold">مراجعة بياناتي</button></div>`:''}
+              ${state.pendingMsg?`<div class="rounded-xl bg-amber-50 border border-amber-200 p-4 text-center"><div class="text-[18px]">⏳</div><p class="mt-2 text-[13px] font-extrabold text-amber-800 leading-6">${escHtml(state.pendingMsg)}</p><p class="mt-1 text-[11px] text-amber-700">سيتم تفعيل حسابك بعد مراجعة الإدارة</p></div>`:''}
               ${state.error?`<p class="text-[12px] font-bold text-red-600 bg-red-50 border border-red-200 rounded-xl p-3 leading-6">${escHtml(state.error)}</p>`:''}
             </div>
           </div>
         `:`
           <div class="rounded-[20px] bg-white border p-5 shadow-sm">
-            <h2 class="font-extrabold text-[16px]">تسجيل فني جديد - نفس مهن العميل</h2><p class="text-[11px] text-slate-500 font-bold mt-1">اختر مهنتك من نفس القائمة التي يراها العميل</p>
+            <h2 class="font-extrabold text-[16px]">تسجيل فني جديد</h2><p class="text-[11px] text-slate-500 font-bold mt-1">بياناتك ستظهر للعملاء عند تقديم عرض</p>
             <div class="mt-4 space-y-3">
               <div><label class="text-[11px] font-bold">اسمك *</label><input value="${escAttr(state.regName)}" oninput="state.regName=sanitize(this.value,50)" placeholder="الاسم كما يظهر للعميل" class="mt-1 w-full h-12 rounded-xl border px-4 text-[13px] font-bold"></div>
               <div class="grid grid-cols-2 gap-3">
                 <div><label class="text-[11px] font-bold">التليفون *</label><input value="${escAttr(state.regPhone)}" oninput="state.regPhone=this.value.replace(/\\D/g,'').slice(0,11)" inputmode="numeric" placeholder="01xxxxxxxxx" class="mt-1 w-full h-12 rounded-xl border px-4 text-[13px] font-mono"></div>
-                <div><label class="text-[11px] font-bold">المهارة * (مطابقة للعميل)</label><select onchange="state.regSkill=this.value" class="mt-1 w-full h-12 rounded-xl border px-3 text-[12px] font-bold bg-white">
+                <div><label class="text-[11px] font-bold">المهارة *</label><select onchange="state.regSkill=this.value" class="mt-1 w-full h-12 rounded-xl border px-3 text-[12px] font-bold bg-white">
                   ${CATEGORIES.map(cat=>`<optgroup label="${escAttr(cat.label)}">${cat.services.map(s=>`<option value="${escAttr(s)}" ${state.regSkill===s?'selected':''}>${escHtml(s)}</option>`).join('')}</optgroup>`).join('')}
                 </select></div>
               </div>
@@ -275,14 +281,12 @@ function render(){
         <div class="mt-3 space-y-3 animate-fade">
           <div class="rounded-[18px] bg-white border p-5 shadow-sm">
             <div class="flex justify-between items-center"><h3 class="font-extrabold text-[15px]">💳 محفظتي - شحن خارج التطبيق</h3><span class="text-[12px] font-black px-3 py-1 rounded-full bg-[#0f172a] text-white">${escHtml(String(balance))}ج</span></div>
-            <p class="mt-2 text-[11px] text-slate-500 font-bold leading-5">حول المبلغ من فودافون كاش / اتصالات كاش / أورنج موني على الرقم المخصص، ثم سجل بيانات التحويل هنا ليتم المراجعة من الإدارة</p>
-            
+            <p class="mt-2 text-[11px] text-slate-500 font-bold leading-5">حول المبلغ ثم سجل بيانات التحويل هنا ليتم المراجعة من الإدارة</p>
             <div class="mt-4 rounded-xl bg-amber-50 border border-amber-200 p-3">
               <p class="text-[11px] font-extrabold text-amber-800">📱 أرقام التحويل المعتمدة:</p>
               <p class="mt-1 text-[12px] font-mono font-bold text-amber-900">01012345678 - فودافون كاش</p>
               <p class="text-[10px] text-amber-700 mt-1">اذكر رقمك المحول منه بدقة</p>
             </div>
-
             <div class="mt-4 space-y-3">
               <div class="grid grid-cols-2 gap-3">
                 <div><label class="text-[11px] font-bold">رقم الهاتف المحول منه *</label><input value="${escAttr(state.walletFromPhone)}" oninput="state.walletFromPhone=this.value.replace(/\\D/g,'').slice(0,11)" inputmode="numeric" placeholder="01xxxxxxxxx" class="mt-1 w-full h-12 rounded-xl border px-4 text-[13px] font-mono font-bold outline-none focus:border-[#f97316]"></div>
@@ -297,11 +301,10 @@ function render(){
               ${state.error?`<p class="text-[12px] font-bold text-red-600 bg-red-50 border border-red-200 rounded-xl p-3 leading-6">${escHtml(state.error)}</p>`:''}
             </div>
           </div>
-
           <div class="rounded-[16px] bg-white border p-4">
             <div class="flex justify-between items-center"><h4 class="font-bold text-[13px]">سجل الشحن</h4><button onclick="loadWalletHistory()" class="text-[11px] px-3 py-1 rounded-full bg-slate-100 border font-bold">تحديث</button></div>
             <div class="mt-3 space-y-2">
-              ${(state.walletHistory||[]).length===0?'<p class="text-[11px] text-slate-400 text-center py-6">لا يوجد طلبات شحن سابقة<br>عندما ترسل طلب سيظهر هنا مع حالة المراجعة</p>' : state.walletHistory.map(h=>`<div class="rounded-xl border bg-slate-50 p-3 flex justify-between items-center gap-2"><div><p class="text-[12px] font-bold">${escHtml(String(h.amount||''))}ج - ${escHtml(h.fromPhone||h.phone||'')}</p><p class="text-[10px] text-slate-500 mt-1">كود: ${escHtml(h.reference||h.referenceCode||'بدون')} - ${escHtml(h.method||'')}</p><p class="text-[10px] text-slate-400 mt-1">${escHtml(h.createdAt? new Date(h.createdAt).toLocaleString('ar-EG'): '')}</p></div><span class="text-[10px] px-2.5 py-1 rounded-full font-bold border ${String(h.status).includes('approv')||String(h.status).includes('مقبول')?'bg-emerald-50 border-emerald-200 text-emerald-700': String(h.status).includes('reject')||String(h.status).includes('مرفوض')?'bg-red-50 border-red-200 text-red-700':'bg-amber-50 border-amber-200 text-amber-800'}">${escHtml(h.status||'قيد المراجعة')}</span></div>`).join('')}
+              ${(state.walletHistory||[]).length===0?'<p class="text-[11px] text-slate-400 text-center py-6">لا يوجد طلبات شحن سابقة</p>' : state.walletHistory.map(h=>`<div class="rounded-xl border bg-slate-50 p-3 flex justify-between items-center gap-2"><div><p class="text-[12px] font-bold">${escHtml(String(h.amount||''))}ج - ${escHtml(h.fromPhone||h.phone||'')}</p><p class="text-[10px] text-slate-500 mt-1">كود: ${escHtml(h.reference||h.referenceCode||'بدون')} - ${escHtml(h.method||'')}</p><p class="text-[10px] text-slate-400 mt-1">${escHtml(h.createdAt? new Date(h.createdAt).toLocaleString('ar-EG'): '')}</p></div><span class="text-[10px] px-2.5 py-1 rounded-full font-bold border ${String(h.status).includes('approv')||String(h.status).includes('مقبول')?'bg-emerald-50 border-emerald-200 text-emerald-700': String(h.status).includes('reject')||String(h.status).includes('مرفوض')?'bg-red-50 border-red-200 text-red-700':'bg-amber-50 border-amber-200 text-amber-800'}">${escHtml(h.status||'قيد المراجعة')}</span></div>`).join('')}
             </div>
           </div>
         </div>
@@ -370,10 +373,9 @@ async function doLogin(){
   if(!V.text(state.loginPass,4,100)){ state.error='كلمة السر قصيرة'; render(); return; }
   state.loading=true; state.error=''; state.pendingMsg=''; render();
   try{
-    let res = await API.login({phone:state.loginPhone.replace(/\D/g,''), password:state.loginPass, clientPhone:state.loginPhone, clientPassword:state.loginPass, phoneNumber:state.loginPhone});
+    let res = await API.login({phone:state.loginPhone.replace(/\D/g,''), password:state.loginPass, clientPhone:state.loginPhone, phoneNumber:state.loginPhone});
     let token = res.token||res.accessToken||res.data?.token;
     let user = res.fanni||res.user||res.data||res.profile||{name:'فني', phone:state.loginPhone};
-    // لو السيرفر رجع status pending بدون توكن
     if(!token && (res.status==='pending'||res.data?.status==='pending')){
       throw new Error('PENDING');
     }
@@ -386,7 +388,7 @@ async function doLogin(){
     state.loading=false;
     const msg = String(e.message||'');
     if(msg.includes('PENDING')||msg.includes('قيد المراجعة')||msg.includes('انتظار')||msg.includes('مراجعة')||msg.includes('pending')||msg.includes('review')){
-      state.pendingMsg = 'حسابك قيد المراجعة من الإدارة - سيتم تفعيله قريباً. لا تحاول التسجيل مرة أخرى.';
+      state.pendingMsg = 'حسابك قيد المراجعة من الإدارة - سيتم تفعيله قريباً.';
       showToast(state.pendingMsg,'pending');
     }else{
       state.error=msg;
@@ -401,9 +403,24 @@ async function doRegister(){
   if(!V.text(state.regPass,6,100)){ state.error='كلمة السر 6 حروف على الأقل'; render(); return; }
   state.loading=true; state.error=''; state.success=''; render();
   try{
-    let payload={name:sanitize(state.regName,50), phone:state.regPhone.replace(/\D/g,''), skill:state.regSkill, service:state.regSkill, city:sanitize(state.regCity,30), password:state.regPass, clientName:sanitize(state.regName,50), clientPhone:state.regPhone.replace(/\D/g,'')};
+    let payload={
+      name:sanitize(state.regName,50), 
+      phone:state.regPhone.replace(/\D/g,''),
+      skill:state.regSkill,
+      service:state.regSkill,
+      serviceType:state.regSkill,
+      city:sanitize(state.regCity,30),
+      area:sanitize(state.regCity,30),
+      password:state.regPass,
+      clientName:sanitize(state.regName,50),
+      clientPhone:state.regPhone.replace(/\D/g,''),
+      // حقول للادمن
+      status:'pending',
+      isApproved:false,
+      role:'fanni'
+    };
     let res = await API.register(payload);
-    state.loading=false; state.success='تم التسجيل! حسابك الآن قيد المراجعة من الإدارة - ستتم الموافقة خلال ساعات'; state.tab='login'; state.loginPhone=state.regPhone;
+    state.loading=false; state.success='تم التسجيل! حسابك الآن قيد المراجعة من الإدارة'; state.tab='login'; state.loginPhone=state.regPhone;
     showToast('تم التسجيل - بانتظار موافقة الإدارة','pending');
     render();
   }catch(e){ state.loading=false; state.error=e.message; render(); }
@@ -420,9 +437,8 @@ async function loadOrders(){
     state.loading=false; applyFilter();
   }catch(e){
     state.loading=false;
-    // معالجة 404 بعد الموافقة من الادمن - قد يكون المسار تغير بعد التفعيل
-    if(String(e.message).includes('404')){
-      showToast('لا يوجد طلبات حالياً أو جاري تحديث الصلاحيات - جرب تحديث الصفحة','pending');
+    if(String(e.message).includes('404')||String(e.message).includes('غير موجود')){
+      showToast('لا يوجد طلبات حالياً','pending');
       state.filteredOrders=[]; render();
     }else{
       showToast(e.message,'error'); render();
@@ -441,7 +457,6 @@ async function loadMyOffers(){
 }
 
 async function loadWalletHistory(){
-  if(!getToken() && state.tab!=='wallet') return;
   try{
     let data = await API.getWalletHistory();
     state.walletHistory = data.history||data.data||data.requests||[];
@@ -458,7 +473,7 @@ async function submitWallet(){
   state.walletLoading=true; state.error=''; state.success=''; render();
   try{
     await API.submitWallet({fromPhone:state.walletFromPhone, amount:state.walletAmount, reference:state.walletRef, method:state.walletMethod});
-    state.walletLoading=false; state.success='تم إرسال طلب الشحن بنجاح - سيتم مراجعته من الإدارة وإضافة الرصيد خلال دقائق'; state.walletFromPhone=''; state.walletAmount=''; state.walletRef='';
+    state.walletLoading=false; state.success='تم إرسال طلب الشحن بنجاح - سيتم مراجعته من الإدارة'; state.walletFromPhone=''; state.walletAmount=''; state.walletRef='';
     showToast('تم إرسال طلب الشحن - قيد المراجعة','success');
     loadWalletHistory(); render();
   }catch(e){ state.walletLoading=false; state.error=e.message; render(); showToast(e.message,'error'); }
@@ -474,7 +489,7 @@ async function submitOffer(){
   try{
     await API.sendOffer(state.offerModal.sn, {price:state.offerPrice, message:state.offerMessage});
     state.loading=false; state.offerModal=null;
-    showToast('تم إرسال العرض للعميل - سيظهر في لوحة العميل فوراً','success');
+    showToast('تم إرسال العرض للعميل','success');
     loadMyOffers(); render();
   }catch(e){ state.loading=false; showToast(e.message,'error'); render(); }
 }
