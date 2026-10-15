@@ -1,346 +1,228 @@
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
-const fs = require('fs');
-const mongoose = require('mongoose');
-
-const app = express();
-app.use(cors({ origin: true }));
-app.use(express.json({ limit: '10mb' }));
-
-let fp = path.join(__dirname, '..', 'frontend');
-if (!fs.existsSync(fp)) fp = path.join(__dirname, 'frontend');
-if (!fs.existsSync(fp)) fp = path.join(__dirname, '..');
-if (!fs.existsSync(fp)) fp = __dirname;
-app.use(express.static(fp));
-
-// ========== MongoDB - سريع مع Cache ==========
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/sonaa';
-let isConnected = false;
-async function connectDB() {
-  if (isConnected && mongoose.connection.readyState === 1) return;
-  try {
-    if (mongoose.connection.readyState === 0) {
-      await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 5000 });
-    }
-    isConnected = true;
-    console.log('✅ MongoDB Connected');
-  } catch (err) {
-    console.error('❌ MongoDB Error:', err.message);
-  }
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>صناع - لوحة الأدمن v4 - سريعة</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+*{font-family:'Cairo',system-ui}
+body{margin:0;background:#f8fafc;color:#0f172a}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.animate-fade{animation:fade .25s ease both}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast" class="fixed bottom-4 left-3 right-3 z-[200] pointer-events-none"></div>
+<script>
+const BASE_URL='https://sonaa-backend-v2.vercel.app';
+const TOKEN_KEY='admin_token_v3';
+const WALLET='01152822263';
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function getToken(){return localStorage.getItem(TOKEN_KEY)||'';}
+function setToken(t){localStorage.setItem(TOKEN_KEY,t);}
+function clearToken(){localStorage.removeItem(TOKEN_KEY);}
+function buildUrl(p){let path=p.startsWith('/api')?p:'/api/'+(p.startsWith('/')?'':'/')+p; if(location.origin.includes('sonaa')&&location.origin.includes('vercel.app')) return path; return BASE_URL+path;}
+async function api(path, opts={}){
+  const token=getToken();
+  const headers={'Content-Type':'application/json', ...(opts.headers||{})};
+  if(token) headers['Authorization']=`Bearer ${token}`;
+  let url=buildUrl(path);
+  try{
+    let r=await fetch(url,{...opts, headers, mode:'cors', credentials:'omit'});
+    let txt=await r.text();
+    if(txt.trim().startsWith('<!DOCTYPE')||txt.includes('Cannot ')){ return {ok:false, status:404, data:{message:'المسار غير موجود: '+path}}; }
+    let data; try{data=JSON.parse(txt);}catch{data={raw:txt.slice(0,500), message:txt.slice(0,200)};}
+    return {ok:r.ok, status:r.status, data};
+  }catch(e){ return {ok:false, status:0, data:{message:e.message}}; }
 }
-connectDB();
-
-const orderSchema = new mongoose.Schema({
-  sn: { type: String, unique: true, required: true, index: true },
-  service: String, area: String, address: String,
-  clientPhone: String, phone: String, clientName: String,
-  description: String, status: { type: String, default: 'قيد المراجعة' },
-  offers: { type: Array, default: [] },
-  createdAt: { type: Date, default: Date.now }
-});
-const fanniSchema = new mongoose.Schema({
-  name: String, phone: { type: String, unique: true, index: true },
-  password: String, service: String, area: String,
-  status: { type: String, default: 'pending' },
-  isApproved: { type: Boolean, default: false },
-  isDisabled: { type: Boolean, default: false },
-  balance: { type: Number, default: 0 },
-  createdAt: { type: Date, default: Date.now }, approvedAt: Date
-}, { strict: false, collection: 'fannis' });
-
-const topupSchema = new mongoose.Schema({
-  fromPhone: String, phone: String, amount: Number, method: String,
-  status: { type: String, default: 'pending', index: true },
-  walletNumber: { type: String, default: '01152822263' },
-  createdAt: { type: Date, default: Date.now }, approvedAt: Date, rejectedAt: Date
-}, { strict: false, collection: 'topups' });
-
-const adminSchema = new mongoose.Schema({
-  email: String, phone: String, password: String, name: String, role: String
-}, { strict: false, collection: 'admins' });
-
-const Order = mongoose.models.Order || mongoose.model('Order', orderSchema);
-const Fanni = mongoose.models.Fanni || mongoose.model('Fanni', fanniSchema);
-const Topup = mongoose.models.Topup || mongoose.model('Topup', topupSchema);
-const Admin = mongoose.models.Admin || mongoose.model('Admin', adminSchema);
-
-async function ensureAdmin() {
-  await connectDB();
-  const count = await Admin.countDocuments();
-  if (count === 0) {
-    await Admin.create({ email: 'aasdstarr77@gmail.com', phone: '01152822263', password: 'aasd139518', name: 'الادمن الرئيسي', role: 'admin' });
-    console.log('Default admin created 01152822263');
-  }
-}
-ensureAdmin();
-
-// ===== SN جديد فيه حروف ومستحيل يتكرر =====
-function generateSN() {
-  const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-  const randomLetters = Array.from({ length: 3 }, () => letters[Math.floor(Math.random() * letters.length)]).join('');
-  const randomNumbers = Math.floor(1000 + Math.random() * 9000);
-  const timePart = Date.now().toString(36).toUpperCase().slice(-3);
-  return `SN-${randomLetters}${randomNumbers}-${timePart}`;
+async function tryApi(paths, opts){
+  let last={status:404, data:{message:'فشل'}};
+  for(let p of paths){ let res=await api(p, opts); if(res.ok) return res.data; last=res; if([400,401,403].includes(res.status)) break; }
+  throw new Error(last.data?.message||'خطأ');
 }
 
-async function createOrder(body) {
-  await connectDB();
-  let sn, exists = true;
-  while (exists) { sn = generateSN(); exists = await Order.findOne({ sn }); }
-  const o = await Order.create({
-    sn, service: body.service || '', area: body.area || body.address || '',
-    address: body.address || body.area || '', clientPhone: body.clientPhone || body.phone || '',
-    phone: body.phone || body.clientPhone || '', clientName: body.clientName || 'عميل',
-    description: body.description || '', status: 'قيد المراجعة', offers: []
-  });
-  return o;
+let state={tab:'fannis', adminEmail:'admin@sonaa.com', adminPass:'Admin@123456', loading:false, fannis:[], filtered:[], topups:[], filteredTopups:[], search:'', filter:'الكل', filterTopup:'الكل', error:''};
+
+function showToast(msg,type='success'){
+  const el=document.getElementById('toast');
+  const bg=type==='success'?'bg-emerald-600': type==='error'?'bg-red-600':'bg-amber-600';
+  el.innerHTML=`<div class="pointer-events-auto mx-auto max-w-[640px] rounded-[14px] ${bg} text-white text-[13px] font-bold px-4 py-3 shadow-2xl animate-fade flex justify-between"><span>${escHtml(msg)}</span><button onclick="this.parentElement.remove()" class="px-3 bg-white/20 rounded-full">X</button></div>`;
+  setTimeout(()=>el.innerHTML='',5000);
 }
 
-// ========== ADMIN ==========
-app.post('/api/admin/login', async (req, res) => {
-  await connectDB();
-  const { phone, email, password } = req.body;
-  const admin = await Admin.findOne({ $and: [{ $or: [{ email }, { phone }, { email: phone }, { phone: email }] }, { password }] });
-  if (!admin) return res.status(401).json({ message: 'بيانات غير صحيحة' });
-  const token = Buffer.from(admin._id + ':' + Date.now()).toString('base64');
-  res.json({ token, admin, data: admin });
-});
-app.post('/api/admins/login', (req, res) => { req.url = '/api/admin/login'; app.handle(req, res); });
-app.post('/api/auth/admin/login', async (req, res) => {
-  await connectDB();
-  const { phone, email, password } = req.body;
-  const admin = await Admin.findOne({ $and: [{ $or: [{ email }, { phone }, { email: phone }, { phone: email }] }, { password }] });
-  if (!admin) return res.status(401).json({ message: 'بيانات غير صحيحة' });
-  const token = Buffer.from(admin._id + ':' + Date.now()).toString('base64');
-  res.json({ token, admin });
-});
-app.post('/api/admin/register', async (req, res) => {
-  await connectDB();
-  const { email, password, phone, name } = req.body;
-  if (await Admin.findOne({ email })) return res.status(400).json({ message: 'موجود' });
-  const admin = await Admin.create({ email, password, phone: phone || '', name: name || 'Admin', role: 'admin' });
-  res.json({ message: 'تم', admin });
-});
+function render(){
+  const isAuth=!!getToken();
+  document.getElementById('app').innerHTML=`
+  <header class="sticky top-0 z-40 bg-[#0f172a] text-white shadow">
+    <div class="mx-auto max-w-[1000px] px-4 py-3 flex justify-between items-center">
+      <div class="flex items-center gap-2"><div class="h-10 w-10 rounded-xl bg-red-600 flex items-center justify-center font-black">A</div><div><h1 class="font-extrabold text-[15px]">لوحة الأدمن v4 - محفظة ${WALLET}</h1><div class="text-[10px] opacity-60">سريعة + تسوية رصيد مباشرة</div></div></div>
+      <div class="flex gap-2"><button onclick="goFanni()" class="h-9 px-3 rounded-full bg-[#f97316] text-[11px] font-bold">الفني</button>${isAuth?`<button onclick="logout()" class="h-9 px-3 rounded-full bg-white/10 text-[11px]">خروج</button>`:''}</div>
+    </div>
+  </header>
+  <main class="mx-auto max-w-[1000px] px-3 pb-24">
+    ${!isAuth?`
+      <div class="mt-6 max-w-[400px] mx-auto bg-white border rounded-[20px] p-6">
+        <h2 class="font-extrabold text-[18px]">دخول الأدمن</h2>
+        <p class="text-[11px] text-slate-500 mt-1">admin@sonaa.com / Admin@123456 - محفظة: ${WALLET}</p>
+        <div class="mt-4 space-y-3">
+          <input value="${escHtml(state.adminEmail)}" oninput="state.adminEmail=this.value" placeholder="الإيميل" class="w-full h-12 rounded-xl border px-4 text-[13px]">
+          <input type="password" value="${escHtml(state.adminPass)}" oninput="state.adminPass=this.value" placeholder="الباسورد" class="w-full h-12 rounded-xl border px-4 text-[13px]">
+          <button onclick="doLogin()" class="w-full h-12 rounded-xl bg-[#0f172a] text-white font-bold">دخول</button>
+          ${state.error?`<p class="text-[12px] text-red-600 bg-red-50 border rounded-xl p-3">${escHtml(state.error)}</p>`:''}
+        </div>
+      </div>
+    `:`
+      <div class="mt-3 flex p-1 bg-white rounded-[16px] border gap-1 overflow-x-auto">
+        ${[{id:'fannis',label:`الفنيين (${state.fannis.length})`},{id:'pending',label:`بانتظار (${state.fannis.filter(f=>!f.isApproved&&!f.isDisabled&&f.status!=='rejected').length})`},{id:'disabled',label:`معطلين (${state.fannis.filter(f=>f.isDisabled).length})`},{id:'topups',label:`شحن (${state.topups.length})`},{id:'stats',label:'إحصائيات'}].map(t=>`<button onclick="setTab('${t.id}')" class="flex-1 min-w-[80px] h-11 rounded-[12px] text-[11px] font-bold ${state.tab===t.id?'bg-[#0f172a] text-white':'bg-slate-50 text-slate-600'}">${escHtml(t.label)}</button>`).join('')}
+        <button onclick="loadAll()" class="h-11 px-4 rounded-[12px] bg-white border text-[11px] font-bold">🔄 تحديث</button>
+      </div>
 
-// ========== ORDERS - سريع بـ lean ==========
-app.get('/api/orders', async (req, res) => { await connectDB(); const orders = await Order.find().sort({ createdAt: -1 }).limit(200).lean(); res.json({ orders, data: orders }); });
-app.get('/api/client/orders', async (req, res) => { await connectDB(); const orders = await Order.find().sort({ createdAt: -1 }).limit(200).lean(); res.json({ orders, data: orders }); });
-app.get('/api/admin/orders', async (req, res) => { await connectDB(); const orders = await Order.find().sort({ createdAt: -1 }).limit(200).lean(); res.json({ orders, data: orders }); });
-app.get('/api/orders/available', async (req, res) => { await connectDB(); const orders = await Order.find().sort({ createdAt: -1 }).limit(200).lean(); res.json({ orders, data: orders }); });
-app.get('/api/fanni/orders/available', async (req, res) => { await connectDB(); const orders = await Order.find().sort({ createdAt: -1 }).limit(200).lean(); res.json({ orders, data: orders }); });
-app.get('/api/fanni/available-orders', async (req, res) => { await connectDB(); const orders = await Order.find().sort({ createdAt: -1 }).limit(200).lean(); res.json({ orders, data: orders }); });
-app.get('/api/orders/:sn', async (req, res) => {
-  await connectDB();
-  const sn = req.params.sn.toUpperCase();
-  const order = await Order.findOne({ $or: [{ sn }, { _id: req.params.sn }] }).lean();
-  if (!order) return res.status(404).json({ message: 'غير موجود' });
-  res.json({ order });
-});
-app.post('/api/orders', async (req, res) => { const o = await createOrder(req.body); res.json({ sn: o.sn, order: o, data: o }); });
-app.post('/api/client/orders', async (req, res) => { const o = await createOrder(req.body); res.json({ sn: o.sn, order: o, data: o }); });
-app.post('/api/admin/orders', async (req, res) => { const o = await createOrder(req.body); res.json({ sn: o.sn, order: o, data: o }); });
-app.patch('/api/orders/:id/status', async (req, res) => {
-  await connectDB();
-  const order = await Order.findOne({ $or: [{ sn: req.params.id }, { _id: req.params.id }] });
-  if (!order) return res.status(404).json({ error: 'not found' });
-  order.status = req.body.status; await order.save(); res.json({ order });
-});
-app.put('/api/orders/:id', async (req, res) => {
-  await connectDB();
-  const order = await Order.findOne({ $or: [{ sn: req.params.id }, { _id: req.params.id }] });
-  if (!order) return res.status(404).json({ error: 'not found' });
-  if (req.body.status) order.status = req.body.status; await order.save(); res.json({ order });
-});
+      <div class="mt-3 flex gap-2">
+        <input value="${escHtml(state.search)}" oninput="onSearch(this.value)" placeholder="بحث باسم / هاتف" class="flex-1 h-11 rounded-xl border bg-white px-4 text-[12px] font-bold">
+        <select onchange="onFilter(this.value)" class="h-11 rounded-xl border bg-white px-3 text-[11px] font-bold"><option>الكل</option><option>pending</option><option>approved</option><option>rejected</option><option>disabled</option></select>
+      </div>
 
-// ========== FANNIS - سريع ==========
-app.get('/api/fanni', async (req, res) => { await connectDB(); const fannis = await Fanni.find().sort({ createdAt: -1 }).lean(); res.json({ fannis, data: fannis }); });
-app.get('/api/fannis', async (req, res) => { await connectDB(); const fannis = await Fanni.find().sort({ createdAt: -1 }).lean(); res.json({ fannis, data: fannis }); });
-app.get('/api/admin/fannis', async (req, res) => { await connectDB(); const fannis = await Fanni.find().sort({ createdAt: -1 }).lean(); res.json({ fannis, data: fannis }); });
-app.get('/api/technicians', async (req, res) => { await connectDB(); const fannis = await Fanni.find().sort({ createdAt: -1 }).lean(); res.json({ fannis, data: fannis }); });
+      ${state.loading?'<div class="mt-4 bg-white rounded-[16px] border p-8 text-center"><div class="h-8 w-8 rounded-full border-2 border-slate-200 border-t-[#0f172a] animate-spin mx-auto"></div><p class="mt-2 text-[12px]">جاري التحميل...</p></div>':''}
 
-app.post('/api/fanni/register', async (req, res) => {
-  await connectDB();
-  const exists = await Fanni.findOne({ phone: req.body.phone });
-  if (exists) return res.status(400).json({ message: 'الرقم مسجل' });
-  const f = await Fanni.create({ ...req.body, status: 'pending', isApproved: false, isDisabled: false, balance: 0 });
-  res.json({ fanni: f, data: f });
-});
-app.post('/api/fannis/register', (req, res) => { req.url = '/api/fanni/register'; app.handle(req, res); });
-app.post('/api/technician/register', (req, res) => { req.url = '/api/fanni/register'; app.handle(req, res); });
-app.post('/api/technicians/register', (req, res) => { req.url = '/api/fanni/register'; app.handle(req, res); });
-app.post('/api/fanni/signup', (req, res) => { req.url = '/api/fanni/register'; app.handle(req, res); });
+      ${state.tab!=='topups' && state.tab!=='stats'?`
+        <div class="mt-3 space-y-3">
+        ${state.filtered.length===0&&!state.loading?'<div class="bg-white rounded-[16px] border p-8 text-center text-[12px] text-slate-400">لا يوجد فنيين</div>':''}
+        ${state.filtered.map(f=>{
+          const id=f._id||'';
+          return `<div class="bg-white rounded-[18px] border p-4 shadow-sm">
+            <div class="flex justify-between gap-3">
+              <div class="min-w-0 flex-1"><p class="font-extrabold text-[13px]">${escHtml(f.name||'بدون اسم')} <span class="font-mono text-[11px] bg-slate-900 text-white px-2 py-0.5 rounded-full">${escHtml(f.phone||'')}</span></p>
+              <p class="text-[11px] text-slate-600 mt-1">🛠 ${escHtml(f.skill||f.service||'')} - رصيد: <span class="font-black text-emerald-600">${escHtml(String(f.balance||0))}ج</span></p>
+              <p class="text-[10px] text-slate-400 mt-1">ID: ${escHtml(String(id).slice(-6))} - ${f.isDisabled?'⛔ معطل': f.isApproved?'✅ مفعل':'⏳ بانتظار'}</p>
+              
+              <div class="mt-3 bg-amber-50 border border-amber-200 rounded-xl p-3">
+                <p class="text-[11px] font-bold text-amber-800">💰 تسوية الرصيد مباشرة (بدون طلب) - محفظة ${WALLET}</p>
+                <div class="flex gap-1 mt-2">
+                  <input id="bal-${id}" type="number" placeholder="المبلغ" class="flex-1 h-9 rounded-lg border px-3 text-[12px] font-bold">
+                  <button onclick="setBalance('${id}')" class="h-9 px-3 rounded-lg bg-[#0f172a] text-white text-[11px] font-bold">تعيين</button>
+                  <button onclick="addBalance('${id}')" class="h-9 px-3 rounded-lg bg-emerald-600 text-white text-[11px] font-bold">+ إضافة</button>
+                </div>
+                <p class="text-[10px] text-amber-700 mt-1">تعيين = يضع الرصيد = الرقم. إضافة = يزود على الحالي</p>
+              </div>
 
-async function handleFanniLogin(req, res) {
-  await connectDB();
-  const { phone, password, clientPhone } = req.body;
-  const p = (phone || clientPhone || '').replace(/\D/g, '');
-  const all = await Fanni.find().lean();
-  const f = all.find(x => x.phone && x.phone.replace(/\D/g, '') === p);
-  if (!f) return res.status(404).json({ message: 'الحساب غير موجود' });
-  if (f.password && f.password !== password) return res.status(401).json({ message: 'كلمة السر خطأ' });
-  if (f.isDisabled) return res.status(403).json({ message: '⛔ موقوف', status: 'disabled' });
-  if (!f.isApproved && f.status !== 'approved') return res.status(423).json({ message: '⏳ قيد المراجعة', status: 'pending' });
-  const token = Buffer.from(f._id + ':' + Date.now()).toString('base64');
-  res.json({ token, fanni: f, user: f, data: f, accessToken: token });
-}
-app.post('/api/fanni/login', handleFanniLogin);
-app.post('/api/fannis/login', handleFanniLogin);
-app.post('/api/technician/login', handleFanniLogin);
-app.post('/api/fanni/signin', handleFanniLogin);
-app.post('/api/technicians/login', handleFanniLogin);
+              </div>
+              <div class="flex flex-col gap-1.5 shrink-0">
+                ${!f.isApproved&&!f.isDisabled?`<button onclick="approveFanni('${id}')" class="h-9 px-4 rounded-full bg-emerald-600 text-white text-[11px] font-bold">✅ قبول</button>`:''}
+                ${!f.isDisabled&&f.status!=='rejected'?`<button onclick="rejectFanni('${id}')" class="h-8 px-3 rounded-full bg-slate-100 border text-[11px] font-bold">❌ رفض</button>`:''}
+                ${!f.isDisabled?`<button onclick="disableFanni('${id}')" class="h-8 px-3 rounded-full bg-red-50 border border-red-200 text-red-700 text-[11px] font-bold">⛔ تعطيل</button>`:`<button onclick="enableFanni('${id}')" class="h-8 px-3 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-bold">♻ استعادة</button>`}
+              </div>
+            </div>
+          </div>`;
+        }).join('')}
+        </div>
+      `:''}
 
-async function approveFanniById(req, res) {
-  await connectDB();
-  const f = await Fanni.findOne({ $or: [{ _id: req.params.id }, { phone: req.params.id }] });
-  if (!f) return res.status(404).json({ message: 'غير موجود' });
-  f.status = 'approved'; f.isApproved = true; f.isDisabled = false; f.approvedAt = new Date(); await f.save();
-  res.json({ message: 'تمت الموافقة', fanni: f, data: f });
-}
-async function rejectFanniById(req, res) {
-  await connectDB();
-  const f = await Fanni.findOne({ $or: [{ _id: req.params.id }, { phone: req.params.id }] });
-  if (!f) return res.status(404).json({ message: 'غير موجود' });
-  f.status = 'rejected'; f.isApproved = false; f.isDisabled = false; await f.save();
-  res.json({ message: 'تم الرفض', fanni: f });
-}
-async function disableFanniById(req, res) {
-  await connectDB();
-  const f = await Fanni.findOne({ $or: [{ _id: req.params.id }, { phone: req.params.id }] });
-  if (!f) return res.status(404).json({ message: 'غير موجود' });
-  f.isDisabled = true; f.status = 'disabled'; await f.save();
-  res.json({ message: 'تم التعطيل', fanni: f });
-}
-async function enableFanniById(req, res) {
-  await connectDB();
-  const f = await Fanni.findOne({ $or: [{ _id: req.params.id }, { phone: req.params.id }] });
-  if (!f) return res.status(404).json({ message: 'غير موجود' });
-  f.isDisabled = false; f.status = 'approved'; f.isApproved = true; await f.save();
-  res.json({ message: 'تمت الاستعادة', fanni: f });
+      ${state.tab==='topups'?`
+        <div class="mt-3">
+          <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-3"><p class="text-[11px] font-bold text-blue-800">💳 المحفظة الرسمية: ${WALLET} - أي طلب شحن يحول هنا</p></div>
+          <div class="flex gap-2 mb-3"><select onchange="onFilterTopup(this.value)" class="h-10 rounded-xl border bg-white px-3 text-[11px] font-bold"><option>الكل</option><option>pending</option><option>approved</option><option>rejected</option></select></div>
+          <div class="space-y-3">
+            ${state.filteredTopups.length===0?'<div class="bg-white rounded-[16px] border p-8 text-center text-[12px] text-slate-400">لا يوجد طلبات شحن</div>':''}
+            ${state.filteredTopups.map(t=>{
+              const s=t.status||'pending';
+              const badge = s==='approved'? 'bg-emerald-50 border-emerald-200 text-emerald-700' : s==='rejected'? 'bg-red-50 border-red-200 text-red-700' : 'bg-amber-50 border-amber-200 text-amber-800';
+              return `<div class="bg-white rounded-[16px] border p-4"><div class="flex justify-between items-start"><div><p class="font-bold text-[13px]">${escHtml(String(t.amount||''))}ج - ${escHtml(t.fromPhone||t.phone||'')} <span class="text-[10px] px-2 py-0.5 rounded-full border ${badge}">${escHtml(s)}</span></p><p class="text-[11px] text-slate-500 mt-1">محفظة: ${escHtml(t.walletNumber||WALLET)} - ${escHtml(t.createdAt? new Date(t.createdAt).toLocaleString('ar-EG'):'')}</p></div><div class="flex flex-col gap-1">${s==='pending'?`<button onclick="approveTopup('${t._id}')" class="h-9 px-4 rounded-full bg-emerald-600 text-white text-[11px] font-bold">✅ قبول + إضافة رصيد</button><button onclick="rejectTopup('${t._id}')" class="h-8 px-3 rounded-full bg-red-50 border border-red-200 text-red-700 text-[11px] font-bold">❌ رفض</button>`:`<span class="text-[11px] font-bold">${s==='approved'?'✅ تم':'❌ مرفوض'}</span>`}</div></div></div>`;
+            }).join('')}
+          </div>
+        </div>
+      `:''}
+
+      ${state.tab==='stats'?`
+        <div class="mt-3 grid grid-cols-2 gap-3">
+          <div class="bg-white rounded-[16px] border p-4 text-center"><p class="text-[22px] font-black">${state.fannis.length}</p><p class="text-[11px] text-slate-500">إجمالي الفنيين</p></div>
+          <div class="bg-white rounded-[16px] border p-4 text-center"><p class="text-[22px] font-black text-emerald-600">${state.fannis.filter(f=>f.isApproved).length}</p><p class="text-[11px] text-slate-500">مفعلين</p></div>
+          <div class="bg-white rounded-[16px] border p-4 text-center"><p class="text-[22px] font-black">${state.topups.length}</p><p class="text-[11px] text-slate-500">طلبات شحن</p></div>
+          <div class="bg-white rounded-[16px] border p-4 text-center"><p class="text-[22px] font-black text-emerald-600">${state.topups.filter(t=>t.status==='approved').reduce((s,t)=>s+Number(t.amount||0),0)}ج</p><p class="text-[11px] text-slate-500">إجمالي مقبول</p></div>
+        </div>
+        <div class="mt-4 bg-white border rounded-[16px] p-4"><p class="text-[12px] font-bold">محفظة ${WALLET} - MongoDB متصل ✅</p><p class="text-[11px] text-slate-500 mt-1">SN جديد فيه حروف مثل SN-KTP4839-X7Z</p></div>
+      `:''}
+    `}
+  </main>
+  `;
 }
 
-app.post('/api/fannis/:id/approve', approveFanniById); app.put('/api/fannis/:id/approve', approveFanniById);
-app.post('/api/fanni/:id/approve', approveFanniById); app.post('/api/admin/fannis/:id/approve', approveFanniById);
-app.put('/api/admin/fannis/:id/approve', approveFanniById); app.post('/api/fannis/:id/activate', approveFanniById);
-app.post('/api/fannis/:id/reject', rejectFanniById); app.put('/api/fannis/:id/reject', rejectFanniById);
-app.post('/api/admin/fannis/:id/reject', rejectFanniById); app.post('/api/fanni/:id/reject', rejectFanniById);
-app.post('/api/fannis/:id/disable', disableFanniById); app.put('/api/fannis/:id/disable', disableFanniById);
-app.post('/api/admin/fannis/:id/disable', disableFanniById); app.post('/api/fannis/:id/block', disableFanniById);
-app.post('/api/fannis/:id/enable', enableFanniById); app.put('/api/fannis/:id/enable', enableFanniById);
-app.post('/api/fannis/:id/restore', enableFanniById); app.post('/api/admin/fannis/:id/enable', enableFanniById);
-
-app.patch('/api/fannis/:id', async (req, res) => {
-  await connectDB();
-  const f = await Fanni.findOne({ $or: [{ _id: req.params.id }, { phone: req.params.id }] });
-  if (!f) return res.status(404).json({ message: 'غير موجود' });
-  Object.assign(f, req.body);
-  if (req.body.status === 'approved' || req.body.isApproved) { f.isApproved = true; f.status = 'approved'; f.isDisabled = false; }
-  await f.save(); res.json({ fanni: f, data: f });
-});
-
-// ========== تسوية الرصيد مباشرة - للأدمن فقط - جديد ==========
-app.post('/api/admin/fannis/:id/set-balance', async (req, res) => {
-  await connectDB();
-  const f = await Fanni.findOne({ $or: [{ _id: req.params.id }, { phone: req.params.id }] });
-  if (!f) return res.status(404).json({ message: 'الفني غير موجود' });
-  const amount = Number(req.body.amount);
-  if (isNaN(amount)) return res.status(400).json({ message: 'مبلغ غير صحيح' });
-  f.balance = amount;
-  await f.save();
-  console.log(`Balance SET: ${f.phone} => ${amount} via Admin`);
-  res.json({ message: `تم تعديل رصيد ${f.name || f.phone} إلى ${amount}ج`, fanni: f });
-});
-
-app.post('/api/admin/fannis/:id/add-balance', async (req, res) => {
-  await connectDB();
-  const f = await Fanni.findOne({ $or: [{ _id: req.params.id }, { phone: req.params.id }] });
-  if (!f) return res.status(404).json({ message: 'الفني غير موجود' });
-  const amount = Number(req.body.amount);
-  f.balance = (f.balance || 0) + amount;
-  await f.save();
-  console.log(`Balance ADD: ${f.phone} +${amount} = ${f.balance}`);
-  res.json({ message: `تم إضافة ${amount}ج - الرصيد الحالي ${f.balance}ج`, fanni: f });
-});
-
-// ========== WALLET - رقم 01152822263 ==========
-app.post('/api/fanni/wallet/topup', async (req, res) => {
-  await connectDB();
-  const t = await Topup.create({ ...req.body, status: 'pending', walletNumber: '01152822263' });
-  res.json({ message: 'تم إرسال الطلب - حول على 01152822263', data: t, topup: t });
-});
-app.post('/api/fanni/wallet/recharge', (req, res) => { req.url = '/api/fanni/wallet/topup'; app.handle(req, res); });
-app.post('/api/fanni/topup', (req, res) => { req.url = '/api/fanni/wallet/topup'; app.handle(req, res); });
-app.post('/api/topup-requests', (req, res) => { req.url = '/api/fanni/wallet/topup'; app.handle(req, res); });
-
-app.get('/api/fanni/wallet/history', async (req, res) => { await connectDB(); const history = await Topup.find().sort({ createdAt: -1 }).limit(100).lean(); res.json({ history, data: history }); });
-app.get('/api/topup-requests', async (req, res) => { await connectDB(); const requests = await Topup.find().sort({ createdAt: -1 }).limit(100).lean(); res.json({ requests, data: requests }); });
-app.get('/api/admin/topup-requests', async (req, res) => { await connectDB(); const requests = await Topup.find().sort({ createdAt: -1 }).limit(100).lean(); res.json({ requests, data: requests }); });
-app.get('/api/wallet/topup-requests', async (req, res) => { await connectDB(); const requests = await Topup.find().sort({ createdAt: -1 }).limit(100).lean(); res.json({ requests, data: requests }); });
-
-async function approveTopup(req, res) {
-  await connectDB();
-  const t = await Topup.findById(req.params.id);
-  if (!t) return res.status(404).json({ message: 'طلب غير موجود' });
-  if (t.status === 'approved') return res.json({ message: 'تم قبوله من قبل', data: t });
-  t.status = 'approved'; t.approvedAt = new Date(); await t.save();
-  // دور على الفني بكل الطرق الممكنة
-  let f = await Fanni.findOne({ phone: t.fromPhone }) || await Fanni.findOne({ phone: t.phone }) || await Fanni.findOne({ _id: t.fromPhone });
-  if (!f) {
-    const all = await Fanni.find().lean();
-    const clean = (t.fromPhone || t.phone || '').replace(/\D/g, '');
-    f = all.find(x => x.phone && x.phone.replace(/\D/g, '') === clean);
-    if (f) f = await Fanni.findById(f._id);
-  }
-  if (f) {
-    f.balance = (f.balance || 0) + Number(t.amount || 0);
-    await f.save();
-    console.log(`Topup APPROVED: ${f.phone} +${t.amount} => ${f.balance}`);
-    return res.json({ message: `تم قبول الشحن وإضافة ${t.amount}ج لرصيد ${f.name || f.phone} - رصيده الآن ${f.balance}ج`, data: t, fanni: f });
-  } else {
-    console.log(`Topup APPROVED but fanni not found: ${t.fromPhone}`);
-    return res.json({ message: `تم قبول الشحن لكن لم يتم العثور على الفني ${t.fromPhone||t.phone} - الرصيد لم يضاف`, data: t });
-  }
+function setTab(t){ state.tab=t; applyFilter(); render(); if(t==='topups') applyTopupFilter(); }
+function onSearch(v){ state.search=v; applyFilter(); if(state.tab==='topups') applyTopupFilter(); }
+function onFilter(v){ state.filter=v; applyFilter(); }
+function onFilterTopup(v){ state.filterTopup=v; applyTopupFilter(); }
+function applyFilter(){
+  let list=[...state.fannis];
+  if(state.tab==='pending') list=list.filter(f=> !f.isApproved && !f.isDisabled && f.status!=='rejected');
+  if(state.tab==='disabled') list=list.filter(f=> f.isDisabled);
+  if(state.filter!=='الكل') list=list.filter(f=> { const st=f.isDisabled?'disabled': f.isApproved?'approved': f.status||'pending'; return st.includes(state.filter.toLowerCase()); });
+  if(state.search){ const s=state.search.toLowerCase(); list=list.filter(f=> (f.name||'').toLowerCase().includes(s)|| (f.phone||'').toLowerCase().includes(s)); }
+  state.filtered=list; if(state.tab!=='topups' && state.tab!=='stats') render();
 }
-async function rejectTopup(req, res) {
-  await connectDB();
-  const t = await Topup.findById(req.params.id);
-  if (!t) return res.status(404).json({ message: 'غير موجود' });
-  t.status = 'rejected'; t.rejectedAt = new Date(); await t.save();
-  res.json({ message: 'تم رفض الشحن', data: t });
+function applyTopupFilter(){
+  let list=[...state.topups];
+  if(state.filterTopup!=='الكل') list=list.filter(t=> (t.status||'pending').toLowerCase()===state.filterTopup.toLowerCase());
+  if(state.search){ const s=state.search.toLowerCase(); list=list.filter(t=> (t.fromPhone||'').includes(s)|| String(t.amount||'').includes(s)); }
+  state.filteredTopups=list; render();
 }
-app.post('/api/topup-requests/:id/approve', approveTopup);
-app.put('/api/topup-requests/:id/approve', approveTopup);
-app.post('/api/admin/topup-requests/:id/approve', approveTopup);
-app.put('/api/topup-requests/:id/status', async (req, res) => { if (req.body.status === 'approved') return approveTopup(req, res); if (req.body.status === 'rejected') return rejectTopup(req, res); res.json({}); });
-app.post('/api/topup-requests/:id/reject', rejectTopup);
-app.put('/api/topup-requests/:id/reject', rejectTopup);
-app.post('/api/admin/topup-requests/:id/reject', rejectTopup);
 
-app.post('/api/fanni/orders/:sn/offer', async (req, res) => {
-  await connectDB();
-  const sn = req.params.sn.toUpperCase();
-  const order = await Order.findOne({ $or: [{ sn }, { _id: sn }] });
-  if (!order) return res.status(404).json({ message: 'الطلب غير موجود' });
-  const offer = { _id: Date.now() + '', price: req.body.price, message: req.body.message, fanniName: req.body.fanniName || 'فني', createdAt: new Date() };
-  order.offers = order.offers || []; order.offers.push(offer); await order.save();
-  res.json({ message: 'تم إرسال العرض', offer, data: offer });
-});
-app.get('/api/fanni/offers', async (req, res) => { await connectDB(); const orders = await Order.find().lean(); const all = orders.flatMap(o => (o.offers || []).map(of => ({ ...of, orderSn: o.sn }))); res.json({ offers: all, data: all }); });
-
-app.post('/api/complaints', (req, res) => { res.json({ ok: true }); });
-
-function sendHtml(res, name) {
-  const files = [path.join(fp, name), path.join(__dirname, name), path.join(__dirname, '..', name)];
-  for (let p of files) { if (fs.existsSync(p)) return res.sendFile(p); }
-  res.send(`ملف ${name} مش موجود`);
+async function doLogin(){
+  state.loading=true; state.error=''; render();
+  try{
+    let data=await tryApi(['/api/admin/login','/api/admins/login'],{method:'POST', body:JSON.stringify({email:state.adminEmail, phone:state.adminEmail, password:state.adminPass})});
+    let token=data.token||data.accessToken||data.data?.token;
+    if(!token) throw new Error('لا يوجد توكن');
+    setToken(token); showToast('دخول ناجح'); loadAll();
+  }catch(e){ state.loading=false; state.error=e.message; render(); }
 }
-app.get('/', (req, res) => sendHtml(res, 'client.html'));
-app.get('/client', (req, res) => sendHtml(res, 'client.html'));
-app.get('/fanni', (req, res) => sendHtml(res, 'fanni.html'));
-app.get('/admin', (req, res) => sendHtml(res, 'admin.html'));
-
-module.exports = app;
-if (require.main === module) {
-  const PORT = process.env.PORT || 3000;
-  app.listen(PORT, () => console.log('Server running on', PORT));
+async function loadAll(){
+  state.loading=true; render();
+  try{
+    // تحميل متوازي سريع
+    let [fData, tData] = await Promise.all([
+      tryApi(['/api/fannis','/api/admin/fannis'],{method:'GET'}).catch(()=>({fannis:[]})),
+      tryApi(['/api/topup-requests','/api/admin/topup-requests'],{method:'GET'}).catch(()=>({requests:[]}))
+    ]);
+    state.fannis=fData.fannis||fData.data||[]; if(!Array.isArray(state.fannis)) state.fannis=[state.fannis];
+    state.topups=tData.requests||tData.data||[]; if(!Array.isArray(state.topups)) state.topups=[state.topups];
+    state.loading=false; applyFilter(); applyTopupFilter();
+  }catch(e){ state.loading=false; state.error=e.message; render(); showToast(e.message,'error'); }
 }
+async function approveFanni(id){ try{ await tryApi([`/api/fannis/${id}/approve`],{method:'POST', body:JSON.stringify({status:'approved'})}); showToast('تم القبول ✅'); loadAll(); }catch(e){ showToast(e.message,'error'); } }
+async function rejectFanni(id){ if(!confirm('رفض؟')) return; try{ await tryApi([`/api/fannis/${id}/reject`],{method:'POST', body:JSON.stringify({})}); showToast('تم الرفض'); loadAll(); }catch(e){ showToast(e.message,'error'); } }
+async function disableFanni(id){ if(!confirm('تعطيل؟')) return; try{ await tryApi([`/api/fannis/${id}/disable`],{method:'POST', body:JSON.stringify({})}); showToast('تم التعطيل ⛔'); loadAll(); }catch(e){ showToast(e.message,'error'); } }
+async function enableFanni(id){ try{ await tryApi([`/api/fannis/${id}/enable`],{method:'POST', body:JSON.stringify({})}); showToast('تمت الاستعادة ♻'); loadAll(); }catch(e){ showToast(e.message,'error'); } }
+
+async function setBalance(id){
+  const input=document.getElementById('bal-'+id);
+  const amount=input.value;
+  if(!amount) return showToast('اكتب المبلغ','error');
+  if(!confirm(`تعيين رصيد الفني إلى ${amount}ج؟`)) return;
+  try{
+    let res=await tryApi([`/api/admin/fannis/${id}/set-balance`],{method:'POST', body:JSON.stringify({amount:Number(amount)})});
+    showToast(res.message||`تم تعيين الرصيد إلى ${amount}ج`,'success'); loadAll();
+  }catch(e){ showToast(e.message,'error'); }
+}
+async function addBalance(id){
+  const input=document.getElementById('bal-'+id);
+  const amount=input.value;
+  if(!amount) return showToast('اكتب المبلغ','error');
+  if(!confirm(`إضافة ${amount}ج لرصيد الفني؟`)) return;
+  try{
+    let res=await tryApi([`/api/admin/fannis/${id}/add-balance`],{method:'POST', body:JSON.stringify({amount:Number(amount)})});
+    showToast(res.message,'success'); loadAll();
+  }catch(e){ showToast(e.message,'error'); }
+}
+
+async function approveTopup(id){ try{ let res=await tryApi([`/api/topup-requests/${id}/approve`,`/api/admin/topup-requests/${id}/approve`],{method:'POST', body:JSON.stringify({status:'approved'})}); showToast(res.message||'تم قبول الشحن ✅','success'); loadAll(); }catch(e){ showToast(e.message,'error'); } }
+async function rejectTopup(id){ if(!confirm('رفض؟')) return; try{ await tryApi([`/api/topup-requests/${id}/reject`],{method:'POST', body:JSON.stringify({})}); showToast('تم الرفض ❌'); loadAll(); }catch(e){ showToast(e.message,'error'); } }
+function goFanni(){ window.location.href='/fanni'; }
+function logout(){ clearToken(); state.fannis=[]; render(); }
+
+render();
+if(getToken()) loadAll();
+</script>
+</body>
+</html>
