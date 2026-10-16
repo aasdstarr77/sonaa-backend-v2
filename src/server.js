@@ -20,6 +20,7 @@ const { auth } = require('./middleware/auth');
 const errorHandler = require('./middleware/error');
 
 const app = express();
+
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
 
@@ -55,19 +56,8 @@ app.use(express.static(frontendPath, {
   dotfiles: 'ignore'
 }));
 
-// فحص صحة الخدمة دون اشتراط اتصال قاعدة البيانات
+// فحص صحة الخدمة فقط، دون اشتراط اتصال قاعدة البيانات
 app.get('/health', (req, res) => {
-  res.json({
-    ok: true,
-    service: 'sonaa-backend-v2',
-    database: mongoose.connection.readyState === 1
-      ? 'connected'
-      : 'disconnected',
-    time: new Date().toISOString()
-  });
-});
-
-app.get('/api/health', (req, res) => {
   res.json({
     ok: true,
     service: 'sonaa-backend-v2',
@@ -96,12 +86,30 @@ async function ensureDatabase(req, res, next) {
   } catch (err) {
     console.error('MongoDB connection failed:', err.message);
 
-    res.status(503).json({
-      message: 'قاعدة البيانات غير متاحة حاليًا',
-      code: 'DATABASE_UNAVAILABLE'
-    });
+    if (!res.headersSent) {
+      res.status(503).json({
+        ok: false,
+        service: 'sonaa-backend-v2',
+        database: 'disconnected',
+        message: 'قاعدة البيانات غير متاحة حاليًا',
+        code: 'DATABASE_UNAVAILABLE',
+        time: new Date().toISOString()
+      });
+    }
   }
 }
+
+// فحص API مع التأكد من الاتصال الفعلي بقاعدة البيانات
+app.get('/api/health', ensureDatabase, (req, res) => {
+  res.json({
+    ok: true,
+    service: 'sonaa-backend-v2',
+    database: mongoose.connection.readyState === 1
+      ? 'connected'
+      : 'disconnected',
+    time: new Date().toISOString()
+  });
+});
 
 // الحد من محاولات تسجيل الدخول
 const loginLimiter = rateLimit({
@@ -152,7 +160,6 @@ app.use('/api/technician', fanniRouter);
 app.use('/api/technicians', fanniRouter);
 
 // مسار عروض الفني المتوافق مع الواجهة القديمة
-// لا نعيد تعريف منطق إرسال العرض هنا؛ نعتمد على orderRouter.
 app.use('/api/fanni/orders', orderRouter);
 
 // لوحة الإدارة وتسجيل دخول الأدمن
