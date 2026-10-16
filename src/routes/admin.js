@@ -117,8 +117,6 @@ function sendBadId(res) {
 function getLoginPhone(body) {
   const raw = String(body.phone || body.email || '').trim();
 
-  // يسمح بتسجيل الدخول بالبريد فقط إذا كانت بيانات الربط
-  // مضبوطة في متغيرات البيئة على الخادم.
   if (raw.includes('@')) {
     const configuredEmail = String(process.env.ADMIN_EMAIL || '')
       .trim()
@@ -141,7 +139,6 @@ function getLoginPhone(body) {
 
 /*
  * POST /api/admin/login
- * تسجيل دخول حساب الإدارة الموجود في مجموعة Fanni.
  */
 router.post(
   '/login',
@@ -206,7 +203,6 @@ router.post(
 
 /*
  * GET /api/admin/fannis
- * قائمة الفنيين بصيغة متوافقة مع لوحة الإدارة.
  */
 router.get('/fannis', auth('admin'), async (req, res, next) => {
   try {
@@ -377,7 +373,6 @@ router.post(
 
 /*
  * إعادة تفعيل حساب معلق.
- * يعيد الفني إلى حالته السابقة بحسب آخر قرار إداري محفوظ.
  */
 router.post(
   '/fannis/:id/enable',
@@ -432,7 +427,6 @@ router.post(
 
 /*
  * تعيين رصيد المحفظة.
- * العملية مسجلة في سجل قرارات الفني.
  */
 router.post(
   '/fannis/:id/set-balance',
@@ -487,7 +481,11 @@ router.post(
   '/fannis/:id/add-balance',
   auth('admin'),
   validate(Joi.object({
-    amount: Joi.number().strict().finite().positive().max(100000000).required(),
+    amount: Joi.number()
+      .strict()
+      .positive()
+      .max(100000000)
+      .required(),
     reason: reasonSchema.optional()
   })),
   async (req, res, next) => {
@@ -529,7 +527,6 @@ router.post(
 
 /*
  * GET /api/admin/topup-requests
- * عرض طلبات شحن المحفظة.
  */
 router.get(
   '/topup-requests',
@@ -552,8 +549,7 @@ router.get(
 
 /*
  * قبول طلب الشحن.
- * يستخدم معاملة MongoDB حتى لا يتم اعتماد الطلب دون إضافة الرصيد،
- * أو إضافة الرصيد أكثر من مرة عند تكرار الطلب.
+ * يستخدم معاملة MongoDB لمنع تكرار إضافة الرصيد.
  */
 router.post(
   '/topup-requests/:id/approve',
@@ -654,7 +650,7 @@ router.post(
 );
 
 /*
- * رفض طلب الشحن دون إضافة أي رصيد.
+ * رفض طلب الشحن دون إضافة رصيد.
  */
 router.post(
   '/topup-requests/:id/reject',
