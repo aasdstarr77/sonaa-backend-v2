@@ -34,7 +34,6 @@ const idSchema = Joi.string().custom((value, helpers) => {
 
 const amountSchema = Joi.number()
   .strict()
-  .finite()
   .min(0)
   .max(100000000)
   .required();
