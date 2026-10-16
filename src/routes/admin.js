@@ -6,6 +6,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const Joi = require('joi');
 const mongoose = require('mongoose');
+const crypto = require('crypto');
 
 const Fanni = require('../models/Fanni');
 const TopupRequest = require('../models/TopupRequest');
@@ -136,6 +137,135 @@ function getLoginPhone(body) {
 
   return normalizePhone(raw);
 }
+
+/*
+ * POST /api/admin/bootstrap
+ *
+ * إنشاء أول حساب إدارة فقط.
+ * يتطلب ADMIN_SETUP_SECRET وبيانات الأدمن في إعدادات الخادم.
+ * لا يسمح بإنشاء حساب إدارة جديد إذا كان حساب إدارة موجودًا.
+ */
+router.post('/bootstrap', async (req, res, next) => {
+  try {
+    const configuredSecret = String(
+      process.env.ADMIN_SETUP_SECRET || ''
+    );
+
+    const suppliedSecret = typeof req.body?.secret === 'string'
+      ? req.body.secret
+      : '';
+
+    if (
+      configuredSecret.length < 32 ||
+      suppliedSecret.length < 32
+    ) {
+      return res.status(503).json({
+        message: 'إعداد إنشاء حساب الإدارة غير مكتمل'
+      });
+    }
+
+    const expected = Buffer.from(configuredSecret, 'utf8');
+    const supplied = Buffer.from(suppliedSecret, 'utf8');
+
+    if (
+      expected.length !== supplied.length ||
+      !crypto.timingSafeEqual(expected, supplied)
+    ) {
+      return res.status(403).json({
+        message: 'المفتاح السري غير صحيح'
+      });
+    }
+
+    const adminCount = await Fanni.countDocuments({
+      role: 'admin'
+    });
+
+    if (adminCount > 0) {
+      return res.status(409).json({
+        message: 'يوجد حساب إدارة بالفعل. تم إيقاف إنشاء الحساب الأول.'
+      });
+    }
+
+    const email = String(process.env.ADMIN_EMAIL || '')
+      .trim()
+      .toLowerCase();
+
+    const configuredPhone = String(process.env.ADMIN_PHONE || '').trim();
+    const password = String(process.env.ADMIN_PASSWORD || '');
+    const name = String(process.env.ADMIN_NAME || 'إدارة صناع').trim();
+
+    if (
+      !email ||
+      !Joi.string().email().validate(email).value ||
+      !configuredPhone ||
+      password.length < 12 ||
+      name.length < 2 ||
+      name.length > 50
+    ) {
+      return res.status(503).json({
+        message: 'راجع إعدادات ADMIN_EMAIL وADMIN_PHONE وADMIN_PASSWORD وADMIN_NAME على الخادم'
+      });
+    }
+
+    const phone = normalizePhone(configuredPhone);
+
+    if (!phone || !/^01[0-9]{9}$/.test(phone)) {
+      return res.status(503).json({
+        message: 'رقم الإدارة الموجود في إعدادات الخادم غير صالح'
+      });
+    }
+
+    const existingPhone = await Fanni.findOne({ phone }).select('_id');
+
+    if (existingPhone) {
+      return res.status(409).json({
+        message: 'رقم الإدارة مستخدم بالفعل في حساب موجود. لم يتم تغيير أي حساب.'
+      });
+    }
+
+    if (!process.env.JWT_SECRET) {
+      return res.status(503).json({
+        message: 'إعداد JWT_SECRET غير موجود على الخادم'
+      });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    const admin = await Fanni.create({
+      name,
+      phone,
+      passwordHash,
+      specialties: ['إدارة'],
+      areas: ['الإدارة'],
+      status: 'معتمد',
+      role: 'admin',
+      decisions: [{
+        action: 'تسجيل',
+        reason: 'إنشاء أول حساب إدارة',
+        date: new Date(),
+        by: 'النظام'
+      }]
+    });
+
+    return res.status(201).json({
+      message: 'تم إنشاء أول حساب إدارة بنجاح. احتفظ ببيانات الدخول في مكان آمن.',
+      user: {
+        id: String(admin._id),
+        name: admin.name,
+        phone: admin.phone,
+        role: admin.role
+      }
+    });
+  } catch (err) {
+    if (err && err.code === 11000) {
+      return res.status(409).json({
+        message: 'الحساب أو رقم الهاتف موجود بالفعل. لم يتم إنشاء حساب مكرر.'
+      });
+    }
+
+    next(err);
+  }
+});
 
 /*
  * POST /api/admin/login
