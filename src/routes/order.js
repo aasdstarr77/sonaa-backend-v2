@@ -1,3 +1,4 @@
+
 'use strict';
 
 const express = require('express');
@@ -18,10 +19,144 @@ const ACTIVE_STATUSES = ['تم النشر', 'وصلتك عروض'];
 const ORDER_EXPIRY_HOURS = 48;
 const COMMISSION_RATE = 10;
 
-const EGYPT_PHONE_PATTERN =
-  /(?:\+?20|0020)?[\s().-]*0?1[0125](?:[\s().-]*[0-9٠-٩]){8}/g;
+/*
+ * قائمة المناطق المسموح بها.
+ * يجب أن تتطابق هذه الأسماء مع خيارات المنطقة في واجهة العميل.
+ */
+const AREA_OPTIONS = [
+  // القاهرة
+  'وسط البلد',
+  'جاردن سيتي',
+  'الزمالك',
+  'قصر النيل',
+  'عابدين',
+  'باب اللوق',
+  'السيدة زينب',
+  'المنيرة',
+  'الفجالة',
+  'رمسيس',
+  'العباسية',
+  'الظاهر',
+  'غمرة',
+  'شبرا',
+  'روض الفرج',
+  'الساحل',
+  'الشرابية',
+  'حدائق القبة',
+  'الزيتون',
+  'الأميرية',
+  'المطرية',
+  'عين شمس',
+  'عين شمس الشرقية',
+  'عين شمس الغربية',
+  'المرج',
+  'عزبة النخل',
+  'مدينة نصر',
+  'الحي الأول بمدينة نصر',
+  'الحي السادس بمدينة نصر',
+  'الحي السابع بمدينة نصر',
+  'الحي الثامن بمدينة نصر',
+  'الحي العاشر بمدينة نصر',
+  'زهراء مدينة نصر',
+  'مصر الجديدة',
+  'الكوربة',
+  'روكسي',
+  'أرض الجولف',
+  'النزهة',
+  'جسر السويس',
+  'ألف مسكن',
+  'الحرفيين',
+  'السلام',
+  'النهضة',
+  'المقطم',
+  'الهضبة الوسطى',
+  'المعادي',
+  'زهراء المعادي',
+  'حدائق المعادي',
+  'دار السلام',
+  'البساتين',
+  'طرة',
+  'حلوان',
+  'المعصرة',
+  '15 مايو',
+  'التجمع الأول',
+  'التجمع الثالث',
+  'التجمع الخامس',
+  'النرجس',
+  'اللوتس',
+  'بيت الوطن',
+  'الرحاب',
+  'مدينتي',
+  'الشروق',
+  'بدر',
+  'العاصمة الإدارية الجديدة',
+
+  // الجيزة
+  'الدقي',
+  'المهندسين',
+  'العجوزة',
+  'بولاق الدكرور',
+  'فيصل',
+  'الهرم',
+  'حدائق الأهرام',
+  'الطالبية',
+  'العمرانية',
+  'الجيزة',
+  'إمبابة',
+  'الوراق',
+  'المنيرة الغربية',
+  'أرض اللواء',
+  'بين السرايات',
+  'جامعة الدول العربية',
+  'كفر طهرمس',
+  'صفط اللبن',
+  'ترسا',
+  'المريوطية',
+  'اللبيني',
+  'المنصورية',
+  'كرداسة',
+  'أوسيم',
+  'أبو رواش',
+
+  // أكتوبر وزايد
+  'مدينة 6 أكتوبر',
+  'الحي الأول بأكتوبر',
+  'الحي الثاني بأكتوبر',
+  'الحي الثالث بأكتوبر',
+  'الحي الرابع بأكتوبر',
+  'الحي الخامس بأكتوبر',
+  'الحي السادس بأكتوبر',
+  'الحي المتميز بأكتوبر',
+  'الحصري',
+  'غرب سوميد',
+  'جنوب الأحياء بأكتوبر',
+  'حدائق أكتوبر',
+  'أكتوبر الجديدة',
+  'مدينة الشيخ زايد',
+
+  // مناطق إضافية بالقاهرة الكبرى
+  'القاهرة الجديدة',
+  'القطامية',
+  'التجمعات السكنية بالقاهرة الجديدة',
+  'العبور',
+  'الخصوص',
+  'شبرا الخيمة',
+  'بهتيم',
+  'مسطرد',
+  'القناطر الخيرية'
+];
 
 const ARABIC_DIGITS = '٠١٢٣٤٥٦٧٨٩';
+
+/*
+ * يسمح هذا النمط بالتقاط أرقام المحمول المصرية حتى لو فُصلت
+ * أرقامها بمسافات أو علامات أو حروف قصيرة.
+ */
+const EGYPT_PHONE_PATTERN =
+  /(?:\+?20|0020)?(?:[^\d]{0,5})0?(?:[^\d]{0,5})1(?:[^\d]{0,5})[0125](?:[^\d]{0,5}[0-9]){8}/gi;
+
+const EGYPT_PHONE_DIGITS_PATTERN =
+  /(?:0020|20)?0?1[0125]\d{8}/;
 
 function toWesternDigits(value) {
   return String(value).replace(/[٠-٩]/g, digit =>
@@ -29,13 +164,28 @@ function toWesternDigits(value) {
   );
 }
 
+/*
+ * حماية إضافية: إذا ظل رقم محمول ظاهرًا بعد محاولة الإخفاء،
+ * لا نعيد النص الأصلي الذي قد يحتوي على رقم العميل.
+ */
 function sanitizeText(value) {
   if (typeof value !== 'string') return value;
 
-  return toWesternDigits(value).replace(
+  const normalized = toWesternDigits(value);
+
+  const sanitized = normalized.replace(
     EGYPT_PHONE_PATTERN,
     '[رقم تواصل مخفي]'
   );
+
+  const compactDigits = toWesternDigits(sanitized)
+    .replace(/\D/g, '');
+
+  if (EGYPT_PHONE_DIGITS_PATTERN.test(compactDigits)) {
+    return '[تم إخفاء التفاصيل لاحتوائها على رقم تواصل]';
+  }
+
+  return sanitized;
 }
 
 function sanitizeOffer(offer) {
@@ -56,13 +206,14 @@ function sanitizeOffer(offer) {
 }
 
 /*
- * بيانات الاتصال لا تظهر في الاستجابة العامة.
- * رقم الفني يظهر لصاحب الطلب بعد قبول العرض فقط.
+ * تجهيز استجابة آمنة للطلب.
+ * لا تظهر بيانات العميل الحساسة للفني قبل قبول عرضه.
  */
 function publicOrder(order, options = {}) {
   const {
     includeAddress = true,
-    includeAssignedFanniPhone = false
+    includeAssignedFanniPhone = false,
+    includeClientName = true
   } = options;
 
   if (!order) return null;
@@ -75,6 +226,10 @@ function publicOrder(order, options = {}) {
 
   if (!includeAddress) {
     delete data.address;
+  }
+
+  if (!includeClientName) {
+    delete data.clientName;
   }
 
   delete data.clientPhone;
@@ -126,7 +281,10 @@ function publicOrder(order, options = {}) {
 
 const createSchema = Joi.object({
   service: Joi.string().trim().min(2).max(100).required(),
-  area: Joi.string().trim().min(2).max(250).required(),
+  area: Joi.string()
+    .trim()
+    .valid(...AREA_OPTIONS)
+    .required(),
   address: Joi.string().trim().min(2).max(250).allow('').optional(),
   phone: Joi.string().trim().required(),
   clientPhone: Joi.string().trim(),
@@ -211,9 +369,9 @@ router.post('/', async (req, res, next) => {
     const area = String(value.area || '').trim();
     const address = String(value.address || '').trim();
 
-    if (area.length < 2) {
+    if (!AREA_OPTIONS.includes(area)) {
       return res.status(400).json({
-        message: 'المنطقة أو الحي مطلوب'
+        message: 'اختار المنطقة من القائمة المتاحة'
       });
     }
 
@@ -229,6 +387,14 @@ router.post('/', async (req, res, next) => {
       });
     }
 
+    const safeDescription = sanitizeText(
+      String(value.description || '').trim()
+    );
+
+    const safeClientName = sanitizeText(
+      String(value.clientName || 'عميل').trim()
+    );
+
     let order = null;
 
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -238,10 +404,10 @@ router.post('/', async (req, res, next) => {
           service: value.service,
           area,
           address,
-          clientName: value.clientName || 'عميل',
+          clientName: safeClientName || 'عميل',
           clientPhone,
           budget: value.budget || '',
-          description: value.description,
+          description: safeDescription,
           status: 'قيد المراجعة'
         });
 
@@ -358,7 +524,7 @@ router.post(
 
 /*
  * الطلبات المتاحة للفنيين المعتمدين.
- * لا يظهر العنوان التفصيلي أو رقم العميل هنا.
+ * لا يظهر العنوان التفصيلي أو رقم العميل أو اسم العميل هنا.
  */
 router.get('/available', auth(), async (req, res, next) => {
   try {
@@ -372,12 +538,13 @@ router.get('/available', auth(), async (req, res, next) => {
       status: { $in: ACTIVE_STATUSES },
       expiresAt: { $gt: new Date() }
     })
-      .select('-clientPhone -phone -address')
+      .select('-clientPhone -phone -address -clientName')
       .sort({ createdAt: -1 })
       .lean();
 
     const safeOrders = orders.map(order => publicOrder(order, {
-      includeAddress: false
+      includeAddress: false,
+      includeClientName: false
     }));
 
     return res.json({
@@ -433,11 +600,11 @@ router.get('/my-offers', auth(), async (req, res, next) => {
          */
         if (isAcceptedByThisFanni) {
           safeOffer.client = {
-            name: order.clientName || '',
+            name: sanitizeText(order.clientName || ''),
             phone: order.clientPhone || '',
             area: order.area || '',
             address: order.address || '',
-            description: order.description || '',
+            description: sanitizeText(order.description || ''),
             budget: order.budget || '',
             acceptedOfferPrice: order.acceptedOfferPrice,
             commissionAmount: order.commissionAmount,
@@ -580,7 +747,7 @@ router.post('/:sn/offer', auth(), async (req, res, next) => {
       fanniPhone: req.user.phone,
       price: String(price),
       priceNum: price,
-      message: result.value.message
+      message: sanitizeText(result.value.message)
     });
 
     order.status = 'وصلتك عروض';
@@ -600,6 +767,10 @@ router.post('/:sn/offer', auth(), async (req, res, next) => {
         delete safeOffer.fanniPhone;
         delete safeOffer.phone;
 
+        if (typeof safeOffer.message === 'string') {
+          safeOffer.message = sanitizeText(safeOffer.message);
+        }
+
         return safeOffer;
       })
     });
@@ -611,6 +782,7 @@ router.post('/:sn/offer', auth(), async (req, res, next) => {
 /*
  * قبول عرض وخصم عمولة المنصة.
  * الخصم وتحديث الطلب وتسجيل الحركة المالية داخل معاملة MongoDB واحدة.
+ * تم الحفاظ على منطق الخصم الحالي دون تغيير.
  */
 router.post('/:sn/accept', async (req, res, next) => {
   let session;
@@ -906,9 +1078,9 @@ router.get('/:sn/assigned-details', auth(), async (req, res, next) => {
         service: order.service,
         area: order.area,
         address: order.address,
-        clientName: order.clientName,
+        clientName: sanitizeText(order.clientName || ''),
         clientPhone: order.clientPhone,
-        description: order.description,
+        description: sanitizeText(order.description || ''),
         budget: order.budget || '',
         status: order.status,
         acceptedOfferPrice: order.acceptedOfferPrice,
