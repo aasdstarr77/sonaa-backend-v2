@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<!DOCTYPE html><html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -38,9 +37,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
 </head>
 <body class="min-h-screen antialiased">
 <div id="app"></div>
-<div id="toast" class="fixed bottom-[88px] left-3 right-3 z-[200] pointer-events-none"></div>
-
-<script>
+<div id="toast" class="fixed bottom-[88px] left-3 right-3 z-[200] pointer-events-none"></div><script>
 'use strict';
 
 const BASE_URL='https://sonaa-backend-v2.vercel.app';
@@ -161,6 +158,42 @@ function toast(message,type='success'){
  el.innerHTML=`<div class="pointer-events-auto mx-auto max-w-[640px] rounded-[14px] ${bg} text-white text-[13px] font-bold px-4 py-3 shadow-2xl flex justify-between gap-3"><span class="leading-6">${esc(message)}</span><button onclick="this.parentElement.remove()" class="shrink-0 h-7 px-3 rounded-full bg-white/20">إغلاق</button></div>`;
  setTimeout(()=>{if(el.firstElementChild)el.innerHTML=''},4000);
 }
+
+async function copyWalletNumber(){
+ const walletNumber='01152822263';
+
+ try{
+  if(navigator.clipboard&&window.isSecureContext){
+   await navigator.clipboard.writeText(walletNumber);
+  }else{
+   const input=document.createElement('textarea');
+   input.value=walletNumber;
+   input.readOnly=true;
+   input.style.position='fixed';
+   input.style.left='-9999px';
+   input.style.top='0';
+   input.setAttribute('aria-hidden','true');
+   document.body.appendChild(input);
+   input.focus();
+   input.select();
+   input.setSelectionRange(0,input.value.length);
+
+   let copied=false;
+   try{
+    copied=document.execCommand('copy');
+   }finally{
+    input.remove();
+   }
+
+   if(!copied)throw new Error('تعذر نسخ الرقم تلقائيًا');
+  }
+
+  toast('تم نسخ رقم المحفظة كاملًا: '+walletNumber);
+ }catch(error){
+  toast('تعذر النسخ تلقائيًا. اضغط مطولًا على الرقم لنسخه.','error');
+ }
+}
+
 function parseAreas(value){
  return [...new Set(String(value||'').split(/[,،;\n\r]+/).map(x=>clean(x,60)).filter(x=>x.length>=2))].slice(0,30);
 }
@@ -383,10 +416,10 @@ function render(){
      <div class="font-extrabold text-[12px] mb-3">التخصصات *</div>
      ${CATEGORIES.map(cat=>`<div class="mb-4"><div class="text-[11px] font-extrabold text-slate-600 mb-2">${cat.emoji} ${esc(cat.label)}</div><div class="flex flex-wrap gap-2">${cat.services.map(s=>`<label class="service-chip ${state.regSpecialties.includes(s)?'selected':''}"><input type="checkbox" data-specialty="${esc(s)}" ${state.regSpecialties.includes(s)?'checked':''} onchange="toggleSpecialty(this.dataset.specialty)"><span>${esc(s)}</span></label>`).join('')}</div></div>`).join('')}
     </div>
-    <div><label class="field-label">مناطق العمل والأحياء *</label><textarea class="field min-h-[100px]" oninput="state.regAreasText=this.value.slice(0,1000)" placeholder="مثال: المعادي، زهراء المعادي، دار السلام">${esc(state.regAreasText)}</textarea><p class="text-[10px] text-slate-500 mt-1">افصل بين المناطق بفاصلة أو سطر جديد.</p></div>
-    <div><label class="field-label">كلمة السر *</label><input type="password" class="field" autocomplete="new-password" value="${esc(state.regPass)}" oninput="state.regPass=this.value.slice(0,100)" placeholder="6 أحرف على الأقل"></div>
-    <button onclick="doRegister()" ${state.loading?'disabled':''} class="primary-btn w-full h-12">${state.loading?'جاري إنشاء الحساب...':'إنشاء حساب فني'}</button>
-    ${state.error?errorBox(state.error):''}
+    <div><label class="field-label">مناطق العمل والأحياء *</label><textarea class="field min-h-[100px]" oninput="state.regAreasText=this.value.slice(0,1000)" placeholder="مثال: المعادي، زهراء المعادي، دار السلام">${esc(state.regAreasText)}</textarea><p class="text-[10px] text-slate-500 mt-1">افصل بين المناطق بفاصلة أو سطر جديد.</p></div><div><label class="field-label">كلمة السر *</label><input type="password" class="field" autocomplete="new-password" value="${esc(state.regPass)}" oninput="state.regPass=this.value.slice(0,100)" placeholder="6 أحرف على الأقل"></div>
+<button onclick="doRegister()" ${state.loading?'disabled':''} class="primary-btn w-full h-12">${state.loading?'جاري إنشاء الحساب...':'إنشاء حساب فني'}</button>
+${state.error?errorBox(state.error):''}
+
    </div>`:`
    <h2 class="font-extrabold text-[17px]">دخول الفني</h2><p class="text-[11px] text-slate-500 mt-1 mb-5">ادخل رقم تليفونك وكلمة السر للمتابعة.</p>
    <div class="space-y-4">
@@ -405,9 +438,8 @@ function render(){
    <div class="mt-3"><div class="text-[10px] text-blue-100/75 mb-2">تخصصاتك</div><div class="flex flex-wrap gap-1.5">${specialties.map(s=>`<span class="text-[10px] px-2.5 py-1 rounded-full bg-white/10">${esc(s)}</span>`).join('')||'لم يتم إرجاع التخصصات من الخادم'}</div></div>
    <div class="mt-3 text-[11px] text-blue-100/80 leading-5"><b class="text-white">مناطق العمل:</b> ${esc(areas.join('، ')||'غير محددة')}</div>
   </section>
-  <section class="mt-4"><div class="grid grid-cols-4 gap-2">${[['available','📋','الطلبات',state.filteredOrders.length],['myOffers','💼','عروضي',state.myOffers.length],['wallet','💳','المحفظة',''],['profile','👤','حسابي','']].map(t=>`<button onclick="setTab('${t[0]}')" class="rounded-2xl border p-2 flex flex-col items-center justify-center gap-1.5 min-h-[76px] ${state.tab===t[0]?'bg-blue-50 border-blue-300 text-blue-800':'bg-white border-slate-200 text-slate-600'}"><span>${t[1]}</span><span class="text-[10px] font-extrabold">${t[2]}</span>${t[3]!==''?`<span class="text-[9px] rounded-full bg-white border px-2">${t[3]}</span>`:''}</button>`).join('')}</div></section>
+  <section class="mt-4"><div class="grid grid-cols-4 gap-2">${[['available','📋','الطلبات',state.filteredOrders.length],['myOffers','💼','عروضي',state.myOffers.length],['wallet','💳','المحفظة',''],['profile','👤','حسابي','']].map(t=>`<button onclick="setTab('${t[0]}')" class="rounded-2xl border p-2 flex flex-col items-center justify-center gap-1.5 min-h-[76px] ${state.tab===t[0]?'bg-blue-50 border-blue-300 text-blue-800':'bg-white border-slate-200 text-slate-600'}"><span>${t[1]}</span><span class="text-[10px] font-extrabold">${t[2]}</span>${t[3]!==''?`<span class="text-[9px] rounded-full bg-white border px-2">${t[3]}</span>`:''}</button>`).join('')}</div></section>${state.tab==='available'?`
 
-  ${state.tab==='available'?`
    <section class="mt-4 space-y-3">
     <div class="flex justify-between items-center px-1"><h3 class="section-title">الطلبات المتاحة</h3><button onclick="loadOrders()" class="secondary-btn px-3 py-2 text-[11px]">↻ تحديث</button></div>
     <div class="panel p-3 space-y-2"><input class="field" value="${esc(state.search)}" oninput="onSearch(this.value)" placeholder="ابحث بكود الطلب أو المنطقة"><select class="field" onchange="onFilterSkill(this.value)"><option>الكل</option>${ALL_SERVICES.map(s=>`<option ${state.filterSkill===s?'selected':''}>${esc(s)}</option>`).join('')}</select></div>
@@ -430,9 +462,8 @@ function render(){
      </div>
      <button data-sn="${esc(sn)}" onclick="openOffer(this.dataset.sn)" ${!approved?'disabled':''} class="primary-btn w-full h-11 text-[12px]">${approved?'تقديم عرض لهذا الطلب':'العروض بعد اعتماد الحساب'}</button>
     </article>`}).join('')}
-   </section>`:''}
+   </section>`:''}${state.tab==='myOffers'?`
 
-  ${state.tab==='myOffers'?`
    <section class="mt-4 space-y-3"><div class="flex justify-between items-center"><h3 class="section-title">عروضي</h3><button onclick="loadMyOffers()" class="secondary-btn px-3 py-2 text-[11px]">تحديث</button></div>
    ${!state.myOffers.length?'<div class="panel p-8 text-center"><div class="text-2xl">💼</div><p class="text-[13px] font-extrabold mt-3">لا توجد عروض لعرضها</p><p class="text-[11px] text-slate-500 mt-1">العروض التي ترسلها ستظهر هنا، وبيانات العميل تظهر فقط بعد قبوله لعرضك.</p></div>':state.myOffers.map(o=>`<article class="panel p-4 space-y-3">
     <div class="flex justify-between gap-3">
@@ -446,13 +477,19 @@ function render(){
     </div>
     ${o.message?`<div class="rounded-xl border border-slate-100 bg-slate-50 p-3"><div class="text-[10px] text-slate-500 font-extrabold mb-1">رسالة العرض</div><p class="text-[12px] leading-6 break-words">${esc(o.message)}</p></div>`:''}
     ${renderAcceptedClient(o)}
-   </article>`).join('')}</section>`:''}
+   </article>`).join('')}</section>`:''}${state.tab==='wallet'?`
 
-  ${state.tab==='wallet'?`
    <section class="mt-4 space-y-4">
     <div class="panel p-4">
      <div class="flex justify-between items-center"><div><h3 class="section-title">محفظتي</h3><p class="text-[10px] text-slate-500 mt-1">طلب شحن الرصيد ومتابعة الطلبات</p></div><b class="text-blue-800">${esc(balance)} ج</b></div>
-     <div class="mt-4 rounded-2xl bg-blue-50 border border-blue-100 p-4"><p class="text-[11px] font-extrabold text-blue-900">رقم التحويل المعتمد في الصفحة</p><p class="text-[17px] font-black text-blue-800 font-mono" dir="ltr">01152822263</p><p class="text-[10px] text-blue-800/80 mt-2 leading-5">راجع الرقم وبيانات التحويل قبل إرسال أي مبلغ. طلب الشحن يحتاج مراجعة الإدارة.</p></div>
+     <div class="mt-4 rounded-2xl bg-blue-50 border border-blue-100 p-4">
+      <p class="text-[11px] font-extrabold text-blue-900">رقم التحويل المعتمد في الصفحة</p>
+      <div class="mt-2 flex flex-wrap items-center gap-3">
+       <p id="wallet-transfer-number" class="text-[17px] font-black text-blue-800 font-mono" dir="ltr">01152822263</p>
+       <button type="button" onclick="copyWalletNumber()" class="secondary-btn px-4 py-2 text-[11px]" aria-label="نسخ رقم المحفظة كاملًا">📋 نسخ الرقم</button>
+      </div>
+      <p class="text-[10px] text-blue-800/80 mt-2 leading-5">راجع الرقم وبيانات التحويل قبل إرسال أي مبلغ. طلب الشحن يحتاج مراجعة الإدارة.</p>
+     </div>
      ${!approved?'<div class="mt-3 rounded-xl bg-amber-50 border border-amber-200 p-3 text-[11px] text-amber-800">لا يمكن تقديم طلب شحن قبل اعتماد حسابك.</div>':''}
      <div class="mt-4 space-y-3">
       <div><label class="field-label">رقم الهاتف المحوّل منه *</label><input class="field" inputmode="numeric" value="${esc(state.walletFromPhone)}" oninput="state.walletFromPhone=this.value.replace(/\\D/g,'').slice(0,11)" placeholder="01xxxxxxxxx"></div>
@@ -465,15 +502,13 @@ function render(){
     </div>
     <div class="panel p-4"><div class="flex justify-between items-center"><div><h4 class="text-[13px] font-extrabold">سجل الشحن</h4><p class="text-[10px] text-slate-500 mt-1">حالة طلبات الشحن السابقة</p></div><button onclick="loadWalletHistory()" class="secondary-btn px-3 py-2 text-[10px]">تحديث</button></div>
     <div class="mt-3 space-y-2">${!state.walletHistory.length?'<div class="rounded-xl bg-slate-50 p-5 text-center text-[11px] text-slate-500">لا توجد طلبات شحن سابقة.</div>':state.walletHistory.map(h=>`<div class="rounded-xl border bg-slate-50 p-3"><div class="flex justify-between gap-2"><b class="text-[12px]">${esc(h.amount??'')} جنيه</b><span class="text-[10px] text-slate-500">${esc(h.senderNumber||h.fromPhone||h.phone||'')}</span></div><p class="text-[10px] text-slate-500 mt-2">الكود: ${esc(h.referenceNumber||h.reference||h.referenceCode||'بدون')}</p><p class="text-[10px] mt-1 text-blue-700 font-bold">الحالة: ${esc(h.status||'قيد المراجعة')}</p>${h.createdAt?`<p class="text-[10px] text-slate-400 mt-1">${esc(new Date(h.createdAt).toLocaleString('ar-EG'))}</p>`:''}</div>`).join('')}</div></div>
-   </section>`:''}
+   </section>`:''}${state.tab==='profile'?`
 
-  ${state.tab==='profile'?`
    <section class="mt-4 panel p-4"><div class="flex items-center gap-3 pb-4 border-b"><div class="text-2xl">👤</div><div><h3 class="section-title">بيانات حسابي</h3><p class="text-[10px] text-slate-500 mt-1">بيانات الحساب من السيرفر</p></div><button onclick="loadProfile()" class="secondary-btn mr-auto px-3 py-2 text-[10px]">تحديث</button></div>
    <div class="mt-4 space-y-3 text-[12px]">${[['الاسم',user?.name],['رقم الهاتف',user?.phone],['حالة الحساب',user?.status],['التخصصات',specialties.join('، ')],['مناطق العمل',areas.join('، ')],['رصيد المحفظة',balance+' جنيه']].map(x=>`<div class="rounded-xl bg-slate-50 border p-3"><div class="text-[10px] text-slate-500 mb-1">${x[0]}</div><b>${esc(x[1]||'غير متاح')}</b></div>`).join('')}</div>
    <button onclick="logout()" class="mt-4 w-full h-11 rounded-xl bg-red-50 border border-red-100 text-red-700 font-extrabold text-[12px]">تسجيل الخروج</button></section>`:''}
- `}
+ `}${state.offerModal?`
 
- ${state.offerModal?`
  <div class="fixed inset-0 z-50 bg-[#07152e]/55 backdrop-blur-sm flex items-end sm:items-center justify-center p-3">
   <div class="w-full max-w-[480px] bg-white rounded-[22px] p-5 shadow-2xl">
    <div class="flex justify-between items-center pb-3 border-b"><div><h3 class="font-extrabold text-[15px]">تقديم عرض</h3><p class="text-[10px] text-slate-500 mt-1">كود الطلب: ${esc(state.offerModal.sn)}</p></div><button onclick="closeOffer()" class="h-9 w-9 rounded-xl bg-slate-100">✕</button></div>
@@ -490,284 +525,283 @@ function render(){
  <nav class="fixed bottom-0 inset-x-0 z-30 border-t bg-white/95 backdrop-blur-xl safe-bottom"><div class="mx-auto max-w-[680px] px-2 h-[70px] grid grid-cols-4 gap-1">
  ${authenticated?[['available','📋','الطلبات'],['myOffers','💼','عروضي'],['wallet','💳','المحفظة'],['profile','👤','حسابي']].map(t=>`<button onclick="setTab('${t[0]}')" class="rounded-xl flex flex-col items-center justify-center gap-1 ${state.tab===t[0]?'bg-blue-50 text-blue-800':'text-slate-500'}"><span>${t[1]}</span><span class="text-[9px] font-extrabold">${t[2]}</span></button>`).join(''):`<button onclick="setTab('login')">🔑<span class="block text-[10px]">دخول</span></button><button onclick="setTab('register')">📝<span class="block text-[10px]">تسجيل</span></button><button onclick="goClient()">👥<span class="block text-[10px]">عميل</span></button><button onclick="setTab('register')">🧑‍🔧<span class="block text-[10px]">فني</span></button>`}
  </div></nav>`;
-}
-
-function errorBox(s){
- return `<p class="text-[12px] font-bold text-red-600 bg-red-50 border border-red-100 rounded-xl p-3 leading-6">${esc(s)}</p>`;
+}function errorBox(s){
+return "<p class="text-[12px] font-bold text-red-600 bg-red-50 border border-red-100 rounded-xl p-3 leading-6">${esc(s)}</p>";
 }
 function successBox(s){
- return `<p class="text-[12px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-xl p-3">${esc(s)}</p>`;
+return "<p class="text-[12px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-xl p-3">${esc(s)}</p>";
 }
 
 async function doLogin(){
- if(state.loading)return;
- if(!V.phone(state.loginPhone)){state.error='رقم التليفون غير صحيح';render();return}
- if(!V.text(state.loginPass,1,100)){state.error='اكتب كلمة السر';render();return}
- state.loading=true;
- state.error='';
- state.pendingMsg='';
- render();
- try{
-  const data=await API.login({
-   phone:state.loginPhone.replace(/\D/g,''),
-   password:state.loginPass
-  });
-  const token=extractToken(data);
-  const user=extractUser(data);
-  if(!token)throw new Error('السيرفر لم يرجع رمز الدخول. راجع استجابة تسجيل الدخول في الباك إند.');
-  if(!user)throw new Error('تم الدخول لكن بيانات الفني غير موجودة في الاستجابة.');
-  setAuth(token,user);
-  currentUser=user;
-  state.loading=false;
-  state.tab='available';
-  state.loginPass='';
-  render();
-  toast('تم تسجيل الدخول بنجاح');
-  await loadProfile();
-  await Promise.allSettled([loadOrders(),loadMyOffers(),loadWalletHistory()]);
- }catch(e){
-  state.loading=false;
-  if(/pending|review|مراجعة|انتظار|قيد/i.test(e.message)){
-   state.pendingMsg='حسابك قيد مراجعة الإدارة.';
-  }
-  state.error=e.message;
-  render();
- }
+if(state.loading)return;
+if(!V.phone(state.loginPhone)){state.error='رقم التليفون غير صحيح';render();return}
+if(!V.text(state.loginPass,1,100)){state.error='اكتب كلمة السر';render();return}
+state.loading=true;
+state.error='';
+state.pendingMsg='';
+render();
+try{
+const data=await API.login({
+phone:state.loginPhone.replace(/\D/g,''),
+password:state.loginPass
+});
+const token=extractToken(data);
+const user=extractUser(data);
+if(!token)throw new Error('السيرفر لم يرجع رمز الدخول. راجع استجابة تسجيل الدخول في الباك إند.');
+if(!user)throw new Error('تم الدخول لكن بيانات الفني غير موجودة في الاستجابة.');
+setAuth(token,user);
+currentUser=user;
+state.loading=false;
+state.tab='available';
+state.loginPass='';
+render();
+toast('تم تسجيل الدخول بنجاح');
+await loadProfile();
+await Promise.allSettled([loadOrders(),loadMyOffers(),loadWalletHistory()]);
+}catch(e){
+state.loading=false;
+if(/pending|review|مراجعة|انتظار|قيد/i.test(e.message)){
+state.pendingMsg='حسابك قيد مراجعة الإدارة.';
+}
+state.error=e.message;
+render();
+}
 }
 
 async function doRegister(){
- if(state.loading)return;
- if(!V.text(state.regName,2,50)){state.error='الاسم لازم يكون حرفين على الأقل';render();return}
- if(!V.phone(state.regPhone)){state.error='رقم التليفون غير صحيح';render();return}
- if(!state.regSpecialties.length){state.error='اختار تخصصًا واحدًا على الأقل';render();return}
- const areas=parseAreas(state.regAreasText);
- if(!areas.length){state.error='اكتب منطقة عمل واحدة على الأقل';render();return}
- if(!V.text(state.regPass,6,100)){state.error='كلمة السر لازم تكون 6 أحرف على الأقل';render();return}
- state.loading=true;
- state.error='';
- render();
- try{
-  await API.register({
-   name:clean(state.regName,50),
-   phone:state.regPhone.replace(/\D/g,''),
-   password:state.regPass,
-   specialties:[...state.regSpecialties],
-   areas
-  });
-  state.loading=false;
-  state.loginPhone=state.regPhone;
-  state.regName='';
-  state.regPhone='';
-  state.regPass='';
-  state.regSpecialties=[];
-  state.regAreasText='';
-  state.tab='login';
-  state.pendingMsg='تم إنشاء الحساب بنجاح. حسابك قيد مراجعة الإدارة.';
-  state.error='';
-  render();
-  toast('تم التسجيل - الحساب بانتظار مراجعة الإدارة','pending');
- }catch(e){
-  state.loading=false;
-  state.error=e.message;
-  render();
- }
+if(state.loading)return;
+if(!V.text(state.regName,2,50)){state.error='الاسم لازم يكون حرفين على الأقل';render();return}
+if(!V.phone(state.regPhone)){state.error='رقم التليفون غير صحيح';render();return}
+if(!state.regSpecialties.length){state.error='اختار تخصصًا واحدًا على الأقل';render();return}
+const areas=parseAreas(state.regAreasText);
+if(!areas.length){state.error='اكتب منطقة عمل واحدة على الأقل';render();return}
+if(!V.text(state.regPass,6,100)){state.error='كلمة السر لازم تكون 6 أحرف على الأقل';render();return}
+state.loading=true;
+state.error='';
+render();
+try{
+await API.register({
+name:clean(state.regName,50),
+phone:state.regPhone.replace(/\D/g,''),
+password:state.regPass,
+specialties:[...state.regSpecialties],
+areas
+});
+state.loading=false;
+state.loginPhone=state.regPhone;
+state.regName='';
+state.regPhone='';
+state.regPass='';
+state.regSpecialties=[];
+state.regAreasText='';
+state.tab='login';
+state.pendingMsg='تم إنشاء الحساب بنجاح. حسابك قيد مراجعة الإدارة.';
+state.error='';
+render();
+toast('تم التسجيل - الحساب بانتظار مراجعة الإدارة','pending');
+}catch(e){
+state.loading=false;
+state.error=e.message;
+render();
+}
 }
 
 async function loadProfile(){
- if(!getToken())return;
- try{
-  const data=await API.profile();
-  const user=extractUser(data)||data?.data||data;
-  if(user&&typeof user==='object'&&!Array.isArray(user)){
-   currentUser={...(currentUser||{}),...user};
-   setAuth(getToken(),currentUser);
-   if(state.walletBalance===0){
-    state.walletBalance=user.walletBalance??user.balance??user.wallet??0;
-   }
-   render();
-  }
- }catch(e){
-  if(e.status===401){
-   clearAuth();
-   currentUser=null;
-   state.tab='login';
-   state.error='انتهت جلسة الدخول. سجل دخولك مرة أخرى.';
-   render();
-  }else{
-   log('profile',e);
-  }
- }
+if(!getToken())return;
+try{
+const data=await API.profile();
+const user=extractUser(data)||data?.data||data;
+if(user&&typeof user==='object'&&!Array.isArray(user)){
+currentUser={...(currentUser||{}),...user};
+setAuth(getToken(),currentUser);
+if(state.walletBalance===0){
+state.walletBalance=user.walletBalance??user.balance??user.wallet??0;
+}
+render();
+}
+}catch(e){
+if(e.status===401){
+clearAuth();
+currentUser=null;
+state.tab='login';
+state.error='انتهت جلسة الدخول. سجل دخولك مرة أخرى.';
+render();
+}else{
+log('profile',e);
+}
+}
 }
 
 async function loadOrders(){
- if(!getToken())return;
- state.loading=true;
- render();
- try{
-  const data=await API.available();
-  state.orders=extractList(data,['orders','requests','items']);
-  applyFilter();
-  state.loading=false;
-  render();
- }catch(e){
-  state.loading=false;
-  state.orders=[];
-  state.filteredOrders=[];
-  render();
-  toast(e.message,'error');
- }
+if(!getToken())return;
+state.loading=true;
+render();
+try{
+const data=await API.available();
+state.orders=extractList(data,['orders','requests','items']);
+applyFilter();
+state.loading=false;
+render();
+}catch(e){
+state.loading=false;
+state.orders=[];
+state.filteredOrders=[];
+render();
+toast(e.message,'error');
+}
 }
 
 async function loadMyOffers(){
- if(!getToken())return;
- try{
-  const data=await API.myOffers();
-  state.myOffers=extractList(data,['offers','items','requests']);
-  applyFilter();
-  render();
- }catch(e){
-  log('my offers',e);
-  if(e.status===401){
-   toast('انتهت جلسة الدخول. سجل دخولك مرة أخرى.','error');
-  }
- }
+if(!getToken())return;
+try{
+const data=await API.myOffers();
+state.myOffers=extractList(data,['offers','items','requests']);
+applyFilter();
+render();
+}catch(e){
+log('my offers',e);
+if(e.status===401){
+toast('انتهت جلسة الدخول. سجل دخولك مرة أخرى.','error');
+}
+}
 }
 
 async function loadWalletHistory(){
- if(!getToken())return;
- try{
-  const data=await API.walletHistory();
-  state.walletHistory=extractList(data,['history','requests','transactions','items']);
-  state.walletBalance=data.balance
-   ??data.walletBalance
-   ??data.wallet?.balance
-   ??currentUser?.walletBalance
-   ??currentUser?.balance
-   ??0;
-  if(currentUser){
-   currentUser.walletBalance=state.walletBalance;
-   setAuth(getToken(),currentUser);
-  }
-  render();
- }catch(e){
-  log('wallet history',e);
-  if(e.status===401){
-   toast('انتهت جلسة الدخول. سجل دخولك مرة أخرى.','error');
-  }
- }
+if(!getToken())return;
+try{
+const data=await API.walletHistory();
+state.walletHistory=extractList(data,['history','requests','transactions','items']);
+state.walletBalance=data.balance
+??data.walletBalance
+??data.wallet?.balance
+??currentUser?.walletBalance
+??currentUser?.balance
+??0;
+if(currentUser){
+currentUser.walletBalance=state.walletBalance;
+setAuth(getToken(),currentUser);
+}
+render();
+}catch(e){
+log('wallet history',e);
+if(e.status===401){
+toast('انتهت جلسة الدخول. سجل دخولك مرة أخرى.','error');
+}
+}
 }
 
 async function submitWallet(){
- if(state.walletLoading)return;
- if(!isApproved()){toast('شحن المحفظة متاح بعد اعتماد حسابك','error');return}
- if(!V.phone(state.walletFromPhone)){toast('رقم الهاتف المحول منه غير صحيح','error');return}
- if(!V.money(state.walletAmount,10,10000)){toast('المبلغ يجب أن يكون عددًا صحيحًا من 10 إلى 10000 جنيه','error');return}
- if(state.walletRef&&!V.text(state.walletRef,1,50)){toast('الكود المرجعي يجب ألا يتجاوز 50 حرفًا','error');return}
- state.walletLoading=true;
- state.error='';
- state.success='';
- render();
- try{
-  const phone=state.walletFromPhone.replace(/\D/g,'');
-  const reference=clean(state.walletRef,50);
-  await API.topup({
-   fromPhone:phone,
-   phone,
-   amount:Number(state.walletAmount),
-   reference,
-   referenceCode:reference,
-   method:'vodafone_cash',
-   note:`تحويل من ${phone} بقيمة ${Number(state.walletAmount)} - كود: ${reference||'بدون'}`.slice(0,200)
-  });
-  state.walletLoading=false;
-  state.success='تم إرسال طلب الشحن للمراجعة.';
-  state.walletFromPhone='';
-  state.walletAmount='';
-  state.walletRef='';
-  render();
-  toast('تم إرسال طلب الشحن');
-  await loadWalletHistory();
- }catch(e){
-  state.walletLoading=false;
-  state.error=e.message;
-  render();
-  toast(e.message,'error');
- }
+if(state.walletLoading)return;
+if(!isApproved()){toast('شحن المحفظة متاح بعد اعتماد حسابك','error');return}
+if(!V.phone(state.walletFromPhone)){toast('رقم الهاتف المحول منه غير صحيح','error');return}
+if(!V.money(state.walletAmount,10,10000)){toast('المبلغ يجب أن يكون عددًا صحيحًا من 10 إلى 10000 جنيه','error');return}
+if(state.walletRef&&!V.text(state.walletRef,1,50)){toast('الكود المرجعي يجب ألا يتجاوز 50 حرفًا','error');return}
+state.walletLoading=true;
+state.error='';
+state.success='';
+render();
+try{
+const phone=state.walletFromPhone.replace(/\D/g,'');
+const reference=clean(state.walletRef,50);
+await API.topup({
+fromPhone:phone,
+phone,
+amount:Number(state.walletAmount),
+reference,
+referenceCode:reference,
+method:'vodafone_cash',
+note:"تحويل من ${phone} بقيمة ${Number(state.walletAmount)} - كود: ${reference||'بدون'}".slice(0,200)
+});
+state.walletLoading=false;
+state.success='تم إرسال طلب الشحن للمراجعة.';
+state.walletFromPhone='';
+state.walletAmount='';
+state.walletRef='';
+render();
+toast('تم إرسال طلب الشحن');
+await loadWalletHistory();
+}catch(e){
+state.walletLoading=false;
+state.error=e.message;
+render();
+toast(e.message,'error');
+}
 }
 
 function openOffer(sn){
- if(!isApproved()){toast('لا يمكن إرسال عرض قبل اعتماد الحساب','error');return}
- if(!V.sn(sn)){toast('كود الطلب غير صحيح','error');return}
- state.offerModal={sn};
- state.offerPrice='';
- state.offerMessage='';
- state.offerError='';
- state.error='';
- render();
+if(!isApproved()){toast('لا يمكن إرسال عرض قبل اعتماد الحساب','error');return}
+if(!V.sn(sn)){toast('كود الطلب غير صحيح','error');return}
+state.offerModal={sn};
+state.offerPrice='';
+state.offerMessage='';
+state.offerError='';
+state.error='';
+render();
 }
 
 function closeOffer(){
- if(state.offerSubmitting)return;
- state.offerModal=null;
- state.offerError='';
- render();
+if(state.offerSubmitting)return;
+state.offerModal=null;
+state.offerError='';
+render();
 }
 
 async function submitOffer(){
- if(!state.offerModal||state.offerSubmitting)return;
- if(!isApproved()){
-  state.offerError='لا يمكن إرسال عرض قبل اعتماد الحساب.';
-  render();
-  return;
- }
- const sn=state.offerModal.sn;
- const price=Number(state.offerPrice);
- const message=clean(state.offerMessage,500);
- if(!V.money(price,10,1000000)){
-  state.offerError='السعر يجب أن يكون عددًا صحيحًا من 10 إلى مليون جنيه.';
-  render();
-  return;
- }
- if(!V.text(message,5,500)){
-  state.offerError='اكتب رسالة من 5 إلى 500 حرف.';
-  render();
-  return;
- }
- state.offerSubmitting=true;
- state.offerError='';
- render();
- try{
-  const result=await API.offer(sn,{price,message});
-  state.offerSubmitting=false;
-  state.offerModal=null;
-  state.offerPrice='';
-  state.offerMessage='';
-  state.offerError='';
-  render();
-  toast(result?.message||'تم إرسال العرض بنجاح');
-  await Promise.allSettled([loadMyOffers(),loadOrders()]);
- }catch(e){
-  state.offerSubmitting=false;
-  state.offerError=e?.message||'تعذر إرسال العرض. حاول مرة أخرى.';
-  render();
-  toast(state.offerError,'error');
- }
+if(!state.offerModal||state.offerSubmitting)return;
+if(!isApproved()){
+state.offerError='لا يمكن إرسال عرض قبل اعتماد الحساب.';
+render();
+return;
+}
+const sn=state.offerModal.sn;
+const price=Number(state.offerPrice);
+const message=clean(state.offerMessage,500);
+if(!V.money(price,10,1000000)){
+state.offerError='السعر يجب أن يكون عددًا صحيحًا من 10 إلى مليون جنيه.';
+render();
+return;
+}
+if(!V.text(message,5,500)){
+state.offerError='اكتب رسالة من 5 إلى 500 حرف.';
+render();
+return;
+}
+state.offerSubmitting=true;
+state.offerError='';
+render();
+try{
+const result=await API.offer(sn,{price,message});
+state.offerSubmitting=false;
+state.offerModal=null;
+state.offerPrice='';
+state.offerMessage='';
+state.offerError='';
+render();
+toast(result?.message||'تم إرسال العرض بنجاح');
+await Promise.allSettled([loadMyOffers(),loadOrders()]);
+}catch(e){
+state.offerSubmitting=false;
+state.offerError=e?.message||'تعذر إرسال العرض. حاول مرة أخرى.';
+render();
+toast(state.offerError,'error');
+}
 }
 
 async function start(){
- render();
- if(!getToken())return;
- state.checkingSession=true;
- try{
-  await loadProfile();
-  if(!getToken())return;
-  await Promise.allSettled([loadOrders(),loadMyOffers(),loadWalletHistory()]);
- }finally{
-  state.checkingSession=false;
- }
+render();
+if(!getToken())return;
+state.checkingSession=true;
+try{
+await loadProfile();
+if(!getToken())return;
+await Promise.allSettled([loadOrders(),loadMyOffers(),loadWalletHistory()]);
+}finally{
+state.checkingSession=false;
+}
 }
 
 start();
 </script>
+
 </body>
 </html>
