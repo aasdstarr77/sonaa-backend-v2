@@ -1,4 +1,3 @@
-
 'use strict';
 
 const express = require('express');
@@ -66,9 +65,17 @@ function publicOrder(order, options = {}) {
     includeAssignedFanniPhone = false
   } = options;
 
+  if (!order) return null;
+
   const data = typeof order.toObject === 'function'
     ? order.toObject()
     : { ...order };
+
+  /*
+   * مهم: نحتفظ بمعرّف الفني قبل حذفه من الاستجابة العامة،
+   * لأننا نحتاجه للتحقق من العرض المقبول.
+   */
+  const assignedFanniId = data.assignedFanni;
 
   if (!includeAddress) {
     delete data.address;
@@ -82,19 +89,26 @@ function publicOrder(order, options = {}) {
   if (
     includeAssignedFanniPhone
     && data.status === 'تم اختيار فني'
-    && data.assignedFanni
+    && assignedFanniId
   ) {
     const acceptedOffer = Array.isArray(data.offers)
       ? data.offers.find(offer =>
-          String(offer._id) === String(data.acceptedOfferId)
+          (
+            data.acceptedOfferId
+            && String(offer._id) === String(data.acceptedOfferId)
+          )
           || (
             !data.acceptedOfferId
-            && String(offer.fanni) === String(data.assignedFanni)
+            && String(offer.fanni) === String(assignedFanniId)
           )
         )
       : null;
 
-    if (acceptedOffer && acceptedOffer.fanniPhone) {
+    if (
+      acceptedOffer
+      && typeof acceptedOffer.fanniPhone === 'string'
+      && acceptedOffer.fanniPhone.trim()
+    ) {
       data.assignedFanniPhone = acceptedOffer.fanniPhone;
     }
   }
@@ -331,10 +345,12 @@ router.post(
         });
       }
 
+      const safeOrder = publicOrder(order);
+
       return res.json({
         message: 'تم نشر الطلب للفنيين المعتمدين بنجاح',
-        order: publicOrder(order),
-        data: publicOrder(order)
+        order: safeOrder,
+        data: safeOrder
       });
     } catch (err) {
       next(err);
@@ -507,11 +523,11 @@ router.post('/:sn/offer', auth(), async (req, res, next) => {
  * الخصم وتحديث الطلب وتسجيل الحركة المالية داخل معاملة MongoDB واحدة.
  */
 router.post('/:sn/accept', async (req, res, next) => {
-  const session = await mongoose.startSession();
-  let responsePayload = null;
-  let responseStatus = 200;
+  let session;
 
   try {
+    session = await mongoose.startSession();
+
     const sn = String(req.params.sn || '').toUpperCase();
     const offerId = String(req.body.offerId || '');
 
@@ -622,7 +638,6 @@ router.post('/:sn/accept', async (req, res, next) => {
 
     /*
      * تحديث شرطي للرصيد يمنع تحوله إلى قيمة سالبة.
-     * شرط commissionCharged:false على الطلب يمنع تكرار الخصم.
      */
     const fanniAfter = await Fanni.findOneAndUpdate(
       {
@@ -651,8 +666,7 @@ router.post('/:sn/accept', async (req, res, next) => {
     const balanceAfter = Number(fanniAfter.walletBalance);
 
     /*
-     * نحدّث الطلب داخل نفس المعاملة.
-     * إذا لم ينجح أي جزء من المعاملة، تتراجع جميع التغييرات.
+     * تحديث الطلب داخل نفس المعاملة.
      */
     const updateResult = await Order.updateOne(
       {
@@ -689,8 +703,7 @@ router.post('/:sn/accept', async (req, res, next) => {
     }
 
     /*
-     * سجل مالي مستقل للعمولة.
-     * المفتاح الفريد يمنع إنشاء حركة ثانية لنفس الطلب.
+     * تسجيل الحركة المالية داخل المعاملة نفسها.
      */
     const transaction = new WalletTransaction({
       fanni: fanniId,
@@ -706,9 +719,18 @@ router.post('/:sn/accept', async (req, res, next) => {
 
     await transaction.save({ session });
 
-    await session.commitTransaction();
+    /*
+     * نقرأ الطلب المحدّث داخل المعاملة وقبل تثبيتها،
+     * حتى لا نكتشف تعذّر قراءة الاستجابة بعد نجاح الخصم.
+     */
+    const updatedOrder = await Order.findById(order._id)
+      .session(session);
 
-    const updatedOrder = await Order.findById(order._id);
+    if (!updatedOrder) {
+      throw new Error('ORDER_NOT_FOUND_AFTER_UPDATE');
+    }
+
+    await session.commitTransaction();
 
     responsePayload = {
       message: 'تم قبول العرض وخصم عمولة المنصة بنجاح',
@@ -722,8 +744,12 @@ router.post('/:sn/accept', async (req, res, next) => {
       })
     };
   } catch (err) {
-    if (session.inTransaction()) {
-      await session.abortTransaction();
+    if (session && session.inTransaction()) {
+      try {
+        await session.abortTransaction();
+      } catch (abortError) {
+        // نحافظ على الخطأ الأصلي للتعامل معه أدناه.
+      }
     }
 
     if (err && err.code === 11000) {
@@ -736,7 +762,9 @@ router.post('/:sn/accept', async (req, res, next) => {
       return;
     }
   } finally {
-    await session.endSession();
+    if (session) {
+      await session.endSession();
+    }
   }
 
   if (responsePayload) {
@@ -747,8 +775,6 @@ router.post('/:sn/accept', async (req, res, next) => {
 /*
  * تفاصيل العميل للفني المعيّن فقط.
  * GET /api/orders/:sn/assigned-details
- *
- * يتطلب توكن الفني الحالي، وحالة الطلب يجب أن تكون بعد القبول.
  */
 router.get('/:sn/assigned-details', auth(), async (req, res, next) => {
   try {
