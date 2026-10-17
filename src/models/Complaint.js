@@ -4,15 +4,7 @@
 const mongoose = require('mongoose');
 
 const complaintSchema = new mongoose.Schema({
-  // الطلب الأصلي المرتبطة به الشكوى.
-  order: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Order',
-    required: true,
-    index: true
-  },
-
-  // كود الطلب للبحث والمراجعة داخل لوحة الأدمن.
+  // كود الطلب الذي يكتبه العميل.
   sn: {
     type: String,
     required: true,
@@ -22,7 +14,16 @@ const complaintSchema = new mongoose.Schema({
     index: true
   },
 
-  // نص الشكوى المرسل من العميل.
+  // اسم العميل الذي قدم الشكوى.
+  clientName: {
+    type: String,
+    required: true,
+    trim: true,
+    minlength: 2,
+    maxlength: 50
+  },
+
+  // تفاصيل الشكوى.
   text: {
     type: String,
     required: true,
@@ -31,7 +32,7 @@ const complaintSchema = new mongoose.Schema({
     maxlength: 1000
   },
 
-  // حالة الشكوى داخل لوحة الأدمن.
+  // حالة الشكوى في لوحة الأدمن.
   status: {
     type: String,
     enum: [
@@ -44,7 +45,7 @@ const complaintSchema = new mongoose.Schema({
     index: true
   },
 
-  // ملاحظات الأدمن الداخلية، لا تظهر للعميل تلقائيًا.
+  // ملاحظات داخلية للأدمن.
   adminNote: {
     type: String,
     trim: true,
@@ -60,7 +61,7 @@ const complaintSchema = new mongoose.Schema({
     default: ''
   },
 
-  // وقت آخر مراجعة للشكوى.
+  // وقت مراجعة الشكوى.
   reviewedAt: {
     type: Date,
     default: null
@@ -88,15 +89,15 @@ const complaintSchema = new mongoose.Schema({
   versionKey: false
 });
 
-// فهرس لمساعدة لوحة الأدمن في عرض الشكاوى الأحدث حسب الحالة.
+// ترتيب الشكاوى حسب الحالة والأحدث.
 complaintSchema.index({
   status: 1,
   createdAt: -1
 });
 
-// يسمح بوجود أكثر من شكوى للطلب نفسه.
+// البحث عن شكاوى طلب معين.
 complaintSchema.index({
-  order: 1,
+  sn: 1,
   createdAt: -1
 });
 
