@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -43,7 +42,9 @@ input:focus,textarea:focus{outline:none;border-color:var(--blue)!important;box-s
 .tab-idle{color:var(--muted)}
 .tab-idle:hover{background:#f1f5f9}
 .soft-card{background:#f8fafc;border:1px solid #e8eef5}
-@media(max-width:480px){main{padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right))}}
+@media(max-width:480px){
+  main{padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right))}
+}
 </style>
 </head>
 <body class="min-h-screen antialiased">
@@ -61,7 +62,11 @@ function escHtml(value){
   return String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;')
     .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
-function escAttr(value){return escHtml(value).replace(/`/g,'&#96;')}
+
+function escAttr(value){
+  return escHtml(value).replace(/`/g,'&#96;');
+}
+
 function sanitizeInput(value,max=500){
   return String(value||'').trim().slice(0,max)
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,'');
@@ -69,6 +74,10 @@ function sanitizeInput(value,max=500){
 
 const VALIDATORS={
   phone:value=>/^01[0-25]\d{8}$/.test(String(value||'').replace(/\D/g,'')),
+  name:value=>{
+    const text=String(value||'').trim();
+    return text.length>=2&&text.length<=100;
+  },
   text:(value,min,max)=>{
     const text=String(value||'').trim();
     return text.length>=min&&text.length<=max;
@@ -76,16 +85,10 @@ const VALIDATORS={
   sn:value=>/^SN\d{6}$/i.test(String(value||'').trim())
 };
 
-/*
- * هذه هي المسارات المطابقة لـ src/routes/order.js:
- * POST /api/orders
- * GET  /api/orders/:sn
- * POST /api/orders/:sn/accept
- *
- * لا نجرب مسارات بديلة عشوائيًا؛ حتى لا نخفي أخطاء الربط الحقيقية.
- */
 const API={
-  tokenKey(sn){return 'sonaa_client_token_'+String(sn||'').toUpperCase()},
+  tokenKey(sn){
+    return 'sonaa_client_token_'+String(sn||'').toUpperCase();
+  },
 
   saveClientToken(sn,token){
     if(!VALIDATORS.sn(sn)||typeof token!=='string'||!token)return false;
@@ -93,56 +96,83 @@ const API={
       localStorage.setItem(this.tokenKey(sn),token);
       return true;
     }catch(error){
-      log('Could not save client token:',error);
+      log('تعذر حفظ بيانات المتابعة:',error);
       return false;
     }
   },
 
   getClientToken(sn){
     if(!VALIDATORS.sn(sn))return '';
-    try{return localStorage.getItem(this.tokenKey(sn))||''}
-    catch(error){log('Could not read client token:',error);return ''}
+    try{
+      return localStorage.getItem(this.tokenKey(sn))||'';
+    }catch(error){
+      log('تعذر قراءة بيانات المتابعة:',error);
+      return '';
+    }
   },
 
   async request(url,options={}){
-    const response=await fetch(url,{
-      ...options,
-      credentials:'same-origin',
-      headers:{
-        ...(options.headers||{})
-      }
-    });
+    let response;
+
+    try{
+      response=await fetch(url,{
+        ...options,
+        credentials:'same-origin',
+        headers:{
+          ...(options.headers||{})
+        }
+      });
+    }catch(error){
+      log('تعذر إتمام الطلب:',error);
+      throw new Error('تعذر الاتصال حاليًا. من فضلك حاول مرة أخرى بعد قليل.');
+    }
 
     const raw=await response.text();
     let data={};
-    try{data=raw?JSON.parse(raw):{}}
-    catch{data={message:raw.slice(0,300)}}
 
-    log('API:',url,response.status,data);
+    try{
+      data=raw?JSON.parse(raw):{};
+    }catch{
+      data={};
+    }
+
+    log('استجابة الطلب:',response.status,data);
 
     if(!response.ok){
       const error=new Error(
-        data.message||data.error||`حصل خطأ من السيرفر (${response.status})`
+        response.status===404
+          ?'لم نتمكن من العثور على البيانات المطلوبة.'
+          :'حصلت مشكلة مؤقتة. من فضلك حاول مرة أخرى بعد قليل.'
       );
       error.status=response.status;
-      error.data=data;
       throw error;
     }
+
     return data;
   },
 
   async createOrder(payload){
-    if(!VALIDATORS.text(payload.area,10,250))
-      throw new Error('العنوان قصير جدًا؛ اكتب العنوان بالتفصيل');
-    if(!VALIDATORS.phone(payload.phone))
-      throw new Error('رقم التليفون غير صحيح؛ لازم يكون 11 رقم ويبدأ بـ 01');
-    if(!VALIDATORS.text(payload.description,10,1000))
-      throw new Error('وصف المشكلة لازم يكون 10 حروف على الأقل');
+    if(!VALIDATORS.name(payload.clientName)){
+      throw new Error('اكتب اسمك بشكل صحيح، من حرفين إلى 100 حرف.');
+    }
+
+    if(!VALIDATORS.text(payload.area,10,250)){
+      throw new Error('اكتب عنوانك بالتفصيل، من فضلك.');
+    }
+
+    if(!VALIDATORS.phone(payload.phone)){
+      throw new Error('رقم التليفون غير صحيح؛ لازم يكون 11 رقم ويبدأ بـ 01.');
+    }
+
+    if(!VALIDATORS.text(payload.description,10,1000)){
+      throw new Error('اكتب تفاصيل المشكلة في 10 حروف على الأقل.');
+    }
 
     const data=await this.request('/api/orders',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
+        clientName:sanitizeInput(payload.clientName,100),
         service:sanitizeInput(payload.service,100),
         area:sanitizeInput(payload.area,250),
         phone:String(payload.phone).replace(/\D/g,''),
@@ -154,8 +184,9 @@ const API={
     const sn=String(data.sn||order.sn||'').toUpperCase();
     const token=data.clientToken||order.clientToken||'';
 
-    if(!VALIDATORS.sn(sn))
-      throw new Error('السيرفر لم يرجع كود تتبع صحيحًا؛ راجع استجابة الباك إند');
+    if(!VALIDATORS.sn(sn)){
+      throw new Error('تعذر إنشاء الطلب حاليًا. من فضلك حاول مرة أخرى.');
+    }
 
     if(token)this.saveClientToken(sn,token);
 
@@ -164,29 +195,39 @@ const API={
 
   async getOrder(sn){
     const cleanSN=sanitizeInput(sn,20).toUpperCase();
-    if(!VALIDATORS.sn(cleanSN))throw new Error('كود التتبع غير صحيح');
+
+    if(!VALIDATORS.sn(cleanSN)){
+      throw new Error('كود التتبع غير صحيح. راجع الكود وحاول مرة أخرى.');
+    }
 
     const token=this.getClientToken(cleanSN);
     const headers={};
+
     if(token)headers.Authorization='Bearer '+token;
 
     const data=await this.request(
       '/api/orders/'+encodeURIComponent(cleanSN),
       {method:'GET',headers}
     );
+
     return data.order||data.data||data;
   },
 
   async acceptOffer(sn,offerId){
     const cleanSN=sanitizeInput(sn,20).toUpperCase();
-    if(!VALIDATORS.sn(cleanSN))throw new Error('كود الطلب غير صحيح');
-    if(!offerId)throw new Error('معرف العرض مفقود');
+
+    if(!VALIDATORS.sn(cleanSN)){
+      throw new Error('كود الطلب غير صحيح.');
+    }
+
+    if(!offerId){
+      throw new Error('تعذر تحديد العرض المطلوب.');
+    }
 
     const token=this.getClientToken(cleanSN);
+
     if(!token){
-      throw new Error(
-        'لا يوجد توكن محفوظ لهذا الطلب على الجهاز. افتح الطلب من نفس الجهاز الذي أنشأته عليه.'
-      );
+      throw new Error('لم نتمكن من تأكيد بيانات الطلب على هذا الجهاز. حاول متابعة الطلب من الجهاز الذي أنشأته منه.');
     }
 
     return this.request(
@@ -202,12 +243,8 @@ const API={
     );
   },
 
-  /*
-   * لم أضع مسارًا وهميًا للشكاوى؛ ملف order.js الحالي
-   * لا يحتوي على API لإنشاء الشكاوى.
-   */
   async sendComplaint(){
-    throw new Error('إرسال الشكاوى غير مربوط بالباك إند حاليًا. لم يتم إرسال الشكوى.');
+    throw new Error('تعذر إرسال الشكوى حاليًا. من فضلك تواصل مع خدمة العملاء.');
   }
 };
 
@@ -219,11 +256,13 @@ const CATEGORIES=[
   {label:'نقاشة',emoji:'🎨',services:['نقاش','جبس بورد','فني ديكور']},
   {label:'تكييف',emoji:'❄️',services:['فني تكييف','فني تبريد وثلاجات']}
 ];
+
 const ALL_SERVICES=CATEGORIES.flatMap(category=>category.services);
 
 let state={
   tab:'new',
   service:ALL_SERVICES[0],
+  clientName:'',
   address:'',
   phone:'',
   desc:'',
@@ -249,16 +288,21 @@ function getCat(service){
 function showToast(message,type='error'){
   const el=document.getElementById('toast');
   const color=type==='success'?'bg-emerald-600':'bg-[#0b1b3a]';
+
   el.innerHTML=`
     <div class="pointer-events-auto mx-auto max-w-[480px] rounded-[14px] ${color} text-white text-[13px] font-bold px-4 py-3 shadow-2xl animate-fade flex justify-between items-center gap-3">
       <span class="leading-6">${escHtml(message)}</span>
       <button onclick="this.parentElement.remove()" class="shrink-0 h-7 px-3 rounded-full bg-white/20">إغلاق</button>
     </div>`;
-  setTimeout(()=>{if(el)el.innerHTML=''},4500);
+
+  setTimeout(()=>{
+    if(el)el.innerHTML='';
+  },4500);
 }
 
 function render(){
   const cat=getCat(state.service);
+
   const filteredServices=ALL_SERVICES.filter(service=>
     !state.searchService||service.includes(state.searchService.trim())
   );
@@ -314,6 +358,21 @@ function render(){
 
           <div class="mt-5 space-y-4">
             <div>
+              <label for="clientNameInput" class="text-[12px] font-extrabold mb-1.5 block">👤 اسم العميل</label>
+              <input
+                id="clientNameInput"
+                value="${escAttr(state.clientName)}"
+                oninput="onClientNameInput(this.value)"
+                maxlength="100"
+                placeholder="اكتب اسمك بالكامل"
+                class="field h-[50px] px-4 text-[13px] font-bold"
+                autocomplete="name"
+                required
+              >
+              <p class="mt-1 text-[10px] text-slate-400 font-semibold">اكتب اسمك من حرفين على الأقل.</p>
+            </div>
+
+            <div>
               <label class="text-[12px] font-extrabold mb-1.5 block">نوع الخدمة</label>
               <button type="button" onclick="toggleService()" class="field h-[52px] px-3.5 text-right flex items-center justify-between hover:bg-slate-50 transition ${state.showService?'border-blue-500 ring-2 ring-blue-50':''}">
                 <span class="flex items-center gap-2.5 min-w-0">
@@ -337,7 +396,7 @@ function render(){
             </div>
 
             <div>
-              <label class="text-[12px] font-extrabold mb-1.5 flex justify-between gap-2">
+              <label for="addrInput" class="text-[12px] font-extrabold mb-1.5 flex justify-between gap-2">
                 <span>📍 العنوان بالتفصيل</span>
                 <span class="text-[10px] text-slate-400 font-semibold" id="addrCounter">${state.address.length}/250</span>
               </label>
@@ -345,7 +404,7 @@ function render(){
             </div>
 
             <div>
-              <label class="text-[12px] font-extrabold mb-1.5 flex justify-between gap-2">
+              <label for="phoneInput" class="text-[12px] font-extrabold mb-1.5 flex justify-between gap-2">
                 <span>📞 رقم تليفونك</span>
                 <span id="phoneStatus" class="text-[10px] font-bold ${VALIDATORS.phone(state.phone)?'text-emerald-600':'text-slate-400'}">${VALIDATORS.phone(state.phone)?'✓ صحيح':'11 رقم يبدأ بـ 01'}</span>
               </label>
@@ -353,7 +412,7 @@ function render(){
             </div>
 
             <div>
-              <label class="text-[12px] font-extrabold mb-1.5 flex justify-between gap-2">
+              <label for="descInput" class="text-[12px] font-extrabold mb-1.5 flex justify-between gap-2">
                 <span>وصف المشكلة</span>
                 <span class="text-[10px] text-slate-400 font-semibold" id="descCounter">${state.desc.length}/1000</span>
               </label>
@@ -460,9 +519,7 @@ function render(){
               <p class="text-[11px] text-slate-500 font-semibold mt-0.5">اكتب كود الطلب وتفاصيل المشكلة</p>
             </div>
           </div>
-          <div class="mt-4 rounded-xl bg-amber-50 border border-amber-200 p-3 text-[12px] font-bold text-amber-900 leading-6">
-            خدمة إرسال الشكاوى لم يتم ربطها بالباك إند بعد. يمكنك تجهيز التفاصيل، لكن الصفحة لن تعرض رسالة نجاح كاذبة.
-          </div>
+
           <div class="mt-4 space-y-3">
             <input value="${escAttr(state.complaintSn)}" oninput="onComplaintSn(this.value)" placeholder="كود الطلب SN123456" maxlength="20" class="field h-[48px] px-4 text-[14px] font-black uppercase" dir="ltr">
             <textarea oninput="onComplaintText(this.value)" maxlength="1000" placeholder="احكي اللي حصل بالتفصيل..." class="field min-h-[120px] p-4 text-[13px] font-semibold resize-none leading-6">${escHtml(state.complaintText)}</textarea>
@@ -494,15 +551,25 @@ function render(){
   </nav>`;
 }
 
-function setTab(tab){state.tab=tab;render()}
-function toggleService(){state.showService=!state.showService;render()}
+function setTab(tab){
+  state.tab=tab;
+  render();
+}
+
+function toggleService(){
+  state.showService=!state.showService;
+  render();
+}
 
 function searchService(value){
   const el=document.getElementById('svcSearch');
   const pos=el?el.selectionStart:null;
+
   state.searchService=sanitizeInput(value,50);
   render();
+
   const next=document.getElementById('svcSearch');
+
   if(next&&pos!==null){
     next.focus();
     try{next.setSelectionRange(pos,pos)}catch(error){}
@@ -516,9 +583,14 @@ function selectService(value){
   }catch(error){
     if(ALL_SERVICES.includes(value))state.service=value;
   }
+
   state.showService=false;
   state.searchService='';
   render();
+}
+
+function onClientNameInput(value){
+  state.clientName=sanitizeInput(value,100);
 }
 
 function onAddressInput(value){
@@ -529,9 +601,12 @@ function onAddressInput(value){
 
 function onPhoneInput(value){
   state.phone=String(value).replace(/\D/g,'').slice(0,11);
+
   const input=document.getElementById('phoneInput');
   if(input&&input.value!==state.phone)input.value=state.phone;
+
   const status=document.getElementById('phoneStatus');
+
   if(status){
     const valid=VALIDATORS.phone(state.phone);
     status.textContent=valid?'✓ صحيح':'11 رقم يبدأ بـ 01';
@@ -545,12 +620,21 @@ function onDescInput(value){
   if(el)el.textContent=state.desc.length+'/1000';
 }
 
-function onTrackInput(value){state.trackInput=sanitizeInput(value,20).toUpperCase()}
-function onComplaintSn(value){state.complaintSn=sanitizeInput(value,20).toUpperCase()}
-function onComplaintText(value){state.complaintText=sanitizeInput(value,1000)}
+function onTrackInput(value){
+  state.trackInput=sanitizeInput(value,20).toUpperCase();
+}
+
+function onComplaintSn(value){
+  state.complaintSn=sanitizeInput(value,20).toUpperCase();
+}
+
+function onComplaintText(value){
+  state.complaintText=sanitizeInput(value,1000);
+}
 
 function resetForm(){
   state.sn=null;
+  state.clientName='';
   state.address='';
   state.phone='';
   state.desc='';
@@ -568,6 +652,7 @@ function trackNow(){
 
 function copySn(){
   if(!state.sn)return;
+
   if(navigator.clipboard&&navigator.clipboard.writeText){
     navigator.clipboard.writeText(state.sn)
       .then(()=>showToast('تم نسخ الكود: '+state.sn,'success'))
@@ -579,8 +664,30 @@ function copySn(){
 
 async function createOrder(){
   if(state.loading)return;
+
+  if(!VALIDATORS.name(state.clientName)){
+    showToast('اكتب اسمك بشكل صحيح، من حرفين على الأقل.');
+    document.getElementById('clientNameInput')?.focus();
+    return;
+  }
+
   if(!state.address||!state.phone||!state.desc){
-    showToast('من فضلك كمّل كل البيانات');
+    showToast('من فضلك كمّل كل البيانات.');
+    return;
+  }
+
+  if(!VALIDATORS.phone(state.phone)){
+    showToast('رقم التليفون غير صحيح؛ لازم يكون 11 رقم ويبدأ بـ 01.');
+    return;
+  }
+
+  if(!VALIDATORS.text(state.address,10,250)){
+    showToast('اكتب عنوانك بالتفصيل، من فضلك.');
+    return;
+  }
+
+  if(!VALIDATORS.text(state.desc,10,1000)){
+    showToast('اكتب تفاصيل المشكلة في 10 حروف على الأقل.');
     return;
   }
 
@@ -589,6 +696,7 @@ async function createOrder(){
 
   try{
     const data=await API.createOrder({
+      clientName:state.clientName,
       service:state.service,
       area:state.address,
       phone:state.phone,
@@ -601,17 +709,24 @@ async function createOrder(){
     render();
   }catch(error){
     state.loading=false;
-    showToast(error.message||'حصل خطأ أثناء إنشاء الطلب');
+    showToast(error.message||'تعذر إنشاء الطلب حاليًا.');
     render();
   }
 }
 
 async function doTrack(){
   if(state.trackLoading)return;
+
   const input=state.trackInput.trim().toUpperCase();
 
   if(!input){
-    state.trackError='اكتب كود التتبع';
+    state.trackError='اكتب كود التتبع.';
+    render();
+    return;
+  }
+
+  if(!VALIDATORS.sn(input)){
+    state.trackError='كود التتبع غير صحيح. راجع الكود وحاول مرة أخرى.';
     render();
     return;
   }
@@ -625,7 +740,7 @@ async function doTrack(){
     const order=await API.getOrder(input);
     state.tracked=order;
   }catch(error){
-    state.trackError=error.message||'تعذر تحميل الطلب';
+    state.trackError=error.message||'تعذر عرض الطلب حاليًا. حاول مرة أخرى.';
   }finally{
     state.trackLoading=false;
     render();
@@ -648,21 +763,23 @@ async function acceptOffer(sn,offerId){
   }catch(error){
     state.acceptingOffer='';
     render();
-    showToast(error.message||'تعذر قبول العرض');
+    showToast(error.message||'تعذر قبول العرض حاليًا. حاول مرة أخرى.');
   }
 }
 
 async function sendComplaint(){
   if(!state.complaintSn||!state.complaintText){
-    showToast('كمّل بيانات الشكوى');
+    showToast('كمّل بيانات الشكوى.');
     return;
   }
+
   if(!VALIDATORS.sn(state.complaintSn)){
-    showToast('كود الطلب غير صحيح');
+    showToast('كود الطلب غير صحيح.');
     return;
   }
+
   if(!VALIDATORS.text(state.complaintText,10,1000)){
-    showToast('اكتب تفاصيل الشكوى في 10 حروف على الأقل');
+    showToast('اكتب تفاصيل الشكوى في 10 حروف على الأقل.');
     return;
   }
 
@@ -672,7 +789,7 @@ async function sendComplaint(){
       text:state.complaintText
     });
   }catch(error){
-    showToast(error.message||'لم يتم إرسال الشكوى');
+    showToast(error.message||'تعذر إرسال الشكوى حاليًا. من فضلك تواصل مع خدمة العملاء.');
   }
 }
 
