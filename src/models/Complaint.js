@@ -1,10 +1,18 @@
-
 'use strict';
 
 const mongoose = require('mongoose');
 
 const complaintSchema = new mongoose.Schema({
-  // كود الطلب الذي يكتبه العميل.
+  // ربط الشكوى بالطلب الأصلي.
+  // يسمح بالقيمة الفارغة للتوافق مع أي شكاوى قديمة.
+  order: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Order',
+    default: null,
+    index: true
+  },
+
+  // كود الطلب الذي قدم العميل الشكوى بخصوصه.
   sn: {
     type: String,
     required: true,
