@@ -57,7 +57,7 @@ function sanitizeOffer(offer) {
 
 /*
  * بيانات الاتصال لا تظهر في الاستجابة العامة.
- * assignedFanniPhone لا يظهر إلا لصاحب الطلب بعد قبول العرض.
+ * رقم الفني يظهر لصاحب الطلب بعد قبول العرض فقط.
  */
 function publicOrder(order, options = {}) {
   const {
@@ -71,10 +71,6 @@ function publicOrder(order, options = {}) {
     ? order.toObject()
     : { ...order };
 
-  /*
-   * مهم: نحتفظ بمعرّف الفني قبل حذفه من الاستجابة العامة،
-   * لأننا نحتاجه للتحقق من العرض المقبول.
-   */
   const assignedFanniId = data.assignedFanni;
 
   if (!includeAddress) {
@@ -376,7 +372,7 @@ router.get('/available', auth(), async (req, res, next) => {
       status: { $in: ACTIVE_STATUSES },
       expiresAt: { $gt: new Date() }
     })
-      .select('-clientPhone -phone')
+      .select('-clientPhone -phone -address')
       .sort({ createdAt: -1 })
       .lean();
 
@@ -396,23 +392,60 @@ router.get('/available', auth(), async (req, res, next) => {
 // العروض التي أرسلها الفني الحالي.
 router.get('/my-offers', auth(), async (req, res, next) => {
   try {
+    if (req.user.role !== 'fanni') {
+      return res.status(403).json({
+        message: 'هذه الخدمة متاحة لحسابات الفنيين فقط'
+      });
+    }
+
     const orders = await Order.find({
       'offers.fanni': req.userId
     })
-      .select('sn status offers')
+      .select(
+        'sn service area address clientName clientPhone description budget status offers assignedFanni acceptedOfferId acceptedOfferPrice commissionAmount commissionCharged'
+      )
       .lean();
 
     const offers = [];
 
     for (const order of orders) {
       for (const offer of order.offers || []) {
-        if (String(offer.fanni) === String(req.userId)) {
-          offers.push({
-            ...sanitizeOffer(offer),
-            orderSn: order.sn,
-            orderStatus: order.status
-          });
+        if (String(offer.fanni) !== String(req.userId)) {
+          continue;
         }
+
+        const isAcceptedByThisFanni =
+          order.status === 'تم اختيار فني'
+          && String(order.assignedFanni) === String(req.userId)
+          && String(order.acceptedOfferId || '') === String(offer._id);
+
+        const safeOffer = {
+          ...sanitizeOffer(offer),
+          orderSn: order.sn,
+          orderStatus: order.status,
+          service: order.service,
+          accepted: isAcceptedByThisFanni
+        };
+
+        /*
+         * بيانات العميل لا تدخل الاستجابة إلا للعرض المقبول
+         * الخاص بالفني المعيّن على الطلب.
+         */
+        if (isAcceptedByThisFanni) {
+          safeOffer.client = {
+            name: order.clientName || '',
+            phone: order.clientPhone || '',
+            area: order.area || '',
+            address: order.address || '',
+            description: order.description || '',
+            budget: order.budget || '',
+            acceptedOfferPrice: order.acceptedOfferPrice,
+            commissionAmount: order.commissionAmount,
+            commissionCharged: Boolean(order.commissionCharged)
+          };
+        }
+
+        offers.push(safeOffer);
       }
     }
 
@@ -428,7 +461,13 @@ router.get('/my-offers', auth(), async (req, res, next) => {
 // إرسال عرض من فني معتمد على طلب منشور وغير منتهٍ.
 router.post('/:sn/offer', auth(), async (req, res, next) => {
   try {
-    if (req.user.role !== 'admin' && req.user.status !== 'معتمد') {
+    if (req.user.role !== 'fanni') {
+      return res.status(403).json({
+        message: 'تقديم العروض متاح للفنيين فقط'
+      });
+    }
+
+    if (req.user.status !== 'معتمد') {
       return res.status(403).json({
         message: 'حساب الفني لم يتم اعتماده بعد'
       });
@@ -454,6 +493,20 @@ router.post('/:sn/offer', auth(), async (req, res, next) => {
     if (result.error) {
       return res.status(400).json({
         message: 'السعر والرسالة مطلوبان بشكل صحيح'
+      });
+    }
+
+    const price = money(result.value.price);
+    const commissionAmount = money(price * COMMISSION_RATE / 100);
+
+    if (
+      !Number.isFinite(price)
+      || price <= 0
+      || !Number.isFinite(commissionAmount)
+      || commissionAmount <= 0
+    ) {
+      return res.status(400).json({
+        message: 'سعر العرض غير صالح'
       });
     }
 
@@ -487,13 +540,46 @@ router.post('/:sn/offer', auth(), async (req, res, next) => {
       });
     }
 
+    /*
+     * التحقق من رصيد الفني قبل السماح بإرسال العرض.
+     * لا يتم حجز العمولة ولا خصمها في هذه المرحلة.
+     * يعاد التحقق من الرصيد عند قبول العميل للعرض.
+     */
+    const fanni = await Fanni.findOne({
+      _id: req.userId,
+      role: 'fanni',
+      status: 'معتمد'
+    }).select('walletBalance');
+
+    if (!fanni) {
+      return res.status(403).json({
+        message: 'حساب الفني غير موجود أو غير معتمد'
+      });
+    }
+
+    const walletBalance = Number(fanni.walletBalance || 0);
+
+    if (
+      !Number.isFinite(walletBalance)
+      || walletBalance < commissionAmount
+    ) {
+      return res.status(409).json({
+        message: 'رصيد محفظتك لا يكفي لعمولة 10% من قيمة هذا العرض',
+        offerPrice: price,
+        requiredCommission: commissionAmount,
+        walletBalance: Number.isFinite(walletBalance)
+          ? walletBalance
+          : 0
+      });
+    }
+
     order.offers.push({
       fanni: req.userId,
       fanniId: String(req.userId),
       fanniName: req.user.name,
       fanniPhone: req.user.phone,
-      price: String(result.value.price),
-      priceNum: result.value.price,
+      price: String(price),
+      priceNum: price,
       message: result.value.message
     });
 
@@ -502,8 +588,10 @@ router.post('/:sn/offer', auth(), async (req, res, next) => {
     await order.save();
 
     return res.status(201).json({
-      message: 'تم إرسال العرض بنجاح',
+      message: 'تم إرسال العرض بنجاح. لم يتم خصم أي مبلغ من محفظتك.',
       orderSn: order.sn,
+      requiredCommission: commissionAmount,
+      walletBalance,
       offers: order.offers.map(offer => {
         const safeOffer = typeof offer.toObject === 'function'
           ? offer.toObject()
@@ -526,6 +614,8 @@ router.post('/:sn/offer', auth(), async (req, res, next) => {
  */
 router.post('/:sn/accept', async (req, res, next) => {
   let session;
+  let responsePayload = null;
+  let responseStatus = 200;
 
   try {
     session = await mongoose.startSession();
@@ -721,10 +811,6 @@ router.post('/:sn/accept', async (req, res, next) => {
 
     await transaction.save({ session });
 
-    /*
-     * نقرأ الطلب المحدّث داخل المعاملة وقبل تثبيتها،
-     * حتى لا نكتشف تعذّر قراءة الاستجابة بعد نجاح الخصم.
-     */
     const updatedOrder = await Order.findById(order._id)
       .session(session);
 
@@ -732,8 +818,9 @@ router.post('/:sn/accept', async (req, res, next) => {
       throw new Error('ORDER_NOT_FOUND_AFTER_UPDATE');
     }
 
-    await session.commitTransaction();
-
+    /*
+     * تجهيز الاستجابة قبل تثبيت المعاملة.
+     */
     responsePayload = {
       message: 'تم قبول العرض وخصم عمولة المنصة بنجاح',
       commission: {
@@ -745,12 +832,14 @@ router.post('/:sn/accept', async (req, res, next) => {
         includeAssignedFanniPhone: true
       })
     };
+
+    await session.commitTransaction();
   } catch (err) {
     if (session && session.inTransaction()) {
       try {
         await session.abortTransaction();
       } catch (abortError) {
-        // نحافظ على الخطأ الأصلي للتعامل معه أدناه.
+        // الحفاظ على الخطأ الأصلي.
       }
     }
 
@@ -760,8 +849,7 @@ router.post('/:sn/accept', async (req, res, next) => {
         message: 'توجد حركة مالية مسجلة لهذا الطلب بالفعل؛ لم يتم تكرار الخصم'
       };
     } else {
-      next(err);
-      return;
+      return next(err);
     }
   } finally {
     if (session) {
@@ -772,6 +860,10 @@ router.post('/:sn/accept', async (req, res, next) => {
   if (responsePayload) {
     return res.status(responseStatus).json(responsePayload);
   }
+
+  return res.status(500).json({
+    message: 'تعذر إكمال عملية قبول العرض'
+  });
 });
 
 /*
