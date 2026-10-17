@@ -1,21 +1,48 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0f172a">
+<meta name="theme-color" content="#0b1b3a">
 <title>صناع - لوحة الأدمن</title>
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-*{font-family:'Cairo',system-ui}
-body{margin:0;background:#f8fafc;color:#0f172a}
-@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.animate-fade{animation:fade .25s ease both}
+:root{
+  --navy:#0b1b3a;
+  --navy-light:#163b70;
+  --blue:#2563eb;
+  --blue-dark:#1d4ed8;
+  --page:#f4f7fc;
+  --border:#e2e8f0;
+}
+*{font-family:'Cairo',system-ui,sans-serif;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--page);color:var(--navy);
+  overflow-x:hidden;-webkit-tap-highlight-color:transparent
+}
+button,input,textarea,select{font:inherit}
+button{cursor:pointer;transition:background-color .18s,border-color .18s,transform .18s}
+button:active{transform:scale(.985)}
 button:disabled{opacity:.55;cursor:not-allowed}
+input,textarea,select{outline:none;max-width:100%;transition:border-color .18s,box-shadow .18s}
+input:focus,textarea:focus,select:focus{
+  border-color:var(--blue)!important;box-shadow:0 0 0 3px #2563eb1a
+}
+@keyframes fade{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+.animate-fade{animation:fade .22s ease both}
+.panel{background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:0 3px 12px #0f234b09}
+.field{width:100%;min-height:42px;border:1px solid #dbe3ef;border-radius:11px;background:#fff;padding:9px 12px;color:var(--navy);font-size:12px}
+.primary-btn{background:var(--blue);color:white;border:0;border-radius:11px;font-weight:800}
+.primary-btn:hover{background:var(--blue-dark)}
+.secondary-btn{background:#eff6ff;color:var(--blue-dark);border:1px solid #dbeafe;border-radius:11px;font-weight:800}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:99px}
 </style>
 </head>
-<body>
+<body class="min-h-screen antialiased">
 <div id="app"></div>
 <div id="toast" class="fixed bottom-4 left-3 right-3 z-[200] pointer-events-none"></div>
 
@@ -36,17 +63,17 @@ function escHtml(s){
 }
 
 function getToken(){
-  try{return localStorage.getItem(TOKEN_KEY)||'';}
-  catch{return '';}
+  try{return localStorage.getItem(TOKEN_KEY)||''}
+  catch{return ''}
 }
 
 function setToken(t){
-  try{localStorage.setItem(TOKEN_KEY,t);}
-  catch{throw new Error('تعذر حفظ جلسة الدخول في المتصفح');}
+  try{localStorage.setItem(TOKEN_KEY,t)}
+  catch{throw new Error('تعذر حفظ جلسة الدخول في المتصفح')}
 }
 
 function clearToken(){
-  try{localStorage.removeItem(TOKEN_KEY);}
+  try{localStorage.removeItem(TOKEN_KEY)}
   catch{}
 }
 
@@ -60,54 +87,33 @@ function buildUrl(p){
 
 async function api(path,opts={}){
   const token=getToken();
-  const headers={
-    ...(opts.headers||{})
-  };
+  const headers={...(opts.headers||{})};
 
-  if(opts.body && !headers['Content-Type']){
+  if(opts.body&&!headers['Content-Type']){
     headers['Content-Type']='application/json';
   }
-  if(token) headers['Authorization']=`Bearer ${token}`;
+  if(token)headers['Authorization']='Bearer '+token;
 
   try{
     const r=await fetch(buildUrl(path),{
-      ...opts,
-      headers,
-      mode:'cors',
-      credentials:'omit'
+      ...opts,headers,mode:'cors',credentials:'omit'
     });
-
     const txt=await r.text();
 
     if(txt.trim().startsWith('<!DOCTYPE')||txt.includes('Cannot ')){
-      return {
-        ok:false,
-        status:404,
-        data:{message:'المسار غير موجود حاليًا: '+path}
-      };
+      return {ok:false,status:404,data:{message:'المسار غير موجود حاليًا: '+path}};
     }
 
     let data;
-    try{
-      data=txt?JSON.parse(txt):{};
-    }catch{
-      data={
-        raw:txt.slice(0,500),
-        message:txt.slice(0,200)||'استجابة غير مفهومة من الخادم'
-      };
+    try{data=txt?JSON.parse(txt):{}}
+    catch{
+      data={raw:txt.slice(0,500),message:txt.slice(0,200)||'استجابة غير مفهومة من الخادم'};
     }
 
-    if(!r.ok && !data.message){
-      data.message=`فشل الطلب (HTTP ${r.status})`;
-    }
-
+    if(!r.ok&&!data.message)data.message='فشل الطلب (HTTP '+r.status+')';
     return {ok:r.ok,status:r.status,data};
   }catch(e){
-    return {
-      ok:false,
-      status:0,
-      data:{message:e.message||'تعذر الاتصال بالخادم'}
-    };
+    return {ok:false,status:0,data:{message:e.message||'تعذر الاتصال بالخادم'}};
   }
 }
 
@@ -116,11 +122,9 @@ async function tryApi(paths,opts={}){
 
   for(const p of paths){
     const res=await api(p,opts);
-    if(res.ok) return res.data;
-
+    if(res.ok)return res.data;
     last=res;
-
-    if([400,401,403].includes(res.status)) break;
+    if([400,401,403].includes(res.status))break;
   }
 
   const error=new Error(last.data?.message||'حدث خطأ');
@@ -129,45 +133,31 @@ async function tryApi(paths,opts={}){
 }
 
 function extractList(data,keys=[]){
-  if(Array.isArray(data)) return data;
-
+  if(Array.isArray(data))return data;
   for(const key of keys){
-    if(Array.isArray(data?.[key])) return data[key];
+    if(Array.isArray(data?.[key]))return data[key];
   }
-
-  if(Array.isArray(data?.data)) return data.data;
+  if(Array.isArray(data?.data))return data.data;
   return [];
 }
 
 let state={
   tab:'fannis',
-
   adminEmail:'',
   adminPass:'',
-
   loading:false,
   loadingOrders:false,
-
   fannis:[],
   filtered:[],
-
   topups:[],
   filteredTopups:[],
-
   orders:[],
   filteredOrders:[],
-
   search:'',
   filter:'الكل',
   filterTopup:'الكل',
   filterOrder:'الكل',
-
-  errors:{
-    fannis:'',
-    topups:'',
-    orders:''
-  },
-
+  errors:{fannis:'',topups:'',orders:''},
   error:''
 };
 
@@ -175,21 +165,13 @@ function showToast(msg,type='success'){
   const el=document.getElementById('toast');
   if(!el)return;
 
-  const bg=type==='success'
-    ?'bg-emerald-600'
-    :type==='error'
-      ?'bg-red-600'
-      :'bg-amber-600';
-
+  const bg=type==='success'?'bg-emerald-600':type==='error'?'bg-red-600':'bg-amber-600';
   el.innerHTML=`
-    <div class="pointer-events-auto mx-auto max-w-[640px] rounded-[14px] ${bg} text-white text-[13px] font-bold px-4 py-3 shadow-2xl animate-fade flex justify-between gap-3">
+    <div class="pointer-events-auto mx-auto max-w-[640px] rounded-xl ${bg} text-white text-[12px] font-bold px-4 py-3 shadow-xl animate-fade flex items-center justify-between gap-3">
       <span>${escHtml(msg)}</span>
-      <button onclick="this.parentElement.remove()" class="px-3 bg-white/20 rounded-full">X</button>
+      <button onclick="this.parentElement.remove()" class="shrink-0 h-7 px-3 bg-white/20 rounded-lg">إغلاق</button>
     </div>`;
-
-  setTimeout(()=>{
-    if(el)el.innerHTML='';
-  },5000);
+  setTimeout(()=>{if(el.firstElementChild)el.innerHTML=''},4000);
 }
 
 function statusLabel(status){
@@ -207,125 +189,127 @@ function statusLabel(status){
     rejected:'مرفوض',
     disabled:'معطل'
   };
-
   return map[String(status||'')]||String(status||'غير محدد');
 }
 
 function statusClass(status){
   const s=String(status||'');
-
   if(['تم الانتهاء','منتهي','تم اختيار فني','approved','مقبول'].includes(s)){
     return 'bg-emerald-50 border-emerald-200 text-emerald-700';
   }
-
   if(['مرفوض','rejected','اعتذار','منتهي - اعتذار','معطل','disabled'].includes(s)){
     return 'bg-red-50 border-red-200 text-red-700';
   }
-
   if(['تم النشر','وصلتك عروض'].includes(s)){
     return 'bg-blue-50 border-blue-200 text-blue-700';
   }
-
   return 'bg-amber-50 border-amber-200 text-amber-800';
 }
 
 function orderSearchMatch(o,s){
   const haystack=[
-    o.sn,
-    o.clientName,
-    o.clientPhone,
-    o.service,
-    o.area,
-    o.city,
-    o.description
+    o.sn,o.clientName,o.clientPhone,o.service,o.area,o.city,o.description
   ].map(v=>String(v||'').toLowerCase()).join(' ');
-
   return haystack.includes(s.toLowerCase());
+}
+
+function moneyLabel(value){
+  if(value===null||value===undefined||String(value).trim()===''){
+    return 'لم يحدد ميزانية';
+  }
+  return String(value)+' جنيه';
 }
 
 function render(){
   const isAuth=!!getToken();
+  const pendingCount=state.fannis.filter(f=>!f.isApproved&&!f.isDisabled&&f.status!=='rejected').length;
 
   document.getElementById('app').innerHTML=`
-  <header class="sticky top-0 z-40 bg-[#0f172a] text-white shadow">
-    <div class="mx-auto max-w-[1000px] px-4 py-3 flex justify-between items-center gap-2">
-      <div class="flex items-center gap-2 min-w-0">
-        <div class="h-10 w-10 shrink-0 rounded-xl bg-red-600 flex items-center justify-center font-black">A</div>
+  <header class="sticky top-0 z-40 bg-[#0b1b3a] text-white shadow-lg">
+    <div class="mx-auto max-w-[760px] px-3 py-3 flex justify-between items-center gap-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="h-10 w-10 shrink-0 rounded-xl bg-blue-600 flex items-center justify-center font-black text-[20px]">S</div>
         <div class="min-w-0">
-          <h1 class="font-extrabold text-[15px]">لوحة الأدمن - صناع</h1>
-          <div class="text-[10px] opacity-70">إدارة الفنيين وطلبات العملاء والشحن</div>
+          <h1 class="font-extrabold text-[15px]">صناع - لوحة الإدارة</h1>
+          <div class="text-[10px] text-blue-100/75 mt-0.5">إدارة الفنيين والطلبات والمحافظ</div>
         </div>
       </div>
-
       <div class="flex gap-2 shrink-0">
-        <button onclick="goFanni()" class="h-9 px-3 rounded-full bg-[#f97316] text-[11px] font-bold">الفني</button>
-        ${isAuth?`<button onclick="logout()" class="h-9 px-3 rounded-full bg-white/10 text-[11px]">خروج</button>`:''}
+        <button onclick="goFanni()" class="h-9 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-[11px] font-extrabold">لوحة الفني</button>
+        ${isAuth?'<button onclick="logout()" class="h-9 px-3 rounded-xl bg-white/10 hover:bg-white/20 text-[11px] font-bold">خروج</button>':''}
       </div>
     </div>
   </header>
 
-  <main class="mx-auto max-w-[1000px] px-3 pb-24">
-
+  <main class="mx-auto max-w-[760px] px-3 pb-24">
     ${!isAuth?`
-      <div class="mt-6 max-w-[400px] mx-auto bg-white border rounded-[20px] p-6 shadow-sm">
-        <h2 class="font-extrabold text-[18px]">دخول الأدمن</h2>
-        <p class="text-[11px] text-slate-500 mt-1">محفظة التحويل: ${WALLET}</p>
+      <section class="mt-6 max-w-[400px] mx-auto panel p-5 sm:p-6">
+        <div class="flex items-center gap-3">
+          <div class="h-11 w-11 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/>
+            </svg>
+          </div>
+          <div>
+            <h2 class="font-extrabold text-[17px]">دخول الأدمن</h2>
+            <p class="text-[11px] text-slate-500 mt-0.5">سجّل الدخول لإدارة مشروع صُنّاع</p>
+          </div>
+        </div>
+
+        <p class="text-[11px] text-slate-600 mt-4 rounded-xl bg-blue-50 border border-blue-100 p-3">
+          رقم محفظة التحويل: <b dir="ltr">${WALLET}</b>
+        </p>
 
         <form onsubmit="event.preventDefault();doLogin();" class="mt-4 space-y-3">
-          <input
-            type="email"
-            value="${escHtml(state.adminEmail)}"
-            oninput="state.adminEmail=this.value"
-            autocomplete="username"
-            required
-            placeholder="البريد الإلكتروني"
-            class="w-full h-12 rounded-xl border px-4 text-[13px] outline-none focus:border-slate-500">
+          <label class="block">
+            <span class="block text-[11px] font-bold text-slate-600 mb-1.5">البريد الإلكتروني</span>
+            <input type="email" value="${escHtml(state.adminEmail)}"
+              oninput="state.adminEmail=this.value" autocomplete="username" required
+              placeholder="البريد الإلكتروني"
+              class="field">
+          </label>
 
-          <input
-            type="password"
-            value="${escHtml(state.adminPass)}"
-            oninput="state.adminPass=this.value"
-            autocomplete="current-password"
-            required
-            placeholder="كلمة المرور"
-            class="w-full h-12 rounded-xl border px-4 text-[13px] outline-none focus:border-slate-500">
+          <label class="block">
+            <span class="block text-[11px] font-bold text-slate-600 mb-1.5">كلمة المرور</span>
+            <input type="password" value="${escHtml(state.adminPass)}"
+              oninput="state.adminPass=this.value" autocomplete="current-password" required
+              placeholder="كلمة المرور" class="field">
+          </label>
 
-          <button type="submit" ${state.loading?'disabled':''} class="w-full h-12 rounded-xl bg-[#0f172a] text-white font-bold">
+          <button type="submit" ${state.loading?'disabled':''}
+            class="w-full h-11 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-[13px] font-extrabold">
             ${state.loading?'جاري تسجيل الدخول...':'دخول'}
           </button>
-
-          ${state.error?`<p class="text-[12px] text-red-600 bg-red-50 border rounded-xl p-3">${escHtml(state.error)}</p>`:''}
+          ${state.error?`<p class="text-[12px] text-red-700 bg-red-50 border border-red-200 rounded-xl p-3">${escHtml(state.error)}</p>`:''}
         </form>
-      </div>
+      </section>
     `:`
-      <div class="mt-3 flex p-1 bg-white rounded-[16px] border gap-1 overflow-x-auto">
-        ${[
-          {id:'fannis',label:`الفنيين (${state.fannis.length})`},
-          {id:'pending',label:`بانتظار (${state.fannis.filter(f=>!f.isApproved&&!f.isDisabled&&f.status!=='rejected').length})`},
-          {id:'disabled',label:`معطلين (${state.fannis.filter(f=>f.isDisabled).length})`},
-          {id:'orders',label:`طلبات العملاء (${state.orders.length})`},
-          {id:'topups',label:`الشحن (${state.topups.length})`},
-          {id:'stats',label:'إحصائيات'}
-        ].map(t=>`
-          <button
-            onclick="setTab('${t.id}')"
-            class="flex-1 min-w-[92px] h-11 px-2 rounded-[12px] text-[11px] font-bold whitespace-nowrap ${state.tab===t.id?'bg-[#0f172a] text-white':'bg-slate-50 text-slate-600'}">
-            ${escHtml(t.label)}
-          </button>
-        `).join('')}
-
-        <button onclick="refreshCurrentTab()" class="h-11 px-4 rounded-[12px] bg-white border text-[11px] font-bold shrink-0">🔄 تحديث</button>
-      </div>
+      <section class="mt-3 panel p-2">
+        <div class="flex gap-1.5 overflow-x-auto pb-0.5">
+          ${[
+            {id:'fannis',label:`الفنيون (${state.fannis.length})`},
+            {id:'pending',label:`بانتظار (${pendingCount})`},
+            {id:'disabled',label:`المعطلون (${state.fannis.filter(f=>f.isDisabled).length})`},
+            {id:'orders',label:`طلبات العملاء (${state.orders.length})`},
+            {id:'topups',label:`الشحن (${state.topups.length})`},
+            {id:'stats',label:'الإحصائيات'}
+          ].map(t=>`
+            <button onclick="setTab('${t.id}')"
+              class="shrink-0 h-10 px-3 rounded-xl text-[11px] font-extrabold whitespace-nowrap ${state.tab===t.id?'bg-[#2563eb] text-white shadow-sm':'bg-slate-50 text-slate-600 hover:bg-blue-50 hover:text-blue-700'}">
+              ${escHtml(t.label)}
+            </button>
+          `).join('')}
+          <button onclick="refreshCurrentTab()" class="shrink-0 h-10 px-3 rounded-xl bg-blue-50 text-blue-700 border border-blue-100 text-[11px] font-extrabold">تحديث</button>
+        </div>
+      </section>
 
       <div class="mt-3 flex gap-2">
-        <input
-          value="${escHtml(state.search)}"
-          oninput="onSearch(this.value)"
-          placeholder="${state.tab==='orders'?'بحث بكود الطلب أو اسم العميل أو الهاتف':state.tab==='topups'?'بحث برقم الهاتف أو المبلغ':'بحث باسم الفني أو الهاتف'}"
-          class="flex-1 min-w-0 h-11 rounded-xl border bg-white px-4 text-[12px] font-bold outline-none focus:border-slate-400">
+        <input value="${escHtml(state.search)}" oninput="onSearch(this.value)"
+          placeholder="${state.tab==='orders'?'بحث بالكود أو اسم العميل أو الهاتف':state.tab==='topups'?'بحث برقم الهاتف أو المبلغ':'بحث باسم الفني أو الهاتف'}"
+          class="field flex-1 min-w-0">
 
         ${state.tab==='orders'?`
-          <select onchange="onFilterOrder(this.value)" class="h-11 max-w-[145px] rounded-xl border bg-white px-2 text-[11px] font-bold">
+          <select onchange="onFilterOrder(this.value)" class="field !w-auto max-w-[135px] px-2">
             <option value="الكل" ${state.filterOrder==='الكل'?'selected':''}>كل الحالات</option>
             <option value="قيد المراجعة" ${state.filterOrder==='قيد المراجعة'?'selected':''}>قيد المراجعة</option>
             <option value="تم النشر" ${state.filterOrder==='تم النشر'?'selected':''}>تم النشر</option>
@@ -334,27 +318,27 @@ function render(){
             <option value="تم الانتهاء" ${state.filterOrder==='تم الانتهاء'?'selected':''}>تم الانتهاء</option>
           </select>
         `:state.tab==='topups'?`
-          <select onchange="onFilterTopup(this.value)" class="h-11 max-w-[130px] rounded-xl border bg-white px-2 text-[11px] font-bold">
+          <select onchange="onFilterTopup(this.value)" class="field !w-auto max-w-[130px] px-2">
             <option value="الكل">كل الحالات</option>
             <option value="pending">بانتظار المراجعة</option>
             <option value="approved">مقبول</option>
             <option value="rejected">مرفوض</option>
           </select>
         `:`
-          <select onchange="onFilter(this.value)" class="h-11 max-w-[130px] rounded-xl border bg-white px-2 text-[11px] font-bold">
+          <select onchange="onFilter(this.value)" class="field !w-auto max-w-[125px] px-2">
             <option value="الكل">كل الحالات</option>
-            <option value="pending">pending</option>
-            <option value="approved">approved</option>
-            <option value="rejected">rejected</option>
-            <option value="disabled">disabled</option>
+            <option value="pending">قيد المراجعة</option>
+            <option value="approved">معتمد</option>
+            <option value="rejected">مرفوض</option>
+            <option value="disabled">معطل</option>
           </select>
         `}
       </div>
 
       ${state.loading?`
-        <div class="mt-4 bg-white rounded-[16px] border p-8 text-center">
-          <div class="h-8 w-8 rounded-full border-2 border-slate-200 border-t-[#0f172a] animate-spin mx-auto"></div>
-          <p class="mt-2 text-[12px]">جاري التحميل...</p>
+        <div class="mt-3 panel p-7 text-center">
+          <div class="h-7 w-7 rounded-full border-2 border-slate-200 border-t-blue-600 animate-spin mx-auto"></div>
+          <p class="mt-2 text-[11px] text-slate-500">جاري التحميل...</p>
         </div>
       `:''}
 
@@ -363,163 +347,172 @@ function render(){
       ${state.tab!=='topups'&&state.tab!=='stats'&&state.tab!=='orders'?`
         <div class="mt-3 space-y-3">
           ${state.errors.fannis?`
-            <div class="bg-red-50 border border-red-200 rounded-[16px] p-4 text-[12px] text-red-700">
-              ${escHtml(state.errors.fannis)}
-            </div>
+            <div class="bg-red-50 border border-red-200 rounded-xl p-3 text-[12px] text-red-700">${escHtml(state.errors.fannis)}</div>
           `:''}
 
           ${state.filtered.length===0&&!state.loading&&!state.errors.fannis?`
-            <div class="bg-white rounded-[16px] border p-8 text-center text-[12px] text-slate-400">لا يوجد فنيون مطابقون للبحث</div>
+            <div class="panel p-8 text-center text-[12px] text-slate-400">لا يوجد فنيون مطابقون للبحث</div>
           `:''}
 
           ${state.filtered.map(f=>{
             const id=String(f._id||'');
-
             return `
-              <div class="bg-white rounded-[18px] border p-4 shadow-sm">
-                <div class="flex justify-between gap-3">
+              <article class="panel p-3 sm:p-4">
+                <div class="flex justify-between items-start gap-3">
                   <div class="min-w-0 flex-1">
                     <p class="font-extrabold text-[13px] break-words">
                       ${escHtml(f.name||'بدون اسم')}
-                      <span class="font-mono text-[11px] bg-slate-900 text-white px-2 py-0.5 rounded-full">${escHtml(f.phone||'')}</span>
                     </p>
-
-                    <p class="text-[11px] text-slate-600 mt-1">
-                      🛠 ${escHtml(f.skill||f.service||'')}
-                      - رصيد: <span class="font-black text-emerald-600">${escHtml(String(f.balance??f.walletBalance??0))}ج</span>
+                    <p class="mt-1">
+                      <span dir="ltr" class="inline-block font-mono text-[11px] bg-blue-50 text-blue-800 border border-blue-100 px-2 py-0.5 rounded-lg">${escHtml(f.phone||'')}</span>
                     </p>
-
-                    <p class="text-[10px] text-slate-400 mt-1">
-                      ID: ${escHtml(id.slice(-6))} -
-                      ${f.isDisabled?'⛔ معطل':f.isApproved?'✅ مفعل':'⏳ بانتظار'}
+                    <p class="text-[11px] text-slate-600 mt-2 break-words">
+                      <span class="text-blue-700 font-bold">التخصص:</span> ${escHtml(f.skill||f.service||'غير محدد')}
                     </p>
-
-                    <div class="mt-3 bg-amber-50 border border-amber-200 rounded-xl p-3">
-                      <p class="text-[11px] font-bold text-amber-800">💰 تسوية الرصيد - محفظة ${WALLET}</p>
-
-                      <div class="flex flex-wrap gap-1 mt-2">
-                        <input id="bal-${escHtml(id)}" type="number" min="0" max="100000000" step="0.01" placeholder="المبلغ" class="flex-1 min-w-[100px] h-9 rounded-lg border px-3 text-[12px] font-bold">
-
-                        <button onclick="setBalance('${escHtml(id)}')" class="h-9 px-3 rounded-lg bg-[#0f172a] text-white text-[11px] font-bold">تعيين</button>
-
-                        <button onclick="addBalance('${escHtml(id)}')" class="h-9 px-3 rounded-lg bg-emerald-600 text-white text-[11px] font-bold">+ إضافة</button>
-                      </div>
-
-                      <p class="text-[10px] text-amber-700 mt-1">تعيين = استبدال الرصيد بالقيمة الجديدة. إضافة = زيادة الرصيد الحالي.</p>
-                    </div>
+                    <p class="text-[11px] mt-1">
+                      <span class="text-slate-500">رصيد المحفظة:</span>
+                      <b class="text-emerald-700">${escHtml(String(f.balance??f.walletBalance??0))} جنيه</b>
+                    </p>
+                    <p class="text-[10px] text-slate-400 mt-1.5">
+                      رقم الحساب: ${escHtml(id.slice(-6)||'غير متوفر')} ·
+                      ${f.isDisabled?'معطل':f.isApproved?'معتمد':f.status==='rejected'?'مرفوض':'بانتظار المراجعة'}
+                    </p>
                   </div>
 
                   <div class="flex flex-col gap-1.5 shrink-0">
-                    ${!f.isApproved&&!f.isDisabled?`
-                      <button onclick="approveFanni('${escHtml(id)}')" class="h-8 px-2.5 rounded-full bg-emerald-600 text-white text-[10px] font-bold">✅ قبول</button>
+                    ${!f.isApproved&&!f.isDisabled&&f.status!=='rejected'?`
+                      <button onclick="approveFanni('${escHtml(id)}')" class="h-8 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-extrabold">قبول</button>
                     `:''}
-
                     ${!f.isDisabled&&f.status!=='rejected'?`
-                      <button onclick="rejectFanni('${escHtml(id)}')" class="h-7 px-2.5 rounded-full bg-slate-100 border text-[10px] font-bold">❌ رفض</button>
+                      <button onclick="rejectFanni('${escHtml(id)}')" class="h-8 px-2.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 text-[10px] font-bold">رفض</button>
                     `:''}
-
                     ${!f.isDisabled?`
-                      <button onclick="disableFanni('${escHtml(id)}')" class="h-7 px-2.5 rounded-full bg-red-50 border border-red-200 text-red-700 text-[10px] font-bold">⛔ تعطيل</button>
+                      <button onclick="disableFanni('${escHtml(id)}')" class="h-8 px-2.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-[10px] font-bold">تعطيل</button>
                     `:`
-                      <button onclick="enableFanni('${escHtml(id)}')" class="h-7 px-2.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[10px] font-bold">♻ استعادة</button>
+                      <button onclick="enableFanni('${escHtml(id)}')" class="h-8 px-2.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 text-[10px] font-bold">استعادة</button>
                     `}
                   </div>
                 </div>
-              </div>
+
+                <details class="mt-3 border border-slate-200 rounded-xl overflow-hidden">
+                  <summary class="cursor-pointer list-none bg-slate-50 hover:bg-blue-50 px-3 py-2.5 flex items-center justify-between gap-2">
+                    <span class="flex items-center gap-2 text-[11px] font-extrabold text-slate-700">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect x="3" y="5" width="18" height="14" rx="3"/><path d="M12 8v8m-4-4h8"/>
+                      </svg>
+                      تسوية رصيد المحفظة
+                    </span>
+                    <span class="text-[10px] text-slate-400">فتح الخيارات</span>
+                  </summary>
+                  <div class="p-3 bg-white">
+                    <p class="text-[10px] text-slate-500 mb-2">محفظة التحويل: <b dir="ltr">${WALLET}</b></p>
+                    <label class="block text-[10px] font-bold text-slate-600 mb-1">المبلغ بالجنيه</label>
+                    <div class="flex flex-wrap gap-2">
+                      <input id="bal-${escHtml(id)}" type="number" min="0" max="100000000" step="0.01"
+                        inputmode="decimal" placeholder="اكتب المبلغ"
+                        class="field flex-1 min-w-[115px]">
+                      <button onclick="setBalance('${escHtml(id)}')" class="h-[42px] px-3 rounded-xl bg-[#0b1b3a] hover:bg-[#163b70] text-white text-[11px] font-extrabold">تعيين الرصيد</button>
+                      <button onclick="addBalance('${escHtml(id)}')" class="h-[42px] px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-extrabold">إضافة رصيد</button>
+                    </div>
+                    <p class="text-[10px] leading-5 text-slate-500 mt-2">
+                      التعيين يستبدل الرصيد الحالي. الإضافة تزيد عليه. هذه العمليات تخص المحفظة فقط ولا تغيّر ميزانية العميل أو سعر عرض الفني.
+                    </p>
+                  </div>
+                </details>
+              </article>
             `;
           }).join('')}
         </div>
       `:''}
 
       ${state.tab==='topups'?`
-        <div class="mt-3">
-          <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-3">
-            <p class="text-[11px] font-bold text-blue-800">💳 محفظة التحويل: ${WALLET}</p>
+        <section class="mt-3">
+          <div class="rounded-xl bg-blue-50 border border-blue-100 p-3 mb-3 flex items-center gap-2">
+            <div class="h-8 w-8 shrink-0 rounded-lg bg-white text-blue-700 flex items-center justify-center">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20"/>
+              </svg>
+            </div>
+            <div>
+              <p class="text-[11px] font-extrabold text-blue-900">طلبات شحن المحافظ</p>
+              <p class="text-[10px] text-blue-800 mt-0.5">رقم التحويل: <b dir="ltr">${WALLET}</b></p>
+            </div>
           </div>
 
           ${state.errors.topups?`
-            <div class="bg-red-50 border border-red-200 rounded-[16px] p-4 text-[12px] text-red-700 mb-3">
-              ${escHtml(state.errors.topups)}
-            </div>
+            <div class="bg-red-50 border border-red-200 rounded-xl p-3 text-[12px] text-red-700 mb-3">${escHtml(state.errors.topups)}</div>
           `:''}
 
           <div class="space-y-3">
             ${state.filteredTopups.length===0&&!state.loading&&!state.errors.topups?`
-              <div class="bg-white rounded-[16px] border p-8 text-center text-[12px] text-slate-400">لا توجد طلبات شحن مطابقة</div>
+              <div class="panel p-8 text-center text-[12px] text-slate-400">لا توجد طلبات شحن مطابقة</div>
             `:''}
 
             ${state.filteredTopups.map(t=>{
               const s=t.status||'pending';
               const id=String(t._id||'');
-              const badge=statusClass(s);
-
               return `
-                <div class="bg-white rounded-[16px] border p-4">
+                <article class="panel p-3 sm:p-4">
                   <div class="flex justify-between items-start gap-3">
                     <div class="min-w-0">
-                      <p class="font-bold text-[13px] break-words">
-                        ${escHtml(String(t.amount??''))}ج -
-                        ${escHtml(t.fromPhone||t.phone||'')}
-                        <span class="text-[10px] px-2 py-0.5 rounded-full border ${badge}">${escHtml(statusLabel(s))}</span>
-                      </p>
-
-                      <p class="text-[11px] text-slate-500 mt-1">
-                        محفظة: ${escHtml(t.walletNumber||WALLET)}
-                      </p>
-
-                      <p class="text-[10px] text-slate-400 mt-1">
-                        ${escHtml(t.createdAt?new Date(t.createdAt).toLocaleString('ar-EG'):'')}
-                      </p>
+                      <p class="font-extrabold text-[13px] break-words">${escHtml(String(t.amount??''))} جنيه</p>
+                      <p class="text-[11px] text-slate-600 mt-1" dir="ltr">${escHtml(t.fromPhone||t.phone||'')}</p>
+                      <p class="text-[10px] text-slate-500 mt-2">محفظة التحويل: ${escHtml(t.walletNumber||WALLET)}</p>
+                      <p class="text-[10px] text-slate-400 mt-1">${escHtml(t.createdAt?new Date(t.createdAt).toLocaleString('ar-EG'):'')}</p>
+                      <span class="inline-block mt-2 text-[10px] px-2.5 py-1 rounded-full border ${statusClass(s)}">${escHtml(statusLabel(s))}</span>
                     </div>
-
-                    <div class="flex flex-col gap-1 shrink-0">
+                    <div class="flex flex-col gap-1.5 shrink-0">
                       ${s==='pending'?`
-                        <button onclick="approveTopup('${escHtml(id)}')" class="h-8 px-3 rounded-full bg-emerald-600 text-white text-[10px] font-bold">✅ قبول + إضافة رصيد</button>
-                        <button onclick="rejectTopup('${escHtml(id)}')" class="h-7 px-2.5 rounded-full bg-red-50 border border-red-200 text-red-700 text-[10px] font-bold">❌ رفض</button>
+                        <button onclick="approveTopup('${escHtml(id)}')" class="h-8 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-extrabold">قبول الشحن</button>
+                        <button onclick="rejectTopup('${escHtml(id)}')" class="h-8 px-2.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-[10px] font-bold">رفض</button>
                       `:`
-                        <span class="text-[11px] font-bold">${s==='approved'?'✅ تم':'❌ مرفوض'}</span>
+                        <span class="text-[10px] font-bold ${s==='approved'?'text-emerald-700':'text-red-700'}">${s==='approved'?'تم الاعتماد':'مرفوض'}</span>
                       `}
                     </div>
                   </div>
-                </div>
+                </article>
               `;
             }).join('')}
           </div>
-        </div>
+        </section>
       `:''}
 
       ${state.tab==='stats'?`
-        <div class="mt-3 grid grid-cols-2 gap-3">
-          <div class="bg-white rounded-[16px] border p-4 text-center">
-            <p class="text-[22px] font-black">${state.fannis.length}</p>
-            <p class="text-[11px] text-slate-500">إجمالي الفنيين</p>
+        <section class="mt-3 grid grid-cols-2 gap-2.5">
+          <div class="panel p-3 text-center">
+            <p class="text-[23px] font-black">${state.fannis.length}</p>
+            <p class="text-[10px] text-slate-500">إجمالي الفنيين</p>
           </div>
-
-          <div class="bg-white rounded-[16px] border p-4 text-center">
-            <p class="text-[22px] font-black text-emerald-600">${state.fannis.filter(f=>f.isApproved).length}</p>
-            <p class="text-[11px] text-slate-500">فنيون معتمدون</p>
+          <div class="panel p-3 text-center">
+            <p class="text-[23px] font-black text-emerald-600">${state.fannis.filter(f=>f.isApproved).length}</p>
+            <p class="text-[10px] text-slate-500">فنيون معتمدون</p>
           </div>
-
-          <div class="bg-white rounded-[16px] border p-4 text-center">
-            <p class="text-[22px] font-black">${state.orders.length}</p>
-            <p class="text-[11px] text-slate-500">طلبات العملاء</p>
+          <div class="panel p-3 text-center">
+            <p class="text-[23px] font-black text-blue-700">${state.orders.length}</p>
+            <p class="text-[10px] text-slate-500">طلبات العملاء المحمّلة</p>
           </div>
-
-          <div class="bg-white rounded-[16px] border p-4 text-center">
-            <p class="text-[22px] font-black">${state.topups.length}</p>
-            <p class="text-[11px] text-slate-500">طلبات الشحن</p>
+          <div class="panel p-3 text-center">
+            <p class="text-[23px] font-black">${state.topups.length}</p>
+            <p class="text-[10px] text-slate-500">طلبات الشحن</p>
           </div>
-
-          <div class="bg-white rounded-[16px] border p-4 text-center col-span-2">
-            <p class="text-[22px] font-black text-emerald-600">${state.topups.filter(t=>t.status==='approved').reduce((s,t)=>s+Number(t.amount||0),0)}ج</p>
-            <p class="text-[11px] text-slate-500">إجمالي طلبات الشحن المقبولة</p>
+          <div class="panel p-3 text-center col-span-2">
+            <p class="text-[22px] font-black text-emerald-600">${state.topups.filter(t=>t.status==='approved').reduce((s,t)=>s+Number(t.amount||0),0)} جنيه</p>
+            <p class="text-[10px] text-slate-500">إجمالي طلبات الشحن المقبولة</p>
           </div>
-        </div>
+        </section>
 
-        <div class="mt-4 bg-white border rounded-[16px] p-4">
-          <p class="text-[12px] font-bold">محفظة التحويل: ${WALLET}</p>
-          <p class="text-[11px] text-slate-500 mt-1">حالة اتصال قاعدة البيانات يجب التحقق منها عبر فحص الخادم، ولا تُعتبر مؤكدة من واجهة الصفحة وحدها.</p>
-        </div>
+        <section class="panel mt-3 p-3 flex items-center gap-3">
+          <div class="h-9 w-9 shrink-0 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-[11px] font-extrabold">محفظة التحويل</p>
+            <p class="text-[11px] text-slate-600 mt-0.5" dir="ltr">${WALLET}</p>
+            <p class="text-[10px] text-slate-500 mt-1">حالة اتصال قاعدة البيانات تحتاج إلى فحص الخادم، ولا تؤكدها الواجهة وحدها.</p>
+          </div>
+        </section>
       `:''}
     `}
   </main>
@@ -528,32 +521,37 @@ function render(){
 
 function renderOrders(){
   return `
-    <div class="mt-3 space-y-3">
-      <div class="bg-blue-50 border border-blue-200 rounded-xl p-3">
-        <p class="text-[12px] font-extrabold text-blue-900">📋 إدارة طلبات العملاء</p>
-        <p class="text-[11px] text-blue-800 mt-1">عرض الطلبات وحالاتها والعروض المقدمة من الفنيين.</p>
+    <section class="mt-3 space-y-3">
+      <div class="rounded-xl bg-blue-50 border border-blue-100 p-3 flex items-start gap-2.5">
+        <div class="h-8 w-8 shrink-0 rounded-lg bg-white text-blue-700 flex items-center justify-center">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-[12px] font-extrabold text-blue-900">طلبات العملاء</p>
+          <p class="text-[10px] text-blue-800 mt-1 leading-5">ميزانية العميل منفصلة عن السعر الذي يقدمه الفني وعن رصيد محفظته.</p>
+        </div>
       </div>
 
       ${state.errors.orders?`
-        <div class="bg-red-50 border border-red-200 rounded-[16px] p-4">
+        <div class="bg-red-50 border border-red-200 rounded-xl p-3">
           <p class="text-[12px] font-extrabold text-red-700">تعذر تحميل طلبات العملاء</p>
-          <p class="text-[11px] text-red-700 mt-2">${escHtml(state.errors.orders)}</p>
-          <p class="text-[11px] text-red-700 mt-2">مسار عرض الطلبات الإداري يحتاج إلى إضافته في الباك إند قبل أن تعمل هذه القائمة.</p>
-          <button onclick="loadOrders()" class="mt-3 h-9 px-4 rounded-lg bg-red-700 text-white text-[11px] font-bold">إعادة المحاولة</button>
+          <p class="text-[11px] text-red-700 mt-1.5">${escHtml(state.errors.orders)}</p>
+          <p class="text-[10px] text-red-700 mt-2 leading-5">مسار عرض الطلبات للإدارة يحتاج إلى إضافته في الباك إند. لا يعني ظهور التبويب أن المسار أصبح موجودًا.</p>
+          <button onclick="loadOrders()" class="mt-3 h-9 px-3 rounded-lg bg-red-700 text-white text-[11px] font-bold">إعادة المحاولة</button>
         </div>
       `:''}
 
       ${state.loadingOrders?`
-        <div class="bg-white rounded-[16px] border p-8 text-center">
-          <div class="h-8 w-8 rounded-full border-2 border-slate-200 border-t-[#0f172a] animate-spin mx-auto"></div>
-          <p class="mt-2 text-[12px]">جاري تحميل الطلبات...</p>
+        <div class="panel p-7 text-center">
+          <div class="h-7 w-7 rounded-full border-2 border-slate-200 border-t-blue-600 animate-spin mx-auto"></div>
+          <p class="mt-2 text-[11px] text-slate-500">جاري تحميل الطلبات...</p>
         </div>
       `:''}
 
       ${state.filteredOrders.length===0&&!state.loadingOrders&&!state.errors.orders?`
-        <div class="bg-white rounded-[16px] border p-8 text-center text-[12px] text-slate-400">
-          لا توجد طلبات مطابقة للبحث أو الفلتر.
-        </div>
+        <div class="panel p-7 text-center text-[11px] text-slate-400">لا توجد طلبات مطابقة للبحث أو الفلتر.</div>
       `:''}
 
       ${state.filteredOrders.map(o=>{
@@ -561,125 +559,99 @@ function renderOrders(){
         const status=o.status||'قيد المراجعة';
         const offers=Array.isArray(o.offers)?o.offers:[];
         const created=o.createdAt?new Date(o.createdAt).toLocaleString('ar-EG'):'';
+        const budget=o.budget===null||o.budget===undefined||String(o.budget).trim()===''?'لم يحدد ميزانية':String(o.budget)+' جنيه';
 
         return `
-          <article class="bg-white rounded-[18px] border p-4 shadow-sm">
-            <div class="flex justify-between items-start gap-3">
+          <article class="panel p-3 sm:p-4">
+            <div class="flex justify-between items-start gap-2.5">
               <div class="min-w-0 flex-1">
-                <p class="font-extrabold text-[14px] break-words">
-                  ${escHtml(o.service||'طلب خدمة')}
-                </p>
-
-                <p class="mt-1 text-[11px] text-slate-500">
+                <p class="font-extrabold text-[13px] break-words">${escHtml(o.service||'طلب خدمة')}</p>
+                <p class="mt-1.5 text-[10px] text-slate-500">
                   كود الطلب:
-                  <span class="font-mono font-black text-slate-900">${escHtml(sn||'غير متوفر')}</span>
+                  <span class="font-mono font-extrabold text-blue-800">${escHtml(sn||'غير متوفر')}</span>
                 </p>
               </div>
-
-              <span class="shrink-0 text-[10px] px-2.5 py-1 rounded-full border ${statusClass(status)}">
-                ${escHtml(statusLabel(status))}
-              </span>
+              <span class="shrink-0 text-[10px] px-2 py-1 rounded-full border ${statusClass(status)}">${escHtml(statusLabel(status))}</span>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
-              <div class="rounded-xl bg-slate-50 border border-slate-100 p-3">
+            <div class="grid grid-cols-2 gap-2 mt-3">
+              <div class="rounded-xl bg-slate-50 border border-slate-100 p-2.5 min-w-0">
                 <p class="text-[10px] text-slate-500">اسم العميل</p>
-                <p class="text-[12px] font-bold mt-1 break-words">${escHtml(o.clientName||'غير مسجل')}</p>
+                <p class="text-[11px] font-bold mt-1 break-words">${escHtml(o.clientName||'غير مسجل')}</p>
               </div>
-
-              <div class="rounded-xl bg-slate-50 border border-slate-100 p-3">
+              <div class="rounded-xl bg-slate-50 border border-slate-100 p-2.5 min-w-0">
                 <p class="text-[10px] text-slate-500">هاتف العميل</p>
-                <p class="text-[12px] font-bold mt-1" dir="ltr">${escHtml(o.clientPhone||'غير متوفر')}</p>
+                <p class="text-[11px] font-bold mt-1 break-words" dir="ltr">${escHtml(o.clientPhone||'غير متوفر')}</p>
               </div>
-
-              <div class="rounded-xl bg-slate-50 border border-slate-100 p-3">
+              <div class="rounded-xl bg-slate-50 border border-slate-100 p-2.5 min-w-0">
                 <p class="text-[10px] text-slate-500">المنطقة</p>
-                <p class="text-[12px] font-bold mt-1 break-words">${escHtml(o.area||o.city||'غير محددة')}</p>
+                <p class="text-[11px] font-bold mt-1 break-words">${escHtml(o.area||o.city||'غير محددة')}</p>
               </div>
-
-              <div class="rounded-xl bg-slate-50 border border-slate-100 p-3">
-                <p class="text-[10px] text-slate-500">الميزانية المكتوبة</p>
-                <p class="text-[12px] font-bold mt-1">${escHtml(o.budget||'لم تُحدد')}</p>
+              <div class="rounded-xl bg-blue-50 border border-blue-100 p-2.5 min-w-0">
+                <p class="text-[10px] text-blue-700">ميزانية العميل</p>
+                <p class="text-[11px] font-extrabold text-blue-900 mt-1 break-words">${escHtml(budget)}</p>
               </div>
             </div>
 
-            <div class="mt-3 rounded-xl bg-slate-50 border border-slate-100 p-3">
+            <div class="mt-2 rounded-xl bg-slate-50 border border-slate-100 p-2.5">
               <p class="text-[10px] text-slate-500">وصف الطلب</p>
-              <p class="text-[12px] mt-1 leading-6 whitespace-pre-wrap break-words">${escHtml(o.description||'لا يوجد وصف')}</p>
+              <p class="text-[11px] mt-1 leading-5 whitespace-pre-wrap break-words">${escHtml(o.description||'لا يوجد وصف')}</p>
             </div>
 
             <div class="mt-3 flex flex-wrap justify-between items-center gap-2">
-              <span class="text-[11px] font-bold text-slate-600">عدد العروض: ${offers.length}</span>
+              <span class="text-[10px] font-bold text-slate-600">عدد عروض الفنيين: ${offers.length}</span>
               <span class="text-[10px] text-slate-400">${escHtml(created)}</span>
             </div>
 
             ${offers.length?`
-              <details class="mt-3 border rounded-xl p-3">
-                <summary class="cursor-pointer text-[12px] font-extrabold">عرض تفاصيل عروض الفنيين (${offers.length})</summary>
-
-                <div class="mt-3 space-y-2">
+              <details class="mt-3 border border-slate-200 rounded-xl overflow-hidden">
+                <summary class="cursor-pointer bg-slate-50 hover:bg-blue-50 px-3 py-2.5 text-[11px] font-extrabold text-slate-700">تفاصيل عروض الفنيين (${offers.length})</summary>
+                <div class="p-2.5 space-y-2">
                   ${offers.map((offer,i)=>`
-                    <div class="rounded-xl bg-slate-50 border p-3">
-                      <p class="text-[12px] font-bold">العرض ${i+1}: ${escHtml(offer.fanniName||'فني')}</p>
-                      <p class="text-[11px] mt-1">السعر: ${escHtml(offer.price??offer.priceNum??'غير محدد')} جنيه</p>
-                      <p class="text-[11px] mt-1 break-words">الهاتف: ${escHtml(offer.fanniPhone||'غير متوفر')}</p>
-                      <p class="text-[11px] mt-1 leading-5 break-words">${escHtml(offer.message||'لا توجد رسالة')}</p>
+                    <div class="rounded-xl bg-white border border-slate-200 p-3">
+                      <p class="text-[11px] font-extrabold">العرض ${i+1}: ${escHtml(offer.fanniName||'فني')}</p>
+                      <p class="text-[11px] mt-1.5">السعر المقترح: <b class="text-blue-700">${escHtml(offer.price??offer.priceNum??'لم يحدد')} جنيه</b></p>
+                      <p class="text-[10px] mt-1 break-words">الهاتف: ${escHtml(offer.fanniPhone||'غير متوفر')}</p>
+                      <p class="text-[10px] mt-1 leading-5 break-words">${escHtml(offer.message||'لا توجد رسالة')}</p>
                     </div>
                   `).join('')}
                 </div>
               </details>
             `:`
-              <p class="mt-3 text-[11px] text-slate-400 bg-slate-50 border rounded-xl p-3 text-center">لم يقدم أي فني عرضًا على هذا الطلب حتى الآن.</p>
+              <p class="mt-3 text-[10px] text-slate-400 bg-slate-50 border border-slate-100 rounded-xl p-3 text-center">لم يقدم أي فني عرضًا على هذا الطلب حتى الآن.</p>
             `}
           </article>
         `;
       }).join('')}
-    </div>
+    </section>
   `;
 }
 
 function setTab(t){
   state.tab=t;
   render();
-
-  if(t==='orders') loadOrders();
-  else if(t==='topups') applyTopupFilter();
+  if(t==='orders')loadOrders();
+  else if(t==='topups')applyTopupFilter();
   else applyFilter();
 }
 
 function onSearch(v){
   state.search=v;
-
-  if(state.tab==='orders') applyOrderFilter();
-  else if(state.tab==='topups') applyTopupFilter();
+  if(state.tab==='orders')applyOrderFilter();
+  else if(state.tab==='topups')applyTopupFilter();
   else applyFilter();
 }
 
-function onFilter(v){
-  state.filter=v;
-  applyFilter();
-}
-
-function onFilterTopup(v){
-  state.filterTopup=v;
-  applyTopupFilter();
-}
-
-function onFilterOrder(v){
-  state.filterOrder=v;
-  applyOrderFilter();
-}
+function onFilter(v){state.filter=v;applyFilter()}
+function onFilterTopup(v){state.filterTopup=v;applyTopupFilter()}
+function onFilterOrder(v){state.filterOrder=v;applyOrderFilter()}
 
 function applyFilter(){
   let list=[...state.fannis];
-
   if(state.tab==='pending'){
     list=list.filter(f=>!f.isApproved&&!f.isDisabled&&f.status!=='rejected');
   }
-
-  if(state.tab==='disabled'){
-    list=list.filter(f=>f.isDisabled);
-  }
+  if(state.tab==='disabled')list=list.filter(f=>f.isDisabled);
 
   if(state.filter!=='الكل'){
     list=list.filter(f=>{
@@ -697,21 +669,14 @@ function applyFilter(){
   }
 
   state.filtered=list;
-
-  if(state.tab!=='topups'&&state.tab!=='stats'&&state.tab!=='orders'){
-    render();
-  }
+  if(!['topups','stats','orders'].includes(state.tab))render();
 }
 
 function applyTopupFilter(){
   let list=[...state.topups];
-
   if(state.filterTopup!=='الكل'){
-    list=list.filter(t=>
-      String(t.status||'pending').toLowerCase()===state.filterTopup.toLowerCase()
-    );
+    list=list.filter(t=>String(t.status||'pending').toLowerCase()===state.filterTopup.toLowerCase());
   }
-
   if(state.search){
     const s=state.search.toLowerCase();
     list=list.filter(t=>
@@ -719,55 +684,35 @@ function applyTopupFilter(){
       String(t.amount||'').includes(s)
     );
   }
-
   state.filteredTopups=list;
-
-  if(state.tab==='topups') render();
+  if(state.tab==='topups')render();
 }
 
 function applyOrderFilter(){
   let list=[...state.orders];
-
   if(state.filterOrder!=='الكل'){
     list=list.filter(o=>String(o.status||'قيد المراجعة')===state.filterOrder);
   }
-
-  if(state.search){
-    list=list.filter(o=>orderSearchMatch(o,state.search));
-  }
-
+  if(state.search)list=list.filter(o=>orderSearchMatch(o,state.search));
   state.filteredOrders=list;
-
-  if(state.tab==='orders') render();
+  if(state.tab==='orders')render();
 }
 
 async function doLogin(){
   if(state.loading)return;
-
   state.loading=true;
   state.error='';
   render();
 
   try{
-    const data=await tryApi(
-      ['/api/admin/login','/api/admins/login'],
-      {
-        method:'POST',
-        body:JSON.stringify({
-          email:state.adminEmail.trim(),
-          password:state.adminPass
-        })
-      }
-    );
-
+    const data=await tryApi(['/api/admin/login','/api/admins/login'],{
+      method:'POST',
+      body:JSON.stringify({email:state.adminEmail.trim(),password:state.adminPass})
+    });
     const token=data.token||data.accessToken||data.data?.token;
-
-    if(!token){
-      throw new Error(data.message||'لم يتم استلام رمز تسجيل الدخول');
-    }
+    if(!token)throw new Error(data.message||'لم يتم استلام رمز تسجيل الدخول');
 
     setToken(token);
-
     state.adminPass='';
     showToast('تم تسجيل الدخول بنجاح');
     await loadAll();
@@ -780,7 +725,6 @@ async function doLogin(){
 
 async function loadAll(){
   if(!getToken())return;
-
   state.loading=true;
   state.errors.fannis='';
   state.errors.topups='';
@@ -794,8 +738,7 @@ async function loadAll(){
   ]);
 
   if(results[0].status==='fulfilled'){
-    const data=results[0].value;
-    state.fannis=extractList(data,['fannis','items']);
+    state.fannis=extractList(results[0].value,['fannis','items']);
     state.errors.fannis='';
   }else{
     state.fannis=[];
@@ -803,8 +746,7 @@ async function loadAll(){
   }
 
   if(results[1].status==='fulfilled'){
-    const data=results[1].value;
-    state.topups=extractList(data,['requests','topups','items']);
+    state.topups=extractList(results[1].value,['requests','topups','items']);
     state.errors.topups='';
   }else{
     state.topups=[];
@@ -812,8 +754,7 @@ async function loadAll(){
   }
 
   if(results[2].status==='fulfilled'){
-    const data=results[2].value;
-    state.orders=extractList(data,['orders','items','requests']);
+    state.orders=extractList(results[2].value,['orders','items','requests']);
     state.errors.orders='';
   }else{
     state.orders=[];
@@ -821,7 +762,6 @@ async function loadAll(){
   }
 
   state.loading=false;
-
   applyFilter();
   applyTopupFilter();
   applyOrderFilter();
@@ -838,7 +778,6 @@ async function loadAll(){
 
 async function loadOrders(){
   if(!getToken())return;
-
   state.loadingOrders=true;
   state.errors.orders='';
   render();
@@ -860,11 +799,8 @@ async function loadOrders(){
 }
 
 async function refreshCurrentTab(){
-  if(state.tab==='orders'){
-    await loadOrders();
-  }else{
-    await loadAll();
-  }
+  if(state.tab==='orders')await loadOrders();
+  else await loadAll();
 }
 
 /* إدارة الفنيين */
@@ -872,167 +808,120 @@ async function refreshCurrentTab(){
 async function approveFanni(id){
   try{
     await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/approve`],{
-      method:'POST',
-      body:JSON.stringify({status:'approved'})
+      method:'POST',body:JSON.stringify({})
     });
-
     showToast('تم قبول الفني');
     await loadAll();
-  }catch(e){
-    showToast(e.message,'error');
-  }
+  }catch(e){showToast(e.message,'error')}
 }
 
 async function rejectFanni(id){
   if(!confirm('هل تريد رفض هذا الفني؟'))return;
-
   try{
     await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/reject`],{
-      method:'POST',
-      body:JSON.stringify({})
+      method:'POST',body:JSON.stringify({})
     });
-
     showToast('تم رفض الفني');
     await loadAll();
-  }catch(e){
-    showToast(e.message,'error');
-  }
+  }catch(e){showToast(e.message,'error')}
 }
 
 async function disableFanni(id){
   if(!confirm('هل تريد تعطيل هذا الفني؟'))return;
-
   try{
     await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/disable`],{
-      method:'POST',
-      body:JSON.stringify({})
+      method:'POST',body:JSON.stringify({})
     });
-
     showToast('تم تعطيل الفني');
     await loadAll();
-  }catch(e){
-    showToast(e.message,'error');
-  }
+  }catch(e){showToast(e.message,'error')}
 }
 
 async function enableFanni(id){
   if(!confirm('هل تريد استعادة هذا الفني؟'))return;
-
   try{
     await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/enable`],{
-      method:'POST',
-      body:JSON.stringify({})
+      method:'POST',body:JSON.stringify({})
     });
-
     showToast('تمت استعادة الفني');
     await loadAll();
-  }catch(e){
-    showToast(e.message,'error');
-  }
+  }catch(e){showToast(e.message,'error')}
 }
 
-/* تسوية الرصيد */
+/* تسوية رصيد المحفظة */
 
 async function setBalance(id){
   const input=document.getElementById('bal-'+id);
   if(!input)return showToast('خانة الرصيد غير موجودة','error');
-
   const amount=input.value;
 
   if(amount===''||!Number.isFinite(Number(amount))||Number(amount)<0||Number(amount)>100000000){
     return showToast('اكتب مبلغًا صحيحًا من صفر إلى 100 مليون','error');
   }
-
   if(!confirm(`تعيين رصيد الفني إلى ${amount} جنيه؟ هذه العملية تستبدل الرصيد الحالي.`))return;
 
   try{
     const res=await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/set-balance`],{
-      method:'POST',
-      body:JSON.stringify({amount:Number(amount)})
+      method:'POST',body:JSON.stringify({amount:Number(amount)})
     });
-
     showToast(res.message||`تم تعيين الرصيد إلى ${amount} جنيه`);
     await loadAll();
-  }catch(e){
-    showToast(e.message,'error');
-  }
+  }catch(e){showToast(e.message,'error')}
 }
 
 async function addBalance(id){
   const input=document.getElementById('bal-'+id);
   if(!input)return showToast('خانة الرصيد غير موجودة','error');
-
   const amount=input.value;
 
   if(amount===''||!Number.isFinite(Number(amount))||Number(amount)<=0||Number(amount)>100000000){
     return showToast('اكتب مبلغًا أكبر من صفر ولا يتجاوز 100 مليون','error');
   }
-
   if(!confirm(`إضافة ${amount} جنيه إلى رصيد الفني الحالي؟`))return;
 
   try{
     const res=await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/add-balance`],{
-      method:'POST',
-      body:JSON.stringify({amount:Number(amount)})
+      method:'POST',body:JSON.stringify({amount:Number(amount)})
     });
-
     showToast(res.message||'تمت إضافة الرصيد');
     await loadAll();
-  }catch(e){
-    showToast(e.message,'error');
-  }
+  }catch(e){showToast(e.message,'error')}
 }
 
 /* طلبات الشحن */
 
 async function approveTopup(id){
   if(!confirm('تأكيد قبول طلب الشحن وإضافة الرصيد مرة واحدة؟'))return;
-
   try{
     const res=await tryApi([`/api/admin/topup-requests/${encodeURIComponent(id)}/approve`],{
-      method:'POST',
-      body:JSON.stringify({status:'approved'})
+      method:'POST',body:JSON.stringify({})
     });
-
     showToast(res.message||'تم قبول طلب الشحن');
     await loadAll();
-  }catch(e){
-    showToast(e.message,'error');
-  }
+  }catch(e){showToast(e.message,'error')}
 }
 
 async function rejectTopup(id){
   if(!confirm('هل تريد رفض طلب الشحن؟ لن تتم إضافة أي رصيد.'))return;
-
   try{
     await tryApi([`/api/admin/topup-requests/${encodeURIComponent(id)}/reject`],{
-      method:'POST',
-      body:JSON.stringify({})
+      method:'POST',body:JSON.stringify({})
     });
-
     showToast('تم رفض طلب الشحن');
     await loadAll();
-  }catch(e){
-    showToast(e.message,'error');
-  }
+  }catch(e){showToast(e.message,'error')}
 }
 
-function goFanni(){
-  window.location.href='/fanni';
-}
+function goFanni(){window.location.href='/fanni'}
 
 function logout(){
   clearToken();
-
   state.fannis=[];
   state.filtered=[];
-
   state.topups=[];
   state.filteredTopups=[];
-
   state.orders=[];
   state.filteredOrders=[];
-
   state.errors={fannis:'',topups:'',orders:''};
   state.error='';
   state.loading=false;
@@ -1041,15 +930,11 @@ function logout(){
   state.adminPass='';
   state.search='';
   state.tab='fannis';
-
   render();
 }
 
 render();
-
-if(getToken()){
-  loadAll();
-}
+if(getToken())loadAll();
 </script>
 </body>
 </html>
