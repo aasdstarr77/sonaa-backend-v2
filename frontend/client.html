@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -282,6 +283,31 @@ function getCat(service){
   return CATEGORIES.find(c=>c.services.includes(service))||null;
 }
 
+/* حفظ موضع الصفحة وقائمة الخدمات قبل إعادة الرسم */
+function captureScrollPosition(){
+  const list=document.getElementById('serviceList');
+
+  return {
+    pageY:window.scrollY||window.pageYOffset||0,
+    listTop:list?list.scrollTop:0
+  };
+}
+
+/* استرجاع موضع التمرير بعد إعادة الرسم */
+function restoreScrollPosition(position){
+  if(!position)return;
+
+  const list=document.getElementById('serviceList');
+
+  if(list)list.scrollTop=position.listTop;
+
+  window.scrollTo({
+    top:position.pageY,
+    left:0,
+    behavior:'instant'
+  });
+}
+
 function showToast(message,type='error'){
   const el=document.getElementById('toast');
   const color=type==='success'?'bg-emerald-600':'bg-[#0b1b3a]';
@@ -379,10 +405,10 @@ function render(){
                   <p class="text-[12px] text-slate-700 font-bold mt-2 px-1 leading-6">اختار القسم اللي يناسبك، وبعدها افتحه واختار خدمة واحدة من جواه.</p>
                 </div>
 
-                <div class="max-h-[390px] overflow-y-auto p-2 space-y-2">
+                <div id="serviceList" class="max-h-[390px] overflow-y-auto overscroll-contain p-2 space-y-2">
                   ${query?matching.map(c=>`
                     <div class="category-card">
-                      <button type="button" onclick='toggleCategory(${JSON.stringify(c.label)})' class="category-head">
+                      <button type="button" onclick='toggleCategory(${JSON.stringify(c.label)})' aria-expanded="${state.openCategory===c.label?'true':'false'}" class="category-head">
                         <span class="text-xl">${c.emoji}</span>
                         <span class="font-extrabold text-[13px] flex-1">${escHtml(c.label)}</span>
                         <span class="text-[11px] text-slate-600 font-bold">${c.services.length} خدمة</span>
@@ -577,7 +603,7 @@ function setTab(tab){
   render();
 }
 
-/* إصلاح فتح قائمة الخدمات مع الحفاظ على القسم المحدد */
+/* فتح وإغلاق قائمة الخدمات */
 function toggleService(){
   state.showService=!state.showService;
 
@@ -589,41 +615,98 @@ function toggleService(){
   render();
 }
 
-/* الاحتفاظ بالقسم الذي اختاره العميل */
+/*
+  الإصلاح الأساسي:
+  حفظ موضع الصفحة وموضع القائمة قبل render،
+  ثم استعادتهما بعد إعادة بناء عناصر HTML.
+*/
 function toggleCategory(label){
-  state.openCategory=state.openCategory===label?'':label;
+  const position=captureScrollPosition();
+  const opening=state.openCategory!==label;
+
+  state.openCategory=opening?label:'';
+
   render();
+  restoreScrollPosition(position);
+
+  /*
+    لو القسم المفتوح بعيد عن الجزء الظاهر داخل القائمة،
+    نحرك القائمة بالقدر اللازم لإظهار عنوان القسم فقط.
+    لا نعيد الصفحة إلى أول الموقع.
+  */
+  if(opening){
+    requestAnimationFrame(()=>{
+      const list=document.getElementById('serviceList');
+      if(!list)return;
+
+      const headings=list.querySelectorAll('.category-head');
+
+      for(const heading of headings){
+        if(heading.textContent.includes(label)){
+          const listRect=list.getBoundingClientRect();
+          const headingRect=heading.getBoundingClientRect();
+
+          if(headingRect.top<listRect.top){
+            list.scrollTop-=listRect.top-headingRect.top;
+          }else if(headingRect.bottom>listRect.bottom){
+            list.scrollTop+=headingRect.bottom-listRect.bottom;
+          }
+
+          break;
+        }
+      }
+    });
+  }
 }
 
-/* الحفاظ على تركيز البحث ومكان المؤشر بعد تحديث النتائج */
+/* البحث مع الحفاظ على موضع القائمة ومؤشر الكتابة */
 function searchService(value){
-  const el=document.getElementById('svcSearch');
-  const pos=el?el.selectionStart:null;
+  const input=document.getElementById('svcSearch');
+  const pos=input?input.selectionStart:null;
+  const position=captureScrollPosition();
 
   state.searchService=sanitizeInput(value,80);
 
   render();
 
-  const next=document.getElementById('svcSearch');
+  const nextInput=document.getElementById('svcSearch');
+  const nextList=document.getElementById('serviceList');
 
-  if(next){
-    next.focus();
+  if(nextInput){
+    try{
+      nextInput.focus({preventScroll:true});
+    }catch(error){
+      nextInput.focus();
+    }
 
     if(pos!==null){
       try{
-        next.setSelectionRange(pos,pos);
+        const cursor=Math.min(pos,nextInput.value.length);
+        nextInput.setSelectionRange(cursor,cursor);
       }catch(error){}
     }
   }
+
+  if(nextList){
+    nextList.scrollTop=position.listTop;
+  }
+
+  window.scrollTo({
+    top:position.pageY,
+    left:0,
+    behavior:'instant'
+  });
 }
 
 function selectServiceByIndex(index){
   const service=ALL_SERVICES[index];
   if(!service)return;
+
   state.service=service;
   state.showService=false;
   state.searchService='';
   state.openCategory='';
+
   render();
 }
 
