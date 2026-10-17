@@ -927,7 +927,8 @@ router.post(
 
 /*
  * DELETE /api/admin/orders/:sn
- * حذف طلب تجريبي غير مرتبط بعملية مالية أو فني متعيّن.
+ * حذف الطلب بعد تأكيد الأدمن، حتى لو كان مرتبطًا بفني أو بعملية مالية.
+ * نعيد ملخص الارتباطات للتدقيق، ونحتفظ بسجلات الحركات المالية وطلبات الشحن.
  */
 router.delete(
   '/orders/:sn',
@@ -955,28 +956,50 @@ router.delete(
         type: 'commission'
       });
 
+      const hasAssignedFanni = Boolean(order.assignedFanni);
+      const hasOffers = Array.isArray(order.offers) && order.offers.length > 0;
+      const hasCommission =
+        order.commissionCharged === true ||
+        Boolean(hasCommissionTransaction);
+
       const protectedStatuses = [
         'تم اختيار فني',
         'تم الانتهاء'
       ];
 
-      if (
-        order.commissionCharged === true ||
-        order.assignedFanni ||
-        protectedStatuses.includes(order.status) ||
-        hasCommissionTransaction
-      ) {
+      const hasProtectedStatus = protectedStatuses.includes(order.status);
+
+      const summary = {
+        status: String(order.status || ''),
+        hasAssignedFanni,
+        offersCount: Array.isArray(order.offers)
+          ? order.offers.length
+          : 0,
+        commissionCharged: order.commissionCharged === true,
+        hasCommissionTransaction: Boolean(hasCommissionTransaction),
+        hasFinancialOrTechnicianLinks:
+          hasAssignedFanni ||
+          hasOffers ||
+          hasCommission ||
+          hasProtectedStatus
+      };
+
+      // الارتباطات لا تمنع الحذف بعد تأكيد الأدمن في الواجهة.
+      const deleted = await Order.deleteOne({ _id: order._id });
+
+      if (deleted.deletedCount !== 1) {
         return res.status(409).json({
-          message: 'لا يمكن حذف الطلب لأنه مرتبط بفني أو بعملية مالية. احتفظ بسجل الطلب واستخدم إجراءات الإدارة المناسبة.'
+          message: 'لم يتم حذف الطلب. حدّث القائمة وحاول مرة أخرى.'
         });
       }
 
-      await Order.deleteOne({ _id: order._id });
-
       return res.json({
-        message: 'تم حذف الطلب التجريبي بنجاح',
+        message: summary.hasFinancialOrTechnicianLinks
+          ? 'تم حذف الطلب بعد التأكيد. احتُفظ بسجلات الحركات المالية وطلبات الشحن.'
+          : 'تم حذف الطلب بنجاح.',
         deleted: 1,
-        sn: order.sn
+        sn: order.sn,
+        summary
       });
     } catch (err) {
       next(err);
@@ -987,6 +1010,7 @@ router.delete(
 /*
  * DELETE /api/admin/clients/:phone
  * حذف طلبات العميل المرتبطة برقم هاتفه.
+ * الشروط الأصلية محفوظة كما هي.
  */
 router.delete(
   '/clients/:phone',
@@ -1067,8 +1091,7 @@ router.delete(
 /*
  * DELETE /api/admin/fannis/:id
  *
- * قرار حذف الفني للأدمن.
- * لا توجد شروط تمنع الحذف بسبب الرصيد أو الطلبات أو الشحنات.
+ * حذف الفني دون شروط تمنع الحذف بسبب الرصيد أو الطلبات أو الشحنات.
  * يحتفظ النظام بسجلات الطلبات والشحنات والحركات المالية.
  */
 router.delete(
