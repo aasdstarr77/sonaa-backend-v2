@@ -555,7 +555,8 @@ router.post(
 );
 
 /*
- * تعيين رصيد المحفظة.
+ * تعيين رصيد المحفظة مع تسجيل فرق التسوية في دفتر الحركات.
+ * التحديث والحركة المالية وسجل القرار تتم داخل معاملة واحدة.
  */
 router.post(
   '/fannis/:id/set-balance',
@@ -565,46 +566,87 @@ router.post(
     reason: reasonSchema.optional()
   })),
   async (req, res, next) => {
-    try {
-      if (!validId(req.params.id)) return sendBadId(res);
+    if (!validId(req.params.id)) return sendBadId(res);
 
-      const fanni = await Fanni.findOne({
-        _id: req.params.id,
-        role: 'fanni'
+    let session;
+    try {
+      session = await mongoose.startSession();
+      let outcome = null;
+
+      await session.withTransaction(async () => {
+        const fanni = await Fanni.findOne({
+          _id: req.params.id,
+          role: 'fanni'
+        }).session(session);
+
+        if (!fanni) {
+          outcome = null;
+          return;
+        }
+
+        const amount = Number(req.body.amount);
+        const previous = Number(fanni.walletBalance || 0);
+        const reason = String(req.body.reason || '').trim();
+        const difference = amount - previous;
+
+        const updatedFanni = await Fanni.findOneAndUpdate(
+          { _id: fanni._id, role: 'fanni' },
+          {
+            $set: { walletBalance: amount },
+            $push: {
+              decisions: decision(
+                req,
+                'تسوية إدارية',
+                `تعيين الرصيد من ${previous} إلى ${amount}. ${reason}`.trim()
+              )
+            }
+          },
+          { new: true, session, runValidators: true }
+        );
+
+        if (!updatedFanni) {
+          throw new Error('SETTLEMENT_FANNI_NOT_FOUND');
+        }
+
+        if (difference !== 0) {
+          const transaction = new WalletTransaction({
+            fanni: fanni._id,
+            type: 'admin_adjustment',
+            amount: difference,
+            balanceBefore: previous,
+            balanceAfter: amount,
+            description: `تسوية إدارية: من ${previous} إلى ${amount}. ${reason}`.trim().slice(0, 500),
+            idempotencyKey: `admin-set-balance:${String(fanni._id)}:${crypto.randomBytes(16).toString('hex')}`
+          });
+
+          await transaction.save({ session });
+        }
+
+        outcome = {
+          fanni: updatedFanni,
+          balance: Number(updatedFanni.walletBalance)
+        };
       });
 
-      if (!fanni) {
+      if (!outcome) {
         return res.status(404).json({ message: 'الفني غير موجود' });
       }
 
-      const amount = Number(req.body.amount);
-      const previous = Number(fanni.walletBalance || 0);
-      const reason = String(req.body.reason || '').trim();
-
-      fanni.walletBalance = amount;
-      fanni.decisions.push(
-        decision(
-          req,
-          'تسوية إدارية',
-          `تعيين الرصيد من ${previous} إلى ${amount}. ${reason}`.trim()
-        )
-      );
-
-      await fanni.save();
-
       return res.json({
-        message: 'تم تحديث رصيد المحفظة',
-        balance: Number(fanni.walletBalance),
-        fanni: publicFanni(fanni)
+        message: 'تم تحديث رصيد المحفظة وتسجيل التسوية',
+        balance: outcome.balance,
+        fanni: publicFanni(outcome.fanni)
       });
     } catch (err) {
       next(err);
+    } finally {
+      if (session) await session.endSession();
     }
   }
 );
 
 /*
- * إضافة مبلغ إلى رصيد المحفظة.
+ * إضافة مبلغ إلى رصيد المحفظة مع تسجيل الحركة المالية.
  */
 router.post(
   '/fannis/:id/add-balance',
@@ -618,38 +660,74 @@ router.post(
     reason: reasonSchema.optional()
   })),
   async (req, res, next) => {
-    try {
-      if (!validId(req.params.id)) return sendBadId(res);
+    if (!validId(req.params.id)) return sendBadId(res);
 
+    let session;
+    try {
+      session = await mongoose.startSession();
+      let outcome = null;
       const amount = Number(req.body.amount);
       const reason = String(req.body.reason || '').trim();
 
-      const fanni = await Fanni.findOneAndUpdate(
-        { _id: req.params.id, role: 'fanni' },
-        {
-          $inc: { walletBalance: amount },
-          $push: {
-            decisions: decision(
-              req,
-              'تسوية إدارية',
-              `إضافة ${amount} إلى المحفظة. ${reason}`.trim()
-            )
-          }
-        },
-        { new: true, runValidators: true }
-      );
+      await session.withTransaction(async () => {
+        const beforeFanni = await Fanni.findOne({
+          _id: req.params.id,
+          role: 'fanni'
+        }).session(session);
 
-      if (!fanni) {
+        if (!beforeFanni) {
+          outcome = null;
+          return;
+        }
+
+        const balanceBefore = Number(beforeFanni.walletBalance || 0);
+        const fanni = await Fanni.findOneAndUpdate(
+          { _id: beforeFanni._id, role: 'fanni' },
+          {
+            $inc: { walletBalance: amount },
+            $push: {
+              decisions: decision(
+                req,
+                'تسوية إدارية',
+                `إضافة ${amount} إلى المحفظة. ${reason}`.trim()
+              )
+            }
+          },
+          { new: true, session, runValidators: true }
+        );
+
+        if (!fanni) throw new Error('ADD_BALANCE_FANNI_NOT_FOUND');
+
+        const transaction = new WalletTransaction({
+          fanni: fanni._id,
+          type: 'admin_adjustment',
+          amount,
+          balanceBefore,
+          balanceAfter: Number(fanni.walletBalance),
+          description: `إضافة إدارية بمبلغ ${amount}. ${reason}`.trim().slice(0, 500),
+          idempotencyKey: `admin-add-balance:${String(fanni._id)}:${crypto.randomBytes(16).toString('hex')}`
+        });
+
+        await transaction.save({ session });
+        outcome = {
+          fanni,
+          balance: Number(fanni.walletBalance)
+        };
+      });
+
+      if (!outcome) {
         return res.status(404).json({ message: 'الفني غير موجود' });
       }
 
       return res.json({
-        message: 'تمت إضافة الرصيد',
-        balance: Number(fanni.walletBalance),
-        fanni: publicFanni(fanni)
+        message: 'تمت إضافة الرصيد وتسجيل الحركة المالية',
+        balance: outcome.balance,
+        fanni: publicFanni(outcome.fanni)
       });
     } catch (err) {
       next(err);
+    } finally {
+      if (session) await session.endSession();
     }
   }
 );
@@ -736,10 +814,25 @@ router.post(
           throw new Error('TOPUP_FANNI_NOT_FOUND');
         }
 
+        const balanceAfter = Number(updatedFanni.walletBalance);
+        const balanceBefore = balanceAfter - Number(topup.amount);
+
+        const transaction = new WalletTransaction({
+          fanni: updatedFanni._id,
+          type: 'topup',
+          amount: Number(topup.amount),
+          balanceBefore,
+          balanceAfter,
+          description: `شحن محفظة بمبلغ ${topup.amount} جنيه لطلب ${topup._id}`,
+          idempotencyKey: `topup:${String(topup._id)}`
+        });
+
+        await transaction.save({ session });
+
         outcome = {
           kind: 'approved',
           topup,
-          balance: Number(updatedFanni.walletBalance)
+          balance: balanceAfter
         };
       });
 
@@ -987,8 +1080,9 @@ router.delete(
 /*
  * DELETE /api/admin/fannis/:id
  *
- * حذف فني تجريبي فقط إذا لم يكن لديه رصيد أو تاريخ مالي
- * أو طلب شحن أو طلب مرتبط به.
+ * يسمح بالحذف عند تصفير الرصيد وعدم وجود شحن معلّق أو طلب نشط.
+ * لا تمنع السجلات المالية أو طلبات الشحن المعتمدة/المرفوضة الحذف؛
+ * وتظل هذه السجلات محفوظة للتدقيق المالي.
  */
 router.delete(
   '/fannis/:id',
@@ -1016,61 +1110,48 @@ router.delete(
         });
       }
 
-      const hasWalletHistory = await WalletTransaction.exists({
-        fanni: fanni._id
+      const hasPendingTopup = await TopupRequest.exists({
+        fanni: fanni._id,
+        status: 'قيد المراجعة'
       });
 
-      if (hasWalletHistory) {
+      if (hasPendingTopup) {
         return res.status(409).json({
-          message: 'لا يمكن حذف الفني لأن له سجل حركات مالية. احتفظ بالحساب وسجله المالي.'
+          message: 'لا يمكن حذف الفني لأن لديه طلب شحن قيد المراجعة.'
         });
       }
 
-      const hasTopupHistory = await TopupRequest.exists({
-        fanni: fanni._id
-      });
+      const activeStatuses = [
+        'قيد المراجعة',
+        'تم النشر',
+        'وصلتك عروض',
+        'تم اختيار فني'
+      ];
 
-      if (hasTopupHistory) {
-        return res.status(409).json({
-          message: 'لا يمكن حذف الفني لأن له طلبات شحن مسجلة. احتفظ بالحساب وسجل الشحن.'
-        });
-      }
-
-      const hasAssignedOrder = await Order.exists({
-        assignedFanni: fanni._id
-      });
-
-      if (hasAssignedOrder) {
-        return res.status(409).json({
-          message: 'لا يمكن حذف الفني لأنه مرتبط بطلب أو أكثر. احتفظ بسجل الطلبات.'
-        });
-      }
-
-      const hasCommissionedOrder = await Order.exists({
+      const hasActiveOrder = await Order.exists({
+        status: { $in: activeStatuses },
         $or: [
-          { commissionCharged: true, assignedFanni: fanni._id },
+          { assignedFanni: fanni._id },
           { 'offers.fanni': fanni._id, commissionCharged: true }
         ]
       });
 
-      if (hasCommissionedOrder) {
+      if (hasActiveOrder) {
         return res.status(409).json({
-          message: 'لا يمكن حذف الفني لأنه مرتبط بطلب عليه عمولة. احتفظ بسجل العملية.'
+          message: 'لا يمكن حذف الفني لأنه مرتبط بطلب نشط أو بعمولة على طلب لم يُغلق بعد.'
         });
       }
 
       /*
-       * إزالة عروض الفني من الطلبات غير المقبولة فقط.
-       * لا نحذف أي طلب هنا.
+       * حذف عروض الفني من الطلبات النشطة غير المسندة إليه.
+       * تبقى الطلبات المكتملة والسجلات المالية القديمة كما هي.
        */
       await Order.updateMany(
         {
           'offers.fanni': fanni._id,
-          commissionCharged: { $ne: true },
           assignedFanni: { $in: [null, undefined] },
-          status: {
-            $nin: ['تم اختيار فني', 'تم الانتهاء']
-          }
+          status: { $in: activeStatuses },
+          commissionCharged: { $ne: true }
         },
         {
           $pull: {
@@ -1079,13 +1160,20 @@ router.delete(
         }
       );
 
-      await Fanni.deleteOne({
+      const deleted = await Fanni.deleteOne({
         _id: fanni._id,
-        role: 'fanni'
+        role: 'fanni',
+        walletBalance: 0
       });
 
+      if (deleted.deletedCount !== 1) {
+        return res.status(409).json({
+          message: 'لم يتم حذف الفني؛ ربما تغيّر رصيده أثناء العملية. حدّث الصفحة وحاول مرة أخرى.'
+        });
+      }
+
       return res.json({
-        message: 'تم حذف حساب الفني التجريبي بنجاح',
+        message: 'تم حذف حساب الفني بنجاح مع الاحتفاظ بالسجلات المالية والطلبات القديمة',
         deleted: 1,
         fanniId: String(fanni._id)
       });
