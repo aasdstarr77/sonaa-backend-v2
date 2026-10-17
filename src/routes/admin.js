@@ -1,4 +1,3 @@
-
 'use strict';
 
 const express = require('express');
@@ -10,6 +9,8 @@ const crypto = require('crypto');
 
 const Fanni = require('../models/Fanni');
 const TopupRequest = require('../models/TopupRequest');
+const Order = require('../models/Order');
+const WalletTransaction = require('../models/WalletTransaction');
 
 const { auth } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
@@ -142,8 +143,6 @@ function getLoginPhone(body) {
  * POST /api/admin/bootstrap
  *
  * إنشاء أول حساب إدارة فقط.
- * يتطلب ADMIN_SETUP_SECRET وبيانات الأدمن في إعدادات الخادم.
- * لا يسمح بإنشاء حساب إدارة جديد إذا كان حساب إدارة موجودًا.
  */
 router.post('/bootstrap', async (req, res, next) => {
   try {
@@ -830,6 +829,265 @@ router.post(
       return res.json({
         message: 'تم رفض طلب الشحن',
         request: publicTopup(request)
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/* =========================================================
+ * عمليات الحذف الإدارية
+ * كل المسارات التالية تتطلب صلاحية الأدمن.
+ * ========================================================= */
+
+/*
+ * DELETE /api/admin/orders/:sn
+ *
+ * حذف طلب تجريبي غير مرتبط بعملية مالية أو فني متعيّن.
+ */
+router.delete(
+  '/orders/:sn',
+  auth('admin'),
+  async (req, res, next) => {
+    try {
+      const sn = String(req.params.sn || '').trim();
+
+      if (!/^[A-Za-z0-9_-]{3,30}$/.test(sn)) {
+        return res.status(400).json({
+          message: 'رقم الطلب غير صالح'
+        });
+      }
+
+      const order = await Order.findOne({ sn });
+
+      if (!order) {
+        return res.status(404).json({
+          message: 'الطلب غير موجود'
+        });
+      }
+
+      const hasCommissionTransaction = await WalletTransaction.exists({
+        order: order._id,
+        type: 'commission'
+      });
+
+      const protectedStatuses = [
+        'تم اختيار فني',
+        'تم الانتهاء'
+      ];
+
+      if (
+        order.commissionCharged === true ||
+        order.assignedFanni ||
+        protectedStatuses.includes(order.status) ||
+        hasCommissionTransaction
+      ) {
+        return res.status(409).json({
+          message: 'لا يمكن حذف الطلب لأنه مرتبط بفني أو بعملية مالية. احتفظ بسجل الطلب واستخدم إجراءات الإدارة المناسبة.'
+        });
+      }
+
+      await Order.deleteOne({ _id: order._id });
+
+      return res.json({
+        message: 'تم حذف الطلب التجريبي بنجاح',
+        deleted: 1,
+        sn: order.sn
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/*
+ * DELETE /api/admin/clients/:phone
+ *
+ * لا يوجد حساب عميل مستقل في قاعدة البيانات الحالية.
+ * لذلك حذف العميل يعني حذف طلباته المرتبطة برقم هاتفه.
+ * لو أي طلب محمي ماليًا، تتوقف العملية كلها دون حذف جزئي.
+ */
+router.delete(
+  '/clients/:phone',
+  auth('admin'),
+  async (req, res, next) => {
+    try {
+      const rawPhone = String(req.params.phone || '').trim();
+      const phone = normalizePhone(rawPhone);
+
+      if (!phone || !/^01[0-9]{9}$/.test(phone)) {
+        return res.status(400).json({
+          message: 'رقم هاتف العميل غير صالح. أدخل رقم موبايل مصري صحيحًا.'
+        });
+      }
+
+      const orders = await Order.find({
+        clientPhone: phone
+      }).select(
+        '_id sn status assignedFanni commissionCharged'
+      ).lean();
+
+      if (orders.length === 0) {
+        return res.status(404).json({
+          message: 'لا توجد طلبات مسجلة برقم الهاتف ده'
+        });
+      }
+
+      const orderIds = orders.map(order => order._id);
+
+      const hasCommissionTransaction = await WalletTransaction.exists({
+        order: { $in: orderIds },
+        type: 'commission'
+      });
+
+      const protectedStatuses = [
+        'تم اختيار فني',
+        'تم الانتهاء'
+      ];
+
+      const hasProtectedOrder = orders.some(order =>
+        order.commissionCharged === true ||
+        Boolean(order.assignedFanni) ||
+        protectedStatuses.includes(order.status)
+      );
+
+      if (hasProtectedOrder || hasCommissionTransaction) {
+        return res.status(409).json({
+          message: 'لا يمكن حذف العميل لأن عنده طلبًا مرتبطًا بفني أو بعملية مالية. لم يتم حذف أي طلب.'
+        });
+      }
+
+      const result = await Order.deleteMany({
+        _id: { $in: orderIds },
+        clientPhone: phone,
+        commissionCharged: { $ne: true },
+        assignedFanni: { $in: [null, undefined] },
+        status: { $nin: protectedStatuses }
+      });
+
+      if (result.deletedCount !== orders.length) {
+        return res.status(409).json({
+          message: 'لم يتم حذف كل الطلبات المتوقعة؛ قد تكون بيانات تغيرت أثناء العملية. راجع الطلبات قبل إعادة المحاولة.',
+          deleted: result.deletedCount
+        });
+      }
+
+      return res.json({
+        message: 'تم حذف طلبات العميل التجريبية بنجاح',
+        deleted: result.deletedCount,
+        phone
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/*
+ * DELETE /api/admin/fannis/:id
+ *
+ * حذف فني تجريبي فقط إذا لم يكن لديه رصيد أو تاريخ مالي
+ * أو طلب شحن أو طلب مرتبط به.
+ */
+router.delete(
+  '/fannis/:id',
+  auth('admin'),
+  async (req, res, next) => {
+    try {
+      if (!validId(req.params.id)) return sendBadId(res);
+
+      const fanni = await Fanni.findOne({
+        _id: req.params.id,
+        role: 'fanni'
+      });
+
+      if (!fanni) {
+        return res.status(404).json({
+          message: 'الفني غير موجود'
+        });
+      }
+
+      const balance = Number(fanni.walletBalance || 0);
+
+      if (balance !== 0) {
+        return res.status(409).json({
+          message: 'لا يمكن حذف الفني لأن رصيد محفظته ليس صفرًا. سوِّ الرصيد أولًا بالطريقة الصحيحة.'
+        });
+      }
+
+      const hasWalletHistory = await WalletTransaction.exists({
+        fanni: fanni._id
+      });
+
+      if (hasWalletHistory) {
+        return res.status(409).json({
+          message: 'لا يمكن حذف الفني لأن له سجل حركات مالية. احتفظ بالحساب وسجله المالي.'
+        });
+      }
+
+      const hasTopupHistory = await TopupRequest.exists({
+        fanni: fanni._id
+      });
+
+      if (hasTopupHistory) {
+        return res.status(409).json({
+          message: 'لا يمكن حذف الفني لأن له طلبات شحن مسجلة. احتفظ بالحساب وسجل الشحن.'
+        });
+      }
+
+      const hasAssignedOrder = await Order.exists({
+        assignedFanni: fanni._id
+      });
+
+      if (hasAssignedOrder) {
+        return res.status(409).json({
+          message: 'لا يمكن حذف الفني لأنه مرتبط بطلب أو أكثر. احتفظ بسجل الطلبات.'
+        });
+      }
+
+      const hasCommissionedOrder = await Order.exists({
+        $or: [
+          { commissionCharged: true, assignedFanni: fanni._id },
+          { 'offers.fanni': fanni._id, commissionCharged: true }
+        ]
+      });
+
+      if (hasCommissionedOrder) {
+        return res.status(409).json({
+          message: 'لا يمكن حذف الفني لأنه مرتبط بطلب عليه عمولة. احتفظ بسجل العملية.'
+        });
+      }
+
+      /*
+       * إزالة عروض الفني من الطلبات غير المقبولة فقط.
+       * لا نحذف أي طلب هنا.
+       */
+      await Order.updateMany(
+        {
+          'offers.fanni': fanni._id,
+          commissionCharged: { $ne: true },
+          assignedFanni: { $in: [null, undefined] },
+          status: {
+            $nin: ['تم اختيار فني', 'تم الانتهاء']
+          }
+        },
+        {
+          $pull: {
+            offers: { fanni: fanni._id }
+          }
+        }
+      );
+
+      await Fanni.deleteOne({
+        _id: fanni._id,
+        role: 'fanni'
+      });
+
+      return res.json({
+        message: 'تم حذف حساب الفني التجريبي بنجاح',
+        deleted: 1,
+        fanniId: String(fanni._id)
       });
     } catch (err) {
       next(err);
