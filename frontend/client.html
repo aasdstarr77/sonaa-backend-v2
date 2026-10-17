@@ -377,10 +377,19 @@ const API={
 
   async sendComplaint(payload){
     const sn=sanitizeInput(payload?.sn,20).toUpperCase();
+    const clientName=sanitizeInput(payload?.clientName,50);
     const text=sanitizeInput(payload?.text,1000);
 
     if(!VALIDATORS.sn(sn)){
       throw new Error('كود الطلب غير صحيح.');
+    }
+
+    if(!VALIDATORS.name(clientName)){
+      throw new Error('اكتب اسم العميل المسجل مع الطلب، من حرفين إلى 50 حرفًا.');
+    }
+
+    if(containsPhoneNumber(clientName)){
+      throw new Error('ممنوع كتابة رقم تليفون داخل اسم العميل.');
     }
 
     if(!VALIDATORS.text(text,10,1000)){
@@ -394,7 +403,7 @@ const API={
     return this.request('/api/complaints',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({sn,text})
+      body:JSON.stringify({sn,clientName,text})
     });
   }
 };
@@ -483,6 +492,7 @@ let state={
   trackLoading:false,
   acceptingOffer:'',
   complaintSn:'',
+  complaintName:'',
   complaintText:'',
   complaintLoading:false,
   showService:false,
@@ -816,17 +826,28 @@ function render(){
           <div class="h-10 w-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center text-lg">⚠️</div>
           <div>
             <h3 class="font-extrabold text-[15px]">تقديم شكوى</h3>
-            <p class="text-[11px] text-slate-500 mt-0.5">ابعت شكواك للإدارة باستخدام كود الطلب</p>
+            <p class="text-[11px] text-slate-500 mt-0.5">ابعت شكواك للإدارة باستخدام كود الطلب والاسم المسجل</p>
           </div>
         </div>
         <div class="mt-4 space-y-3">
-          <input value="${escAttr(state.complaintSn)}" oninput="onComplaintSn(this.value)" placeholder="كود الطلب SN123456" maxlength="20" class="field h-[48px] px-4 text-[14px] font-black uppercase" dir="ltr">
-          <textarea oninput="onComplaintText(this.value)" maxlength="1000" placeholder="احكي اللي حصل بالتفصيل..." class="field min-h-[120px] p-4 text-[13px] font-semibold resize-none leading-6">${escHtml(state.complaintText)}</textarea>
+          <div>
+            <label for="complaintNameInput" class="text-[12px] font-extrabold mb-1.5 block">👤 اسم العميل المسجل مع الطلب</label>
+            <input id="complaintNameInput" value="${escAttr(state.complaintName)}" oninput="onComplaintName(this.value)" placeholder="اكتب نفس الاسم اللي سجلت بيه الطلب" maxlength="50" autocomplete="name" class="field h-[48px] px-4 text-[13px] font-bold">
+            <p class="mt-1 text-[10px] text-slate-500">لازم الاسم يكون مطابقًا للاسم اللي كتبته وقت إنشاء الطلب.</p>
+          </div>
+          <div>
+            <label for="complaintSnInput" class="text-[12px] font-extrabold mb-1.5 block">كود الطلب</label>
+            <input id="complaintSnInput" value="${escAttr(state.complaintSn)}" oninput="onComplaintSn(this.value)" placeholder="كود الطلب SN123456" maxlength="20" class="field h-[48px] px-4 text-[14px] font-black uppercase" dir="ltr">
+          </div>
+          <div>
+            <label for="complaintTextInput" class="text-[12px] font-extrabold mb-1.5 block">تفاصيل الشكوى</label>
+            <textarea id="complaintTextInput" oninput="onComplaintText(this.value)" maxlength="1000" placeholder="احكي اللي حصل بالتفصيل..." class="field min-h-[120px] p-4 text-[13px] font-semibold resize-none leading-6">${escHtml(state.complaintText)}</textarea>
+          </div>
           <div class="flex justify-between text-[10px] text-slate-400 font-bold">
             <span>${state.complaintText.length}/1000</span>
-            <span>${VALIDATORS.text(state.complaintText,10,1000)?'✓ البيانات مكتملة':''}</span>
+            <span>${VALIDATORS.text(state.complaintText,10,1000)?'✓ تفاصيل الشكوى مكتملة':''}</span>
           </div>
-          <p class="text-[10px] text-slate-500">ما تكتبش رقم تليفون داخل الشكوى؛ استخدم بيانات الطلب للتواصل.</p>
+          <p class="text-[10px] text-slate-500">ما تكتبش رقم تليفون داخل الاسم أو الشكوى؛ استخدم بيانات الطلب للتواصل.</p>
           <button type="button" onclick="sendComplaint()" ${state.complaintLoading?'disabled':''} class="w-full h-[48px] rounded-xl bg-red-600 text-white font-extrabold text-[13px]">
             ${state.complaintLoading?'جاري إرسال الشكوى...':'إرسال الشكوى'}
           </button>
@@ -1067,18 +1088,33 @@ function onTrackInput(value){
   state.trackInput=sanitizeInput(value,20).toUpperCase();
 }
 
+function onComplaintName(value){
+  const clean=sanitizeInput(value,50);
+
+  if(rejectPhoneInField(clean,'اسم العميل')){
+    state.complaintName='';
+    const input=document.getElementById('complaintNameInput');
+    if(input)input.value='';
+    return;
+  }
+
+  state.complaintName=clean;
+}
+
 function onComplaintSn(value){
   state.complaintSn=sanitizeInput(value,20).toUpperCase();
 }
 
 function onComplaintText(value){
   const clean=sanitizeInput(value,1000);
+
   if(rejectPhoneInField(clean,'تفاصيل الشكوى')){
     state.complaintText='';
-    const input=document.querySelector('textarea[oninput="onComplaintText(this.value)"]');
+    const input=document.getElementById('complaintTextInput');
     if(input)input.value='';
     return;
   }
+
   state.complaintText=clean;
 }
 
@@ -1260,61 +1296,3 @@ async function acceptOffer(sn,offerId){
     showToast('تم قبول العرض بنجاح','success');
     state.trackInput=sn;
     state.acceptingOffer='';
-    await doTrack();
-  }catch(error){
-    state.acceptingOffer='';
-    render();
-    showToast(error.message||'تعذر قبول العرض حاليًا. حاول مرة أخرى.');
-  }
-}
-
-async function sendComplaint(){
-  if(state.complaintLoading)return;
-
-  const sn=sanitizeInput(state.complaintSn,20).toUpperCase();
-  const text=sanitizeInput(state.complaintText,1000);
-
-  if(!sn){
-    showToast('اكتب كود الطلب.');
-    return;
-  }
-
-  if(!VALIDATORS.sn(sn)){
-    showToast('كود الطلب غير صحيح. مثال: SN123456');
-    return;
-  }
-
-  if(!VALIDATORS.text(text,10,1000)){
-    showToast('اكتب تفاصيل الشكوى في 10 حروف على الأقل.');
-    return;
-  }
-
-  if(containsPhoneNumber(text)){
-    showToast('ممنوع كتابة رقم تليفون داخل تفاصيل الشكوى.');
-    return;
-  }
-
-  state.complaintLoading=true;
-  render();
-
-  try{
-    const result=await API.sendComplaint({sn,text});
-
-    state.complaintSn='';
-    state.complaintText='';
-    showToast(result.message||'تم إرسال الشكوى بنجاح.','success');
-  }catch(error){
-    showToast(error.message||'تعذر إرسال الشكوى حاليًا.');
-  }finally{
-    state.complaintLoading=false;
-    render();
-  }
-}
-
-/* تسجيل مستمع الضغط خارج القائمة مرة واحدة فقط */
-document.addEventListener('click',handleOutsideServiceClick);
-
-render();
-</script>
-</body>
-</html>
