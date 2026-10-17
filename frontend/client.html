@@ -130,10 +130,6 @@ const API={
     log('استجابة الطلب:',response.status,data);
 
     if(!response.ok){
-      /*
-       * إظهار رسالة الخطأ القادمة من الباك إند بدل إخفائها،
-       * مع الاحتفاظ برسالة بديلة إذا لم يرجع الخادم رسالة.
-       */
       const serverMessage=
         typeof data.message==='string'&&data.message.trim()
           ?data.message.trim()
@@ -182,7 +178,8 @@ const API={
         area:sanitizeInput(payload.area,100),
         address:sanitizeInput(payload.address,250),
         phone:String(payload.phone).replace(/\D/g,''),
-        description:sanitizeInput(payload.description,1000)
+        description:sanitizeInput(payload.description,1000),
+        budget:sanitizeInput(payload.budget||'',50)
       })
     });
 
@@ -320,6 +317,7 @@ let state={
   area:'',
   address:'',
   phone:'',
+  budget:'',
   desc:'',
   loading:false,
   sn:null,
@@ -531,6 +529,12 @@ function render(){
                 <span id="phoneStatus" class="text-[10px] font-bold ${VALIDATORS.phone(state.phone)?'text-emerald-600':'text-slate-400'}">${VALIDATORS.phone(state.phone)?'✓ صحيح':'11 رقم يبدأ بـ 01'}</span>
               </label>
               <input id="phoneInput" value="${escAttr(state.phone)}" oninput="onPhoneInput(this.value)" inputmode="numeric" type="tel" maxlength="11" placeholder="01012345678" class="field h-[50px] px-4 text-[15px] font-bold tracking-widest" dir="ltr" autocomplete="tel">
+            </div>
+
+            <div>
+              <label for="budgetInput" class="text-[12px] font-extrabold mb-1.5 block">💰 الميزانية المتوقعة (اختياري)</label>
+              <input id="budgetInput" value="${escAttr(state.budget)}" oninput="onBudgetInput(this.value)" maxlength="50" placeholder="مثال: من 300 إلى 500 جنيه" class="field h-[50px] px-4 text-[13px] font-bold">
+              <p class="mt-1 text-[10px] text-slate-500">اكتب ميزانيتك التقريبية أو اترك الخانة فارغة.</p>
             </div>
 
             <div>
@@ -833,6 +837,11 @@ function onPhoneInput(value){
   }
 }
 
+/* الميزانية اختيارية ولا تمنع إرسال الطلب */
+function onBudgetInput(value){
+  state.budget=sanitizeInput(value,50);
+}
+
 function onDescInput(value){
   state.desc=sanitizeInput(value,1000);
   const el=document.getElementById('descCounter');
@@ -857,6 +866,7 @@ function resetForm(){
   state.area='';
   state.address='';
   state.phone='';
+  state.budget='';
   state.desc='';
   state.service='';
   state.showService=false;
@@ -947,6 +957,7 @@ async function createOrder(){
       area:state.area,
       address:state.address,
       phone:state.phone,
+      budget:state.budget,
       description:state.desc
     });
 
