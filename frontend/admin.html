@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -138,6 +139,15 @@ function extractList(data,keys=[]){
   }
   if(Array.isArray(data?.data))return data.data;
   return [];
+}
+
+/* توحيد الأرقام العربية والهاتف قبل إرسال طلب الحذف */
+function normalizePhoneInput(value){
+  return String(value??'')
+    .replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
+    .replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))
+    .replace(/[\s\-().]/g,'')
+    .replace(/^(\+?20)/,'0');
 }
 
 let state={
@@ -966,20 +976,54 @@ async function deleteFanni(id,name){
   if(state.deletingItems.includes('fanni:'+id))return;
 
   const fanni=state.fannis.find(item=>String(item._id||'')===id);
-  const balance=Number(fanni?.balance??fanni?.walletBalance??0);
+  if(!fanni){
+    showToast('لم يتم العثور على حساب الفني في القائمة. حدّث القائمة وحاول مجددًا.','error');
+    return;
+  }
+
+  const balance=Number(fanni.balance??fanni.walletBalance??0);
+
+  /* قراءة أكثر من شكل محتمل للربط لتكون رسالة التحذير أقرب للبيانات المعروضة */
   const linkedOrders=state.orders.filter(order=>{
     const offers=Array.isArray(order.offers)?order.offers:[];
-    return String(
-      order.fanniId||
-      order.technicianId||
-      order.assignedFanniId||
-      order.assignedTechnicianId||
-      ''
-    )===id || offers.some(offer=>
-      String(offer.fanniId||offer.technicianId||offer.technician||'')===id
-    );
+    const assignedValues=[
+      order.fanniId,
+      order.technicianId,
+      order.assignedFanniId,
+      order.assignedTechnicianId,
+      order.assignedFanni,
+      order.assignedTechnician,
+      order.fanni,
+      order.technician
+    ];
+
+    const assignedMatch=assignedValues.some(value=>{
+      if(value&&typeof value==='object'){
+        return String(value._id||value.id||'')===id;
+      }
+      return String(value||'')===id;
+    });
+
+    const offerMatch=offers.some(offer=>{
+      const offerValues=[
+        offer.fanniId,
+        offer.technicianId,
+        offer.fanni,
+        offer.technician
+      ];
+
+      return offerValues.some(value=>{
+        if(value&&typeof value==='object'){
+          return String(value._id||value.id||'')===id;
+        }
+        return String(value||'')===id;
+      });
+    });
+
+    return assignedMatch||offerMatch;
   });
-  const displayName=String(name||fanni?.name||'الفني');
+
+  const displayName=String(name||fanni.name||'الفني');
 
   const warning=[
     `تأكيد حذف حساب الفني: ${displayName}`,
@@ -990,7 +1034,8 @@ async function deleteFanni(id,name){
     '',
     'سيُرسل طلب الحذف إلى الخادم بعد موافقتك.',
     'قد لا تعرض هذه الصفحة جميع المعاملات أو الارتباطات المالية.',
-    'راجع السجلات المالية قبل الحذف؛ ولا تفترض أن حذف الحساب يعني حذف سجلات المعاملات.',
+    'الحذف لا يعني حذف سجل معاملات المحفظة أو طلبات الشحن المرتبطة.',
+    'راجع السجلات المالية قبل الحذف، ولا تعتمد على عدد الطلبات الظاهر وحده.',
     '',
     'هل تريد المتابعة؟'
   ].join('\n');
@@ -1047,6 +1092,8 @@ async function deleteOrder(sn){
     order.assignedTechnicianName||
     order.fanni?.name||
     order.technician?.name||
+    (order.assignedFanni&&typeof order.assignedFanni==='object'?order.assignedFanni.name:'')||
+    (order.assignedTechnician&&typeof order.assignedTechnician==='object'?order.assignedTechnician.name:'')||
     'لا يظهر فني معين في بيانات الطلب المعروضة'
   );
   const commission=order.commission??order.check??order.fanniCheck??order.leadFee;
@@ -1103,7 +1150,8 @@ async function deleteClient(){
     return;
   }
 
-  const phone=String(input.value||'').trim();
+  const rawPhone=String(input.value||'').trim();
+  const phone=normalizePhoneInput(rawPhone);
 
   if(!phone){
     showToast('اكتب رقم موبايل العميل أولًا','error');
@@ -1111,16 +1159,23 @@ async function deleteClient(){
     return;
   }
 
-  if(phone.length<7||phone.length>20){
-    showToast('راجع رقم الموبايل المكتوب','error');
+  /* المسار الخلفي يتوقع رقم هاتف مصريًا بصيغة 01XXXXXXXXX بعد التطبيع */
+  if(!/^01[0-9]{9}$/.test(phone)){
+    showToast('رقم الموبايل غير صحيح. اكتب رقمًا مصريًا من 11 رقمًا يبدأ بـ 01.','error');
     input.focus();
     return;
   }
 
-  if(state.deletingItems.includes('client:'+phone))return;
+  const deleteKey='client:'+phone;
+  if(state.deletingItems.includes(deleteKey))return;
+
+  const matchingOrders=state.orders.filter(order=>
+    normalizePhoneInput(order.clientPhone||'')===phone
+  );
 
   const confirmed=confirm(
     `سيتم طلب حذف الطلبات المرتبطة برقم الهاتف:\n${phone}\n\n`+
+    `عدد الطلبات المطابقة في القائمة الحالية: ${matchingOrders.length}\n`+
     'هذه العملية قد تحذف أكثر من طلب للعميل نفسه.\n'+
     'قد لا تعرض الواجهة جميع الارتباطات الفنية أو المالية؛ راجع رسالة الخادم بعد التنفيذ.\n\n'+
     'هل تريد المتابعة؟'
@@ -1128,7 +1183,7 @@ async function deleteClient(){
 
   if(!confirmed)return;
 
-  state.deletingItems.push('client:'+phone);
+  state.deletingItems.push(deleteKey);
 
   const button=document.querySelector('button[onclick="deleteClient()"]');
   if(button){
@@ -1159,7 +1214,7 @@ async function deleteClient(){
   }catch(e){
     showToast(e.message||'تعذر حذف طلبات العميل','error');
   }finally{
-    state.deletingItems=state.deletingItems.filter(item=>item!=='client:'+phone);
+    state.deletingItems=state.deletingItems.filter(item=>item!==deleteKey);
 
     const currentButton=document.querySelector('button[onclick="deleteClient()"]');
     if(currentButton){
@@ -1224,42 +1279,4 @@ async function approveTopup(id){
   }catch(e){showToast(e.message,'error')}
 }
 
-async function rejectTopup(id){
-  if(!confirm('هل تريد رفض طلب الشحن؟ لن تتم إضافة أي رصيد.'))return;
-  try{
-    await tryApi([`/api/admin/topup-requests/${encodeURIComponent(id)}/reject`],{
-      method:'POST',body:JSON.stringify({})
-    });
-    showToast('تم رفض طلب الشحن');
-    await loadAll();
-  }catch(e){showToast(e.message,'error')}
-}
-
-function goFanni(){window.location.href='/fanni'}
-
-function logout(){
-  clearToken();
-  state.fannis=[];
-  state.filtered=[];
-  state.topups=[];
-  state.filteredTopups=[];
-  state.orders=[];
-  state.filteredOrders=[];
-  state.errors={fannis:'',topups:'',orders:''};
-  state.error='';
-  state.loading=false;
-  state.loadingOrders=false;
-  state.publishingOrders=[];
-  state.deletingItems=[];
-  state.adminEmail='';
-  state.adminPass='';
-  state.search='';
-  state.tab='fannis';
-  render();
-}
-
-render();
-if(getToken())loadAll();
-</script>
-</body>
-</html>
+async funct
