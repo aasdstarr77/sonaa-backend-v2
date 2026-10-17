@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -82,16 +83,19 @@ const VALIDATORS={
 
 const API={
   tokenKey(sn){return 'sonaa_client_token_'+String(sn||'').toUpperCase()},
+
   saveClientToken(sn,token){
     if(!VALIDATORS.sn(sn)||typeof token!=='string'||!token)return false;
     try{localStorage.setItem(this.tokenKey(sn),token);return true}
     catch(error){log('تعذر حفظ بيانات المتابعة:',error);return false}
   },
+
   getClientToken(sn){
     if(!VALIDATORS.sn(sn))return '';
     try{return localStorage.getItem(this.tokenKey(sn))||''}
     catch(error){log('تعذر قراءة بيانات المتابعة:',error);return ''}
   },
+
   async request(url,options={}){
     let response;
     try{
@@ -119,15 +123,23 @@ const API={
     }
     return data;
   },
+
   async createOrder(payload){
     if(!VALIDATORS.name(payload.clientName))
       throw new Error('اكتب اسمك بشكل صحيح، من حرفين إلى 50 حرفًا.');
+
     if(!payload.service||!ALL_SERVICES.includes(payload.service))
       throw new Error('اختار الخدمة المطلوبة الأول.');
-    if(!VALIDATORS.text(payload.area,10,250))
-      throw new Error('اكتب عنوانك بالتفصيل، من فضلك.');
+
+    if(!VALIDATORS.text(payload.area,2,100))
+      throw new Error('اكتب المنطقة أو الحي بشكل صحيح.');
+
+    if(!VALIDATORS.text(payload.address,5,250))
+      throw new Error('اكتب العنوان التفصيلي بشكل صحيح.');
+
     if(!VALIDATORS.phone(payload.phone))
       throw new Error('رقم التليفون غير صحيح؛ لازم يكون 11 رقم ويبدأ بـ 01.');
+
     if(!VALIDATORS.text(payload.description,10,1000))
       throw new Error('اكتب تفاصيل المشكلة في 10 حروف على الأقل.');
 
@@ -137,7 +149,8 @@ const API={
       body:JSON.stringify({
         clientName:sanitizeInput(payload.clientName,50),
         service:sanitizeInput(payload.service,100),
-        area:sanitizeInput(payload.area,250),
+        area:sanitizeInput(payload.area,100),
+        address:sanitizeInput(payload.address,250),
         phone:String(payload.phone).replace(/\D/g,''),
         description:sanitizeInput(payload.description,1000)
       })
@@ -153,6 +166,7 @@ const API={
     if(token)this.saveClientToken(sn,token);
     return {...data,sn,clientToken:token};
   },
+
   async getOrder(sn){
     const cleanSN=sanitizeInput(sn,20).toUpperCase();
     if(!VALIDATORS.sn(cleanSN))
@@ -167,6 +181,7 @@ const API={
     });
     return data.order||data.data||data;
   },
+
   async acceptOffer(sn,offerId){
     const cleanSN=sanitizeInput(sn,20).toUpperCase();
     if(!VALIDATORS.sn(cleanSN))throw new Error('كود الطلب غير صحيح.');
@@ -185,6 +200,7 @@ const API={
       body:JSON.stringify({offerId,clientToken:token})
     });
   },
+
   async sendComplaint(){
     throw new Error('تعذر إرسال الشكوى حاليًا. من فضلك تواصل مع خدمة العملاء.');
   }
@@ -261,6 +277,7 @@ let state={
   tab:'new',
   service:'',
   clientName:'',
+  area:'',
   address:'',
   phone:'',
   desc:'',
@@ -297,7 +314,6 @@ function restoreScrollPosition(position){
   if(!position)return;
 
   const list=document.getElementById('serviceList');
-
   if(list)list.scrollTop=position.listTop;
 
   window.scrollTo({
@@ -451,12 +467,20 @@ function render(){
               <p class="mt-1 text-[11px] text-slate-600 font-semibold">لازم تختار الخدمة قبل إرسال الطلب.</p>
             </div>
 
+            <!-- المنطقة أو الحي: تُرسل إلى API في area -->
+            <div>
+              <label for="areaInput" class="text-[12px] font-extrabold mb-1.5 block">📍 المنطقة أو الحي</label>
+              <input id="areaInput" value="${escAttr(state.area)}" oninput="onAreaInput(this.value)" maxlength="100" placeholder="مثال: شبرا، المعادي، فيصل..." class="field h-[50px] px-4 text-[13px] font-bold" autocomplete="address-level2">
+              <p class="mt-1 text-[10px] text-slate-500">اكتب اسم المنطقة أو الحي فقط.</p>
+            </div>
+
+            <!-- العنوان التفصيلي: يُرسل منفصلًا إلى API في address -->
             <div>
               <label for="addrInput" class="text-[12px] font-extrabold mb-1.5 flex justify-between gap-2">
-                <span>📍 العنوان بالتفصيل</span>
+                <span>🏠 العنوان بالتفصيل</span>
                 <span id="addrCounter" class="text-[10px] text-slate-400">${state.address.length}/250</span>
               </label>
-              <input id="addrInput" value="${escAttr(state.address)}" oninput="onAddressInput(this.value)" maxlength="250" placeholder="المنطقة، الشارع، رقم العمارة..." class="field h-[50px] px-4 text-[13px] font-bold" autocomplete="street-address">
+              <input id="addrInput" value="${escAttr(state.address)}" oninput="onAddressInput(this.value)" maxlength="250" placeholder="اسم الشارع، رقم العمارة، الدور أو علامة مميزة..." class="field h-[50px] px-4 text-[13px] font-bold" autocomplete="street-address">
             </div>
 
             <div>
@@ -621,10 +645,7 @@ function handleOutsideServiceClick(event){
   const target=event.target;
   if(!(target instanceof Element))return;
 
-  /* الضغط على زر اختيار الخدمة لا يغلقها من هذا المستمع */
   if(target.closest('button[onclick="toggleService()"]'))return;
-
-  /* الضغط داخل قائمة الخدمات أو البحث لا يغلق القائمة */
   if(target.closest('#servicePanel'))return;
 
   const pageY=window.scrollY||window.pageYOffset||0;
@@ -642,11 +663,7 @@ function handleOutsideServiceClick(event){
   });
 }
 
-/*
-  الإصلاح الأساسي:
-  حفظ موضع الصفحة وموضع القائمة قبل render،
-  ثم استعادتهما بعد إعادة بناء عناصر HTML.
-*/
+/* حفظ موضع التمرير عند فتح الأقسام */
 function toggleCategory(label){
   const position=captureScrollPosition();
   const opening=state.openCategory!==label;
@@ -656,11 +673,6 @@ function toggleCategory(label){
   render();
   restoreScrollPosition(position);
 
-  /*
-    لو القسم المفتوح بعيد عن الجزء الظاهر داخل القائمة،
-    نحرك القائمة بالقدر اللازم لإظهار عنوان القسم فقط.
-    لا نعيد الصفحة إلى أول الموقع.
-  */
   if(opening){
     requestAnimationFrame(()=>{
       const list=document.getElementById('serviceList');
@@ -714,9 +726,7 @@ function searchService(value){
     }
   }
 
-  if(nextList){
-    nextList.scrollTop=position.listTop;
-  }
+  if(nextList)nextList.scrollTop=position.listTop;
 
   window.scrollTo({
     top:position.pageY,
@@ -737,8 +747,16 @@ function selectServiceByIndex(index){
   render();
 }
 
-function onClientNameInput(value){state.clientName=sanitizeInput(value,50)}
+function onClientNameInput(value){
+  state.clientName=sanitizeInput(value,50);
+}
 
+/* المنطقة العامة أو الحي */
+function onAreaInput(value){
+  state.area=sanitizeInput(value,100);
+}
+
+/* العنوان التفصيلي */
 function onAddressInput(value){
   state.address=sanitizeInput(value,250);
   const el=document.getElementById('addrCounter');
@@ -764,13 +782,22 @@ function onDescInput(value){
   if(el)el.textContent=state.desc.length+'/1000';
 }
 
-function onTrackInput(value){state.trackInput=sanitizeInput(value,20).toUpperCase()}
-function onComplaintSn(value){state.complaintSn=sanitizeInput(value,20).toUpperCase()}
-function onComplaintText(value){state.complaintText=sanitizeInput(value,1000)}
+function onTrackInput(value){
+  state.trackInput=sanitizeInput(value,20).toUpperCase();
+}
+
+function onComplaintSn(value){
+  state.complaintSn=sanitizeInput(value,20).toUpperCase();
+}
+
+function onComplaintText(value){
+  state.complaintText=sanitizeInput(value,1000);
+}
 
 function resetForm(){
   state.sn=null;
   state.clientName='';
+  state.area='';
   state.address='';
   state.phone='';
   state.desc='';
@@ -818,8 +845,27 @@ async function createOrder(){
     return;
   }
 
-  if(!state.address||!state.phone||!state.desc){
-    showToast('من فضلك كمّل كل البيانات.');
+  if(!VALIDATORS.text(state.area,2,100)){
+    showToast('اكتب المنطقة أو الحي بشكل صحيح.');
+    document.getElementById('areaInput')?.focus();
+    return;
+  }
+
+  if(!VALIDATORS.text(state.address,5,250)){
+    showToast('اكتب العنوان بالتفصيل، من فضلك.');
+    document.getElementById('addrInput')?.focus();
+    return;
+  }
+
+  if(!state.phone){
+    showToast('اكتب رقم تليفونك.');
+    document.getElementById('phoneInput')?.focus();
+    return;
+  }
+
+  if(!state.desc){
+    showToast('اكتب تفاصيل المشكلة.');
+    document.getElementById('descInput')?.focus();
     return;
   }
 
@@ -828,13 +874,9 @@ async function createOrder(){
     return;
   }
 
-  if(!VALIDATORS.text(state.address,10,250)){
-    showToast('اكتب عنوانك بالتفصيل، من فضلك.');
-    return;
-  }
-
   if(!VALIDATORS.text(state.desc,10,1000)){
     showToast('اكتب تفاصيل المشكلة في 10 حروف على الأقل.');
+    document.getElementById('descInput')?.focus();
     return;
   }
 
@@ -845,7 +887,8 @@ async function createOrder(){
     const data=await API.createOrder({
       clientName:state.clientName,
       service:state.service,
-      area:state.address,
+      area:state.area,
+      address:state.address,
       phone:state.phone,
       description:state.desc
     });
