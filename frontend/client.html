@@ -577,27 +577,43 @@ function setTab(tab){
   render();
 }
 
+/* إصلاح فتح قائمة الخدمات مع الحفاظ على القسم المحدد */
 function toggleService(){
   state.showService=!state.showService;
-  state.searchService='';
-  state.openCategory='';
+
+  if(state.showService){
+    state.searchService='';
+    state.openCategory=getCat(state.service)?.label||'';
+  }
+
   render();
 }
 
+/* الاحتفاظ بالقسم الذي اختاره العميل */
 function toggleCategory(label){
   state.openCategory=state.openCategory===label?'':label;
   render();
 }
 
+/* الحفاظ على تركيز البحث ومكان المؤشر بعد تحديث النتائج */
 function searchService(value){
   const el=document.getElementById('svcSearch');
   const pos=el?el.selectionStart:null;
+
   state.searchService=sanitizeInput(value,80);
+
   render();
+
   const next=document.getElementById('svcSearch');
-  if(next&&pos!==null){
+
+  if(next){
     next.focus();
-    try{next.setSelectionRange(pos,pos)}catch(error){}
+
+    if(pos!==null){
+      try{
+        next.setSelectionRange(pos,pos);
+      }catch(error){}
+    }
   }
 }
 
