@@ -135,6 +135,7 @@ const createSchema = Joi.object({
   phone: Joi.string().trim().required(),
   clientPhone: Joi.string().trim(),
   clientName: Joi.string().trim().max(50).allow(''),
+  budget: Joi.string().trim().max(50).allow('').optional(),
   description: Joi.string().trim().min(10).max(1000),
   desc: Joi.string().trim().min(10).max(1000).allow('')
 }).unknown(false);
@@ -243,6 +244,7 @@ router.post('/', async (req, res, next) => {
           address,
           clientName: value.clientName || 'عميل',
           clientPhone,
+          budget: value.budget || '',
           description: value.description,
           status: 'قيد المراجعة'
         });
@@ -815,6 +817,7 @@ router.get('/:sn/assigned-details', auth(), async (req, res, next) => {
         clientName: order.clientName,
         clientPhone: order.clientPhone,
         description: order.description,
+        budget: order.budget || '',
         status: order.status,
         acceptedOfferPrice: order.acceptedOfferPrice,
         commissionAmount: order.commissionAmount,
