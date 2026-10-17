@@ -1,175 +1,235 @@
-
 'use strict';
 
 const mongoose = require('mongoose');
 
 const offerSchema = new mongoose.Schema({
-  fanni: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Fanni',
-    required: true
-  },
+fanni: {
+type: mongoose.Schema.Types.ObjectId,
+ref: 'Fanni',
+required: true
+},
 
-  fanniId: String,
-  fanniName: String,
-  fanniPhone: String,
+fanniId: {
+type: String,
+trim: true
+},
 
-  price: {
-    type: String,
-    required: true
-  },
+fanniName: {
+type: String,
+trim: true,
+maxlength: 50
+},
 
-  priceNum: {
-    type: Number,
-    min: 0
-  },
+fanniPhone: {
+type: String,
+trim: true
+},
 
-  message: {
-    type: String,
-    maxlength: 500
-  },
+price: {
+type: String,
+required: true,
+trim: true
+},
 
-  date: {
-    type: Date,
-    default: Date.now
-  }
-}, { _id: true });
+priceNum: {
+type: Number,
+min: 0
+},
+
+message: {
+type: String,
+trim: true,
+maxlength: 500
+},
+
+date: {
+type: Date,
+default: Date.now
+}
+}, {
+_id: true
+});
 
 const orderSchema = new mongoose.Schema({
-  sn: {
-    type: String,
-    required: true,
-    unique: true,
-    index: true
-  },
+sn: {
+type: String,
+required: true,
+unique: true,
+index: true,
+trim: true,
+uppercase: true,
+match: /^SN\d{6}$/
+},
 
-  service: {
-    type: String,
-    required: true,
-    index: true
-  },
+service: {
+type: String,
+required: true,
+trim: true,
+maxlength: 100,
+index: true
+},
 
-  // المنطقة العامة أو الحي.
-  area: {
-    type: String,
-    required: true,
-    trim: true,
-    maxlength: 250
-  },
+// المنطقة العامة أو الحي.
+area: {
+type: String,
+required: true,
+trim: true,
+maxlength: 250
+},
 
-  // العنوان التفصيلي للعميل.
-  // إظهاره للفني يجب أن يكون بعد قبول العرض
-  // ومن خلال مسار API يتحقق من هوية الفني المعيّن.
-  address: {
-    type: String,
-    trim: true,
-    maxlength: 250,
-    default: ''
-  },
+// العنوان التفصيلي للعميل.
+// لا يجوز عرضه للفني قبل قبول عرضه وتعيينه على الطلب.
+address: {
+type: String,
+trim: true,
+maxlength: 250,
+default: ''
+},
 
-  city: {
-    type: String,
-    trim: true,
-    maxlength: 100
-  },
+city: {
+type: String,
+trim: true,
+maxlength: 100
+},
 
-  clientName: {
-    type: String,
-    trim: true,
-    maxlength: 50
-  },
+clientName: {
+type: String,
+trim: true,
+maxlength: 50,
+default: 'عميل'
+},
 
-  clientPhone: {
-    type: String,
-    required: true,
-    trim: true
-  },
+clientPhone: {
+type: String,
+required: true,
+trim: true
+},
 
-  description: {
-    type: String,
-    maxlength: 1000
-  },
+description: {
+type: String,
+trim: true,
+maxlength: 1000
+},
 
-  budget: String,
+budget: {
+type: String,
+trim: true,
+maxlength: 50,
+default: ''
+},
 
-  status: {
-    type: String,
-    enum: [
-      'قيد المراجعة',
-      'تم النشر',
-      'وصلتك عروض',
-      'تم اختيار فني',
-      'تم الانتهاء',
-      'منتهي',
-      'اعتذار',
-      'منتهي - اعتذار'
-    ],
-    default: 'قيد المراجعة',
-    index: true
-  },
+status: {
+type: String,
+enum: [
+'قيد المراجعة',
+'تم النشر',
+'وصلتك عروض',
+'تم اختيار فني',
+'تم الانتهاء',
+'منتهي',
+'اعتذار',
+'منتهي - اعتذار'
+],
+default: 'قيد المراجعة',
+index: true
+},
 
-  offers: [offerSchema],
+// عروض الفنيين على الطلب.
+offers: {
+type: [offerSchema],
+default: []
+},
 
-  assignedFanni: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Fanni'
-  },
+// الفني الذي اختاره العميل.
+assignedFanni: {
+type: mongoose.Schema.Types.ObjectId,
+ref: 'Fanni',
+default: null
+},
 
-  assignedFanniName: String,
+assignedFanniName: {
+type: String,
+trim: true,
+maxlength: 50,
+default: ''
+},
 
-  // بيانات العرض الذي وافق عليه العميل.
-  // نحتفظ بها لتحديد السعر الصحيح الذي تُحسب منه العمولة.
-  acceptedOfferId: {
-    type: mongoose.Schema.Types.ObjectId,
-    default: null
-  },
+// العرض الذي وافق عليه العميل.
+acceptedOfferId: {
+type: mongoose.Schema.Types.ObjectId,
+default: null
+},
 
-  acceptedOfferPrice: {
-    type: Number,
-    min: 0,
-    default: null
-  },
+acceptedOfferPrice: {
+type: Number,
+min: 0,
+default: null
+},
 
-  // حقول تتبّع عمولة المنصة.
-  // تفعيل الخصم الفعلي يتم في مسار قبول العرض،
-  // وليس بمجرد إنشاء الطلب أو إرسال العرض.
-  commissionRate: {
-    type: Number,
-    min: 0,
-    max: 100,
-    default: 10
-  },
+// نسبة عمولة المنصة.
+commissionRate: {
+type: Number,
+min: 0,
+max: 100,
+default: 10
+},
 
-  commissionAmount: {
-    type: Number,
-    min: 0,
-    default: 0
-  },
+// قيمة العمولة الخاصة بالعرض المقبول.
+commissionAmount: {
+type: Number,
+min: 0,
+default: 0
+},
 
-  commissionCharged: {
-    type: Boolean,
-    default: false,
-    index: true
-  },
+// لا تتحول إلى true إلا بعد تسجيل الخصم بنجاح.
+commissionCharged: {
+type: Boolean,
+default: false,
+index: true
+},
 
-  commissionChargedAt: {
-    type: Date,
-    default: null
-  },
+commissionChargedAt: {
+type: Date,
+default: null
+},
 
-  expiresAt: {
-    type: Date,
-    default: () => new Date(Date.now() + 48 * 60 * 60 * 1000),
-    index: true
-  },
+// انتهاء استقبال العروض بعد 48 ساعة افتراضيًا.
+expiresAt: {
+type: Date,
+default: () => new Date(Date.now() + 48 * 60 * 60 * 1000),
+index: true
+},
 
-  createdAt: {
-    type: Date,
-    default: Date.now,
-    index: true
-  }
+createdAt: {
+type: Date,
+default: Date.now,
+index: true
+}
 }, {
-  timestamps: false
+timestamps: false
+});
+
+/*
+
+* فهارس تساعد في:
+* 1. جلب الطلبات المتاحة وغير المنتهية.
+* 2. جلب الطلبات التي قدم عليها فني معين.
+* 3. الوصول إلى طلبات الفني الذي تم اختياره.
+     */
+     orderSchema.index({
+     status: 1,
+     expiresAt: 1,
+     createdAt: -1
+     });
+
+orderSchema.index({
+'offers.fanni': 1,
+createdAt: -1
+});
+
+orderSchema.index({
+assignedFanni: 1,
+status: 1
 });
 
 module.exports = mongoose.model('Order', orderSchema);
