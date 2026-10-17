@@ -147,6 +147,7 @@ let state={
   loading:false,
   loadingOrders:false,
   publishingOrders:[],
+  deletingItems:[],
   fannis:[],
   filtered:[],
   topups:[],
@@ -356,6 +357,7 @@ function render(){
 
           ${state.filtered.map(f=>{
             const id=String(f._id||'');
+            const deleting=state.deletingItems.includes('fanni:'+id);
             return `
               <article class="panel p-3 sm:p-4">
                 <div class="flex justify-between items-start gap-3">
@@ -391,6 +393,12 @@ function render(){
                     `:`
                       <button onclick="enableFanni('${escHtml(id)}')" class="h-8 px-2.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 text-[10px] font-bold">استعادة</button>
                     `}
+                    <button
+                      onclick="deleteFanni('${escHtml(id)}','${escHtml(f.name||'الفني')}')"
+                      ${deleting?'disabled':''}
+                      class="h-8 px-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-[10px] font-extrabold">
+                      ${deleting?'جاري الحذف...':'حذف نهائي'}
+                    </button>
                   </div>
                 </div>
 
@@ -537,6 +545,29 @@ function renderOrders(){
         </div>
       </div>
 
+      <div class="panel p-3">
+        <h3 class="text-[12px] font-extrabold text-red-700">حذف طلبات عميل تجريبي</h3>
+        <p class="text-[10px] text-slate-500 mt-1 leading-5">
+          اكتب رقم هاتف العميل لحذف الطلبات المرتبطة به. هذه العملية لا تحذف حساب عميل مستقلًا إن كان النظام يستخدم حسابات منفصلة.
+          سيرفض الخادم الحذف إذا كانت هناك ارتباطات فنية أو مالية تمنع الحذف الآمن.
+        </p>
+        <div class="mt-3 flex gap-2">
+          <input
+            id="delete-client-phone"
+            type="tel"
+            inputmode="tel"
+            autocomplete="off"
+            placeholder="رقم موبايل العميل"
+            class="field flex-1 min-w-0"
+            dir="ltr">
+          <button
+            onclick="deleteClient()"
+            class="shrink-0 h-[42px] px-3 rounded-xl bg-red-600 hover:bg-red-700 text-white text-[11px] font-extrabold">
+            حذف الطلبات
+          </button>
+        </div>
+      </div>
+
       ${state.errors.orders?`
         <div class="bg-red-50 border border-red-200 rounded-xl p-3">
           <p class="text-[12px] font-extrabold text-red-700">تعذر تحميل طلبات العملاء</p>
@@ -563,6 +594,7 @@ function renderOrders(){
         const created=o.createdAt?new Date(o.createdAt).toLocaleString('ar-EG'):'';
         const budget=o.budget===null||o.budget===undefined||String(o.budget).trim()===''?'لم يحدد ميزانية':String(o.budget)+' جنيه';
         const isPublishing=state.publishingOrders.includes(sn);
+        const isDeleting=state.deletingItems.includes('order:'+sn);
         const canPublish=status==='قيد المراجعة'&&!!sn;
 
         return `
@@ -639,6 +671,15 @@ function renderOrders(){
             `:`
               <p class="mt-3 text-[10px] text-slate-400 bg-slate-50 border border-slate-100 rounded-xl p-3 text-center">لم يقدم أي فني عرضًا على هذا الطلب حتى الآن.</p>
             `}
+
+            <div class="mt-3 border-t border-slate-100 pt-3">
+              <button
+                onclick="deleteOrder('${escHtml(sn)}')"
+                ${isDeleting?'disabled':''}
+                class="w-full h-10 px-3 rounded-xl bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 text-[11px] font-extrabold">
+                ${isDeleting?'جاري حذف الطلب...':'حذف الطلب التجريبي'}
+              </button>
+            </div>
           </article>
         `;
       }).join('')}
@@ -912,6 +953,161 @@ async function enableFanni(id){
   }catch(e){showToast(e.message,'error')}
 }
 
+/* حذف فني تجريبي */
+async function deleteFanni(id,name){
+  id=String(id||'').trim();
+
+  if(!id){
+    showToast('معرّف الفني غير موجود','error');
+    return;
+  }
+
+  if(state.deletingItems.includes('fanni:'+id))return;
+
+  const confirmed=confirm(
+    `هل تريد طلب حذف حساب الفني "${name||'الفني'}" نهائيًا؟\n\n`+
+    'قد يرفض الخادم الحذف إذا كان للفني رصيد أو سجل مالي أو طلبات مرتبطة به.\n\n'+
+    'لن يتم الحذف إلا إذا وافق الخادم على العملية.'
+  );
+
+  if(!confirmed)return;
+
+  state.deletingItems.push('fanni:'+id);
+  render();
+
+  try{
+    const result=await tryApi([
+      `/api/admin/fannis/${encodeURIComponent(id)}`
+    ],{
+      method:'DELETE'
+    });
+
+    showToast(result.message||'تم حذف حساب الفني');
+    await loadAll();
+  }catch(e){
+    showToast(e.message||'تعذر حذف الفني','error');
+  }finally{
+    state.deletingItems=state.deletingItems.filter(item=>item!=='fanni:'+id);
+    render();
+  }
+}
+
+/* حذف طلب تجريبي */
+async function deleteOrder(sn){
+  sn=String(sn||'').trim().toUpperCase();
+
+  if(!/^SN\d{6}$/.test(sn)){
+    showToast('كود الطلب غير صحيح أو غير موجود','error');
+    return;
+  }
+
+  if(state.deletingItems.includes('order:'+sn))return;
+
+  const confirmed=confirm(
+    `هل تريد طلب حذف الطلب ${sn} نهائيًا؟\n\n`+
+    'إذا كان الطلب مرتبطًا بفني أو بسجل مالي، فقد يرفض الخادم الحذف.\n\n'+
+    'لا يمكن التراجع عن الحذف إذا وافق الخادم ونفّذه.'
+  );
+
+  if(!confirmed)return;
+
+  state.deletingItems.push('order:'+sn);
+  render();
+
+  try{
+    const result=await tryApi([
+      `/api/admin/orders/${encodeURIComponent(sn)}`
+    ],{
+      method:'DELETE'
+    });
+
+    showToast(result.message||'تم حذف الطلب');
+    await loadOrders();
+  }catch(e){
+    showToast(e.message||'تعذر حذف الطلب','error');
+  }finally{
+    state.deletingItems=state.deletingItems.filter(item=>item!=='order:'+sn);
+    if(state.tab==='orders')render();
+  }
+}
+
+/* حذف طلبات عميل باستخدام رقم الهاتف */
+async function deleteClient(){
+  const input=document.getElementById('delete-client-phone');
+
+  if(!input){
+    showToast('خانة رقم هاتف العميل غير موجودة','error');
+    return;
+  }
+
+  const phone=String(input.value||'').trim();
+
+  if(!phone){
+    showToast('اكتب رقم موبايل العميل أولًا','error');
+    input.focus();
+    return;
+  }
+
+  if(phone.length<7||phone.length>20){
+    showToast('راجع رقم الموبايل المكتوب','error');
+    input.focus();
+    return;
+  }
+
+  if(state.deletingItems.includes('client:'+phone))return;
+
+  const confirmed=confirm(
+    `سيتم طلب حذف الطلبات المرتبطة برقم الهاتف:\n${phone}\n\n`+
+    'هذه العملية قد تحذف أكثر من طلب للعميل نفسه.\n'+
+    'إذا كانت هناك طلبات مرتبطة بفني أو بسجلات مالية، فقد يرفض الخادم الحذف.\n\n'+
+    'هل تريد المتابعة؟'
+  );
+
+  if(!confirmed)return;
+
+  state.deletingItems.push('client:'+phone);
+
+  const button=document.querySelector('button[onclick="deleteClient()"]');
+  if(button){
+    button.disabled=true;
+    button.textContent='جاري الحذف...';
+  }
+
+  try{
+    const result=await tryApi([
+      `/api/admin/clients/${encodeURIComponent(phone)}`
+    ],{
+      method:'DELETE'
+    });
+
+    const deleted=Number(result.deleted);
+    const message=result.message||'تم تنفيذ طلب الحذف';
+
+    showToast(
+      Number.isFinite(deleted)&&deleted>=0
+        ?`${message} — عدد الطلبات المحذوفة: ${deleted}`
+        :message
+    );
+
+    const currentInput=document.getElementById('delete-client-phone');
+    if(currentInput)currentInput.value='';
+
+    await loadOrders();
+  }catch(e){
+    showToast(e.message||'تعذر حذف طلبات العميل','error');
+  }finally{
+    state.deletingItems=state.deletingItems.filter(item=>item!=='client:'+phone);
+
+    const currentButton=document.querySelector('button[onclick="deleteClient()"]');
+    if(currentButton){
+      currentButton.disabled=false;
+      currentButton.textContent='حذف الطلبات';
+    }
+
+    if(state.tab==='orders')render();
+  }
+}
+
 /* تسوية رصيد المحفظة */
 
 async function setBalance(id){
@@ -991,6 +1187,7 @@ function logout(){
   state.loading=false;
   state.loadingOrders=false;
   state.publishingOrders=[];
+  state.deletingItems=[];
   state.adminEmail='';
   state.adminPass='';
   state.search='';
