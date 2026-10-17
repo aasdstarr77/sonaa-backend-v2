@@ -19,7 +19,10 @@ const offerSchema = new mongoose.Schema({
     required: true
   },
 
-  priceNum: Number,
+  priceNum: {
+    type: Number,
+    min: 0
+  },
 
   message: {
     type: String,
@@ -46,8 +49,7 @@ const orderSchema = new mongoose.Schema({
     index: true
   },
 
-  // المنطقة العامة أو الحي، ويظهر للفني لتحديد نطاق الخدمة.
-  // أبقيناه مطلوبًا للتوافق مع الطلبات الحالية.
+  // المنطقة العامة أو الحي.
   area: {
     type: String,
     required: true,
@@ -56,8 +58,8 @@ const orderSchema = new mongoose.Schema({
   },
 
   // العنوان التفصيلي للعميل.
-  // اختياري للتوافق مع الطلبات القديمة التي لا تحتوي عليه.
-  // إخفاؤه عن الفني قبل قبول العرض يجب تطبيقه في مسارات الـ API أيضًا.
+  // إظهاره للفني يجب أن يكون بعد قبول العرض
+  // ومن خلال مسار API يتحقق من هوية الفني المعيّن.
   address: {
     type: String,
     trim: true,
@@ -114,6 +116,46 @@ const orderSchema = new mongoose.Schema({
   },
 
   assignedFanniName: String,
+
+  // بيانات العرض الذي وافق عليه العميل.
+  // نحتفظ بها لتحديد السعر الصحيح الذي تُحسب منه العمولة.
+  acceptedOfferId: {
+    type: mongoose.Schema.Types.ObjectId,
+    default: null
+  },
+
+  acceptedOfferPrice: {
+    type: Number,
+    min: 0,
+    default: null
+  },
+
+  // حقول تتبّع عمولة المنصة.
+  // تفعيل الخصم الفعلي يتم في مسار قبول العرض،
+  // وليس بمجرد إنشاء الطلب أو إرسال العرض.
+  commissionRate: {
+    type: Number,
+    min: 0,
+    max: 100,
+    default: 10
+  },
+
+  commissionAmount: {
+    type: Number,
+    min: 0,
+    default: 0
+  },
+
+  commissionCharged: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+
+  commissionChargedAt: {
+    type: Date,
+    default: null
+  },
 
   expiresAt: {
     type: Date,
