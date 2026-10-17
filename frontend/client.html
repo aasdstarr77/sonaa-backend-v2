@@ -27,9 +27,10 @@ input,textarea{color:var(--text)}input:focus,textarea:focus{outline:none;border-
 .field{width:100%;border:1px solid #dbe3ee;border-radius:12px;background:white}
 .tab-active{background:var(--navy);color:white}.tab-idle{color:var(--muted)}
 .soft-card{background:#f8fafc;border:1px solid #e8eef5}
-.category-card{border:1px solid #e2e8f0;background:white;border-radius:14px;overflow:hidden}
-.category-head{width:100%;display:flex;align-items:center;gap:10px;padding:12px;text-align:right}
-.category-head:active{background:#f8fafc}
+.category-card{border:1px solid #d5deeb;background:white;border-radius:14px;overflow:hidden}
+.category-head{width:100%;display:flex;align-items:center;gap:10px;padding:13px;text-align:right;background:#fff;transition:background .15s}
+.category-head:hover,.category-head:focus-visible{background:#eff6ff;outline:2px solid #bfdbfe;outline-offset:-2px}
+.category-head:active{background:#dbeafe}
 .service-choice{width:100%;min-height:43px;text-align:right;padding:9px 12px;border-radius:10px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:8px}
 .service-choice.selected{background:#0b1b3a;color:white}
 @keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
@@ -306,13 +307,15 @@ function render(){
               <div class="mt-2 rounded-[14px] border border-slate-200 bg-white shadow-lg overflow-hidden">
                 <div class="p-2 bg-slate-50 border-b border-slate-100">
                   <input id="svcSearch" value="${escAttr(state.searchService)}" oninput="searchService(this.value)" placeholder="ابحث عن خدمة أو قسم..." class="field h-10 px-3 text-[12px] font-bold">
-                  <p class="text-[10px] text-slate-400 mt-2 px-1">اضغط على اسم القسم لعرض خدماته.</p>
+                  <p class="text-[12px] text-slate-700 font-bold mt-2 px-1 leading-6">اضغط على أي تصنيف لفتح الخدمات الموجودة بداخله.</p>
                 </div>
                 <div class="max-h-[390px] overflow-y-auto p-2 space-y-2">
                   ${query?matching.map(c=>`
                     <div class="category-card">
-                      <div class="px-3 py-2.5 flex items-center gap-2 bg-slate-50 border-b border-slate-100">
-                        <span>${c.emoji}</span><span class="font-extrabold text-[12px]">${escHtml(c.label)}</span>
+                      <div class="px-3 py-3 flex items-center gap-2 bg-slate-50 border-b border-slate-100">
+                        <span class="text-xl">${c.emoji}</span>
+                        <span class="font-extrabold text-[14px] text-slate-900">${escHtml(c.label)}</span>
+                        <span class="mr-auto text-[11px] text-slate-700 font-bold">${c.services.length} خدمة</span>
                       </div>
                       <div class="p-1.5">${c.services.map(s=>`
                         <button type="button" onclick="selectServiceByIndex(${ALL_SERVICES.indexOf(s)})" class="service-choice ${state.service===s?'selected':'hover:bg-blue-50'}">
@@ -322,16 +325,16 @@ function render(){
                     </div>`).join('')||'<p class="p-4 text-[12px] text-slate-400 text-center">مفيش نتائج مطابقة.</p>'
                   :CATEGORIES.map(c=>`
                     <div class="category-card">
-                      <button type="button" onclick="toggleCategory(${JSON.stringify(c.label)})" class="category-head">
-                        <span class="h-10 w-10 rounded-xl bg-blue-50 flex items-center justify-center text-xl shrink-0">${c.emoji}</span>
+                      <button type="button" onclick='toggleCategory(${JSON.stringify(c.label)})' aria-expanded="${state.openCategory===c.label?'true':'false'}" class="category-head">
+                        <span class="h-11 w-11 rounded-xl bg-blue-50 flex items-center justify-center text-2xl shrink-0">${c.emoji}</span>
                         <span class="flex-1 min-w-0">
-                          <span class="block font-extrabold text-[12px]">${escHtml(c.label)}</span>
-                          <span class="block text-[10px] text-slate-400 mt-0.5">${c.services.length} خدمات</span>
+                          <span class="block font-extrabold text-[14px] text-slate-900">${escHtml(c.label)}</span>
+                          <span class="block text-[12px] text-slate-700 font-bold mt-1">${c.services.length} خدمة — اضغط للفتح</span>
                         </span>
-                        <span class="text-slate-400 text-xs">${state.openCategory===c.label?'▲':'▼'}</span>
+                        <span class="text-slate-700 text-sm font-black shrink-0">${state.openCategory===c.label?'▲':'▼'}</span>
                       </button>
                       ${state.openCategory===c.label?`
-                        <div class="border-t border-slate-100 p-1.5">
+                        <div class="border-t border-slate-100 p-1.5 bg-white">
                           ${c.services.map(s=>`
                             <button type="button" onclick="selectServiceByIndex(${ALL_SERVICES.indexOf(s)})" class="service-choice ${state.service===s?'selected':'hover:bg-blue-50'}">
                               <span>${state.service===s?'✓':'○'}</span><span>${escHtml(s)}</span>
@@ -340,7 +343,7 @@ function render(){
                     </div>`).join('')}
                 </div>
               </div>`:''}
-              <p class="mt-1 text-[10px] text-slate-400">اختار القسم المناسب، وبعده حدد الخدمة المطلوبة.</p>
+              <p class="mt-1 text-[11px] text-slate-600 font-semibold">اختار القسم المناسب، وبعده حدد الخدمة المطلوبة.</p>
             </div>
 
             <div>
