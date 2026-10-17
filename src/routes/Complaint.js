@@ -1,3 +1,4 @@
+
 'use strict';
 
 const express = require('express');
@@ -9,8 +10,12 @@ const router = express.Router();
 
 function normalizeDigits(value) {
   return String(value || '')
-    .replace(/[٠-٩]/g, digit => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
-    .replace(/[۰-۹]/g, digit => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)));
+    .replace(/[٠-٩]/g, digit =>
+      String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit))
+    )
+    .replace(/[۰-۹]/g, digit =>
+      String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit))
+    );
 }
 
 function containsPhoneNumber(value) {
@@ -33,6 +38,17 @@ function cleanText(value, maxLength) {
   return value.trim().slice(0, maxLength);
 }
 
+// توحيد المسافات والحروف لتقليل اختلافات كتابة الاسم.
+function normalizeName(value) {
+  return String(value || '')
+    .normalize('NFC')
+    .replace(/[\u064B-\u065F\u0670\u0640]/g, '')
+    .replace(/[أإآ]/g, 'ا')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
 // إرسال شكوى مرتبطة بطلب موجود.
 router.post('/', async (req, res) => {
   try {
@@ -50,12 +66,13 @@ router.post('/', async (req, res) => {
       });
     }
 
-    if (submittedName && (
-      submittedName.length < 2 || containsPhoneNumber(submittedName)
-    )) {
+    if (
+      submittedName.length < 2
+      || containsPhoneNumber(submittedName)
+    ) {
       return res.status(400).json({
         ok: false,
-        message: 'اسم العميل غير صحيح. اكتب الاسم بدون أرقام تليفونات.'
+        message: 'اكتب اسم العميل بشكل صحيح، بدون أرقام تليفونات.'
       });
     }
 
@@ -87,13 +104,29 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // نعتمد اسم العميل المسجل مع الطلب بدلًا من الاسم المرسل من المتصفح.
-    const clientName = cleanText(order.clientName, 50) || 'عميل';
+    const registeredName = cleanText(order.clientName, 50);
+
+    if (
+      registeredName.length < 2
+      || normalizeName(registeredName) === normalizeName('عميل')
+    ) {
+      return res.status(400).json({
+        ok: false,
+        message: 'بيانات اسم صاحب الطلب غير مكتملة. تواصل مع الإدارة للمساعدة.'
+      });
+    }
+
+    if (normalizeName(submittedName) !== normalizeName(registeredName)) {
+      return res.status(403).json({
+        ok: false,
+        message: 'اسم العميل غير مطابق للاسم المسجل مع الطلب.'
+      });
+    }
 
     const complaint = await Complaint.create({
       order: order._id,
       sn: order.sn,
-      clientName,
+      clientName: registeredName,
       text: complaintText
     });
 
