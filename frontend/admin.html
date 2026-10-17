@@ -1279,4 +1279,58 @@ async function approveTopup(id){
   }catch(e){showToast(e.message,'error')}
 }
 
-async funct
+async function rejectTopup(id){
+  if(!confirm('هل تريد رفض طلب الشحن؟ لن تتم إضافة أي رصيد.'))return;
+  try{
+    await tryApi([`/api/admin/topup-requests/${encodeURIComponent(id)}/reject`],{
+      method:'POST',
+      body:JSON.stringify({})
+    });
+    showToast('تم رفض طلب الشحن');
+    await loadAll();
+  }catch(e){
+    showToast(e.message,'error');
+  }
+}
+
+function goFanni(){
+  window.location.href='/fanni';
+}
+
+function logout(){
+  clearToken();
+
+  state.fannis=[];
+  state.filtered=[];
+  state.topups=[];
+  state.filteredTopups=[];
+  state.orders=[];
+  state.filteredOrders=[];
+
+  state.errors={
+    fannis:'',
+    topups:'',
+    orders:''
+  };
+
+  state.error='';
+  state.loading=false;
+  state.loadingOrders=false;
+  state.publishingOrders=[];
+  state.deletingItems=[];
+  state.adminEmail='';
+  state.adminPass='';
+  state.search='';
+  state.tab='fannis';
+
+  render();
+}
+
+render();
+
+if(getToken()){
+  loadAll();
+}
+</script>
+</body>
+</html>
