@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -164,11 +163,15 @@ let state={
   filteredTopups:[],
   orders:[],
   filteredOrders:[],
+  complaints:[],
+  filteredComplaints:[],
+  loadingComplaints:false,
   search:'',
   filter:'الكل',
   filterTopup:'الكل',
   filterOrder:'الكل',
-  errors:{fannis:'',topups:'',orders:''},
+  filterComplaint:'الكل',
+  errors:{fannis:'',topups:'',orders:'',complaints:''},
   error:''
 };
 
@@ -303,6 +306,7 @@ function render(){
             {id:'disabled',label:`المعطلون (${state.fannis.filter(f=>f.isDisabled).length})`},
             {id:'orders',label:`طلبات العملاء (${state.orders.length})`},
             {id:'topups',label:`الشحن (${state.topups.length})`},
+            {id:'complaints',label:`الشكاوى (${state.complaints.length})`},
             {id:'stats',label:'الإحصائيات'}
           ].map(t=>`
             <button onclick="setTab('${t.id}')"
@@ -316,7 +320,7 @@ function render(){
 
       <div class="mt-3 flex gap-2">
         <input value="${escHtml(state.search)}" oninput="onSearch(this.value)"
-          placeholder="${state.tab==='orders'?'بحث بالكود أو اسم العميل أو الهاتف':state.tab==='topups'?'بحث برقم الهاتف أو المبلغ':'بحث باسم الفني أو الهاتف'}"
+          placeholder="${state.tab==='orders'?'بحث بالكود أو اسم العميل أو الهاتف':state.tab==='topups'?'بحث برقم الهاتف أو المبلغ':state.tab==='complaints'?'بحث بالكود أو اسم العميل أو الشكوى':'بحث باسم الفني أو الهاتف'}"
           class="field flex-1 min-w-0">
 
         ${state.tab==='orders'?`
@@ -327,6 +331,14 @@ function render(){
             <option value="وصلتك عروض" ${state.filterOrder==='وصلتك عروض'?'selected':''}>وصلت عروض</option>
             <option value="تم اختيار فني" ${state.filterOrder==='تم اختيار فني'?'selected':''}>تم اختيار فني</option>
             <option value="تم الانتهاء" ${state.filterOrder==='تم الانتهاء'?'selected':''}>تم الانتهاء</option>
+          </select>
+        `:state.tab==='complaints'?`
+          <select onchange="onFilterComplaint(this.value)" class="field !w-auto max-w-[145px] px-2">
+            <option value="الكل" ${state.filterComplaint==='الكل'?'selected':''}>كل الشكاوى</option>
+            <option value="جديدة" ${state.filterComplaint==='جديدة'?'selected':''}>جديدة</option>
+            <option value="قيد المراجعة" ${state.filterComplaint==='قيد المراجعة'?'selected':''}>قيد المراجعة</option>
+            <option value="تم الحل" ${state.filterComplaint==='تم الحل'?'selected':''}>تم الحل</option>
+            <option value="مرفوضة" ${state.filterComplaint==='مرفوضة'?'selected':''}>مرفوضة</option>
           </select>
         `:state.tab==='topups'?`
           <select onchange="onFilterTopup(this.value)" class="field !w-auto max-w-[130px] px-2">
@@ -354,8 +366,9 @@ function render(){
       `:''}
 
       ${state.tab==='orders'?renderOrders():''}
+      ${state.tab==='complaints'?renderComplaints():''}
 
-      ${state.tab!=='topups'&&state.tab!=='stats'&&state.tab!=='orders'?`
+      ${state.tab!=='topups'&&state.tab!=='stats'&&state.tab!=='orders'&&state.tab!=='complaints'?`
         <div class="mt-3 space-y-3">
           ${state.errors.fannis?`
             <div class="bg-red-50 border border-red-200 rounded-xl p-3 text-[12px] text-red-700">${escHtml(state.errors.fannis)}</div>
@@ -697,10 +710,114 @@ function renderOrders(){
   `;
 }
 
+
+function complaintStatusClass(status){
+  if(status==='تم الحل')return 'bg-emerald-50 border-emerald-200 text-emerald-700';
+  if(status==='مرفوضة')return 'bg-red-50 border-red-200 text-red-700';
+  if(status==='قيد المراجعة')return 'bg-blue-50 border-blue-200 text-blue-700';
+  return 'bg-amber-50 border-amber-200 text-amber-800';
+}
+
+function applyComplaintFilter(){
+  let list=[...state.complaints];
+  if(state.filterComplaint!=='الكل')list=list.filter(c=>String(c.status||'جديدة')===state.filterComplaint);
+  if(state.search){
+    const q=state.search.toLowerCase();
+    list=list.filter(c=>[c.sn,c.clientName,c.text,c.status,c.adminNote,c.adminResponse].some(v=>String(v||'').toLowerCase().includes(q)));
+  }
+  state.filteredComplaints=list;
+  if(state.tab==='complaints')render();
+}
+
+async function loadComplaints(){
+  if(!getToken())return;
+  state.loadingComplaints=true;
+  state.errors.complaints='';
+  render();
+  try{
+    const data=await tryApi(['/api/admin/complaints'],{method:'GET'});
+    state.complaints=extractList(data,['complaints','items']);
+    applyComplaintFilter();
+  }catch(e){
+    state.complaints=[];
+    state.filteredComplaints=[];
+    state.errors.complaints=e.message||'تعذر تحميل الشكاوى';
+    render();
+    if(e.status===401||e.status===403)showToast('جلسة الأدمن غير صالحة أو لا تملك صلاحية عرض الشكاوى. سجل الدخول مجددًا.','error');
+  }finally{
+    state.loadingComplaints=false;
+    if(state.tab==='complaints')render();
+  }
+}
+
+function renderComplaints(){
+  let html='<section class="mt-3 space-y-3">';
+  html+='<div class="rounded-xl bg-blue-50 border border-blue-100 p-3"><p class="text-[12px] font-extrabold text-blue-900">إدارة شكاوى العملاء</p><p class="text-[10px] text-blue-800 mt-1 leading-5">راجع الشكوى وكود الطلب، ثم حدّث الحالة واكتب ملاحظة داخلية أو رد الإدارة عند الحاجة.</p></div>';
+  if(state.errors.complaints){
+    html+='<div class="bg-red-50 border border-red-200 rounded-xl p-3"><p class="text-[12px] font-extrabold text-red-700">تعذر تحميل الشكاوى</p><p class="text-[11px] text-red-700 mt-1.5">'+escHtml(state.errors.complaints)+'</p><button onclick="loadComplaints()" class="mt-3 h-9 px-3 rounded-lg bg-red-700 text-white text-[11px] font-bold">إعادة المحاولة</button></div>';
+  }
+  if(state.loadingComplaints){
+    html+='<div class="panel p-7 text-center"><div class="h-7 w-7 rounded-full border-2 border-slate-200 border-t-blue-600 animate-spin mx-auto"></div><p class="mt-2 text-[11px] text-slate-500">جاري تحميل الشكاوى...</p></div>';
+  }
+  if(state.filteredComplaints.length===0&&!state.loadingComplaints&&!state.errors.complaints){
+    html+='<div class="panel p-7 text-center text-[11px] text-slate-400">لا توجد شكاوى مطابقة للبحث أو الحالة المحددة.</div>';
+  }
+  state.filteredComplaints.forEach(function(c){
+    const id=String(c._id||c.id||'');
+    const sn=String(c.sn||'');
+    const status=String(c.status||'جديدة');
+    const created=c.createdAt?new Date(c.createdAt).toLocaleString('ar-EG'):'غير محدد';
+    const busy=state.deletingItems.includes('complaint:'+id);
+    html+='<article class="panel p-3 sm:p-4"><div class="flex items-start justify-between gap-2"><div class="min-w-0"><p class="text-[13px] font-extrabold break-words">'+escHtml(c.clientName||'عميل غير معروف')+'</p><p class="mt-1 text-[10px] text-slate-500">كود الطلب: <span class="font-mono font-extrabold text-blue-800">'+escHtml(sn||'غير متوفر')+'</span></p><p class="mt-1 text-[10px] text-slate-400">'+escHtml(created)+'</p></div><span class="shrink-0 text-[10px] px-2 py-1 rounded-full border '+complaintStatusClass(status)+'">'+escHtml(status)+'</span></div>';
+    html+='<div class="mt-3 rounded-xl bg-slate-50 border border-slate-100 p-3"><p class="text-[10px] text-slate-500 font-bold">نص الشكوى</p><p class="text-[12px] leading-6 whitespace-pre-wrap break-words mt-1">'+escHtml(c.text||'لا توجد تفاصيل')+'</p></div>';
+    html+='<div class="mt-3 space-y-3"><label class="block"><span class="block text-[10px] font-bold text-slate-600 mb-1.5">حالة الشكوى</span><select id="complaint-status-'+escHtml(id)+'" class="field">';
+    ['جديدة','قيد المراجعة','تم الحل','مرفوضة'].forEach(function(v){html+='<option value="'+v+'" '+(status===v?'selected':'')+'>'+v+'</option>';});
+    html+='</select></label>';
+    html+='<label class="block"><span class="block text-[10px] font-bold text-slate-600 mb-1.5">ملاحظة داخلية للإدارة</span><textarea id="complaint-note-'+escHtml(id)+'" rows="2" maxlength="1000" class="field" placeholder="ملاحظة داخلية لا تظهر للعميل">'+escHtml(c.adminNote||'')+'</textarea></label>';
+    html+='<label class="block"><span class="block text-[10px] font-bold text-slate-600 mb-1.5">رد الإدارة</span><textarea id="complaint-response-'+escHtml(id)+'" rows="2" maxlength="1000" class="field" placeholder="اكتب رد الإدارة على الشكوى">'+escHtml(c.adminResponse||'')+'</textarea></label>';
+    html+='<button onclick="saveComplaint(\''+escHtml(id)+'\')" '+(busy?'disabled':'')+' class="w-full h-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-extrabold">'+(busy?'جاري حفظ التعديلات...':'حفظ تحديث الشكوى')+'</button>';
+    if(c.reviewedAt)html+='<p class="text-[10px] text-slate-400">آخر مراجعة: '+escHtml(new Date(c.reviewedAt).toLocaleString('ar-EG'))+(c.reviewedBy?' — بواسطة '+escHtml(c.reviewedBy):'')+'</p>';
+    html+='</div></article>';
+  });
+  return html+'</section>';
+}
+
+async function saveComplaint(id){
+  id=String(id||'').trim();
+  if(!/^[a-f0-9]{24}$/i.test(id)){showToast('معرّف الشكوى غير صالح','error');return;}
+  const statusEl=document.getElementById('complaint-status-'+id);
+  const noteEl=document.getElementById('complaint-note-'+id);
+  const responseEl=document.getElementById('complaint-response-'+id);
+  if(!statusEl||!noteEl||!responseEl){showToast('تعذر قراءة بيانات الشكوى. حدّث القائمة وحاول مرة أخرى.','error');return;}
+  const status=statusEl.value;
+  if(!['جديدة','قيد المراجعة','تم الحل','مرفوضة'].includes(status)){showToast('حالة الشكوى غير صحيحة','error');return;}
+  if(noteEl.value.length>1000||responseEl.value.length>1000){showToast('الملاحظة والرد لا يمكن أن يتجاوز كل منهما 1000 حرف','error');return;}
+  if(state.deletingItems.includes('complaint:'+id))return;
+  state.deletingItems.push('complaint:'+id);
+  render();
+  try{
+    const result=await tryApi(['/api/admin/complaints/'+encodeURIComponent(id)],{
+      method:'PATCH',
+      body:JSON.stringify({status:status,adminNote:noteEl.value.trim(),adminResponse:responseEl.value.trim()})
+    });
+    const updated=result.complaint||result.data||result;
+    const index=state.complaints.findIndex(c=>String(c._id||c.id||'')===id);
+    if(index>=0)state.complaints[index]={...state.complaints[index],...updated};
+    showToast(result.message||'تم تحديث الشكوى بنجاح');
+    applyComplaintFilter();
+  }catch(e){
+    showToast(e.message||'تعذر تحديث الشكوى','error');
+  }finally{
+    state.deletingItems=state.deletingItems.filter(x=>x!=='complaint:'+id);
+    if(state.tab==='complaints')render();
+  }
+}
+
 function setTab(t){
   state.tab=t;
   render();
   if(t==='orders')loadOrders();
+  else if(t==='complaints')loadComplaints();
   else if(t==='topups')applyTopupFilter();
   else applyFilter();
 }
@@ -708,6 +825,7 @@ function setTab(t){
 function onSearch(v){
   state.search=v;
   if(state.tab==='orders')applyOrderFilter();
+  else if(state.tab==='complaints')applyComplaintFilter();
   else if(state.tab==='topups')applyTopupFilter();
   else applyFilter();
 }
@@ -715,6 +833,7 @@ function onSearch(v){
 function onFilter(v){state.filter=v;applyFilter()}
 function onFilterTopup(v){state.filterTopup=v;applyTopupFilter()}
 function onFilterOrder(v){state.filterOrder=v;applyOrderFilter()}
+function onFilterComplaint(v){state.filterComplaint=v;applyComplaintFilter()}
 
 function applyFilter(){
   let list=[...state.fannis];
@@ -739,7 +858,7 @@ function applyFilter(){
   }
 
   state.filtered=list;
-  if(!['topups','stats','orders'].includes(state.tab))render();
+  if(!['topups','stats','orders','complaints'].includes(state.tab))render();
 }
 
 function applyTopupFilter(){
@@ -799,12 +918,14 @@ async function loadAll(){
   state.errors.fannis='';
   state.errors.topups='';
   state.errors.orders='';
+  state.errors.complaints='';
   render();
 
   const results=await Promise.allSettled([
     tryApi(['/api/admin/fannis'],{method:'GET'}),
     tryApi(['/api/admin/topup-requests'],{method:'GET'}),
-    tryApi(['/api/admin/orders'],{method:'GET'})
+    tryApi(['/api/admin/orders'],{method:'GET'}),
+    tryApi(['/api/admin/complaints'],{method:'GET'})
   ]);
 
   if(results[0].status==='fulfilled'){
@@ -831,10 +952,19 @@ async function loadAll(){
     state.errors.orders=results[2].reason?.message||'تعذر تحميل الطلبات';
   }
 
+  if(results[3].status==='fulfilled'){
+    state.complaints=extractList(results[3].value,['complaints','items']);
+    state.errors.complaints='';
+  }else{
+    state.complaints=[];
+    state.errors.complaints=results[3].reason?.message||'تعذر تحميل الشكاوى';
+  }
+
   state.loading=false;
   applyFilter();
   applyTopupFilter();
   applyOrderFilter();
+  applyComplaintFilter();
 
   if(results.some(r=>r.status==='rejected')){
     const firstError=results.find(r=>r.status==='rejected')?.reason;
@@ -870,6 +1000,7 @@ async function loadOrders(){
 
 async function refreshCurrentTab(){
   if(state.tab==='orders')await loadOrders();
+  else if(state.tab==='complaints')await loadComplaints();
   else await loadAll();
 }
 
@@ -1306,11 +1437,14 @@ function logout(){
   state.filteredTopups=[];
   state.orders=[];
   state.filteredOrders=[];
+  state.complaints=[];
+  state.filteredComplaints=[];
 
   state.errors={
     fannis:'',
     topups:'',
-    orders:''
+    orders:'',
+    complaints:''
   };
 
   state.error='';
