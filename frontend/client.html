@@ -11,74 +11,39 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
 :root{
-  --navy:#0b1b3a;
-  --navy2:#102c52;
-  --blue:#2563eb;
-  --blue-dark:#1d4ed8;
-  --blue-soft:#eff6ff;
-  --page:#f4f7fb;
-  --border:#e2e8f0;
-  --text:#0f172a;
-  --muted:#64748b;
-  --green:#059669;
-  --red:#dc2626;
-  --amber:#d97706;
+  --navy:#0b1b3a;--navy2:#102c52;--blue:#2563eb;
+  --blue-dark:#1d4ed8;--blue-soft:#eff6ff;--page:#f4f7fb;
+  --border:#e2e8f0;--text:#0f172a;--muted:#64748b;
+  --green:#059669;--red:#dc2626
 }
 *{font-family:'Cairo',system-ui,-apple-system,sans-serif;box-sizing:border-box}
 html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
-body{
-  margin:0;background:var(--page);color:var(--text);
-  overflow-x:hidden;-webkit-tap-highlight-color:transparent
-}
+body{margin:0;background:var(--page);color:var(--text);overflow-x:hidden;-webkit-tap-highlight-color:transparent}
 img,video,input,textarea,button{max-width:100%}
 button,a,input,textarea{-webkit-tap-highlight-color:transparent}
 button{cursor:pointer}
 button:disabled{cursor:not-allowed;opacity:.6}
 input,textarea{color:var(--text)}
-input:focus,textarea:focus{
-  outline:none;border-color:var(--blue)!important;
-  box-shadow:0 0 0 3px rgba(37,99,235,.09)
-}
+input:focus,textarea:focus{outline:none;border-color:var(--blue)!important;box-shadow:0 0 0 3px rgba(37,99,235,.09)}
 ::-webkit-scrollbar{width:0;height:0}
 .safe-bottom{padding-bottom:env(safe-area-inset-bottom)}
-@keyframes fadeIn{
-  from{opacity:0;transform:translateY(7px)}
-  to{opacity:1;transform:translateY(0)}
-}
+@keyframes fadeIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
 .animate-fade{animation:fadeIn .25s ease both}
-.app-header{
-  background:rgba(255,255,255,.96);
-  border-bottom:1px solid var(--border);
-  box-shadow:0 2px 12px rgba(15,23,42,.035)
-}
-.brand-mark{
-  background:linear-gradient(145deg,var(--navy),var(--navy2));
-  box-shadow:0 4px 10px rgba(11,27,58,.16)
-}
-.primary-btn{
-  background:linear-gradient(135deg,var(--navy),var(--navy2));
-  color:#fff;transition:transform .15s,filter .15s
-}
+.app-header{background:rgba(255,255,255,.96);border-bottom:1px solid var(--border);box-shadow:0 2px 12px rgba(15,23,42,.035)}
+.brand-mark{background:linear-gradient(145deg,var(--navy),var(--navy2));box-shadow:0 4px 10px rgba(11,27,58,.16)}
+.primary-btn{background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;transition:transform .15s,filter .15s}
 .primary-btn:hover{filter:brightness(1.12)}
 .primary-btn:active,.blue-btn:active{transform:scale(.985)}
 .blue-btn{background:var(--blue);color:#fff;transition:background .15s,transform .15s}
 .blue-btn:hover{background:var(--blue-dark)}
-.panel{
-  background:#fff;border:1px solid var(--border);
-  border-radius:20px;box-shadow:0 3px 12px rgba(15,23,42,.035)
-}
-.field{
-  width:100%;border:1px solid #dbe3ee;border-radius:12px;
-  background:#fff;transition:border-color .15s,box-shadow .15s
-}
+.panel{background:#fff;border:1px solid var(--border);border-radius:20px;box-shadow:0 3px 12px rgba(15,23,42,.035)}
+.field{width:100%;border:1px solid #dbe3ee;border-radius:12px;background:#fff;transition:border-color .15s,box-shadow .15s}
 .field:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.09)}
 .tab-active{background:var(--navy);color:#fff;box-shadow:0 2px 6px rgba(11,27,58,.12)}
 .tab-idle{color:var(--muted)}
 .tab-idle:hover{background:#f1f5f9}
 .soft-card{background:#f8fafc;border:1px solid #e8eef5}
-@media(max-width:480px){
-  main{padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right))}
-}
+@media(max-width:480px){main{padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right))}}
 </style>
 </head>
 <body class="min-h-screen antialiased">
@@ -86,143 +51,163 @@ input:focus,textarea:focus{
 <div id="toast" class="fixed bottom-[88px] left-3 right-3 z-[200] pointer-events-none"></div>
 
 <script>
-const IS_DEV = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-const log = (...a)=>{if(IS_DEV) console.log(...a)};
+'use strict';
 
-function escHtml(s){
-  if(s==null)return '';
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+const IS_DEV=location.hostname==='localhost'||location.hostname==='127.0.0.1';
+const log=(...args)=>{if(IS_DEV)console.log(...args)};
+
+function escHtml(value){
+  if(value==null)return '';
+  return String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
-function escAttr(s){return escHtml(s).replace(/`/g,'&#96;')}
+function escAttr(value){return escHtml(value).replace(/`/g,'&#96;')}
+function sanitizeInput(value,max=500){
+  return String(value||'').trim().slice(0,max)
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,'');
+}
 
 const VALIDATORS={
-  phone:v=>{
-    const clean=String(v).replace(/\D/g,'').slice(0,11);
-    return /^01[0-25]\d{8}$/.test(clean)
+  phone:value=>/^01[0-25]\d{8}$/.test(String(value||'').replace(/\D/g,'')),
+  text:(value,min,max)=>{
+    const text=String(value||'').trim();
+    return text.length>=min&&text.length<=max;
   },
-  text:(v,min,max)=>{
-    const t=String(v||'').trim();
-    return t.length>=min&&t.length<=max
-  },
-  sn:v=>/^[A-Z0-9-]{4,20}$/.test(String(v).trim().toUpperCase())
+  sn:value=>/^SN\d{6}$/i.test(String(value||'').trim())
 };
 
-function sanitizeInput(str,max=500){
-  return String(str||'').trim().slice(0,max).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,'')
-}
-
-const ENDPOINTS={
-  create:['/api/client/orders','/api/orders','/api/client/order','/api/order','/api/orders/client','/api/client/create-order'],
-  get:[
-    sn=>`/api/client/orders/${encodeURIComponent(sn)}`,
-    sn=>`/api/orders/${encodeURIComponent(sn)}`,
-    sn=>`/api/client/order/${encodeURIComponent(sn)}`,
-    sn=>`/api/orders/sn/${encodeURIComponent(sn)}`,
-    sn=>`/api/orders/by-sn/${encodeURIComponent(sn)}`
-  ],
-  accept:[
-    (sn,id)=>`/api/client/orders/${encodeURIComponent(sn)}/accept`,
-    (sn,id)=>`/api/orders/${encodeURIComponent(sn)}/accept`,
-    (sn,id)=>`/api/client/orders/${encodeURIComponent(sn)}/offers/${encodeURIComponent(id)}/accept`,
-    (sn,id)=>`/api/orders/${encodeURIComponent(sn)}/accept-offer`
-  ],
-  complaint:['/api/complaints','/api/client/complaints','/api/complaint','/api/orders/complaint']
-};
-
-async function tryFetch(urls,opts){
-  let lastError=null;
-  for(const u of urls){
-    const url=typeof u==='function'?(opts.offerId?u(opts.sn,opts.offerId):u(opts.sn)):u;
-    try{
-      log('Trying:',url);
-      const r=await fetch(url,{...opts.fetchOptions,credentials:'same-origin'});
-      const txt=await r.text();
-      let data;
-      try{data=JSON.parse(txt)}catch{data={raw:txt.slice(0,500)}}
-      if(r.ok)return {ok:true,data,url,status:r.status};
-      lastError={url,status:r.status,data};
-      if(r.status!==404&&r.status!==405)break;
-    }catch(err){lastError={url,error:err.message}}
-  }
-  return {ok:false,lastError}
-}
-
+/*
+ * هذه هي المسارات المطابقة لـ src/routes/order.js:
+ * POST /api/orders
+ * GET  /api/orders/:sn
+ * POST /api/orders/:sn/accept
+ *
+ * لا نجرب مسارات بديلة عشوائيًا؛ حتى لا نخفي أخطاء الربط الحقيقية.
+ */
 const API={
-  createOrder:async payload=>{
-    if(!VALIDATORS.text(payload.address,10,250))throw new Error('العنوان قصير جداً (10 حروف على الأقل)');
-    if(!VALIDATORS.phone(payload.phone))throw new Error('رقم التليفون غير صحيح - لازم يبدأ بـ 01 ويكون 11 رقم');
-    if(!VALIDATORS.text(payload.description,10,1000))throw new Error('وصف المشكلة لازم 10 حروف على الأقل');
+  tokenKey(sn){return 'sonaa_client_token_'+String(sn||'').toUpperCase()},
 
-    const payloads=[
-      {service:payload.service,area:payload.area,address:payload.address,phone:payload.phone,description:payload.description},
-      {service:payload.service,area:payload.area,address:payload.area,phone:payload.phone,clientPhone:payload.phone,description:payload.description,clientName:'عميل'}
-    ];
-
-    for(const p of payloads){
-      for(const ep of ENDPOINTS.create){
-        try{
-          const r=await fetch(ep,{
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            credentials:'same-origin',
-            body:JSON.stringify(p)
-          });
-          const txt=await r.text();
-          let data;
-          try{data=JSON.parse(txt)}catch{data={raw:txt}}
-          log('Create order:',ep,r.status,data);
-          if(r.ok)return data;
-          if(r.status!==404&&r.status!==405)throw new Error(data.message||data.error||`خطأ ${r.status}`);
-        }catch(e){
-          if(!String(e.message).includes('404')&&!String(e.message).includes('405'))throw e
-        }
-      }
+  saveClientToken(sn,token){
+    if(!VALIDATORS.sn(sn)||typeof token!=='string'||!token)return false;
+    try{
+      localStorage.setItem(this.tokenKey(sn),token);
+      return true;
+    }catch(error){
+      log('Could not save client token:',error);
+      return false;
     }
-    throw new Error('السيرفر لا يستجيب - تأكد أن الـ backend شغال')
   },
 
-  getOrder:async sn=>{
-    const cleanSn=sanitizeInput(sn,20).toUpperCase();
-    if(!VALIDATORS.sn(cleanSn))throw new Error('كود التتبع غير صحيح');
-    const res=await tryFetch(ENDPOINTS.get,{sn:cleanSn,fetchOptions:{method:'GET'}});
-    if(res.ok)return res.data.order||res.data.data||res.data;
-    throw new Error(res.lastError?.data?.message||`الكود ${cleanSn} غير موجود`)
+  getClientToken(sn){
+    if(!VALIDATORS.sn(sn))return '';
+    try{return localStorage.getItem(this.tokenKey(sn))||''}
+    catch(error){log('Could not read client token:',error);return ''}
   },
 
-  acceptOffer:async(sn,offerId)=>{
+  async request(url,options={}){
+    const response=await fetch(url,{
+      ...options,
+      credentials:'same-origin',
+      headers:{
+        ...(options.headers||{})
+      }
+    });
+
+    const raw=await response.text();
+    let data={};
+    try{data=raw?JSON.parse(raw):{}}
+    catch{data={message:raw.slice(0,300)}}
+
+    log('API:',url,response.status,data);
+
+    if(!response.ok){
+      const error=new Error(
+        data.message||data.error||`حصل خطأ من السيرفر (${response.status})`
+      );
+      error.status=response.status;
+      error.data=data;
+      throw error;
+    }
+    return data;
+  },
+
+  async createOrder(payload){
+    if(!VALIDATORS.text(payload.area,10,250))
+      throw new Error('العنوان قصير جدًا؛ اكتب العنوان بالتفصيل');
+    if(!VALIDATORS.phone(payload.phone))
+      throw new Error('رقم التليفون غير صحيح؛ لازم يكون 11 رقم ويبدأ بـ 01');
+    if(!VALIDATORS.text(payload.description,10,1000))
+      throw new Error('وصف المشكلة لازم يكون 10 حروف على الأقل');
+
+    const data=await this.request('/api/orders',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        service:sanitizeInput(payload.service,100),
+        area:sanitizeInput(payload.area,250),
+        phone:String(payload.phone).replace(/\D/g,''),
+        description:sanitizeInput(payload.description,1000)
+      })
+    });
+
+    const order=data.order||data.data||{};
+    const sn=String(data.sn||order.sn||'').toUpperCase();
+    const token=data.clientToken||order.clientToken||'';
+
+    if(!VALIDATORS.sn(sn))
+      throw new Error('السيرفر لم يرجع كود تتبع صحيحًا؛ راجع استجابة الباك إند');
+
+    if(token)this.saveClientToken(sn,token);
+
+    return {...data,sn,clientToken:token};
+  },
+
+  async getOrder(sn){
+    const cleanSN=sanitizeInput(sn,20).toUpperCase();
+    if(!VALIDATORS.sn(cleanSN))throw new Error('كود التتبع غير صحيح');
+
+    const token=this.getClientToken(cleanSN);
+    const headers={};
+    if(token)headers.Authorization='Bearer '+token;
+
+    const data=await this.request(
+      '/api/orders/'+encodeURIComponent(cleanSN),
+      {method:'GET',headers}
+    );
+    return data.order||data.data||data;
+  },
+
+  async acceptOffer(sn,offerId){
+    const cleanSN=sanitizeInput(sn,20).toUpperCase();
+    if(!VALIDATORS.sn(cleanSN))throw new Error('كود الطلب غير صحيح');
     if(!offerId)throw new Error('معرف العرض مفقود');
-    const res=await tryFetch(ENDPOINTS.accept,{
-      sn,offerId,
-      fetchOptions:{
+
+    const token=this.getClientToken(cleanSN);
+    if(!token){
+      throw new Error(
+        'لا يوجد توكن محفوظ لهذا الطلب على الجهاز. افتح الطلب من نفس الجهاز الذي أنشأته عليه.'
+      );
+    }
+
+    return this.request(
+      '/api/orders/'+encodeURIComponent(cleanSN)+'/accept',
+      {
         method:'POST',
-        headers:{'Content-Type':'application/json'},
-        credentials:'same-origin',
-        body:JSON.stringify({offerId})
+        headers:{
+          'Content-Type':'application/json',
+          Authorization:'Bearer '+token
+        },
+        body:JSON.stringify({offerId,clientToken:token})
       }
-    });
-    if(res.ok)return res.data;
-    throw new Error('فشل قبول العرض')
+    );
   },
 
-  sendComplaint:async payload=>{
-    const clean={
-      sn:sanitizeInput(payload.sn,20).toUpperCase(),
-      text:sanitizeInput(payload.text,1000),
-      complaint:sanitizeInput(payload.complaint,1000),
-      orderSn:sanitizeInput(payload.orderSn,20).toUpperCase()
-    };
-    if(!VALIDATORS.sn(clean.sn))throw new Error('كود الطلب غير صحيح');
-    if(!VALIDATORS.text(clean.text,10,1000))throw new Error('اكتب تفاصيل الشكوى (10 حروف على الأقل)');
-    const res=await tryFetch(ENDPOINTS.complaint,{
-      fetchOptions:{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        credentials:'same-origin',
-        body:JSON.stringify(clean)
-      }
-    });
-    if(res.ok)return res.data;
-    throw new Error('فشل إرسال الشكوى')
+  /*
+   * لم أضع مسارًا وهميًا للشكاوى؛ ملف order.js الحالي
+   * لا يحتوي على API لإنشاء الشكاوى.
+   */
+  async sendComplaint(){
+    throw new Error('إرسال الشكاوى غير مربوط بالباك إند حاليًا. لم يتم إرسال الشكوى.');
   }
 };
 
@@ -234,27 +219,49 @@ const CATEGORIES=[
   {label:'نقاشة',emoji:'🎨',services:['نقاش','جبس بورد','فني ديكور']},
   {label:'تكييف',emoji:'❄️',services:['فني تكييف','فني تبريد وثلاجات']}
 ];
-const ALL_SERVICES=CATEGORIES.flatMap(c=>c.services);
+const ALL_SERVICES=CATEGORIES.flatMap(category=>category.services);
 
 let state={
-  tab:'new',service:ALL_SERVICES[0],address:'',phone:'',desc:'',
-  loading:false,sn:null,trackInput:'',tracked:null,trackError:'',
-  complaintSn:'',complaintText:'',complaintLoading:false,complaintDone:false,
-  showService:false,searchService:''
+  tab:'new',
+  service:ALL_SERVICES[0],
+  address:'',
+  phone:'',
+  desc:'',
+  loading:false,
+  sn:null,
+  trackInput:'',
+  tracked:null,
+  trackError:'',
+  trackLoading:false,
+  acceptingOffer:'',
+  complaintSn:'',
+  complaintText:'',
+  complaintLoading:false,
+  complaintDone:false,
+  showService:false,
+  searchService:''
 };
 
-function getCat(s){return CATEGORIES.find(c=>c.services.includes(s))||CATEGORIES[0]}
+function getCat(service){
+  return CATEGORIES.find(category=>category.services.includes(service))||CATEGORIES[0];
+}
 
-function showToast(msg,type='error'){
+function showToast(message,type='error'){
   const el=document.getElementById('toast');
   const color=type==='success'?'bg-emerald-600':'bg-[#0b1b3a]';
-  el.innerHTML=`<div class="pointer-events-auto mx-auto max-w-[480px] rounded-[14px] ${color} text-white text-[13px] font-bold px-4 py-3 shadow-2xl animate-fade flex justify-between items-center gap-3"><span class="leading-6">${escHtml(msg)}</span><button onclick="this.parentElement.remove()" class="shrink-0 h-7 px-3 rounded-full bg-white/20">إغلاق</button></div>`;
-  setTimeout(()=>{el.innerHTML=''},4000)
+  el.innerHTML=`
+    <div class="pointer-events-auto mx-auto max-w-[480px] rounded-[14px] ${color} text-white text-[13px] font-bold px-4 py-3 shadow-2xl animate-fade flex justify-between items-center gap-3">
+      <span class="leading-6">${escHtml(message)}</span>
+      <button onclick="this.parentElement.remove()" class="shrink-0 h-7 px-3 rounded-full bg-white/20">إغلاق</button>
+    </div>`;
+  setTimeout(()=>{if(el)el.innerHTML=''},4500);
 }
 
 function render(){
   const cat=getCat(state.service);
-  const filteredServices=ALL_SERVICES.filter(s=>!state.searchService||s.includes(state.searchService.trim()));
+  const filteredServices=ALL_SERVICES.filter(service=>
+    !state.searchService||service.includes(state.searchService.trim())
+  );
 
   document.getElementById('app').innerHTML=`
   <header class="app-header sticky top-0 z-40 backdrop-blur-xl">
@@ -275,8 +282,13 @@ function render(){
 
   <main class="mx-auto w-full max-w-[640px] px-3 sm:px-4 pb-[100px] safe-bottom">
     <div class="mt-4 flex p-1 bg-white rounded-[15px] shadow-sm border border-slate-200 gap-1">
-      ${[{id:'new',label:'طلب جديد'},{id:'track',label:'تتبع طلبك'},{id:'complaint',label:'شكوى'}].map(t=>`
-        <button type="button" onclick="setTab('${escAttr(t.id)}')" class="flex-1 h-11 rounded-xl text-[12px] sm:text-[13px] font-extrabold transition ${state.tab===t.id?'tab-active':'tab-idle'}">${escHtml(t.label)}</button>
+      ${[
+        {id:'new',label:'طلب جديد'},
+        {id:'track',label:'تتبع طلبك'},
+        {id:'complaint',label:'شكوى'}
+      ].map(tab=>`
+        <button type="button" onclick="setTab('${tab.id}')"
+          class="flex-1 h-11 rounded-xl text-[12px] sm:text-[13px] font-extrabold transition ${state.tab===tab.id?'tab-active':'tab-idle'}">${tab.label}</button>
       `).join('')}
     </div>
 
@@ -305,7 +317,7 @@ function render(){
               <label class="text-[12px] font-extrabold mb-1.5 block">نوع الخدمة</label>
               <button type="button" onclick="toggleService()" class="field h-[52px] px-3.5 text-right flex items-center justify-between hover:bg-slate-50 transition ${state.showService?'border-blue-500 ring-2 ring-blue-50':''}">
                 <span class="flex items-center gap-2.5 min-w-0">
-                  <span class="h-9 w-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">${escHtml(cat.emoji)}</span>
+                  <span class="h-9 w-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">${cat.emoji}</span>
                   <span class="text-[13px] font-extrabold truncate">${escHtml(state.service)}</span>
                 </span>
                 <span class="text-slate-400 text-[12px]">${state.showService?'▲':'▼'}</span>
@@ -316,13 +328,12 @@ function render(){
                     <input id="svcSearch" value="${escAttr(state.searchService)}" oninput="searchService(this.value)" placeholder="ابحث عن خدمة..." class="field h-10 px-3 text-[12px] font-bold">
                   </div>
                   <div class="max-h-[260px] overflow-y-auto p-1.5 space-y-1">
-                    ${filteredServices.map(s=>{
-                      const c=getCat(s);
-                      return `<button type="button" onclick="selectService(${escAttr(JSON.stringify(s))})" class="w-full min-h-11 px-3 rounded-xl text-right text-[13px] font-bold flex items-center gap-2 transition ${state.service===s?'bg-[#0b1b3a] text-white':'hover:bg-blue-50 text-slate-700'}"><span>${escHtml(c.emoji)}</span><span class="truncate">${escHtml(s)}</span></button>`
+                    ${filteredServices.map(service=>{
+                      const serviceCat=getCat(service);
+                      return `<button type="button" onclick="selectService(${escAttr(JSON.stringify(service))})" class="w-full min-h-11 px-3 rounded-xl text-right text-[13px] font-bold flex items-center gap-2 transition ${state.service===service?'bg-[#0b1b3a] text-white':'hover:bg-blue-50 text-slate-700'}"><span>${serviceCat.emoji}</span><span class="truncate">${escHtml(service)}</span></button>`;
                     }).join('')||'<p class="p-3 text-[12px] text-slate-400 text-center">مفيش نتائج</p>'}
                   </div>
-                </div>
-              `:''}
+                </div>`:''}
             </div>
 
             <div>
@@ -330,7 +341,7 @@ function render(){
                 <span>📍 العنوان بالتفصيل</span>
                 <span class="text-[10px] text-slate-400 font-semibold" id="addrCounter">${state.address.length}/250</span>
               </label>
-              <input id="addrInput" value="${escAttr(state.address)}" oninput="onAddressInput(this.value)" maxlength="250" placeholder="المنطقة، الشارع، رقم العمارة..." class="field h-[50px] px-4 text-[13px] font-bold">
+              <input id="addrInput" value="${escAttr(state.address)}" oninput="onAddressInput(this.value)" maxlength="250" placeholder="المنطقة، الشارع، رقم العمارة..." class="field h-[50px] px-4 text-[13px] font-bold" autocomplete="street-address">
             </div>
 
             <div>
@@ -346,7 +357,7 @@ function render(){
                 <span>وصف المشكلة</span>
                 <span class="text-[10px] text-slate-400 font-semibold" id="descCounter">${state.desc.length}/1000</span>
               </label>
-              <textarea id="descInput" oninput="onDescInput(this.value)" maxlength="1000" placeholder="احكي المشكلة بالتفصيل، مثال: محتاج صيانة للدش..." class="field min-h-[112px] p-3.5 text-[13px] font-semibold resize-none leading-6"></textarea>
+              <textarea id="descInput" oninput="onDescInput(this.value)" maxlength="1000" placeholder="احكي المشكلة بالتفصيل، مثال: محتاج صيانة للدش..." class="field min-h-[112px] p-3.5 text-[13px] font-semibold resize-none leading-6">${escHtml(state.desc)}</textarea>
             </div>
 
             <button type="button" onclick="createOrder()" ${state.loading?'disabled':''} class="w-full h-[52px] rounded-xl blue-btn font-extrabold text-[14px] sm:text-[15px] flex items-center justify-center gap-2 shadow-sm">
@@ -368,12 +379,14 @@ function render(){
           </div>
           <button type="button" onclick="copySn()" class="shrink-0 h-10 px-4 rounded-xl bg-white text-[#0b1b3a] font-extrabold text-[12px] hover:bg-blue-50 transition">نسخ الكود</button>
         </div>
+        <div class="mt-4 rounded-xl bg-blue-50 border border-blue-100 p-3 text-[11px] text-blue-900 font-bold leading-6">
+          احتفظ بكود الطلب واستخدم نفس الجهاز لمتابعة الطلب وقبول العرض.
+        </div>
         <div class="mt-5 grid grid-cols-2 gap-2">
           <button type="button" onclick="trackNow()" class="h-[46px] rounded-xl primary-btn font-extrabold text-[12px]">تتبع الطلب</button>
           <button type="button" onclick="resetForm()" class="h-[46px] rounded-xl bg-slate-100 text-slate-700 font-extrabold text-[12px] hover:bg-slate-200 transition">طلب جديد</button>
         </div>
-      </div>
-      `}
+      </div>`}
     `:''}
 
     ${state.tab==='track'?`
@@ -387,8 +400,8 @@ function render(){
             </div>
           </div>
           <div class="mt-4 flex gap-2">
-            <input value="${escAttr(state.trackInput)}" oninput="onTrackInput(this.value)" onkeydown="if(event.key==='Enter')doTrack()" placeholder="مثال: SN123456" maxlength="20" class="field flex-1 min-w-0 h-[48px] px-3 text-[14px] font-black uppercase">
-            <button type="button" onclick="doTrack()" class="h-[48px] px-5 rounded-xl primary-btn font-extrabold text-[12px]">تتبع</button>
+            <input value="${escAttr(state.trackInput)}" oninput="onTrackInput(this.value)" onkeydown="if(event.key==='Enter')doTrack()" placeholder="مثال: SN123456" maxlength="20" class="field flex-1 min-w-0 h-[48px] px-3 text-[14px] font-black uppercase" dir="ltr">
+            <button type="button" onclick="doTrack()" ${state.trackLoading?'disabled':''} class="h-[48px] px-5 rounded-xl primary-btn font-extrabold text-[12px]">${state.trackLoading?'...':'تتبع'}</button>
           </div>
           ${state.trackError?`<p class="mt-3 text-[12px] font-bold text-red-700 bg-red-50 border border-red-200 rounded-xl p-3 leading-5">${escHtml(state.trackError)}</p>`:''}
         </div>
@@ -398,7 +411,7 @@ function render(){
             <div class="flex justify-between items-start gap-3">
               <div class="min-w-0">
                 <p class="text-[10px] text-slate-500 font-bold">رقم الطلب</p>
-                <h4 class="font-extrabold text-[14px] truncate mt-1">${escHtml(state.tracked.sn||state.tracked._id||'طلب')}</h4>
+                <h4 class="font-extrabold text-[14px] truncate mt-1">${escHtml(state.tracked.sn||'طلب')}</h4>
               </div>
               <span class="shrink-0 text-[10px] font-extrabold px-3 py-1.5 rounded-full bg-blue-50 border border-blue-100 text-blue-800">${escHtml(state.tracked.status||'قيد المراجعة')}</span>
             </div>
@@ -409,21 +422,28 @@ function render(){
               </div>
               <div class="soft-card rounded-xl p-3">
                 <p class="text-[10px] text-slate-500 font-bold">العنوان</p>
-                <p class="font-extrabold mt-1 break-words">${escHtml(state.tracked.area||state.tracked.address||'-')}</p>
+                <p class="font-extrabold mt-1 break-words">${escHtml(state.tracked.area||'-')}</p>
               </div>
             </div>
             <div class="mt-5">
-              <h4 class="font-extrabold text-[14px]">عروض الفنيين (${(state.tracked.offers||[]).length})</h4>
-              ${(state.tracked.offers||[]).length===0?'<p class="mt-3 text-[12px] text-slate-500 bg-slate-50 border border-slate-100 rounded-xl p-4 text-center leading-6">لسه مفيش عروض على طلبك.<br><span class="text-[11px]">راجع الطلب لاحقًا لمتابعة العروض الجديدة.</span></p>':(state.tracked.offers||[]).map(o=>`
-                <div class="mt-3 rounded-[14px] border border-slate-200 p-4 hover:border-blue-200 transition">
-                  <div class="flex justify-between items-center gap-2">
-                    <span class="font-extrabold text-[13px]">${escHtml(o.fanniName||'فني')}</span>
-                    <span class="font-black text-[15px] text-blue-700">${escHtml(o.price==null?'':String(o.price))} جنيه</span>
-                  </div>
-                  <p class="mt-2 text-[12px] bg-slate-50 border border-slate-100 rounded-xl p-2.5 leading-6 break-words">${escHtml(o.message||'بدون رسالة')}</p>
-                  <button type="button" onclick="acceptOffer('${escAttr(state.tracked.sn||state.tracked._id||'')}','${escAttr(o._id||'')}')" class="mt-3 w-full h-11 rounded-xl blue-btn font-extrabold text-[12px]">قبول العرض</button>
-                </div>
-              `).join('')}
+              <h4 class="font-extrabold text-[14px]">عروض الفنيين (${Array.isArray(state.tracked.offers)?state.tracked.offers.length:0})</h4>
+              ${(state.tracked.offers||[]).length===0
+                ?'<p class="mt-3 text-[12px] text-slate-500 bg-slate-50 border border-slate-100 rounded-xl p-4 text-center leading-6">لسه مفيش عروض على طلبك.<br><span class="text-[11px]">راجع الطلب لاحقًا لمتابعة العروض الجديدة.</span></p>'
+                :(state.tracked.offers||[]).map(offer=>{
+                  const offerId=String(offer._id||'');
+                  const orderSN=String(state.tracked.sn||'');
+                  return `
+                  <div class="mt-3 rounded-[14px] border border-slate-200 p-4 hover:border-blue-200 transition">
+                    <div class="flex justify-between items-center gap-2">
+                      <span class="font-extrabold text-[13px]">${escHtml(offer.fanniName||'فني')}</span>
+                      <span class="font-black text-[15px] text-blue-700">${escHtml(offer.price==null?'':String(offer.price))} جنيه</span>
+                    </div>
+                    <p class="mt-2 text-[12px] bg-slate-50 border border-slate-100 rounded-xl p-2.5 leading-6 break-words">${escHtml(offer.message||'بدون رسالة')}</p>
+                    ${state.tracked.status==='تم اختيار فني'
+                      ?'<div class="mt-3 rounded-xl bg-emerald-50 text-emerald-700 p-3 text-[12px] font-extrabold text-center">تم اختيار فني لهذا الطلب</div>'
+                      :`<button type="button" onclick="acceptOffer('${escAttr(orderSN)}','${escAttr(offerId)}')" ${state.acceptingOffer===offerId?'disabled':''} class="mt-3 w-full h-11 rounded-xl blue-btn font-extrabold text-[12px]">${state.acceptingOffer===offerId?'جاري قبول العرض...':'قبول العرض'}</button>`}
+                  </div>`;
+                }).join('')}
             </div>
           </div>
         `:''}
@@ -440,15 +460,17 @@ function render(){
               <p class="text-[11px] text-slate-500 font-semibold mt-0.5">اكتب كود الطلب وتفاصيل المشكلة</p>
             </div>
           </div>
+          <div class="mt-4 rounded-xl bg-amber-50 border border-amber-200 p-3 text-[12px] font-bold text-amber-900 leading-6">
+            خدمة إرسال الشكاوى لم يتم ربطها بالباك إند بعد. يمكنك تجهيز التفاصيل، لكن الصفحة لن تعرض رسالة نجاح كاذبة.
+          </div>
           <div class="mt-4 space-y-3">
-            <input value="${escAttr(state.complaintSn)}" oninput="onComplaintSn(this.value)" placeholder="كود الطلب SN123456" maxlength="20" class="field h-[48px] px-4 text-[14px] font-black uppercase">
+            <input value="${escAttr(state.complaintSn)}" oninput="onComplaintSn(this.value)" placeholder="كود الطلب SN123456" maxlength="20" class="field h-[48px] px-4 text-[14px] font-black uppercase" dir="ltr">
             <textarea oninput="onComplaintText(this.value)" maxlength="1000" placeholder="احكي اللي حصل بالتفصيل..." class="field min-h-[120px] p-4 text-[13px] font-semibold resize-none leading-6">${escHtml(state.complaintText)}</textarea>
             <div class="flex justify-between text-[10px] text-slate-400 font-bold">
               <span>${state.complaintText.length}/1000</span>
-              <span>${VALIDATORS.text(state.complaintText,10,1000)?'✓ جاهز للإرسال':''}</span>
+              <span>${VALIDATORS.text(state.complaintText,10,1000)?'✓ البيانات مكتملة':''}</span>
             </div>
-            <button type="button" onclick="sendComplaint()" ${state.complaintLoading?'disabled':''} class="w-full h-[48px] rounded-xl bg-red-600 text-white font-extrabold text-[13px] hover:bg-red-700 transition">${state.complaintLoading?'جاري الإرسال...':'إرسال الشكوى'}</button>
-            ${state.complaintDone?'<div class="rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-[12px] font-bold text-emerald-700 text-center">✓ تم إرسال الشكوى بنجاح</div>':''}
+            <button type="button" onclick="sendComplaint()" class="w-full h-[48px] rounded-xl bg-red-600 text-white font-extrabold text-[13px] hover:bg-red-700 transition">إرسال الشكوى</button>
           </div>
         </div>
       </div>
@@ -457,149 +479,200 @@ function render(){
 
   <nav class="fixed bottom-0 inset-x-0 z-30 border-t border-slate-200 bg-white/95 backdrop-blur-xl safe-bottom">
     <div class="mx-auto max-w-[640px] px-2 h-[72px] grid grid-cols-3 gap-1">
-      ${[{id:'new',icon:'＋',label:'طلب'},{id:'track',icon:'◉',label:'تتبع'},{id:'complaint',icon:'⚠',label:'شكوى'}].map(t=>`
-        <button type="button" onclick="setTab('${escAttr(t.id)}')" class="rounded-xl flex flex-col items-center justify-center gap-1 transition ${state.tab===t.id?'bg-blue-50 text-blue-800':'text-slate-500 hover:bg-slate-50'}">
-          <span class="text-[17px] font-black">${t.icon}</span>
-          <span class="text-[10px] font-extrabold">${t.label}</span>
-          ${state.tab===t.id?'<span class="w-5 h-0.5 rounded-full bg-blue-700"></span>':''}
+      ${[
+        {id:'new',icon:'＋',label:'طلب'},
+        {id:'track',icon:'◉',label:'تتبع'},
+        {id:'complaint',icon:'⚠',label:'شكوى'}
+      ].map(tab=>`
+        <button type="button" onclick="setTab('${tab.id}')" class="rounded-xl flex flex-col items-center justify-center gap-1 transition ${state.tab===tab.id?'bg-blue-50 text-blue-800':'text-slate-500 hover:bg-slate-50'}">
+          <span class="text-[17px] font-black">${tab.icon}</span>
+          <span class="text-[10px] font-extrabold">${tab.label}</span>
+          ${state.tab===tab.id?'<span class="w-5 h-0.5 rounded-full bg-blue-700"></span>':''}
         </button>
       `).join('')}
     </div>
-  </nav>
-  `;
-
-  const descEl=document.getElementById('descInput');
-  if(descEl)descEl.value=state.desc;
-  if(state.showService)setTimeout(()=>document.getElementById('svcSearch')?.focus(),50)
+  </nav>`;
 }
 
-function setTab(t){state.tab=t;render()}
+function setTab(tab){state.tab=tab;render()}
 function toggleService(){state.showService=!state.showService;render()}
-function searchService(v){
+
+function searchService(value){
   const el=document.getElementById('svcSearch');
   const pos=el?el.selectionStart:null;
-  state.searchService=sanitizeInput(v,50);
+  state.searchService=sanitizeInput(value,50);
   render();
   const next=document.getElementById('svcSearch');
-  if(next&&pos!==null){next.focus();try{next.setSelectionRange(pos,pos)}catch{}}
-}
-function selectService(s){
-  try{
-    const val=JSON.parse(s);
-    if(ALL_SERVICES.includes(val))state.service=val
-  }catch{
-    if(ALL_SERVICES.includes(s))state.service=s
+  if(next&&pos!==null){
+    next.focus();
+    try{next.setSelectionRange(pos,pos)}catch(error){}
   }
-  state.showService=false;state.searchService='';render()
 }
-function onAddressInput(v){
-  state.address=sanitizeInput(v,250);
+
+function selectService(value){
+  try{
+    const service=JSON.parse(value);
+    if(ALL_SERVICES.includes(service))state.service=service;
+  }catch(error){
+    if(ALL_SERVICES.includes(value))state.service=value;
+  }
+  state.showService=false;
+  state.searchService='';
+  render();
+}
+
+function onAddressInput(value){
+  state.address=sanitizeInput(value,250);
   const el=document.getElementById('addrCounter');
-  if(el)el.textContent=state.address.length+'/250'
+  if(el)el.textContent=state.address.length+'/250';
 }
-function onPhoneInput(v){
-  state.phone=String(v).replace(/\D/g,'').slice(0,11);
+
+function onPhoneInput(value){
+  state.phone=String(value).replace(/\D/g,'').slice(0,11);
   const input=document.getElementById('phoneInput');
   if(input&&input.value!==state.phone)input.value=state.phone;
-  const statusEl=document.getElementById('phoneStatus');
-  if(statusEl){
+  const status=document.getElementById('phoneStatus');
+  if(status){
     const valid=VALIDATORS.phone(state.phone);
-    statusEl.textContent=valid?'✓ صحيح':'11 رقم يبدأ بـ 01';
-    statusEl.className='text-[10px] font-bold '+(valid?'text-emerald-600':'text-slate-400')
+    status.textContent=valid?'✓ صحيح':'11 رقم يبدأ بـ 01';
+    status.className='text-[10px] font-bold '+(valid?'text-emerald-600':'text-slate-400');
   }
 }
-function onDescInput(v){
-  state.desc=sanitizeInput(v,1000);
+
+function onDescInput(value){
+  state.desc=sanitizeInput(value,1000);
   const el=document.getElementById('descCounter');
-  if(el)el.textContent=state.desc.length+'/1000'
+  if(el)el.textContent=state.desc.length+'/1000';
 }
-function onTrackInput(v){state.trackInput=sanitizeInput(v,20).toUpperCase()}
-function onComplaintSn(v){state.complaintSn=sanitizeInput(v,20).toUpperCase()}
-function onComplaintText(v){state.complaintText=sanitizeInput(v,1000)}
+
+function onTrackInput(value){state.trackInput=sanitizeInput(value,20).toUpperCase()}
+function onComplaintSn(value){state.complaintSn=sanitizeInput(value,20).toUpperCase()}
+function onComplaintText(value){state.complaintText=sanitizeInput(value,1000)}
 
 function resetForm(){
-  state.sn=null;state.address='';state.phone='';state.desc='';state.tab='new';render()
+  state.sn=null;
+  state.address='';
+  state.phone='';
+  state.desc='';
+  state.tab='new';
+  state.loading=false;
+  render();
 }
+
 function trackNow(){
-  state.tab='track';state.trackInput=state.sn||'';render();doTrack()
+  state.tab='track';
+  state.trackInput=state.sn||'';
+  render();
+  doTrack();
 }
+
 function copySn(){
   if(!state.sn)return;
   if(navigator.clipboard&&navigator.clipboard.writeText){
     navigator.clipboard.writeText(state.sn)
       .then(()=>showToast('تم نسخ الكود: '+state.sn,'success'))
-      .catch(()=>showToast('تعذر النسخ تلقائيًا. الكود: '+state.sn))
+      .catch(()=>showToast('تعذر النسخ التلقائي. الكود: '+state.sn));
   }else{
-    showToast('انسخ الكود يدويًا: '+state.sn,'success')
+    showToast('انسخ الكود يدويًا: '+state.sn,'success');
   }
 }
 
 async function createOrder(){
   if(state.loading)return;
   if(!state.address||!state.phone||!state.desc){
-    showToast('من فضلك كمّل كل البيانات');return
+    showToast('من فضلك كمّل كل البيانات');
+    return;
   }
-  state.loading=true;render();
+
+  state.loading=true;
+  render();
+
   try{
-    const payload={
-      service:state.service,area:state.address,address:state.address,
-      phone:state.phone,description:state.desc
-    };
-    const data=await API.createOrder(payload);
-    state.sn=data.sn||data.order?.sn||data.data?.sn||data.orderId||data._id||'';
-    if(!state.sn)throw new Error('السيرفر رجع بدون كود تتبع');
+    const data=await API.createOrder({
+      service:state.service,
+      area:state.address,
+      phone:state.phone,
+      description:state.desc
+    });
+
+    state.sn=data.sn;
     state.loading=false;
     showToast('تم إنشاء الطلب: '+state.sn,'success');
-    render()
-  }catch(e){
+    render();
+  }catch(error){
     state.loading=false;
-    showToast(e.message||'حصل خطأ أثناء إنشاء الطلب');
-    render()
+    showToast(error.message||'حصل خطأ أثناء إنشاء الطلب');
+    render();
   }
 }
 
 async function doTrack(){
-  const input=state.trackInput.trim();
-  if(!input){state.trackError='اكتب كود التتبع';render();return}
-  state.trackError='';state.tracked=null;render();
+  if(state.trackLoading)return;
+  const input=state.trackInput.trim().toUpperCase();
+
+  if(!input){
+    state.trackError='اكتب كود التتبع';
+    render();
+    return;
+  }
+
+  state.trackLoading=true;
+  state.trackError='';
+  state.tracked=null;
+  render();
+
   try{
     const order=await API.getOrder(input);
-    state.tracked=order;render()
-  }catch(e){
-    state.trackError=e.message;render()
+    state.tracked=order;
+  }catch(error){
+    state.trackError=error.message||'تعذر تحميل الطلب';
+  }finally{
+    state.trackLoading=false;
+    render();
   }
 }
 
-async function acceptOffer(sn,id){
+async function acceptOffer(sn,offerId){
   if(!confirm('تأكيد قبول هذا العرض؟'))return;
+  if(state.acceptingOffer)return;
+
+  state.acceptingOffer=offerId;
+  render();
+
   try{
-    await API.acceptOffer(sn,id);
-    showToast('تم إرسال طلب قبول العرض','success');
+    await API.acceptOffer(sn,offerId);
+    showToast('تم قبول العرض بنجاح','success');
     state.trackInput=sn;
-    await doTrack()
-  }catch(e){showToast(e.message||'تعذر قبول العرض')}
+    state.acceptingOffer='';
+    await doTrack();
+  }catch(error){
+    state.acceptingOffer='';
+    render();
+    showToast(error.message||'تعذر قبول العرض');
+  }
 }
 
 async function sendComplaint(){
-  if(state.complaintLoading)return;
   if(!state.complaintSn||!state.complaintText){
-    showToast('كمّل بيانات الشكوى');return
+    showToast('كمّل بيانات الشكوى');
+    return;
   }
-  state.complaintLoading=true;render();
+  if(!VALIDATORS.sn(state.complaintSn)){
+    showToast('كود الطلب غير صحيح');
+    return;
+  }
+  if(!VALIDATORS.text(state.complaintText,10,1000)){
+    showToast('اكتب تفاصيل الشكوى في 10 حروف على الأقل');
+    return;
+  }
+
   try{
     await API.sendComplaint({
-      sn:state.complaintSn,text:state.complaintText,
-      complaint:state.complaintText,orderSn:state.complaintSn
+      sn:state.complaintSn,
+      text:state.complaintText
     });
-    state.complaintDone=true;
-    state.complaintSn='';state.complaintText='';state.complaintLoading=false;
-    render();
-    showToast('تم إرسال الشكوى','success');
-    setTimeout(()=>{state.complaintDone=false;render()},4000)
-  }catch(e){
-    state.complaintLoading=false;
-    showToast(e.message||'تعذر إرسال الشكوى');
-    render()
+  }catch(error){
+    showToast(error.message||'لم يتم إرسال الشكوى');
   }
 }
 
