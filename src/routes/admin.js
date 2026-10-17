@@ -1,4 +1,3 @@
-
 'use strict';
 
 const express = require('express');
@@ -11,6 +10,7 @@ const crypto = require('crypto');
 const Fanni = require('../models/Fanni');
 const TopupRequest = require('../models/TopupRequest');
 const Order = require('../models/Order');
+const Complaint = require('../models/Complaint');
 const WalletTransaction = require('../models/WalletTransaction');
 
 const { auth } = require('../middleware/auth');
@@ -35,6 +35,13 @@ const amountSchema = Joi.number()
   .required();
 
 const reasonSchema = Joi.string().trim().max(500).allow('');
+
+const complaintStatusSchema = Joi.string().valid(
+  'جديدة',
+  'قيد المراجعة',
+  'تم الحل',
+  'مرفوضة'
+);
 
 function publicFanni(fanni) {
   const item = typeof fanni.toObject === 'function'
@@ -316,6 +323,160 @@ router.post(
           phone: admin.phone,
           role: admin.role
         }
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/* =========================================================
+ * إدارة الشكاوى
+ * جميع المسارات التالية تتطلب صلاحية الأدمن.
+ * ========================================================= */
+
+/*
+ * GET /api/admin/complaints
+ * عرض الشكاوى للأدمن، مع إمكانية التصفية بالحالة.
+ */
+router.get(
+  '/complaints',
+  auth('admin'),
+  async (req, res, next) => {
+    try {
+      const filter = {};
+      const status = String(req.query.status || '').trim();
+
+      if (status) {
+        const { error } = complaintStatusSchema.validate(status);
+
+        if (error) {
+          return res.status(400).json({
+            message: 'حالة الشكوى المطلوبة غير صحيحة'
+          });
+        }
+
+        filter.status = status;
+      }
+
+      const parsedLimit = Number.parseInt(req.query.limit, 10);
+      const limit = Number.isInteger(parsedLimit) && parsedLimit > 0
+        ? Math.min(parsedLimit, MAX_LIST_LIMIT)
+        : MAX_LIST_LIMIT;
+
+      const complaints = await Complaint.find(filter)
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .lean();
+
+      return res.json({
+        complaints,
+        data: complaints,
+        total: complaints.length
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/*
+ * GET /api/admin/complaints/:id
+ * عرض شكوى واحدة للأدمن.
+ */
+router.get(
+  '/complaints/:id',
+  auth('admin'),
+  async (req, res, next) => {
+    try {
+      if (!validId(req.params.id)) {
+        return sendBadId(res);
+      }
+
+      const complaint = await Complaint.findById(req.params.id).lean();
+
+      if (!complaint) {
+        return res.status(404).json({
+          message: 'الشكوى غير موجودة'
+        });
+      }
+
+      return res.json({
+        complaint,
+        data: complaint
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/*
+ * PATCH /api/admin/complaints/:id
+ * تحديث حالة الشكوى وملاحظات الإدارة وردها.
+ */
+router.patch(
+  '/complaints/:id',
+  auth('admin'),
+  validate(Joi.object({
+    status: complaintStatusSchema.optional(),
+    adminNote: Joi.string().trim().max(1000).allow('').optional(),
+    adminResponse: Joi.string().trim().max(1000).allow('').optional()
+  }).min(1)),
+  async (req, res, next) => {
+    try {
+      if (!validId(req.params.id)) {
+        return sendBadId(res);
+      }
+
+      const updates = {};
+      const hasStatus = Object.prototype.hasOwnProperty.call(
+        req.body,
+        'status'
+      );
+
+      if (hasStatus) {
+        updates.status = req.body.status;
+      }
+
+      if (
+        Object.prototype.hasOwnProperty.call(req.body, 'adminNote')
+      ) {
+        updates.adminNote = req.body.adminNote;
+      }
+
+      if (
+        Object.prototype.hasOwnProperty.call(req.body, 'adminResponse')
+      ) {
+        updates.adminResponse = req.body.adminResponse;
+      }
+
+      if (hasStatus) {
+        updates.reviewedAt = new Date();
+        updates.reviewedBy = adminName(req);
+      }
+
+      updates.updatedAt = new Date();
+
+      const complaint = await Complaint.findByIdAndUpdate(
+        req.params.id,
+        { $set: updates },
+        {
+          new: true,
+          runValidators: true
+        }
+      ).lean();
+
+      if (!complaint) {
+        return res.status(404).json({
+          message: 'الشكوى غير موجودة'
+        });
+      }
+
+      return res.json({
+        message: 'تم تحديث الشكوى بنجاح',
+        complaint,
+        data: complaint
       });
     } catch (err) {
       next(err);
@@ -984,7 +1145,6 @@ router.delete(
           hasProtectedStatus
       };
 
-      // الارتباطات لا تمنع الحذف بعد تأكيد الأدمن في الواجهة.
       const deleted = await Order.deleteOne({ _id: order._id });
 
       if (deleted.deletedCount !== 1) {
@@ -1010,7 +1170,6 @@ router.delete(
 /*
  * DELETE /api/admin/clients/:phone
  * حذف طلبات العميل المرتبطة برقم هاتفه.
- * الشروط الأصلية محفوظة كما هي.
  */
 router.delete(
   '/clients/:phone',
@@ -1090,9 +1249,7 @@ router.delete(
 
 /*
  * DELETE /api/admin/fannis/:id
- *
- * حذف الفني دون شروط تمنع الحذف بسبب الرصيد أو الطلبات أو الشحنات.
- * يحتفظ النظام بسجلات الطلبات والشحنات والحركات المالية.
+ * حذف الفني مع الاحتفاظ بسجلات الطلبات والشحنات والحركات المالية.
  */
 router.delete(
   '/fannis/:id',
@@ -1116,7 +1273,6 @@ router.delete(
 
       const fanniId = fanni._id;
 
-      // نجمع معلومات للعرض والتدقيق، ولا نستخدمها لمنع الحذف.
       const [
         topupCount,
         pendingTopupCount,
@@ -1165,7 +1321,6 @@ router.delete(
         activeOrderCount
       };
 
-      // الحذف لا يعتمد على قيمة الرصيد أو عدد الارتباطات.
       const deleted = await Fanni.deleteOne({
         _id: fanniId,
         role: 'fanni'
