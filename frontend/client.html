@@ -1295,4 +1295,65 @@ async function acceptOffer(sn,offerId){
     await API.acceptOffer(sn,offerId);
     showToast('تم قبول العرض بنجاح','success');
     state.trackInput=sn;
+        state.acceptingOffer='';
+    state.tab='track';
+    await doTrack();
+  }catch(error){
+    showToast(error.message||'تعذر قبول العرض حاليًا.');
+  }finally{
     state.acceptingOffer='';
+    render();
+  }
+}
+
+async function sendComplaint(){
+  if(state.complaintLoading)return;
+
+  const payload={
+    sn:state.complaintSn,
+    clientName:state.complaintName,
+    text:state.complaintText
+  };
+
+  try{
+    if(!VALIDATORS.sn(payload.sn)){
+      throw new Error('كود الطلب غير صحيح.');
+    }
+
+    if(!VALIDATORS.name(payload.clientName)){
+      throw new Error('اكتب اسم العميل المسجل مع الطلب بشكل صحيح.');
+    }
+
+    if(!VALIDATORS.text(payload.text,10,1000)){
+      throw new Error('اكتب تفاصيل الشكوى في 10 حروف على الأقل.');
+    }
+
+    if(containsPhoneNumber(payload.clientName)||containsPhoneNumber(payload.text)){
+      throw new Error('ممنوع كتابة أرقام التليفونات داخل الاسم أو تفاصيل الشكوى.');
+    }
+  }catch(error){
+    showToast(error.message);
+    return;
+  }
+
+  state.complaintLoading=true;
+  render();
+
+  try{
+    await API.sendComplaint(payload);
+    showToast('تم إرسال الشكوى للإدارة بنجاح.','success');
+    state.complaintText='';
+  }catch(error){
+    showToast(error.message||'تعذر إرسال الشكوى حاليًا.');
+  }finally{
+    state.complaintLoading=false;
+    render();
+  }
+}
+
+document.addEventListener('click',handleOutsideServiceClick);
+
+render();
+</script>
+</body>
+</html>
