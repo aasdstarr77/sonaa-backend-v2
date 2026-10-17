@@ -1,4 +1,3 @@
-
 'use strict';
 
 require('dotenv').config();
@@ -16,6 +15,7 @@ const orderRouter = require('./routes/order');
 const fanniRouter = require('./routes/fanni');
 const adminRouter = require('./routes/admin');
 const publicRouter = require('./routes/public');
+const complaintRouter = require('./routes/Complaint');
 const { auth } = require('./middleware/auth');
 const errorHandler = require('./middleware/error');
 
@@ -142,6 +142,9 @@ app.use('/api', (req, res, next) => {
 
 // مسارات عامة
 app.use('/api', publicRouter);
+
+// مسار الشكاوى
+app.use('/api/complaints', complaintRouter);
 
 // الطلبات - المسار الأساسي
 app.use('/api/orders', orderRouter);
