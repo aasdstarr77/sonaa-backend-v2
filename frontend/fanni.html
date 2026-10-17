@@ -3,501 +3,1349 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1b3a">
 <title>صناع - لوحة الفني</title>
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-*{font-family:'Cairo',system-ui}
-body{margin:0;background:#f8fafc;color:#0f172a;overflow-x:hidden;-webkit-tap-highlight-color:transparent}
-*,*::before,*::after{box-sizing:border-box}
-img,input,textarea,button,select{max-width:100%}
-@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.animate-fade{animation:fade .25s ease both}
+:root{
+  --navy:#0b1b3a;
+  --navy-light:#163b70;
+  --blue:#2563eb;
+  --blue-dark:#1d4ed8;
+  --blue-soft:#eff6ff;
+  --page:#f4f7fc;
+  --border:#e2e8f0;
+}
+*{font-family:'Cairo',system-ui,sans-serif;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  background:var(--page);
+  color:var(--navy);
+  overflow-x:hidden;
+  -webkit-tap-highlight-color:transparent;
+}
+button,input,textarea,select{font:inherit}
+button{cursor:pointer;transition:background-color .18s,border-color .18s,transform .18s}
+button:active{transform:scale(.985)}
+button:disabled{cursor:not-allowed;opacity:.55}
+input,textarea,select{outline:none;max-width:100%;transition:border-color .18s,box-shadow .18s}
+input:focus,textarea:focus,select:focus{
+  border-color:var(--blue)!important;
+  box-shadow:0 0 0 3px rgba(37,99,235,.10);
+}
+@keyframes fade{
+  from{opacity:0;transform:translateY(7px)}
+  to{opacity:1;transform:translateY(0)}
+}
+.animate-fade{animation:fade .22s ease both}
 .safe-bottom{padding-bottom:env(safe-area-inset-bottom)}
+.panel{
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius:18px;
+  box-shadow:0 3px 12px rgba(15,35,75,.035);
+}
+.field-label{display:block;font-size:12px;font-weight:800;color:#334155;margin-bottom:6px}
+.field{
+  display:block;width:100%;min-height:46px;border:1px solid #dbe3ef;
+  border-radius:12px;background:#fff;padding:10px 12px;color:#0b1b3a;
+  font-size:13px;
+}
+.field::placeholder{color:#94a3b8}
+.primary-btn{
+  background:var(--blue);color:white;border:0;border-radius:12px;
+  font-weight:800;box-shadow:0 3px 8px rgba(37,99,235,.12);
+}
+.primary-btn:hover{background:var(--blue-dark)}
+.secondary-btn{
+  background:#eff6ff;color:#1d4ed8;border:1px solid #dbeafe;border-radius:12px;font-weight:800;
+}
+.section-title{font-size:15px;font-weight:800;color:var(--navy)}
+.muted{color:#64748b}
+.service-chip{
+  display:inline-flex;align-items:center;gap:6px;border:1px solid #dbe3ef;
+  border-radius:999px;padding:7px 11px;font-size:11px;font-weight:700;
+  background:#fff;color:#334155;cursor:pointer;
+}
+.service-chip.selected{background:#eff6ff;border-color:#60a5fa;color:#1d4ed8}
+.service-chip input{accent-color:#2563eb}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:99px}
 </style>
 </head>
+
 <body class="min-h-screen antialiased">
 <div id="app"></div>
 <div id="toast" class="fixed bottom-[88px] left-3 right-3 z-[200] pointer-events-none"></div>
 
 <script>
+'use strict';
+
 // ========= CONFIG =========
-const BASE_URL = 'https://sonaa-backend-v2.vercel.app';
-const IS_DEV = location.hostname==='localhost' || location.hostname==='127.0.0.1';
-const log = (...a)=>{ if(IS_DEV) console.log(...a); };
-function escHtml(s){ if(s==null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
-function escAttr(s){ return escHtml(s).replace(/`/g,'&#96;'); }
-function sanitize(str,max=1000){ return String(str||'').trim().slice(0,max).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,''); }
-const V = {
-  phone: v=> /^01[0-25]\d{8}$/.test(String(v).replace(/\D/g,'')),
-  text: (v,min,max)=>{ const t=String(v||'').trim(); return t.length>=min && t.length<=max; },
-  sn: v=> /^[A-Z0-9-]{4,25}$/.test(String(v).trim().toUpperCase()),
-  amount: v=> { const n=Number(v); return !isNaN(n) && n>=10 && n<=10000; }
+const BASE_URL='https://sonaa-backend-v2.vercel.app';
+const IS_DEV=location.hostname==='localhost'||location.hostname==='127.0.0.1';
+const log=(...a)=>{if(IS_DEV)console.log(...a);};
+
+function escHtml(s){
+  if(s==null)return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function escAttr(s){return escHtml(s).replace(/`/g,'&#96;');}
+function sanitize(str,max=1000){
+  return String(str||'').trim().slice(0,max)
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,'');
+}
+const V={
+  phone:v=>/^01[0-25]\d{8}$/.test(String(v).replace(/\D/g,'')),
+  text:(v,min,max)=>{const t=String(v||'').trim();return t.length>=min&&t.length<=max;},
+  sn:v=>/^[A-Z0-9-]{4,25}$/.test(String(v).trim().toUpperCase()),
+  amount:v=>{const n=Number(v);return Number.isFinite(n)&&n>=10&&n<=10000;}
 };
 
-// ========= المهن - مطابقة 100% للوحة العميل =========
-const CATEGORIES = [
-  {label:'دش وكاميرات', emoji:'📡', services:['تركيب دش','صيانة دش','تركيب كاميرات مراقبة','صيانة كاميرات']},
-  {label:'كهرباء', emoji:'⚡', services:['كهربائي منازل','كهربائي سيارات','كهربائي']},
-  {label:'سباكة', emoji:'🚿', services:['سباك','سباكة صرف صحي','سخانات']},
-  {label:'نجارة', emoji:'🪚', services:['نجار موبيليا','نجار باب وشباك','نجار']},
-  {label:'نقاشة وديكور', emoji:'🎨', services:['نقاش','جبس بورد','فني ديكور','حداد']},
-  {label:'تكييف وتبريد', emoji:'❄️', services:['فني تكييف','فني تبريد وثلاجات']},
+// ========= المهن الـ24 المعتمدة في المشروع =========
+const CATEGORIES=[
+  {
+    label:'الفنيون - دش وكاميرات',
+    emoji:'📡',
+    services:['فني دش','فني كاميرات']
+  },
+  {
+    label:'الكهرباء والسباكة',
+    emoji:'🔧',
+    services:['كهربائي','سباك']
+  },
+  {
+    label:'النجارة والنقاشة',
+    emoji:'🪚',
+    services:['نجار','نقاش']
+  },
+  {
+    label:'التكييف والأجهزة',
+    emoji:'❄️',
+    services:['فني تكييف','فني ثلاجة وغسالة']
+  },
+  {
+    label:'الأعمال الفنية الأخرى',
+    emoji:'🛠️',
+    services:[
+      'فني ألوميتال','حداد','ميكانيكي سيارات',
+      'ونش إنقاذ','فني مفاتيح','فني سيراميك'
+    ]
+  },
+  {
+    label:'التنظيف والخدمات المنزلية',
+    emoji:'🧹',
+    services:[
+      'تنظيف شقق','تنظيف فلل','غسيل سجاد وموكيت',
+      'تنظيف خزانات','مكافحة حشرات','نقل عفش',
+      'تنظيف واجهات','خدمة شغالات','غسيل سيارات منزلي',
+      'جنايني وتنسيق حدائق'
+    ]
+  }
 ];
-const ALL_SERVICES = CATEGORIES.flatMap(c=>c.services);
-const SKILLS = [...ALL_SERVICES, 'الكل'];
-const REGISTER_SKILLS = ALL_SERVICES;
 
-// ========= API LAYER - مربوط بالادمن والعميل =========
+const ALL_SERVICES=[...new Set(CATEGORIES.flatMap(c=>c.services))];
+const SKILLS=[...ALL_SERVICES,'الكل'];
+
 const TOKEN_KEY='fanni_token_v4';
 const USER_KEY='fanni_user_v4';
 
-function getToken(){ return localStorage.getItem(TOKEN_KEY)||''; }
-function setAuth(token,user){ if(token) localStorage.setItem(TOKEN_KEY,token); if(user) localStorage.setItem(USER_KEY, JSON.stringify(user)); }
-function clearAuth(){ localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(USER_KEY); }
-function getUser(){ try{ return JSON.parse(localStorage.getItem(USER_KEY)||'null'); }catch{ return null; } }
+function getToken(){return localStorage.getItem(TOKEN_KEY)||'';}
+function setAuth(token,user){
+  if(token)localStorage.setItem(TOKEN_KEY,token);
+  if(user)localStorage.setItem(USER_KEY,JSON.stringify(user));
+}
+function clearAuth(){
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
+}
+function getUser(){
+  try{return JSON.parse(localStorage.getItem(USER_KEY)||'null');}
+  catch{return null;}
+}
 
 function buildUrl(path){
-  // لو احنا على نفس دومين الباك اند استخدم relative، غير كده استخدم BASE_URL
-  let p = path.startsWith('/api')? path : '/api'+(path.startsWith('/')?'':'/')+path;
-  if(location.origin.includes('vercel.app') && location.origin.includes('sonaa')) return p;
-  if(location.hostname==='localhost' || location.hostname==='127.0.0.1') return p;
-  return BASE_URL + p;
+  const p=path.startsWith('/api')?path:'/api'+(path.startsWith('/')?'':'/')+path;
+  if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return p;
+  if(location.origin.includes('vercel.app')&&location.origin.includes('sonaa'))return p;
+  return BASE_URL+p;
 }
 
-async function api(path, opts={}){
+async function api(path,opts={}){
+  const headers={'Content-Type':'application/json',...(opts.headers||{})};
   const token=getToken();
-  const headers={'Content-Type':'application/json', ...(opts.headers||{})};
-  if(token) headers['Authorization']=`Bearer ${token}`;
-  let url = buildUrl(path);
+  if(token)headers.Authorization=`Bearer ${token}`;
+  const url=buildUrl(path);
   try{
-    let r = await fetch(url,{...opts, headers, credentials:'omit', mode:'cors'});
-    let txt = await r.text();
-    // لو السيرفر رجع HTML (Cannot POST /api/...) نعتبرها 404 ونخلي tryApi يجرب المسار اللي بعده
-    if(txt.trim().startsWith('<!DOCTYPE') || txt.trim().startsWith('<html') || txt.includes('Cannot POST') || txt.includes('Cannot GET')){
-      log('HTML ERROR',url,txt.slice(0,200));
-      return {ok:false, status:404, data:{message:'المسار غير موجود', raw:txt.slice(0,300)}};
+    const r=await fetch(url,{...opts,headers,credentials:'omit',mode:'cors'});
+    const txt=await r.text();
+
+    if(txt.trim().startsWith('<!DOCTYPE')||
+       txt.trim().startsWith('<html')||
+       txt.includes('Cannot POST')||
+       txt.includes('Cannot GET')){
+      return {ok:false,status:404,data:{message:'المسار غير موجود'}};
     }
-    let data; try{ data=JSON.parse(txt); }catch{ data={raw:txt.slice(0,800), message: txt.slice(0,300)}; }
+
+    let data;
+    try{data=JSON.parse(txt);}
+    catch{data={message:txt.slice(0,300)};}
+
     log(url,r.status,data);
-    return {ok:r.ok, status:r.status, data};
+    return {ok:r.ok,status:r.status,data};
   }catch(e){
-    return {ok:false, status:0, data:{message:e.message}};
+    return {
+      ok:false,status:0,
+      data:{message:'تعذر الاتصال بالسيرفر: '+e.message}
+    };
   }
 }
 
-async function tryApi(paths, opts){
-  let last={status:404, data:{message:'غير موجود'}};
-  for(let p of paths){
-    let path = typeof p==='function'? p(opts?.sn) : p;
-    let res = await api(path, opts);
-    if(res.ok) return res.data;
+async function tryApi(paths,opts={}){
+  let last={status:404,data:{message:'المسار غير موجود'}};
+
+  for(const p of paths){
+    const res=await api(typeof p==='function'?p(opts.sn):p,opts);
+    if(res.ok)return res.data;
     last=res;
-    if([400,401,403,422,423].includes(res.status)) break;
+
+    // لا نجرب مسارات بديلة عند وجود خطأ بيانات أو صلاحيات أو تكرار الهاتف.
+    if([400,401,403,409,422,423,429].includes(res.status))break;
   }
-  const msg = (last.data?.message||last.data?.error||last.data?.raw||'').toLowerCase();
-  if(last.status===404){
-    if(msg.includes('pending')||msg.includes('review')||msg.includes('approval')||msg.includes('انتظار')||msg.includes('مراجعة')||msg.includes('قيد')){
-      throw new Error('⏳ حسابك قيد المراجعة من الإدارة - سيتم تفعيله خلال ساعات');
-    }
-    if(msg.includes('not found')||msg.includes('لا يوجد')){
-      throw new Error('الحساب غير موجود - تأكد من رقم الهاتف أو سجل حساب جديد');
-    }
-    throw new Error(last.data?.message || 'المسار غير موجود على السيرفر - جاري تجربة مسار آخر');
-  }
-  if(last.status===403||last.status===423){
-    throw new Error(last.data?.message||'حسابك موقوف مؤقتاً أو بانتظار موافقة الإدارة');
-  }
-  throw new Error(last.data?.message||last.data?.error||last.data?.raw||`خطأ ${last.status}`);
+
+  if(last.status===0)
+    throw new Error(last.data?.message||'تعذر الاتصال بالسيرفر');
+
+  if(last.status===409)
+    throw new Error('رقم الهاتف مسجل بالفعل. جرّب تسجيل الدخول.');
+
+  if(last.status===401)
+    throw new Error('رقم الهاتف أو كلمة السر غير صحيحة، أو أن الحساب يحتاج مراجعة الإدارة.');
+
+  if(last.status===403||last.status===423)
+    throw new Error(last.data?.message||'الحساب غير مصرح له أو موقوف');
+
+  throw new Error(last.data?.message||last.data?.error||`تعذر تنفيذ الطلب (${last.status})`);
 }
 
-// مسارات صحيحة ومربوطة بالادمن - بدون /api/auth/login اللي بيعطي Cannot POST
-const ENDPOINTS_FANNI = {
-  register: ['/api/fanni/register','/api/fannis/register','/api/technician/register','/api/fanni/signup','/api/technicians/register'],
-  login: ['/api/fanni/login','/api/fannis/login','/api/technician/login','/api/fanni/signin','/api/technicians/login'],
-  available: ['/api/orders/available','/api/fanni/orders/available','/api/fanni/available-orders','/api/orders/fanni/available','/api/orders/available-for-fanni'],
-  myOffers: ['/api/fanni/offers','/api/fanni/my-offers','/api/orders/my-offers','/api/fanni/offers/mine'],
-  sendOffer: (sn)=>`/api/fanni/orders/${encodeURIComponent(sn)}/offer`,
-  walletSubmit: ['/api/fanni/wallet/topup','/api/fanni/wallet/recharge','/api/fanni/topup','/api/wallet/topup-request','/api/fanni/balance/topup','/api/topup-requests'],
-  walletHistory: ['/api/fanni/wallet/history','/api/fanni/wallet','/api/fanni/balance/history','/api/topup-requests/my'],
-  profile: ['/api/fanni/me','/api/fanni/profile'],
+// مسارات API المحتملة؛ يجب أن يتطابق المسار الفعلي مع الباك إند المنشور.
+const ENDPOINTS_FANNI={
+  register:[
+    '/api/fanni/register',
+    '/api/fannis/register',
+    '/api/technician/register',
+    '/api/technicians/register'
+  ],
+  login:[
+    '/api/fanni/login',
+    '/api/fannis/login',
+    '/api/technician/login',
+    '/api/technicians/login'
+  ],
+  available:[
+    '/api/orders/available',
+    '/api/fanni/orders/available'
+  ],
+  myOffers:[
+    '/api/fanni/offers',
+    '/api/fanni/my-offers',
+    '/api/orders/my-offers'
+  ],
+  sendOffer:sn=>`/api/fanni/orders/${encodeURIComponent(sn)}/offer`,
+  walletSubmit:[
+    '/api/fanni/wallet/topup',
+    '/api/fanni/wallet/recharge',
+    '/api/fanni/topup',
+    '/api/wallet/topup-request',
+    '/api/fanni/balance/topup',
+    '/api/topup-requests'
+  ],
+  walletHistory:[
+    '/api/fanni/wallet/history',
+    '/api/fanni/wallet',
+    '/api/fanni/balance/history',
+    '/api/topup-requests/my'
+  ],
+  profile:[
+    '/api/fanni/me',
+    '/api/fanni/profile'
+  ]
 };
 
-const API = {
-  register: (payload)=> tryApi(ENDPOINTS_FANNI.register,{method:'POST', body:JSON.stringify(payload)}),
-  login: (payload)=> tryApi(ENDPOINTS_FANNI.login,{method:'POST', body:JSON.stringify(payload)}),
-  getAvailable: ()=> tryApi(ENDPOINTS_FANNI.available,{method:'GET'}),
-  getMyOffers: ()=> tryApi(ENDPOINTS_FANNI.myOffers,{method:'GET'}),
-  sendOffer: async (sn, offer)=>{
-    if(!V.sn(sn)) throw new Error('كود الطلب غير صحيح');
-    if(!V.text(offer.price,1,10)) throw new Error('السعر مطلوب');
-    if(!V.text(offer.message,5,500)) throw new Error('اكتب رسالة 5 حروف على الأقل');
-    let res = await api(ENDPOINTS_FANNI.sendOffer(sn),{method:'POST', body:JSON.stringify({price:Number(offer.price), message:sanitize(offer.message,500)})});
-    if(!res.ok) throw new Error(res.data?.message||res.data?.raw||'فشل إرسال العرض');
-    return res.data;
+const API={
+  register:payload=>tryApi(ENDPOINTS_FANNI.register,{
+    method:'POST',
+    body:JSON.stringify(payload)
+  }),
+
+  login:payload=>tryApi(ENDPOINTS_FANNI.login,{
+    method:'POST',
+    body:JSON.stringify(payload)
+  }),
+
+  getAvailable:()=>tryApi(ENDPOINTS_FANNI.available,{method:'GET'}),
+
+  getMyOffers:()=>tryApi(ENDPOINTS_FANNI.myOffers,{method:'GET'}),
+
+  sendOffer:async(sn,offer)=>{
+    if(!V.sn(sn))throw new Error('كود الطلب غير صحيح');
+    if(!V.amount(offer.price))
+      throw new Error('السعر يجب أن يكون من 10 إلى 10000 جنيه');
+    if(!V.text(offer.message,5,500))
+      throw new Error('اكتب رسالة من 5 إلى 500 حرف');
+
+    const r=await api(ENDPOINTS_FANNI.sendOffer(sn),{
+      method:'POST',
+      body:JSON.stringify({
+        price:Number(offer.price),
+        message:sanitize(offer.message,500)
+      })
+    });
+
+    if(!r.ok)throw new Error(r.data?.message||'فشل إرسال العرض');
+    return r.data;
   },
-  submitWallet: async (payload)=>{
-    if(!V.phone(payload.fromPhone)) throw new Error('رقم الهاتف المحول منه غير صحيح');
-    if(!V.amount(payload.amount)) throw new Error('قيمة التحويل من 10 إلى 10000 جنيه');
-    if(payload.reference && !V.text(payload.reference,3,100)) throw new Error('الكود المرجعي غير صحيح');
-    let body = {
-      fromPhone: payload.fromPhone.replace(/\D/g,''),
-      phone: payload.fromPhone.replace(/\D/g,''),
-      amount: Number(payload.amount),
-      reference: sanitize(payload.reference||'',100),
-      referenceCode: sanitize(payload.reference||'',100),
-      method: payload.method||'vodafone_cash',
-      note: `تحويل من ${payload.fromPhone} بقيمة ${payload.amount} - كود: ${payload.reference||'بدون'}`
+
+  submitWallet:async p=>{
+    if(!V.phone(p.fromPhone))
+      throw new Error('رقم الهاتف المحول منه غير صحيح');
+    if(!V.amount(p.amount))
+      throw new Error('قيمة التحويل من 10 إلى 10000 جنيه');
+    if(p.reference&&!V.text(p.reference,3,100))
+      throw new Error('الكود المرجعي يجب أن يكون 3 أحرف على الأقل');
+
+    const phone=p.fromPhone.replace(/\D/g,'');
+    const reference=sanitize(p.reference||'',100);
+
+    const body={
+      fromPhone:phone,
+      phone,
+      amount:Number(p.amount),
+      reference,
+      referenceCode:reference,
+      method:p.method||'vodafone_cash',
+      note:`تحويل من ${phone} بقيمة ${p.amount} - كود: ${reference||'بدون'}`
     };
-    let res = await tryApi(ENDPOINTS_FANNI.walletSubmit,{method:'POST', body:JSON.stringify(body)});
-    return res;
+
+    return tryApi(ENDPOINTS_FANNI.walletSubmit,{
+      method:'POST',
+      body:JSON.stringify(body)
+    });
   },
-  getWalletHistory: ()=> tryApi(ENDPOINTS_FANNI.walletHistory,{method:'GET'}).catch(()=>({history:[], balance:0}))
+
+  getWalletHistory:()=>tryApi(ENDPOINTS_FANNI.walletHistory,{method:'GET'})
 };
 
 // ========= STATE =========
-let state = {
-  tab: getToken() ? 'available' : 'login',
-  loginPhone:'', loginPass:'',
-  regName:'', regPhone:'', regSkill: REGISTER_SKILLS[0], regCity:'القاهرة', regPass:'',
+let state={
+  tab:getToken()?'available':'login',
+  loginPhone:'',
+  loginPass:'',
+  regName:'',
+  regPhone:'',
+  regSpecialties:[ALL_SERVICES[0]],
+  regAreasText:'',
+  regPass:'',
   loading:false,
-  orders:[], filteredOrders:[], search:'', filterSkill:'الكل',
+  orders:[],
+  filteredOrders:[],
+  search:'',
+  filterSkill:'الكل',
   myOffers:[],
-  offerModal:null, offerPrice:'', offerMessage:'',
-  walletFromPhone:'', walletAmount:'', walletRef:'', walletMethod:'vodafone_cash',
-  walletLoading:false, walletHistory:[], walletBalance:0,
-  pendingMsg:'', error:'', success:''
+  offerModal:null,
+  offerPrice:'',
+  offerMessage:'',
+  walletFromPhone:'',
+  walletAmount:'',
+  walletRef:'',
+  walletMethod:'vodafone_cash',
+  walletLoading:false,
+  walletHistory:[],
+  walletBalance:0,
+  pendingMsg:'',
+  error:'',
+  success:''
 };
+
+function parseAreas(value){
+  return [...new Set(String(value||'')
+    .split(/[,،;\n\r]+/)
+    .map(x=>sanitize(x,60))
+    .filter(x=>x.length>=2))].slice(0,30);
+}
 
 function showToast(msg,type='success'){
   const el=document.getElementById('toast');
-  const bg=type==='success'?'bg-emerald-600': type==='pending'?'bg-amber-600' : 'bg-[#0f172a]';
-  el.innerHTML=`<div class="pointer-events-auto mx-auto max-w-[640px] rounded-[14px] ${bg} text-white text-[13px] font-bold px-4 py-3 shadow-2xl animate-fade flex justify-between gap-3"><span class="leading-6">${escHtml(msg)}</span><button onclick="this.parentElement.remove()" class="shrink-0 h-7 px-3 rounded-full bg-white/20">X</button></div>`;
-  setTimeout(()=>el.innerHTML='', type==='pending'?6000:3500);
+  const bg=type==='success'
+    ?'bg-emerald-600'
+    :type==='pending'
+      ?'bg-amber-600'
+      :'bg-[#0b1b3a]';
+
+  el.innerHTML=`
+    <div class="pointer-events-auto mx-auto max-w-[640px] rounded-[14px] ${bg}
+      text-white text-[13px] font-bold px-4 py-3 shadow-2xl animate-fade
+      flex justify-between gap-3">
+      <span class="leading-6">${escHtml(msg)}</span>
+      <button onclick="this.parentElement.remove()"
+        class="shrink-0 h-7 px-3 rounded-full bg-white/20">إغلاق</button>
+    </div>`;
+  setTimeout(()=>{el.innerHTML='';},type==='pending'?6000:3500);
 }
 
 function goClient(){
-  // المسار الصحيح كما طلبه المستخدم
-  window.location.href = 'https://sonaa-backend-v2.vercel.app/';
+  location.href=location.origin+'/';
 }
 
+function setTab(t){
+  state.tab=t;
+  state.error='';
+  state.success='';
+  state.pendingMsg='';
+  render();
+
+  if(t==='wallet')loadWalletHistory();
+  if(t==='available')loadOrders();
+  if(t==='myOffers')loadMyOffers();
+}
+
+function toggleSpecialty(value){
+  if(state.regSpecialties.includes(value)){
+    state.regSpecialties=state.regSpecialties.filter(s=>s!==value);
+  }else if(state.regSpecialties.length<20){
+    state.regSpecialties=[...state.regSpecialties,value];
+  }else{
+    showToast('يمكنك اختيار 20 تخصصًا كحد أقصى','error');
+  }
+  render();
+}
+
+function applyFilter(){
+  let list=[...state.orders];
+
+  if(state.filterSkill!=='الكل'){
+    list=list.filter(o=>(o.service||'').includes(state.filterSkill));
+  }
+
+  if(state.search){
+    const s=state.search.toLowerCase();
+    list=list.filter(o=>
+      (o.sn||'').toLowerCase().includes(s)||
+      (o.area||'').toLowerCase().includes(s)||
+      (o.service||'').toLowerCase().includes(s)
+    );
+  }
+
+  state.filteredOrders=list;
+}
+
+function onSearch(v){
+  state.search=sanitize(v,50);
+  applyFilter();
+  render();
+}
+
+function onFilterSkill(v){
+  state.filterSkill=v;
+  applyFilter();
+  render();
+}
+
+// ========= RENDER =========
 function render(){
   const user=getUser();
   const isAuth=!!getToken();
-  const balance = state.walletBalance || user?.balance || user?.wallet || 0;
+  const balance=state.walletBalance||user?.walletBalance||user?.balance||user?.wallet||0;
+  const specialties=Array.isArray(user?.specialties)?user.specialties:[];
+  const areas=Array.isArray(user?.areas)?user.areas:[];
 
   document.getElementById('app').innerHTML=`
-  <header class="sticky top-0 z-40 bg-[#0f172a] text-white shadow-lg">
-    <div class="mx-auto w-full max-w-[640px] px-3 sm:px-4 py-3 flex items-center justify-between gap-2">
-      <div class="flex items-center gap-2.5 min-w-0">
-        <div class="h-10 w-10 rounded-xl bg-[#f97316] flex items-center justify-center font-black text-[16px] shrink-0">ص</div>
-        <div class="min-w-0"><h1 class="font-extrabold text-[15px] leading-none truncate">صناع - لوحة الفني</h1><div class="text-[10px] opacity-60 mt-1 truncate">${isAuth? escHtml(user?.name||'فني')+' - رصيد '+balance+'ج' : 'سجل دخول لاستقبال طلبات حقيقية'}</div></div>
+  <header class="sticky top-0 z-40 bg-[#0b1b3a] text-white shadow-lg">
+    <div class="mx-auto w-full max-w-[680px] px-3 sm:px-4 py-3 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="h-11 w-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center
+          font-black text-[21px] shrink-0 shadow-md border border-white/15">S</div>
+        <div class="min-w-0">
+          <h1 class="font-extrabold text-[16px] leading-tight truncate">صناع</h1>
+          <div class="text-[10px] text-blue-100/75 mt-0.5 truncate">
+            ${isAuth?escHtml(user?.name||'فني')+' · الرصيد '+escHtml(String(balance))+' جنيه':'لوحة الفني والخدمات'}
+          </div>
+        </div>
       </div>
-      <div class="flex items-center gap-1.5 shrink-0">
-        <button onclick="goClient()" class="h-9 px-3 sm:px-4 rounded-full bg-[#f97316] hover:bg-[#ea6d0f] text-white text-[11px] sm:text-[12px] font-extrabold flex items-center gap-1.5 shadow transition"><span>👥</span> لوحة العميل</button>
-        ${isAuth?`<button onclick="logout()" class="h-9 px-3 rounded-full bg-white/10 hover:bg-white/15 text-[11px] font-bold">خروج</button>`:''}
+
+      <div class="flex items-center gap-2 shrink-0">
+        <button onclick="goClient()"
+          class="h-9 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-extrabold">
+          لوحة العميل
+        </button>
+        ${isAuth?`
+          <button onclick="logout()"
+            class="h-9 px-3 rounded-xl bg-white/10 hover:bg-white/15 text-[11px] font-bold">
+            خروج
+          </button>`:''}
       </div>
     </div>
   </header>
 
-  <main class="mx-auto w-full max-w-[640px] px-3 sm:px-4 pb-[100px]">
-    ${!isAuth?`
-      <div class="mt-4 flex p-1 bg-white rounded-[16px] border shadow-sm">
-        ${[{id:'login',label:'تسجيل دخول'},{id:'register',label:'حساب جديد'}].map(t=>`<button onclick="setTab('${escAttr(t.id)}')" class="flex-1 h-11 rounded-[12px] text-[13px] font-bold transition ${state.tab===t.id?'bg-[#0f172a] text-white shadow':'text-slate-500 hover:bg-slate-50'}">${escHtml(t.label)}</button>`).join('')}
+  <main class="mx-auto w-full max-w-[680px] px-3 sm:px-4 pb-[112px]">
+
+  ${!isAuth?`
+    <section class="mt-5">
+      <div class="rounded-2xl bg-gradient-to-br from-[#0b1b3a] to-[#163b70] text-white p-5 shadow-md">
+        <div class="flex items-center gap-3">
+          <div class="h-12 w-12 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center text-2xl">🧰</div>
+          <div>
+            <h2 class="text-[17px] font-extrabold">أهلاً بيك في صناع</h2>
+            <p class="text-[11px] text-blue-100/80 mt-1">استقبل طلبات مناسبة لتخصصك ومناطق عملك</p>
+          </div>
+        </div>
+        <div class="grid grid-cols-3 gap-2 mt-4">
+          <div class="rounded-xl bg-white/10 p-2.5 text-center">
+            <div class="text-lg">🛠️</div>
+            <div class="text-[10px] font-bold mt-1">تخصصات متنوعة</div>
+          </div>
+          <div class="rounded-xl bg-white/10 p-2.5 text-center">
+            <div class="text-lg">📍</div>
+            <div class="text-[10px] font-bold mt-1">مناطق عملك</div>
+          </div>
+          <div class="rounded-xl bg-white/10 p-2.5 text-center">
+            <div class="text-lg">📋</div>
+            <div class="text-[10px] font-bold mt-1">متابعة الطلبات</div>
+          </div>
+        </div>
       </div>
 
-      <div class="mt-4 animate-fade">
-        ${state.tab==='login'?`
-          <div class="rounded-[20px] bg-white border p-5 shadow-sm">
-            <h2 class="font-extrabold text-[16px]">دخول الفني</h2>
-            <p class="text-[11px] text-slate-500 font-bold mt-1">ادخل رقمك وكلمة السر</p>
-            <div class="mt-4 space-y-3">
-              <div><label class="text-[11px] font-bold text-slate-600">رقم التليفون</label><input value="${escAttr(state.loginPhone)}" oninput="state.loginPhone=this.value.replace(/\\D/g,'').slice(0,11)" inputmode="numeric" placeholder="01xxxxxxxxx" class="mt-1 w-full h-12 rounded-xl border px-4 text-[14px] font-bold tracking-widest outline-none focus:border-[#0f172a]"></div>
-              <div><label class="text-[11px] font-bold text-slate-600">كلمة السر</label><input type="password" value="${escAttr(state.loginPass)}" oninput="state.loginPass=this.value" placeholder="••••••••" class="mt-1 w-full h-12 rounded-xl border px-4 text-[14px] outline-none focus:border-[#0f172a]"></div>
-              <button onclick="doLogin()" ${state.loading?'disabled':''} class="w-full h-12 rounded-xl bg-[#0f172a] text-white font-extrabold text-[14px] disabled:opacity-50 hover:bg-black transition">${state.loading?'جاري الدخول...':'دخول اللوحة'}</button>
-              ${state.pendingMsg?`<div class="rounded-xl bg-amber-50 border border-amber-200 p-4 text-center"><div class="text-[18px]">⏳</div><p class="mt-2 text-[13px] font-extrabold text-amber-800 leading-6">${escHtml(state.pendingMsg)}</p><p class="mt-1 text-[11px] text-amber-700">سيتم تفعيل حسابك بعد مراجعة الإدارة</p></div>`:''}
-              ${state.error?`<p class="text-[12px] font-bold text-red-600 bg-red-50 border border-red-200 rounded-xl p-3 leading-6">${escHtml(state.error)}</p>`:''}
-            </div>
+      <div class="mt-4 flex p-1 bg-white rounded-2xl border shadow-sm">
+        ${[
+          {id:'login',label:'تسجيل الدخول'},
+          {id:'register',label:'حساب فني جديد'}
+        ].map(t=>`
+          <button onclick="setTab('${t.id}')"
+            class="flex-1 h-11 rounded-xl text-[12px] font-extrabold
+            ${state.tab===t.id?'bg-[#0b1b3a] text-white shadow-sm':'text-slate-500 hover:bg-slate-50'}">
+            ${t.label}
+          </button>`).join('')}
+      </div>
+    </section>
+
+    <section class="mt-4 animate-fade">
+    ${state.tab==='login'?`
+      <div class="panel p-5 sm:p-6">
+        <div class="mb-5">
+          <div class="h-11 w-11 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center text-xl">🔐</div>
+          <h2 class="font-extrabold text-[17px] mt-3">دخول الفني</h2>
+          <p class="text-[11px] text-slate-500 font-semibold mt-1">ادخل رقم تليفونك وكلمة السر للمتابعة.</p>
+        </div>
+
+        <div class="space-y-4">
+          <div>
+            <label class="field-label">رقم التليفون</label>
+            <input value="${escAttr(state.loginPhone)}"
+              oninput="state.loginPhone=this.value.replace(/\\D/g,'').slice(0,11)"
+              inputmode="numeric" autocomplete="tel" placeholder="01xxxxxxxxx"
+              class="field">
           </div>
-        `:`
-          <div class="rounded-[20px] bg-white border p-5 shadow-sm">
-            <h2 class="font-extrabold text-[16px]">تسجيل فني جديد</h2><p class="text-[11px] text-slate-500 font-bold mt-1">بياناتك ستظهر للعملاء عند تقديم عرض</p>
-            <div class="mt-4 space-y-3">
-              <div><label class="text-[11px] font-bold">اسمك *</label><input value="${escAttr(state.regName)}" oninput="state.regName=sanitize(this.value,50)" placeholder="الاسم كما يظهر للعميل" class="mt-1 w-full h-12 rounded-xl border px-4 text-[13px] font-bold"></div>
-              <div class="grid grid-cols-2 gap-3">
-                <div><label class="text-[11px] font-bold">التليفون *</label><input value="${escAttr(state.regPhone)}" oninput="state.regPhone=this.value.replace(/\\D/g,'').slice(0,11)" inputmode="numeric" placeholder="01xxxxxxxxx" class="mt-1 w-full h-12 rounded-xl border px-4 text-[13px] font-mono"></div>
-                <div><label class="text-[11px] font-bold">المهارة *</label><select onchange="state.regSkill=this.value" class="mt-1 w-full h-12 rounded-xl border px-3 text-[12px] font-bold bg-white">
-                  ${CATEGORIES.map(cat=>`<optgroup label="${escAttr(cat.label)}">${cat.services.map(s=>`<option value="${escAttr(s)}" ${state.regSkill===s?'selected':''}>${escHtml(s)}</option>`).join('')}</optgroup>`).join('')}
-                </select></div>
-              </div>
-              <div class="rounded-xl bg-slate-50 border p-3 flex flex-wrap gap-1.5">${CATEGORIES.map(c=>`<div class="text-[10px]"><span class="font-bold">${escHtml(c.label)}:</span> ${c.services.map(s=>`<span class="inline-block px-2 py-0.5 rounded-full bg-white border text-[10px] ml-1">${escHtml(s)}</span>`).join('')}</div>`).join('')}</div>
-              <div class="grid grid-cols-2 gap-3">
-                <div><label class="text-[11px] font-bold">المدينة</label><input value="${escAttr(state.regCity)}" oninput="state.regCity=sanitize(this.value,30)" class="mt-1 w-full h-12 rounded-xl border px-4 text-[13px] font-bold"></div>
-                <div><label class="text-[11px] font-bold">كلمة سر *</label><input type="password" value="${escAttr(state.regPass)}" oninput="state.regPass=this.value" placeholder="6 حروف على الأقل" class="mt-1 w-full h-12 rounded-xl border px-4 text-[13px]"></div>
-              </div>
-              <button onclick="doRegister()" ${state.loading?'disabled':''} class="w-full h-12 rounded-xl bg-[#f97316] text-white font-extrabold text-[14px] disabled:opacity-50 hover:bg-[#ea6d0f] transition">${state.loading?'جاري التسجيل...':'إنشاء حساب فني'}</button>
-              ${state.error?`<p class="text-[12px] font-bold text-red-600 bg-red-50 border rounded-xl p-3 leading-6">${escHtml(state.error)}</p>`:''}
-              ${state.success?`<p class="text-[12px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl p-3 leading-6">${escHtml(state.success)}</p>`:''}
-            </div>
+
+          <div>
+            <label class="field-label">كلمة السر</label>
+            <input type="password" value="${escAttr(state.loginPass)}"
+              oninput="state.loginPass=this.value"
+              autocomplete="current-password" placeholder="اكتب كلمة السر"
+              class="field">
           </div>
-        `}
+
+          <button onclick="doLogin()" ${state.loading?'disabled':''}
+            class="primary-btn w-full h-12">
+            ${state.loading?'جاري تسجيل الدخول...':'دخول اللوحة'}
+          </button>
+
+          ${state.pendingMsg?`
+            <div class="rounded-xl bg-amber-50 border border-amber-200 p-3 text-center text-[12px] font-bold text-amber-800">
+              ${escHtml(state.pendingMsg)}
+            </div>`:''}
+
+          ${state.error?`
+            <p class="text-[12px] font-bold text-red-600 bg-red-50 border border-red-100 rounded-xl p-3 leading-6">
+              ${escHtml(state.error)}
+            </p>`:''}
+        </div>
       </div>
     `:`
-      <div class="mt-3 rounded-[18px] bg-gradient-to-br from-[#0f172a] to-[#1e293b] text-white p-4 flex justify-between items-center border border-slate-800">
-        <div><div class="text-[12px] opacity-70">مرحبا ${escHtml(user?.name||'فني')}</div><div class="text-[14px] font-extrabold mt-1">${escHtml(user?.skill||state.regSkill||'فني')} - ${escHtml(user?.city||'القاهرة')}</div><div class="mt-2 flex gap-2"><span class="text-[11px] px-2.5 py-1 rounded-full bg-white/10 border border-white/10">رصيد: ${escHtml(String(balance))}ج</span><span class="text-[11px] px-2.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/20">عروضك: ${(state.myOffers||[]).length}</span></div></div>
-        <div class="h-12 w-12 rounded-xl bg-white/10 flex items-center justify-center text-[24px]">🧑‍🔧</div>
+      <div class="panel p-4 sm:p-6">
+        <div class="mb-5">
+          <div class="h-11 w-11 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center text-xl">🧑‍🔧</div>
+          <h2 class="font-extrabold text-[17px] mt-3">إنشاء حساب فني</h2>
+          <p class="text-[11px] text-slate-500 font-semibold mt-1 leading-5">
+            اكتب بياناتك وحدد التخصصات والمناطق اللي تقدر تخدم فيها.
+          </p>
+        </div>
+
+        <div class="space-y-4">
+          <div>
+            <label class="field-label">الاسم بالكامل *</label>
+            <input value="${escAttr(state.regName)}"
+              oninput="state.regName=sanitize(this.value,50)"
+              autocomplete="name" placeholder="الاسم كما يظهر للعميل"
+              class="field">
+          </div>
+
+          <div>
+            <label class="field-label">رقم التليفون *</label>
+            <input value="${escAttr(state.regPhone)}"
+              oninput="state.regPhone=this.value.replace(/\\D/g,'').slice(0,11)"
+              inputmode="numeric" autocomplete="tel" placeholder="01xxxxxxxxx"
+              class="field">
+          </div>
+
+          <div class="rounded-2xl border border-slate-200 p-3 sm:p-4">
+            <div class="flex justify-between items-center gap-2">
+              <label class="text-[12px] font-extrabold text-[#0b1b3a]">تخصصاتك *</label>
+              <span class="rounded-full bg-blue-50 text-blue-700 border border-blue-100 px-2.5 py-1 text-[10px] font-extrabold">
+                ${state.regSpecialties.length} مختار
+              </span>
+            </div>
+            <p class="text-[10px] text-slate-500 mt-1 mb-4">اختار تخصصًا واحدًا على الأقل، وتقدر تختار أكتر من تخصص.</p>
+
+            <div class="space-y-4">
+              ${CATEGORIES.map(cat=>`
+                <div>
+                  <div class="flex items-center gap-2 text-[11px] font-extrabold text-slate-600 mb-2">
+                    <span class="h-7 w-7 rounded-lg bg-blue-50 flex items-center justify-center">${cat.emoji}</span>
+                    ${escHtml(cat.label)}
+                  </div>
+                  <div class="flex flex-wrap gap-2">
+                    ${cat.services.map(s=>`
+                      <label class="service-chip ${state.regSpecialties.includes(s)?'selected':''}">
+                        <input type="checkbox"
+                          ${state.regSpecialties.includes(s)?'checked':''}
+                          onchange="toggleSpecialty(${escAttr(JSON.stringify(s))})">
+                        <span>${escHtml(s)}</span>
+                      </label>`).join('')}
+                  </div>
+                </div>`).join('')}
+            </div>
+          </div>
+
+          <div>
+            <label class="field-label">مناطق العمل والأحياء *</label>
+            <textarea oninput="state.regAreasText=sanitize(this.value,1000)"
+              placeholder="مثال: المعادي، زهراء المعادي، دار السلام&#10;اكتب كل منطقة في سطر أو افصل بينها بفاصلة."
+              class="field min-h-[105px] resize-y">${escHtml(state.regAreasText)}</textarea>
+            <p class="text-[10px] text-slate-500 mt-2 leading-5">
+              اكتب الأحياء اللي تقدر تروحها، وافصل المناطق بفاصلة أو بسطر جديد.
+            </p>
+
+            ${parseAreas(state.regAreasText).length?`
+              <div class="mt-3 flex flex-wrap gap-1.5">
+                ${parseAreas(state.regAreasText).map(a=>`
+                  <span class="rounded-full bg-blue-50 border border-blue-100 text-blue-800 text-[10px] px-2.5 py-1">
+                    📍 ${escHtml(a)}
+                  </span>`).join('')}
+              </div>`:''}
+          </div>
+
+          <div>
+            <label class="field-label">كلمة السر *</label>
+            <input type="password" value="${escAttr(state.regPass)}"
+              oninput="state.regPass=this.value"
+              autocomplete="new-password" placeholder="6 أحرف على الأقل"
+              class="field">
+            <p class="text-[10px] text-slate-500 mt-1">استخدم كلمة سر لا تقل عن 6 أحرف.</p>
+          </div>
+
+          <button onclick="doRegister()" ${state.loading?'disabled':''}
+            class="primary-btn w-full h-12">
+            ${state.loading?'جاري إنشاء الحساب...':'إنشاء حساب فني'}
+          </button>
+
+          ${state.error?`
+            <p class="text-[12px] font-bold text-red-600 bg-red-50 border border-red-100 rounded-xl p-3 leading-6">
+              ${escHtml(state.error)}
+            </p>`:''}
+
+          ${state.success?`
+            <p class="text-[12px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-xl p-3 leading-6">
+              ${escHtml(state.success)}
+            </p>`:''}
+        </div>
       </div>
-
-      <div class="mt-3 flex p-1 bg-white rounded-[16px] border shadow-sm overflow-x-auto">
-        ${[{id:'available',label:`طلبات (${state.filteredOrders.length})`,icon:'📋'},{id:'myOffers',label:`عروضي (${state.myOffers.length})`,icon:'💼'},{id:'wallet',label:`محفظتي`,icon:'💳'},{id:'profile',label:'حسابي',icon:'👤'}].map(t=>`<button onclick="setTab('${escAttr(t.id)}')" class="flex-1 min-w-[70px] h-11 rounded-[12px] text-[11px] font-bold transition flex flex-col items-center justify-center gap-0.5 ${state.tab===t.id?'bg-[#0f172a] text-white shadow':'text-slate-500 hover:bg-slate-50'}"><span>${t.icon}</span><span>${escHtml(t.label)}</span></button>`).join('')}
-      </div>
-
-      ${state.tab==='available'?`
-        <div class="mt-3 space-y-3 animate-fade">
-          <div class="bg-white rounded-[16px] border p-3 flex gap-2">
-            <input value="${escAttr(state.search)}" oninput="onSearch(this.value)" placeholder="ابحث بمنطقة أو SN..." class="flex-1 h-11 rounded-xl border bg-slate-50 px-3 text-[12px] font-bold outline-none focus:bg-white focus:border-[#0f172a]">
-            <select onchange="onFilterSkill(this.value)" class="h-11 rounded-xl border bg-white px-2 text-[11px] font-bold max-w-[120px]"><option value="الكل">الكل</option>${CATEGORIES.map(cat=>`<optgroup label="${escAttr(cat.label)}">${cat.services.map(s=>`<option ${state.filterSkill===s?'selected':''}>${escHtml(s)}</option>`).join('')}</optgroup>`).join('')}</select>
-            <button onclick="loadOrders()" class="h-11 px-3 rounded-xl bg-[#0f172a] text-white text-[11px] font-bold">تحديث</button>
-          </div>
-          ${state.loading?'<div class="bg-white rounded-[16px] border p-8 text-center"><div class="h-8 w-8 rounded-full border-2 border-slate-200 border-t-[#0f172a] animate-spin mx-auto"></div><p class="mt-3 text-[12px] text-slate-500 font-bold">جاري تحميل الطلبات...</p></div>':''}
-          ${!state.loading && state.filteredOrders.length===0?'<div class="bg-white rounded-[16px] border p-8 text-center text-[12px] text-slate-400 font-bold leading-6">لا يوجد طلبات متاحة حالياً<br>الطلبات من لوحة العميل ستظهر هنا فوراً</div>':''}
-          ${state.filteredOrders.map(o=>{
-            const sn = escHtml(o.sn||o._id||'');
-            const service = escHtml(o.service||o.serviceType||'');
-            const area = escHtml(o.area||o.address||o.city||'');
-            const client = escHtml(o.clientName||'عميل');
-            const desc = escHtml((o.description||o.desc||'').slice(0,180));
-            const date = o.createdAt? new Date(o.createdAt).toLocaleString('ar-EG') : '';
-            return `<div class="bg-white rounded-[18px] border p-4 shadow-sm">
-              <div class="flex justify-between items-start gap-3"><div class="min-w-0"><div class="flex items-center gap-2 flex-wrap"><span class="font-black text-[12px] font-mono bg-slate-900 text-white px-2.5 py-1 rounded-full">${sn}</span><span class="text-[10px] px-2 py-1 rounded-full bg-orange-50 border border-orange-100 text-[#f97316] font-bold">${service}</span></div><p class="mt-2 text-[12px] font-bold text-slate-700">📍 ${area}</p><p class="mt-1 text-[11px] text-slate-500">👤 ${client} - ${escHtml(date)}</p></div><span class="shrink-0 text-[10px] px-2 py-1 rounded-full bg-emerald-50 border text-emerald-700 font-bold">${escHtml(o.status||'جديد')}</span></div>
-              <p class="mt-3 text-[12px] bg-slate-50 border rounded-xl p-3 leading-6 break-words">${desc||'بدون وصف'}</p>
-              <button onclick="openOffer('${escAttr(o.sn||o._id||'') }')" class="mt-3 w-full h-11 rounded-xl bg-[#f97316] text-white font-extrabold text-[13px] hover:bg-[#ea6d0f] active:scale-[0.98] transition">تقديم عرض لهذا الطلب</button>
-            </div>`
-          }).join('')}
-        </div>
-      `:''}
-
-      ${state.tab==='wallet'?`
-        <div class="mt-3 space-y-3 animate-fade">
-          <div class="rounded-[18px] bg-white border p-5 shadow-sm">
-            <div class="flex justify-between items-center"><h3 class="font-extrabold text-[15px]">💳 محفظتي - شحن خارج التطبيق</h3><span class="text-[12px] font-black px-3 py-1 rounded-full bg-[#0f172a] text-white">${escHtml(String(balance))}ج</span></div>
-            <p class="mt-2 text-[11px] text-slate-500 font-bold leading-5">حول المبلغ ثم سجل بيانات التحويل هنا ليتم المراجعة من الإدارة</p>
-            <div class="mt-4 rounded-xl bg-amber-50 border border-amber-200 p-3">
-              <p class="text-[11px] font-extrabold text-amber-800">📱 أرقام التحويل المعتمدة:</p>
-              <p class="mt-1 text-[12px] font-mono font-bold text-amber-900">01012345678 - فودافون كاش</p>
-              <p class="text-[10px] text-amber-700 mt-1">اذكر رقمك المحول منه بدقة</p>
-            </div>
-            <div class="mt-4 space-y-3">
-              <div class="grid grid-cols-2 gap-3">
-                <div><label class="text-[11px] font-bold">رقم الهاتف المحول منه *</label><input value="${escAttr(state.walletFromPhone)}" oninput="state.walletFromPhone=this.value.replace(/\\D/g,'').slice(0,11)" inputmode="numeric" placeholder="01xxxxxxxxx" class="mt-1 w-full h-12 rounded-xl border px-4 text-[13px] font-mono font-bold outline-none focus:border-[#f97316]"></div>
-                <div><label class="text-[11px] font-bold">قيمة التحويل (جنيه) *</label><input type="number" value="${escAttr(state.walletAmount)}" oninput="state.walletAmount=this.value.slice(0,5)" placeholder="مثال: 100" class="mt-1 w-full h-12 rounded-xl border px-4 text-[14px] font-black outline-none focus:border-[#f97316]"></div>
-              </div>
-              <div class="grid grid-cols-2 gap-3">
-                <div><label class="text-[11px] font-bold">الكود المرجعي (إن وجد)</label><input value="${escAttr(state.walletRef)}" oninput="state.walletRef=sanitize(this.value,100)" placeholder="مثال: Trx123456" class="mt-1 w-full h-12 rounded-xl border px-4 text-[12px] font-bold outline-none focus:border-[#f97316]"></div>
-                <div><label class="text-[11px] font-bold">طريقة التحويل</label><select onchange="state.walletMethod=this.value" class="mt-1 w-full h-12 rounded-xl border px-3 text-[12px] font-bold bg-white"><option value="vodafone_cash" ${state.walletMethod==='vodafone_cash'?'selected':''}>فودافون كاش</option><option value="etisalat_cash" ${state.walletMethod==='etisalat_cash'?'selected':''}>اتصالات كاش</option><option value="orange_money" ${state.walletMethod==='orange_money'?'selected':''}>أورنج موني</option><option value="bank_transfer" ${state.walletMethod==='bank_transfer'?'selected':''}>تحويل بنكي</option><option value="other" ${state.walletMethod==='other'?'selected':''}>أخرى</option></select></div>
-              </div>
-              <button onclick="submitWallet()" ${state.walletLoading?'disabled':''} class="w-full h-12 rounded-xl bg-[#0f172a] text-white font-extrabold text-[13px] disabled:opacity-50 hover:bg-black transition">${state.walletLoading?'جاري إرسال طلب الشحن...':'إرسال طلب الشحن للإدارة 🚀'}</button>
-              ${state.success?`<p class="text-[12px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl p-3 leading-6">${escHtml(state.success)}</p>`:''}
-              ${state.error?`<p class="text-[12px] font-bold text-red-600 bg-red-50 border border-red-200 rounded-xl p-3 leading-6">${escHtml(state.error)}</p>`:''}
-            </div>
-          </div>
-          <div class="rounded-[16px] bg-white border p-4">
-            <div class="flex justify-between items-center"><h4 class="font-bold text-[13px]">سجل الشحن</h4><button onclick="loadWalletHistory()" class="text-[11px] px-3 py-1 rounded-full bg-slate-100 border font-bold">تحديث</button></div>
-            <div class="mt-3 space-y-2">
-              ${(state.walletHistory||[]).length===0?'<p class="text-[11px] text-slate-400 text-center py-6">لا يوجد طلبات شحن سابقة</p>' : state.walletHistory.map(h=>`<div class="rounded-xl border bg-slate-50 p-3 flex justify-between items-center gap-2"><div><p class="text-[12px] font-bold">${escHtml(String(h.amount||''))}ج - ${escHtml(h.fromPhone||h.phone||'')}</p><p class="text-[10px] text-slate-500 mt-1">كود: ${escHtml(h.reference||h.referenceCode||'بدون')} - ${escHtml(h.method||'')}</p><p class="text-[10px] text-slate-400 mt-1">${escHtml(h.createdAt? new Date(h.createdAt).toLocaleString('ar-EG'): '')}</p></div><span class="text-[10px] px-2.5 py-1 rounded-full font-bold border ${String(h.status).includes('approv')||String(h.status).includes('مقبول')?'bg-emerald-50 border-emerald-200 text-emerald-700': String(h.status).includes('reject')||String(h.status).includes('مرفوض')?'bg-red-50 border-red-200 text-red-700':'bg-amber-50 border-amber-200 text-amber-800'}">${escHtml(h.status||'قيد المراجعة')}</span></div>`).join('')}
-            </div>
-          </div>
-        </div>
-      `:''}
-
-      ${state.tab==='myOffers'?`
-        <div class="mt-3 space-y-3 animate-fade">
-          <button onclick="loadMyOffers()" class="w-full h-11 rounded-xl bg-white border font-bold text-[12px]">تحديث عروضي</button>
-          ${state.myOffers.length===0?'<div class="bg-white rounded-[16px] border p-8 text-center text-[12px] text-slate-400 font-bold">لسه مقدمتش عروض</div>': state.myOffers.map(of=>`<div class="bg-white rounded-[16px] border p-4"><div class="flex justify-between"><span class="font-mono font-black text-[12px] bg-slate-900 text-white px-2 py-1 rounded-full">${escHtml(of.orderSn||of.sn||'')}</span><span class="font-black text-[13px] text-[#f97316]">${escHtml(String(of.price||''))}ج</span></div><p class="mt-2 text-[11px] text-slate-500">حالة: ${escHtml(of.status||'بانتظار موافقة العميل')}</p><p class="mt-2 text-[12px] bg-slate-50 border rounded-xl p-2.5 break-words">${escHtml(of.message||'')}</p></div>`).join('')}
-        </div>
-      `:''}
-
-      ${state.tab==='profile'?`
-        <div class="mt-3 bg-white rounded-[20px] border p-5 animate-fade">
-          <h3 class="font-extrabold text-[15px]">بياناتي</h3>
-          <div class="mt-4 space-y-2 text-[13px]"><div class="flex justify-between p-3 bg-slate-50 rounded-xl"><span class="text-slate-500">الاسم</span><b>${escHtml(user?.name||'')}</b></div><div class="flex justify-between p-3 bg-slate-50 rounded-xl"><span class="text-slate-500">الهاتف</span><b class="font-mono">${escHtml(user?.phone||'')}</b></div><div class="flex justify-between p-3 bg-slate-50 rounded-xl"><span class="text-slate-500">المهارة</span><b>${escHtml(user?.skill||'')}</b></div><div class="flex justify-between p-3 bg-slate-50 rounded-xl"><span class="text-slate-500">المدينة</span><b>${escHtml(user?.city||'')}</b></div><div class="flex justify-between p-3 bg-amber-50 border border-amber-100 rounded-xl"><span class="text-amber-800">الرصيد</span><b class="text-[#0f172a]">${escHtml(String(balance))}ج</b></div></div>
-          <div class="mt-4 grid grid-cols-2 gap-2"><button onclick="goClient()" class="h-11 rounded-xl bg-[#0f172a] text-white font-bold text-[12px]">👥 لوحة العميل</button><button onclick="logout()" class="h-11 rounded-xl bg-red-50 border border-red-200 text-red-700 font-bold text-[12px]">تسجيل خروج</button></div>
-        </div>
-      `:''}
     `}
+    </section>
 
-    ${state.offerModal?`
-      <div class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-3">
-        <div class="w-full max-w-[480px] bg-white rounded-[20px] p-5 shadow-2xl animate-fade">
-          <div class="flex justify-between items-center"><h3 class="font-extrabold text-[15px]">تقديم عرض للطلب ${escHtml(state.offerModal.sn)}</h3><button onclick="closeOffer()" class="h-8 w-8 rounded-full bg-slate-100">✕</button></div>
-          <div class="mt-4 space-y-3">
-            <div><label class="text-[11px] font-bold">السعر *</label><input type="number" value="${escAttr(state.offerPrice)}" oninput="state.offerPrice=this.value.slice(0,6)" placeholder="مثال: 150" class="mt-1 w-full h-12 rounded-xl border px-4 text-[14px] font-black outline-none focus:border-[#f97316]"></div>
-            <div><label class="text-[11px] font-bold">رسالتك للعميل *</label><textarea oninput="state.offerMessage=sanitize(this.value,500)" placeholder="أقدر أجي خلال ساعة..." class="mt-1 w-full min-h-[90px] rounded-xl border p-3 text-[13px] font-bold outline-none focus:border-[#f97316] resize-none">${escHtml(state.offerMessage)}</textarea><div class="text-[10px] text-slate-400 font-bold mt-1">${state.offerMessage.length}/500</div></div>
-            <button onclick="submitOffer()" ${state.loading?'disabled':''} class="w-full h-12 rounded-xl bg-[#f97316] text-white font-extrabold text-[14px] disabled:opacity-50 hover:bg-[#ea6d0f] transition">${state.loading?'جاري الإرسال...':'إرسال العرض للعميل 🚀'}</button>
-          </div>
+  `:`
+    <section class="mt-4 rounded-2xl bg-gradient-to-br from-[#0b1b3a] to-[#163b70] text-white p-4 sm:p-5 shadow-md">
+      <div class="flex justify-between items-start gap-3">
+        <div>
+          <p class="text-[11px] text-blue-100/75">أهلاً بيك</p>
+          <h2 class="text-[17px] font-extrabold mt-1">${escHtml(user?.name||'فني')}</h2>
+          <p class="text-[11px] text-blue-100/80 mt-1">تابع طلباتك وعروضك من هنا</p>
+        </div>
+        <div class="h-11 w-11 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center text-xl">🧰</div>
+      </div>
+
+      <div class="mt-4 rounded-xl bg-white/10 border border-white/10 p-3 flex justify-between items-center gap-3">
+        <div>
+          <div class="text-[10px] text-blue-100/80">رصيد المحفظة</div>
+          <div class="text-[21px] font-extrabold mt-0.5">${escHtml(String(balance))} <span class="text-[12px]">جنيه</span></div>
+        </div>
+        <button onclick="setTab('wallet')" class="rounded-xl bg-white text-blue-800 px-3 py-2 text-[11px] font-extrabold">
+          المحفظة
+        </button>
+      </div>
+
+      <div class="mt-3">
+        <div class="text-[10px] text-blue-100/75 mb-2">تخصصاتك</div>
+        <div class="flex flex-wrap gap-1.5">
+          ${specialties.map(s=>`
+            <span class="text-[10px] px-2.5 py-1 rounded-full bg-white/10 border border-white/10">
+              ${escHtml(s)}
+            </span>`).join('')||'<span class="text-[10px] text-blue-100/75">لم يتم إرجاع التخصصات من الخادم</span>'}
         </div>
       </div>
+
+      <div class="mt-3 text-[11px] text-blue-100/80 leading-5">
+        <span class="font-bold text-white">مناطق العمل:</span>
+        ${escHtml(areas.join('، ')||'غير محددة')}
+      </div>
+    </section>
+
+    <section class="mt-4">
+      <div class="grid grid-cols-4 gap-2">
+        ${[
+          {id:'available',icon:'📋',label:'الطلبات',count:state.filteredOrders.length},
+          {id:'myOffers',icon:'💼',label:'عروضي',count:state.myOffers.length},
+          {id:'wallet',icon:'💳',label:'المحفظة'},
+          {id:'profile',icon:'👤',label:'حسابي'}
+        ].map(t=>`
+          <button onclick="setTab('${t.id}')"
+            class="rounded-2xl border p-2.5 flex flex-col items-center justify-center gap-1.5 min-h-[78px]
+            ${state.tab===t.id?'bg-blue-50 border-blue-300 text-blue-800':'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}">
+            <span class="text-lg">${t.icon}</span>
+            <span class="text-[10px] font-extrabold">${t.label}</span>
+            ${t.count!==undefined?`<span class="text-[9px] rounded-full bg-white/80 border border-slate-200 px-2 py-0.5">${t.count}</span>`:''}
+          </button>`).join('')}
+      </div>
+    </section>
+
+    ${state.tab==='available'?`
+      <section class="mt-4 space-y-3">
+        <div class="flex justify-between items-center gap-2 px-1">
+          <h3 class="section-title">الطلبات المتاحة</h3>
+          <button onclick="loadOrders()" class="text-[11px] font-extrabold text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+            ↻ تحديث
+          </button>
+        </div>
+
+        <div class="panel p-3 space-y-2">
+          <input value="${escAttr(state.search)}"
+            oninput="onSearch(this.value)"
+            placeholder="ابحث بكود الطلب أو المنطقة"
+            class="field">
+
+          <div class="flex gap-2">
+            <select onchange="onFilterSkill(this.value)"
+              class="field flex-1 min-w-0">
+              <option>الكل</option>
+              ${ALL_SERVICES.map(s=>`
+                <option ${state.filterSkill===s?'selected':''}>${escHtml(s)}</option>`).join('')}
+            </select>
+            <button onclick="loadOrders()" class="secondary-btn px-4 text-[11px] shrink-0">تحديث</button>
+          </div>
+        </div>
+
+        ${state.loading?`
+          <div class="panel p-7 text-center">
+            <div class="text-2xl mb-2">⏳</div>
+            <p class="text-[12px] font-bold text-slate-500">جاري تحميل الطلبات...</p>
+          </div>`:''}
+
+        ${!state.loading&&!state.filteredOrders.length?`
+          <div class="panel p-8 text-center">
+            <div class="mx-auto h-14 w-14 rounded-2xl bg-blue-50 flex items-center justify-center text-2xl">📋</div>
+            <p class="text-[13px] font-extrabold text-slate-700 mt-3">لا توجد طلبات متاحة حاليًا</p>
+            <p class="text-[11px] text-slate-500 mt-1">تقدر تحدّث القائمة بعد شوية.</p>
+          </div>`:''}
+
+        ${state.filteredOrders.map(o=>{
+          const sn=o.sn||o._id||'';
+          return `
+            <article class="panel p-4">
+              <div class="flex justify-between items-start gap-3">
+                <div class="min-w-0">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class="font-black text-[11px] font-mono bg-[#0b1b3a] text-white px-2.5 py-1 rounded-lg">
+                      ${escHtml(sn)}
+                    </span>
+                    <span class="text-[10px] px-2.5 py-1 rounded-full bg-blue-50 border border-blue-100 text-blue-700 font-extrabold">
+                      ${escHtml(o.service||'')}
+                    </span>
+                  </div>
+                  <p class="mt-3 text-[12px] font-bold text-slate-700">📍 ${escHtml(o.area||o.address||'')}</p>
+                  <p class="mt-1 text-[11px] text-slate-500">👤 ${escHtml(o.clientName||'عميل')}</p>
+                </div>
+                <span class="text-[10px] px-2 py-1 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 font-bold shrink-0">
+                  ${escHtml(o.status||'جديد')}
+                </span>
+              </div>
+
+              <p class="mt-3 text-[12px] bg-slate-50 border border-slate-100 rounded-xl p-3 leading-6 break-words">
+                ${escHtml((o.description||o.desc||'بدون وصف').slice(0,180))}
+              </p>
+
+              <button onclick="openOffer(${escAttr(JSON.stringify(sn))})"
+                class="primary-btn mt-3 w-full h-11 text-[12px]">
+                تقديم عرض لهذا الطلب
+              </button>
+            </article>`;
+        }).join('')}
+      </section>
     `:''}
+
+    ${state.tab==='myOffers'?`
+      <section class="mt-4 space-y-3">
+        <div class="flex justify-between items-center gap-2 px-1">
+          <h3 class="section-title">عروضي</h3>
+          <button onclick="loadMyOffers()" class="secondary-btn px-3 py-2 text-[11px]">تحديث العروض</button>
+        </div>
+
+        ${!state.myOffers.length?`
+          <div class="panel p-8 text-center">
+            <div class="mx-auto h-14 w-14 rounded-2xl bg-blue-50 flex items-center justify-center text-2xl">💼</div>
+            <p class="text-[13px] font-extrabold text-slate-700 mt-3">لسه مقدمتش عروض</p>
+            <p class="text-[11px] text-slate-500 mt-1">العروض اللي تقدمها هتظهر هنا.</p>
+          </div>`:state.myOffers.map(of=>`
+            <article class="panel p-4">
+              <div class="flex justify-between items-start gap-3">
+                <div>
+                  <div class="text-[10px] text-slate-500">كود الطلب</div>
+                  <b class="font-mono text-[12px]">${escHtml(of.orderSn||of.sn||'')}</b>
+                </div>
+                <div class="text-left">
+                  <div class="text-[10px] text-slate-500">السعر</div>
+                  <b class="text-blue-700 text-[15px]">${escHtml(String(of.price||''))} جنيه</b>
+                </div>
+              </div>
+              <p class="mt-3 text-[11px] text-slate-600">
+                الحالة:
+                <span class="font-bold">${escHtml(of.status||'بانتظار موافقة العميل')}</span>
+              </p>
+              <p class="mt-2 text-[12px] bg-slate-50 border border-slate-100 rounded-xl p-3 leading-6">
+                ${escHtml(of.message||'')}
+              </p>
+            </article>`).join('')}
+      </section>
+    `:''}
+
+    ${state.tab==='wallet'?`
+      <section class="mt-4 space-y-4">
+        <div class="panel p-4 sm:p-5">
+          <div class="flex justify-between items-center gap-3">
+            <div>
+              <h3 class="section-title">محفظتي</h3>
+              <p class="text-[10px] text-slate-500 mt-1">طلبات الشحن ومتابعة الرصيد</p>
+            </div>
+            <div class="rounded-xl bg-blue-50 border border-blue-100 px-3 py-2 text-blue-800">
+              <div class="text-[9px] font-bold">الرصيد الحالي</div>
+              <div class="text-[15px] font-extrabold">${escHtml(String(balance))} ج</div>
+            </div>
+          </div>
+
+          <div class="mt-4 rounded-2xl bg-blue-50 border border-blue-100 p-4">
+            <div class="flex items-center gap-2">
+              <span class="h-9 w-9 rounded-xl bg-white flex items-center justify-center text-xl">💳</span>
+              <div>
+                <p class="text-[11px] font-extrabold text-blue-900">رقم المحفظة المعتمد في الصفحة</p>
+                <p class="text-[17px] font-black text-blue-800 font-mono" dir="ltr">01152822263</p>
+              </div>
+            </div>
+            <p class="text-[10px] text-blue-800/80 mt-2 leading-5">
+              راجع الرقم وبيانات التحويل قبل إرسال أي مبلغ. طلب الشحن يحتاج مراجعة الإدارة.
+            </p>
+          </div>
+
+          <div class="mt-4 space-y-3">
+            <div>
+              <label class="field-label">رقم الهاتف المحوّل منه *</label>
+              <input value="${escAttr(state.walletFromPhone)}"
+                oninput="state.walletFromPhone=this.value.replace(/\\D/g,'').slice(0,11)"
+                inputmode="numeric" placeholder="01xxxxxxxxx" class="field">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="field-label">المبلغ بالجنيه *</label>
+                <input type="number" min="10" max="10000"
+                  value="${escAttr(state.walletAmount)}"
+                  oninput="state.walletAmount=this.value.slice(0,5)"
+                  placeholder="100" class="field">
+              </div>
+              <div>
+                <label class="field-label">طريقة التحويل</label>
+                <select onchange="state.walletMethod=this.value" class="field">
+                  <option value="vodafone_cash" ${state.walletMethod==='vodafone_cash'?'selected':''}>فودافون كاش</option>
+                  <option value="etisalat_cash" ${state.walletMethod==='etisalat_cash'?'selected':''}>اتصالات كاش</option>
+                  <option value="orange_money" ${state.walletMethod==='orange_money'?'selected':''}>أورنج موني</option>
+                  <option value="bank_transfer" ${state.walletMethod==='bank_transfer'?'selected':''}>تحويل بنكي</option>
+                  <option value="other" ${state.walletMethod==='other'?'selected':''}>أخرى</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="field-label">الكود المرجعي للتحويل</label>
+              <input value="${escAttr(state.walletRef)}"
+                oninput="state.walletRef=sanitize(this.value,100)"
+                placeholder="اكتب الكود إن وجد" class="field">
+            </div>
+
+            <button onclick="submitWallet()" ${state.walletLoading?'disabled':''}
+              class="primary-btn w-full h-12">
+              ${state.walletLoading?'جاري إرسال الطلب...':'إرسال طلب الشحن للإدارة'}
+            </button>
+
+            ${state.success?`
+              <p class="text-[12px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-xl p-3">
+                ${escHtml(state.success)}
+              </p>`:''}
+
+            ${state.error?`
+              <p class="text-[12px] font-bold text-red-600 bg-red-50 border border-red-100 rounded-xl p-3">
+                ${escHtml(state.error)}
+              </p>`:''}
+          </div>
+        </div>
+
+        <div class="panel p-4">
+          <div class="flex justify-between items-center gap-2">
+            <div>
+              <h4 class="text-[13px] font-extrabold">سجل الشحن</h4>
+              <p class="text-[10px] text-slate-500 mt-1">حالة طلبات الشحن السابقة</p>
+            </div>
+            <button onclick="loadWalletHistory()" class="secondary-btn px-3 py-2 text-[10px]">تحديث</button>
+          </div>
+
+          <div class="mt-3 space-y-2">
+            ${!state.walletHistory.length?`
+              <div class="rounded-xl bg-slate-50 p-5 text-center">
+                <div class="text-xl">🧾</div>
+                <p class="text-[11px] text-slate-500 mt-2">لا توجد طلبات شحن سابقة أو لم يتوفر مسار السجل.</p>
+              </div>`:state.walletHistory.map(h=>`
+              <div class="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                <div class="flex justify-between gap-2">
+                  <p class="text-[12px] font-extrabold">${escHtml(String(h.amount||''))} جنيه</p>
+                  <p class="text-[10px] text-slate-500">${escHtml(h.fromPhone||h.phone||'')}</p>
+                </div>
+                <p class="text-[10px] text-slate-500 mt-2">الكود: ${escHtml(h.reference||h.referenceCode||'بدون')}</p>
+                <p class="text-[10px] mt-1 text-blue-700 font-bold">الحالة: ${escHtml(h.status||'قيد المراجعة')}</p>
+              </div>`).join('')}
+          </div>
+        </div>
+      </section>
+    `:''}
+
+    ${state.tab==='profile'?`
+      <section class="mt-4 panel p-4 sm:p-5">
+        <div class="flex items-center gap-3 pb-4 border-b border-slate-100">
+          <div class="h-12 w-12 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center text-2xl">👤</div>
+          <div>
+            <h3 class="section-title">بيانات حسابي</h3>
+            <p class="text-[10px] text-slate-500 mt-1">معلومات الحساب المسجلة</p>
+          </div>
+        </div>
+
+        <div class="mt-4 space-y-3 text-[12px]">
+          <div class="rounded-xl bg-slate-50 border border-slate-100 p-3">
+            <div class="text-[10px] text-slate-500 mb-1">الاسم</div>
+            <b>${escHtml(user?.name||'غير متاح')}</b>
+          </div>
+          <div class="rounded-xl bg-slate-50 border border-slate-100 p-3">
+            <div class="text-[10px] text-slate-500 mb-1">رقم الهاتف</div>
+            <b dir="ltr" class="inline-block">${escHtml(user?.phone||'غير متاح')}</b>
+          </div>
+          <div class="rounded-xl bg-slate-50 border border-slate-100 p-3">
+            <div class="text-[10px] text-slate-500 mb-1">التخصصات</div>
+            <p class="leading-6">${escHtml(specialties.join('، ')||'غير متاحة')}</p>
+          </div>
+          <div class="rounded-xl bg-slate-50 border border-slate-100 p-3">
+            <div class="text-[10px] text-slate-500 mb-1">مناطق العمل</div>
+            <p class="leading-6">${escHtml(areas.join('، ')||'غير متاحة')}</p>
+          </div>
+          <div class="rounded-xl bg-blue-50 border border-blue-100 p-3 flex justify-between items-center">
+            <span class="text-blue-800 font-bold">رصيد المحفظة</span>
+            <b class="text-blue-800">${escHtml(String(balance))} جنيه</b>
+          </div>
+        </div>
+
+        <button onclick="logout()" class="mt-4 w-full h-11 rounded-xl bg-red-50 border border-red-100 text-red-700 font-extrabold text-[12px]">
+          تسجيل الخروج
+        </button>
+      </section>
+    `:''}
+  `}
+
+  ${state.offerModal?`
+    <div class="fixed inset-0 z-50 bg-[#07152e]/55 backdrop-blur-sm flex items-end sm:items-center justify-center p-3">
+      <div class="w-full max-w-[480px] bg-white rounded-[22px] p-5 shadow-2xl animate-fade">
+        <div class="flex justify-between items-center gap-3 pb-3 border-b border-slate-100">
+          <div>
+            <h3 class="font-extrabold text-[15px]">تقديم عرض</h3>
+            <p class="text-[10px] text-slate-500 mt-1">كود الطلب: ${escHtml(state.offerModal.sn)}</p>
+          </div>
+          <button onclick="closeOffer()" class="h-9 w-9 rounded-xl bg-slate-100 text-slate-600">✕</button>
+        </div>
+
+        <div class="mt-4 space-y-4">
+          <div>
+            <label class="field-label">السعر بالجنيه *</label>
+            <input type="number" min="10" max="10000"
+              value="${escAttr(state.offerPrice)}"
+              oninput="state.offerPrice=this.value.slice(0,6)"
+              placeholder="150" class="field">
+          </div>
+
+          <div>
+            <label class="field-label">رسالتك للعميل *</label>
+            <textarea oninput="state.offerMessage=sanitize(this.value,500)"
+              placeholder="اكتب تفاصيل العرض والوقت المتوقع للوصول..."
+              class="field min-h-[100px] resize-y">${escHtml(state.offerMessage)}</textarea>
+            <p class="text-[10px] text-slate-500 mt-1">من 5 إلى 500 حرف.</p>
+          </div>
+
+          <button onclick="submitOffer()" ${state.loading?'disabled':''}
+            class="primary-btn w-full h-12">
+            ${state.loading?'جاري إرسال العرض...':'إرسال العرض للعميل'}
+          </button>
+        </div>
+      </div>
+    </div>
+  `:''}
+
   </main>
 
-  <nav class="fixed bottom-0 inset-x-0 z-30 border-t bg-white/95 backdrop-blur-xl safe-bottom">
-    <div class="mx-auto max-w-[640px] px-2 h-[72px] grid grid-cols-4 gap-1">
-      ${getToken()?`
-        <button onclick="setTab('available')" class="rounded-[12px] flex flex-col items-center justify-center gap-1 ${state.tab==='available'?'bg-[#0f172a] text-white':'text-slate-500'}"><span class="text-[14px]">📋</span><span class="text-[9px] font-bold">طلبات</span></button>
-        <button onclick="setTab('myOffers')" class="rounded-[12px] flex flex-col items-center justify-center gap-1 ${state.tab==='myOffers'?'bg-[#0f172a] text-white':'text-slate-500'}"><span class="text-[14px]">💼</span><span class="text-[9px] font-bold">عروضي</span></button>
-        <button onclick="setTab('wallet')" class="rounded-[12px] flex flex-col items-center justify-center gap-1 ${state.tab==='wallet'?'bg-[#0f172a] text-white':'text-slate-500'}"><span class="text-[14px]">💳</span><span class="text-[9px] font-bold">محفظتي</span></button>
-        <button onclick="setTab('profile')" class="rounded-[12px] flex flex-col items-center justify-center gap-1 ${state.tab==='profile'?'bg-[#0f172a] text-white':'text-slate-500'}"><span class="text-[14px]">👤</span><span class="text-[9px] font-bold">حسابي</span></button>
-      `:`
-        <button onclick="setTab('login')" class="rounded-[12px] flex flex-col items-center justify-center gap-1 ${state.tab==='login'?'bg-[#0f172a] text-white':'text-slate-500'}"><span class="text-[14px]">🔑</span><span class="text-[10px] font-bold">دخول</span></button>
-        <button onclick="setTab('register')" class="rounded-[12px] flex flex-col items-center justify-center gap-1 ${state.tab==='register'?'bg-[#0f172a] text-white':'text-slate-500'}"><span class="text-[14px]">📝</span><span class="text-[10px] font-bold">تسجيل</span></button>
-        <button onclick="goClient()" class="rounded-[12px] flex flex-col items-center justify-center gap-1 text-[#f97316] bg-orange-50 border border-orange-100"><span class="text-[14px]">👥</span><span class="text-[9px] font-bold">عميل</span></button>
-        <button onclick="setTab('wallet')" class="rounded-[12px] flex flex-col items-center justify-center gap-1 text-slate-400"><span class="text-[14px]">💳</span><span class="text-[9px] font-bold">شحن</span></button>
+  <nav class="fixed bottom-0 inset-x-0 z-30 border-t border-slate-200 bg-white/95 backdrop-blur-xl safe-bottom">
+    <div class="mx-auto max-w-[680px] px-2 h-[70px] grid grid-cols-4 gap-1">
+      ${getToken()?[
+        {id:'available',icon:'📋',label:'الطلبات'},
+        {id:'myOffers',icon:'💼',label:'عروضي'},
+        {id:'wallet',icon:'💳',label:'المحفظة'},
+        {id:'profile',icon:'👤',label:'حسابي'}
+      ].map(t=>`
+        <button onclick="setTab('${t.id}')"
+          class="rounded-xl flex flex-col items-center justify-center gap-1
+          ${state.tab===t.id?'bg-blue-50 text-blue-800':'text-slate-500 hover:bg-slate-50'}">
+          <span class="text-[18px]">${t.icon}</span>
+          <span class="text-[9px] font-extrabold">${t.label}</span>
+        </button>`).join(''):`
+        <button onclick="setTab('login')" class="rounded-xl flex flex-col items-center justify-center text-slate-600">
+          <span>🔑</span><span class="text-[10px] font-bold">دخول</span>
+        </button>
+        <button onclick="setTab('register')" class="rounded-xl flex flex-col items-center justify-center text-slate-600">
+          <span>📝</span><span class="text-[10px] font-bold">تسجيل</span>
+        </button>
+        <button onclick="goClient()" class="rounded-xl flex flex-col items-center justify-center text-blue-700">
+          <span>👥</span><span class="text-[10px] font-bold">عميل</span>
+        </button>
+        <button onclick="setTab('register')" class="rounded-xl flex flex-col items-center justify-center text-slate-600">
+          <span>🧑‍🔧</span><span class="text-[10px] font-bold">فني</span>
+        </button>
       `}
     </div>
-  </nav>
-  `;
+  </nav>`;
 }
 
-function setTab(t){ state.tab=t; state.error=''; state.success=''; state.pendingMsg=''; render(); if(t==='wallet') loadWalletHistory(); }
-function onSearch(v){ state.search=sanitize(v,50); applyFilter(); }
-function onFilterSkill(v){ state.filterSkill=v; applyFilter(); }
-function applyFilter(){
-  let list=[...state.orders];
-  if(state.filterSkill!=='الكل') list=list.filter(o=> (o.service||'').includes(state.filterSkill));
-  if(state.search){ const s=state.search.toLowerCase(); list=list.filter(o=> (o.sn||'').toLowerCase().includes(s) || (o.area||'').toLowerCase().includes(s) || (o.service||'').toLowerCase().includes(s)); }
-  state.filteredOrders=list; render();
-}
-
+// ========= AUTH =========
 async function doLogin(){
-  if(!V.phone(state.loginPhone)){ state.error='رقم التليفون غير صحيح'; render(); return; }
-  if(!V.text(state.loginPass,4,100)){ state.error='كلمة السر قصيرة'; render(); return; }
-  state.loading=true; state.error=''; state.pendingMsg=''; render();
+  if(!V.phone(state.loginPhone)){
+    state.error='رقم التليفون غير صحيح';
+    render();
+    return;
+  }
+
+  if(!V.text(state.loginPass,1,100)){
+    state.error='اكتب كلمة السر';
+    render();
+    return;
+  }
+
+  state.loading=true;
+  state.error='';
+  state.pendingMsg='';
+  render();
+
   try{
-    let res = await API.login({phone:state.loginPhone.replace(/\D/g,''), password:state.loginPass, clientPhone:state.loginPhone, phoneNumber:state.loginPhone});
-    let token = res.token||res.accessToken||res.data?.token;
-    let user = res.fanni||res.user||res.data||res.profile||{name:'فني', phone:state.loginPhone};
-    if(!token && (res.status==='pending'||res.data?.status==='pending')){
-      throw new Error('PENDING');
-    }
-    if(!token) throw new Error('السيرفر لم يرجع توكن - قد يكون الحساب قيد المراجعة');
-    setAuth(token,user);
-    state.tab='available'; state.loading=false;
-    showToast('تم الدخول بنجاح','success');
-    loadOrders(); loadMyOffers(); loadWalletHistory();
+    const res=await API.login({
+      phone:state.loginPhone.replace(/\D/g,''),
+      password:state.loginPass
+    });
+
+    const token=res.token||res.accessToken||res.data?.token;
+    const user=res.user||res.fanni||res.data?.user;
+
+    if(!token)
+      throw new Error('السيرفر لم يرجع رمز الدخول. راجع استجابة تسجيل الدخول في الباك إند.');
+
+    setAuth(token,user||{name:'فني',phone:state.loginPhone});
+
+    state.loading=false;
+    state.tab='available';
+    showToast('تم الدخول بنجاح');
+    render();
+
+    loadOrders();
+    loadMyOffers();
+    loadWalletHistory();
   }catch(e){
     state.loading=false;
-    const msg = String(e.message||'');
-    if(msg.includes('PENDING')||msg.includes('قيد المراجعة')||msg.includes('انتظار')||msg.includes('مراجعة')||msg.includes('pending')||msg.includes('review')){
-      state.pendingMsg = 'حسابك قيد المراجعة من الإدارة - سيتم تفعيله قريباً.';
-      showToast(state.pendingMsg,'pending');
+
+    if(/pending|review|مراجعة|انتظار|قيد/i.test(e.message)){
+      state.pendingMsg='حسابك قيد المراجعة من الإدارة.';
+      state.error='';
     }else{
-      state.error=msg;
+      state.error=e.message;
     }
+
     render();
   }
 }
 
 async function doRegister(){
-  if(!V.text(state.regName,3,50)){ state.error='الاسم قصير'; render(); return; }
-  if(!V.phone(state.regPhone)){ state.error='رقم التليفون غير صحيح'; render(); return; }
-  if(!V.text(state.regPass,6,100)){ state.error='كلمة السر 6 حروف على الأقل'; render(); return; }
-  state.loading=true; state.error=''; state.success=''; render();
-  try{
-    let payload={
-      name:sanitize(state.regName,50), 
-      phone:state.regPhone.replace(/\D/g,''),
-      skill:state.regSkill,
-      service:state.regSkill,
-      serviceType:state.regSkill,
-      city:sanitize(state.regCity,30),
-      area:sanitize(state.regCity,30),
-      password:state.regPass,
-      clientName:sanitize(state.regName,50),
-      clientPhone:state.regPhone.replace(/\D/g,''),
-      // حقول للادمن
-      status:'pending',
-      isApproved:false,
-      role:'fanni'
-    };
-    let res = await API.register(payload);
-    state.loading=false; state.success='تم التسجيل! حسابك الآن قيد المراجعة من الإدارة'; state.tab='login'; state.loginPhone=state.regPhone;
-    showToast('تم التسجيل - بانتظار موافقة الإدارة','pending');
+  if(!V.text(state.regName,2,50)){
+    state.error='الاسم لازم يكون حرفين على الأقل';
     render();
-  }catch(e){ state.loading=false; state.error=e.message; render(); }
-}
+    return;
+  }
 
-async function loadOrders(){
-  if(!getToken()) return;
-  state.loading=true; render();
+  if(!V.phone(state.regPhone)){
+    state.error='رقم التليفون غير صحيح';
+    render();
+    return;
+  }
+
+  if(!state.regSpecialties.length){
+    state.error='اختار تخصصًا واحدًا على الأقل';
+    render();
+    return;
+  }
+
+  const areas=parseAreas(state.regAreasText);
+
+  if(!areas.length){
+    state.error='اكتب منطقة عمل واحدة على الأقل';
+    render();
+    return;
+  }
+
+  if(!V.text(state.regPass,6,100)){
+    state.error='كلمة السر لازم تكون 6 أحرف على الأقل';
+    render();
+    return;
+  }
+
+  state.loading=true;
+  state.error='';
+  state.success='';
+  render();
+
   try{
-    let data = await API.getAvailable();
-    let orders = data.orders||data.data||data||[];
-    if(!Array.isArray(orders)) orders=[orders];
-    state.orders=orders; state.filteredOrders=orders;
-    state.loading=false; applyFilter();
+    // مطابقة الحقول المطلوبة في مسار تسجيل الفني.
+    const payload={
+      name:sanitize(state.regName,50),
+      phone:state.regPhone.replace(/\D/g,''),
+      password:state.regPass,
+      specialties:[...state.regSpecialties],
+      areas
+    };
+
+    await API.register(payload);
+
+    state.loading=false;
+    state.success='';
+    state.loginPhone=state.regPhone;
+    state.regName='';
+    state.regPhone='';
+    state.regPass='';
+    state.regSpecialties=[ALL_SERVICES[0]];
+    state.regAreasText='';
+    state.tab='login';
+    state.pendingMsg='تم إنشاء الحساب بنجاح. حسابك قيد مراجعة الإدارة.';
+    state.error='';
+
+    showToast('تم التسجيل - الحساب بانتظار مراجعة الإدارة','pending');
+    render();
   }catch(e){
     state.loading=false;
-    if(String(e.message).includes('404')||String(e.message).includes('غير موجود')){
-      showToast('لا يوجد طلبات حالياً','pending');
-      state.filteredOrders=[]; render();
-    }else{
-      showToast(e.message,'error'); render();
-    }
+    state.error=e.message;
+    render();
+  }
+}
+
+// ========= ORDERS =========
+async function loadOrders(){
+  if(!getToken())return;
+
+  state.loading=true;
+  render();
+
+  try{
+    const data=await API.getAvailable();
+    let orders=data.orders||data.data||data||[];
+
+    if(!Array.isArray(orders))orders=[];
+
+    state.orders=orders;
+    applyFilter();
+    state.loading=false;
+    render();
+  }catch(e){
+    state.loading=false;
+    state.filteredOrders=[];
+    render();
+    showToast(e.message,'error');
   }
 }
 
 async function loadMyOffers(){
-  if(!getToken()) return;
+  if(!getToken())return;
+
   try{
-    let data = await API.getMyOffers();
-    let offers = data.offers||data.data||data||[];
-    if(!Array.isArray(offers)) offers=[offers];
-    state.myOffers=offers; render();
-  }catch(e){ log('myOffers',e); }
+    const data=await API.getMyOffers();
+    let offers=data.offers||data.data||data||[];
+
+    state.myOffers=Array.isArray(offers)?offers:[];
+    render();
+  }catch(e){
+    log('myOffers',e);
+  }
 }
 
 async function loadWalletHistory(){
+  if(!getToken())return;
+
   try{
-    let data = await API.getWalletHistory();
-    state.walletHistory = data.history||data.data||data.requests||[];
-    state.walletBalance = data.balance||data.wallet||data.total||0;
-    if(!Array.isArray(state.walletHistory)) state.walletHistory=[state.walletHistory];
+    const data=await API.getWalletHistory();
+
+    state.walletHistory=data.history||data.requests||data.data||[];
+
+    if(!Array.isArray(state.walletHistory))
+      state.walletHistory=[];
+
+    state.walletBalance=data.balance??data.walletBalance??data.wallet??0;
     render();
-  }catch{ }
+  }catch(e){
+    log('wallet history',e);
+  }
 }
 
+// ========= WALLET =========
 async function submitWallet(){
-  if(state.walletLoading) return;
-  if(!V.phone(state.walletFromPhone)){ showToast('رقم الهاتف المحول منه غير صحيح','error'); return; }
-  if(!V.amount(state.walletAmount)){ showToast('قيمة التحويل من 10 إلى 10000','error'); return; }
-  state.walletLoading=true; state.error=''; state.success=''; render();
+  if(state.walletLoading)return;
+
+  if(!V.phone(state.walletFromPhone)){
+    showToast('رقم الهاتف المحول منه غير صحيح','error');
+    return;
+  }
+
+  if(!V.amount(state.walletAmount)){
+    showToast('قيمة التحويل من 10 إلى 10000 جنيه','error');
+    return;
+  }
+
+  state.walletLoading=true;
+  state.error='';
+  state.success='';
+  render();
+
   try{
-    await API.submitWallet({fromPhone:state.walletFromPhone, amount:state.walletAmount, reference:state.walletRef, method:state.walletMethod});
-    state.walletLoading=false; state.success='تم إرسال طلب الشحن بنجاح - سيتم مراجعته من الإدارة'; state.walletFromPhone=''; state.walletAmount=''; state.walletRef='';
-    showToast('تم إرسال طلب الشحن - قيد المراجعة','success');
-    loadWalletHistory(); render();
-  }catch(e){ state.walletLoading=false; state.error=e.message; render(); showToast(e.message,'error'); }
+    await API.submitWallet({
+      fromPhone:state.walletFromPhone,
+      amount:state.walletAmount,
+      reference:state.walletRef,
+      method:state.walletMethod
+    });
+
+    state.walletLoading=false;
+    state.success='تم إرسال طلب الشحن للمراجعة.';
+    state.walletFromPhone='';
+    state.walletAmount='';
+    state.walletRef='';
+
+    showToast('تم إرسال طلب الشحن');
+    await loadWalletHistory();
+    render();
+  }catch(e){
+    state.walletLoading=false;
+    state.error=e.message;
+    render();
+    showToast(e.message,'error');
+  }
 }
 
-function openOffer(sn){ state.offerModal={sn}; state.offerPrice=''; state.offerMessage=''; render(); }
-function closeOffer(){ state.offerModal=null; render(); }
+// ========= OFFERS =========
+function openOffer(sn){
+  state.offerModal={sn};
+  state.offerPrice='';
+  state.offerMessage='';
+  state.error='';
+  render();
+}
+
+function closeOffer(){
+  state.offerModal=null;
+  render();
+}
 
 async function submitOffer(){
-  if(!state.offerModal) return;
-  if(state.loading) return;
-  state.loading=true; render();
+  if(!state.offerModal||state.loading)return;
+
+  state.loading=true;
+  render();
+
   try{
-    await API.sendOffer(state.offerModal.sn, {price:state.offerPrice, message:state.offerMessage});
-    state.loading=false; state.offerModal=null;
-    showToast('تم إرسال العرض للعميل','success');
-    loadMyOffers(); render();
-  }catch(e){ state.loading=false; showToast(e.message,'error'); render(); }
+    await API.sendOffer(state.offerModal.sn,{
+      price:state.offerPrice,
+      message:state.offerMessage
+    });
+
+    state.loading=false;
+    state.offerModal=null;
+    showToast('تم إرسال العرض للعميل');
+    render();
+    loadMyOffers();
+  }catch(e){
+    state.loading=false;
+    render();
+    showToast(e.message,'error');
+  }
 }
 
-function logout(){ clearAuth(); state.tab='login'; state.orders=[]; state.filteredOrders=[]; state.myOffers=[]; showToast('تم تسجيل الخروج','success'); render(); }
+// ========= LOGOUT =========
+function logout(){
+  clearAuth();
+  state.tab='login';
+  state.orders=[];
+  state.filteredOrders=[];
+  state.myOffers=[];
+  state.walletHistory=[];
+  state.walletBalance=0;
+  state.error='';
+  state.success='';
+  state.pendingMsg='';
 
+  showToast('تم تسجيل الخروج');
+  render();
+}
+
+// ========= START =========
 render();
-if(getToken()){ loadOrders(); loadMyOffers(); loadWalletHistory(); }
+
+if(getToken()){
+  loadOrders();
+  loadMyOffers();
+  loadWalletHistory();
+}
 </script>
 </body>
 </html>
