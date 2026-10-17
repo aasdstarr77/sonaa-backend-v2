@@ -7,17 +7,18 @@ const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 
 const Order = require('../models/Order');
+const Fanni = require('../models/Fanni');
+const WalletTransaction = require('../models/WalletTransaction');
 const { auth } = require('../middleware/auth');
 const { generateSN } = require('../utils/generateSN');
 const { normalizePhone } = require('../utils/phone');
 
 const router = express.Router();
 
-// الطلب لا يصبح متاحًا للفنيين إلا بعد نشره من الإدارة.
 const ACTIVE_STATUSES = ['تم النشر', 'وصلتك عروض'];
 const ORDER_EXPIRY_HOURS = 48;
+const COMMISSION_RATE = 10;
 
-// مطابقة أرقام الموبايل المصرية، سواء محلية أو بمفتاح الدولة.
 const EGYPT_PHONE_PATTERN =
   /(?:\+?20|0020)?[\s().-]*0?1[0125](?:[\s().-]*[0-9٠-٩]){8}/g;
 
@@ -29,7 +30,6 @@ function toWesternDigits(value) {
   );
 }
 
-// إخفاء الأرقام داخل النصوص المعادة فقط، دون تعديل البيانات المخزنة.
 function sanitizeText(value) {
   if (typeof value !== 'string') return value;
 
@@ -44,7 +44,6 @@ function sanitizeOffer(offer) {
     ? offer.toObject()
     : { ...offer };
 
-  // لا نعيد بيانات الاتصال أو المعرّفات الداخلية للفني للعميل.
   delete safeOffer.fanniPhone;
   delete safeOffer.phone;
   delete safeOffer.fanniId;
@@ -57,24 +56,48 @@ function sanitizeOffer(offer) {
   return safeOffer;
 }
 
+/*
+ * بيانات الاتصال لا تظهر في الاستجابة العامة.
+ * assignedFanniPhone لا يظهر إلا لصاحب الطلب بعد قبول العرض.
+ */
 function publicOrder(order, options = {}) {
-  const { includeAddress = true } = options;
+  const {
+    includeAddress = true,
+    includeAssignedFanniPhone = false
+  } = options;
 
   const data = typeof order.toObject === 'function'
     ? order.toObject()
     : { ...order };
 
-  // لا نكشف العنوان التفصيلي إلا عند السماح الصريح بذلك.
   if (!includeAddress) {
     delete data.address;
   }
 
-  // حماية بيانات العميل في الاستجابات العامة.
   delete data.clientPhone;
   delete data.phone;
-
-  // لا نكشف المعرّف الداخلي للفني المعيّن.
   delete data.assignedFanni;
+  delete data.assignedFanniPhone;
+
+  if (
+    includeAssignedFanniPhone
+    && data.status === 'تم اختيار فني'
+    && data.assignedFanni
+  ) {
+    const acceptedOffer = Array.isArray(data.offers)
+      ? data.offers.find(offer =>
+          String(offer._id) === String(data.acceptedOfferId)
+          || (
+            !data.acceptedOfferId
+            && String(offer.fanni) === String(data.assignedFanni)
+          )
+        )
+      : null;
+
+    if (acceptedOffer && acceptedOffer.fanniPhone) {
+      data.assignedFanniPhone = acceptedOffer.fanniPhone;
+    }
+  }
 
   if (typeof data.description === 'string') {
     data.description = sanitizeText(data.description);
@@ -93,18 +116,11 @@ function publicOrder(order, options = {}) {
 
 const createSchema = Joi.object({
   service: Joi.string().trim().min(2).max(100).required(),
-
-  // المنطقة العامة أو الحي.
   area: Joi.string().trim().min(2).max(250).required(),
-
-  // العنوان التفصيلي منفصل عن المنطقة.
   address: Joi.string().trim().min(2).max(250).allow('').optional(),
-
   phone: Joi.string().trim().required(),
   clientPhone: Joi.string().trim(),
-
   clientName: Joi.string().trim().max(50).allow(''),
-
   description: Joi.string().trim().min(10).max(1000),
   desc: Joi.string().trim().min(10).max(1000).allow('')
 }).unknown(false);
@@ -144,13 +160,19 @@ function verifyClientToken(req, order) {
   }
 }
 
-// إنشاء طلب جديد للعميل؛ يظل قيد المراجعة إلى أن تنشره الإدارة.
+function money(value) {
+  return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+}
+
+function getAcceptedOffer(order, offerId) {
+  return order.offers.id(offerId);
+}
+
+// إنشاء طلب جديد للعميل.
 router.post('/', async (req, res, next) => {
   try {
     const body = {
       ...req.body,
-
-      // area للمنطقة العامة وaddress للعنوان التفصيلي.
       phone: req.body.clientPhone || req.body.phone,
       description: req.body.description || req.body.desc
     };
@@ -273,7 +295,6 @@ router.post(
         });
       }
 
-      // تحديث مشروط لمنع نشر الطلب مرتين بالتزامن.
       const order = await Order.findOneAndUpdate(
         {
           sn,
@@ -322,8 +343,8 @@ router.post(
 );
 
 /*
- * الطلبات المتاحة للفني المعتمد.
- * الطلبات قيد المراجعة لا تظهر هنا.
+ * الطلبات المتاحة للفنيين المعتمدين.
+ * لا يظهر العنوان التفصيلي أو رقم العميل هنا.
  */
 router.get('/available', auth(), async (req, res, next) => {
   try {
@@ -341,7 +362,6 @@ router.get('/available', auth(), async (req, res, next) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    // الفني يرى المنطقة العامة، ولا يحصل على العنوان التفصيلي هنا.
     const safeOrders = orders.map(order => publicOrder(order, {
       includeAddress: false
     }));
@@ -370,8 +390,7 @@ router.get('/my-offers', auth(), async (req, res, next) => {
       for (const offer of order.offers || []) {
         if (String(offer.fanni) === String(req.userId)) {
           offers.push({
-            ...offer,
-            message: sanitizeText(offer.message),
+            ...sanitizeOffer(offer),
             orderSn: order.sn,
             orderStatus: order.status
           });
@@ -483,8 +502,15 @@ router.post('/:sn/offer', auth(), async (req, res, next) => {
   }
 });
 
-// قبول عرض: يتطلب توكن العميل الصادر عند إنشاء الطلب.
+/*
+ * قبول عرض وخصم عمولة المنصة.
+ * الخصم وتحديث الطلب وتسجيل الحركة المالية داخل معاملة MongoDB واحدة.
+ */
 router.post('/:sn/accept', async (req, res, next) => {
+  const session = await mongoose.startSession();
+  let responsePayload = null;
+  let responseStatus = 200;
+
   try {
     const sn = String(req.params.sn || '').toUpperCase();
     const offerId = String(req.body.offerId || '');
@@ -495,7 +521,246 @@ router.post('/:sn/accept', async (req, res, next) => {
       });
     }
 
-    const order = await Order.findOne({ sn });
+    if (!process.env.JWT_SECRET) {
+      return res.status(503).json({
+        message: 'الخدمة غير متاحة بسبب إعدادات الخادم'
+      });
+    }
+
+    await session.startTransaction();
+
+    const order = await Order.findOne({ sn }).session(session);
+
+    if (!order) {
+      await session.abortTransaction();
+      return res.status(404).json({
+        message: 'الطلب غير موجود'
+      });
+    }
+
+    if (!verifyClientToken(req, order)) {
+      await session.abortTransaction();
+      return res.status(403).json({
+        message: 'لازم تستخدم رابط أو جلسة العميل صاحب الطلب لقبول العرض'
+      });
+    }
+
+    if (!ACTIVE_STATUSES.includes(order.status)) {
+      await session.abortTransaction();
+      return res.status(409).json({
+        message: 'تم اختيار فني بالفعل أو لم يعد الطلب متاحًا'
+      });
+    }
+
+    if (order.expiresAt && order.expiresAt <= new Date()) {
+      await session.abortTransaction();
+      return res.status(409).json({
+        message: 'انتهت مدة استقبال العروض لهذا الطلب'
+      });
+    }
+
+    if (order.commissionCharged === true) {
+      await session.abortTransaction();
+      return res.status(409).json({
+        message: 'تم تسجيل عمولة هذا الطلب بالفعل'
+      });
+    }
+
+    const offer = getAcceptedOffer(order, offerId);
+
+    if (!offer) {
+      await session.abortTransaction();
+      return res.status(404).json({
+        message: 'العرض غير موجود'
+      });
+    }
+
+    const price = Number(offer.priceNum);
+
+    if (!Number.isFinite(price) || price <= 0) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        message: 'سعر العرض غير صالح، اطلب من الفني إرسال عرض صحيح'
+      });
+    }
+
+    const commissionRate = COMMISSION_RATE;
+    const commissionAmount = money(price * commissionRate / 100);
+
+    if (!Number.isFinite(commissionAmount) || commissionAmount <= 0) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        message: 'تعذر حساب عمولة الطلب بشكل صحيح'
+      });
+    }
+
+    const fanniId = offer.fanni;
+
+    const fanniBefore = await Fanni.findOne({
+      _id: fanniId,
+      role: 'fanni',
+      status: 'معتمد'
+    }).session(session);
+
+    if (!fanniBefore) {
+      await session.abortTransaction();
+      return res.status(409).json({
+        message: 'الفني صاحب العرض لم يعد حسابه معتمدًا'
+      });
+    }
+
+    const balanceBefore = Number(fanniBefore.walletBalance || 0);
+
+    if (!Number.isFinite(balanceBefore) || balanceBefore < commissionAmount) {
+      await session.abortTransaction();
+      return res.status(409).json({
+        message: 'رصيد محفظة الفني غير كافٍ لسداد عمولة المنصة',
+        requiredCommission: commissionAmount,
+        walletBalance: Number.isFinite(balanceBefore) ? balanceBefore : 0
+      });
+    }
+
+    /*
+     * تحديث شرطي للرصيد يمنع تحوله إلى قيمة سالبة.
+     * شرط commissionCharged:false على الطلب يمنع تكرار الخصم.
+     */
+    const fanniAfter = await Fanni.findOneAndUpdate(
+      {
+        _id: fanniId,
+        role: 'fanni',
+        status: 'معتمد',
+        walletBalance: { $gte: commissionAmount }
+      },
+      {
+        $inc: { walletBalance: -commissionAmount }
+      },
+      {
+        new: true,
+        session,
+        runValidators: true
+      }
+    );
+
+    if (!fanniAfter) {
+      await session.abortTransaction();
+      return res.status(409).json({
+        message: 'الرصيد تغيّر أو أصبح غير كافٍ؛ لم يتم قبول العرض أو خصم العمولة'
+      });
+    }
+
+    const balanceAfter = Number(fanniAfter.walletBalance);
+
+    /*
+     * نحدّث الطلب داخل نفس المعاملة.
+     * إذا لم ينجح أي جزء من المعاملة، تتراجع جميع التغييرات.
+     */
+    const updateResult = await Order.updateOne(
+      {
+        _id: order._id,
+        status: { $in: ACTIVE_STATUSES },
+        commissionCharged: { $ne: true },
+        expiresAt: { $gt: new Date() },
+        'offers._id': offerId
+      },
+      {
+        $set: {
+          assignedFanni: fanniId,
+          assignedFanniName: offer.fanniName,
+          acceptedOfferId: offer._id,
+          acceptedOfferPrice: price,
+          commissionRate,
+          commissionAmount,
+          commissionCharged: true,
+          commissionChargedAt: new Date(),
+          status: 'تم اختيار فني'
+        }
+      },
+      {
+        session,
+        runValidators: true
+      }
+    );
+
+    if (updateResult.modifiedCount !== 1) {
+      await session.abortTransaction();
+      return res.status(409).json({
+        message: 'الطلب لم يعد متاحًا؛ لم يتم تثبيت الخصم'
+      });
+    }
+
+    /*
+     * سجل مالي مستقل للعمولة.
+     * المفتاح الفريد يمنع إنشاء حركة ثانية لنفس الطلب.
+     */
+    const transaction = new WalletTransaction({
+      fanni: fanniId,
+      order: order._id,
+      orderSN: order.sn,
+      type: 'commission',
+      amount: -commissionAmount,
+      balanceBefore,
+      balanceAfter,
+      description: `عمولة منصة صُنّاع بنسبة ${commissionRate}% للطلب ${order.sn}`,
+      idempotencyKey: `commission:${String(order._id)}`
+    });
+
+    await transaction.save({ session });
+
+    await session.commitTransaction();
+
+    const updatedOrder = await Order.findById(order._id);
+
+    responsePayload = {
+      message: 'تم قبول العرض وخصم عمولة المنصة بنجاح',
+      commission: {
+        rate: commissionRate,
+        amount: commissionAmount
+      },
+      order: publicOrder(updatedOrder, {
+        includeAddress: true,
+        includeAssignedFanniPhone: true
+      })
+    };
+  } catch (err) {
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
+
+    if (err && err.code === 11000) {
+      responseStatus = 409;
+      responsePayload = {
+        message: 'توجد حركة مالية مسجلة لهذا الطلب بالفعل؛ لم يتم تكرار الخصم'
+      };
+    } else {
+      next(err);
+      return;
+    }
+  } finally {
+    await session.endSession();
+  }
+
+  if (responsePayload) {
+    return res.status(responseStatus).json(responsePayload);
+  }
+});
+
+/*
+ * تفاصيل العميل للفني المعيّن فقط.
+ * GET /api/orders/:sn/assigned-details
+ *
+ * يتطلب توكن الفني الحالي، وحالة الطلب يجب أن تكون بعد القبول.
+ */
+router.get('/:sn/assigned-details', auth(), async (req, res, next) => {
+  try {
+    const sn = String(req.params.sn || '').toUpperCase();
+
+    if (!validSN(sn)) {
+      return res.status(400).json({
+        message: 'كود الطلب غير صحيح'
+      });
+    }
+
+    const order = await Order.findOne({ sn }).lean();
 
     if (!order) {
       return res.status(404).json({
@@ -503,62 +768,32 @@ router.post('/:sn/accept', async (req, res, next) => {
       });
     }
 
-    if (!verifyClientToken(req, order)) {
+    if (
+      order.status !== 'تم اختيار فني'
+      || !order.assignedFanni
+      || String(order.assignedFanni) !== String(req.userId)
+      || req.user.role !== 'fanni'
+    ) {
       return res.status(403).json({
-        message: 'لازم تستخدم رابط أو جلسة العميل صاحب الطلب لقبول العرض'
-      });
-    }
-
-    if (!ACTIVE_STATUSES.includes(order.status)) {
-      return res.status(409).json({
-        message: 'تم اختيار فني بالفعل أو لم يعد الطلب متاحًا'
-      });
-    }
-
-    if (order.expiresAt && order.expiresAt <= new Date()) {
-      return res.status(409).json({
-        message: 'انتهت مدة استقبال العروض لهذا الطلب'
-      });
-    }
-
-    const offer = order.offers.id(offerId);
-
-    if (!offer) {
-      return res.status(404).json({
-        message: 'العرض غير موجود'
-      });
-    }
-
-    // تحديث مشروط بالحالة الحالية لمنع قبول عرضين متزامنين.
-    const updated = await Order.findOneAndUpdate(
-      {
-        _id: order._id,
-        status: { $in: ACTIVE_STATUSES },
-        expiresAt: { $gt: new Date() },
-        'offers._id': offerId
-      },
-      {
-        $set: {
-          assignedFanni: offer.fanni,
-          assignedFanniName: offer.fanniName,
-          status: 'تم اختيار فني'
-        }
-      },
-      {
-        new: true,
-        runValidators: true
-      }
-    );
-
-    if (!updated) {
-      return res.status(409).json({
-        message: 'تم اختيار فني بالفعل أو انتهت صلاحية الطلب؛ حدّث حالة الطلب'
+        message: 'تفاصيل العميل متاحة للفني المعيّن لهذا الطلب بعد قبول العرض فقط'
       });
     }
 
     return res.json({
-      message: 'تم قبول العرض بنجاح',
-      order: publicOrder(updated)
+      message: 'تم جلب تفاصيل الطلب المعيّن لك',
+      order: {
+        sn: order.sn,
+        service: order.service,
+        area: order.area,
+        address: order.address,
+        clientName: order.clientName,
+        clientPhone: order.clientPhone,
+        description: order.description,
+        status: order.status,
+        acceptedOfferPrice: order.acceptedOfferPrice,
+        commissionAmount: order.commissionAmount,
+        commissionCharged: order.commissionCharged
+      }
     });
   } catch (err) {
     next(err);
@@ -584,11 +819,11 @@ async function trackOrder(req, res, next) {
       });
     }
 
-    // لا نعيد العنوان التفصيلي إلا لصاحب الطلب الذي يحمل توكنه الصحيح.
     const isOrderOwner = verifyClientToken(req, order);
 
     const safe = publicOrder(order, {
-      includeAddress: isOrderOwner
+      includeAddress: isOrderOwner,
+      includeAssignedFanniPhone: isOrderOwner
     });
 
     return res.json({
