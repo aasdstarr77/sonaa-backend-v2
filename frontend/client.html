@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -76,7 +77,7 @@ const VALIDATORS={
   phone:value=>/^01[0-25]\d{8}$/.test(String(value||'').replace(/\D/g,'')),
   name:value=>{
     const text=String(value||'').trim();
-    return text.length>=2&&text.length<=100;
+    return text.length>=2&&text.length<=50;
   },
   text:(value,min,max)=>{
     const text=String(value||'').trim();
@@ -153,7 +154,7 @@ const API={
 
   async createOrder(payload){
     if(!VALIDATORS.name(payload.clientName)){
-      throw new Error('اكتب اسمك بشكل صحيح، من حرفين إلى 100 حرف.');
+      throw new Error('اكتب اسمك بشكل صحيح، من حرفين إلى 50 حرفًا.');
     }
 
     if(!VALIDATORS.text(payload.area,10,250)){
@@ -172,7 +173,7 @@ const API={
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        clientName:sanitizeInput(payload.clientName,100),
+        clientName:sanitizeInput(payload.clientName,50),
         service:sanitizeInput(payload.service,100),
         area:sanitizeInput(payload.area,250),
         phone:String(payload.phone).replace(/\D/g,''),
@@ -249,15 +250,124 @@ const API={
 };
 
 const CATEGORIES=[
-  {label:'دش وكاميرات',emoji:'📡',services:['تركيب دش','صيانة دش','تركيب كاميرات مراقبة','صيانة كاميرات'],highlight:true},
-  {label:'كهرباء',emoji:'⚡',services:['كهربائي منازل','كهربائي سيارات']},
-  {label:'سباكة',emoji:'🚿',services:['سباك','سباكة صرف صحي']},
-  {label:'نجارة',emoji:'🪚',services:['نجار موبيليا','نجار باب وشباك']},
-  {label:'نقاشة',emoji:'🎨',services:['نقاش','جبس بورد','فني ديكور']},
-  {label:'تكييف',emoji:'❄️',services:['فني تكييف','فني تبريد وثلاجات']}
+  {
+    label:'دش وكاميرات وشاشات',
+    emoji:'📡',
+    services:[
+      'تركيب دش','صيانة دش','تركيب كاميرات مراقبة','صيانة كاميرات مراقبة',
+      'تركيب رسيفر','صيانة رسيفر','تعليق شاشة حائط','صيانة شاشة تلفزيون',
+      'تركيب شبكة إنترنت منزلية','صيانة أجهزة استقبال'
+    ],
+    highlight:true
+  },
+  {
+    label:'تنظيف',
+    emoji:'🧹',
+    services:[
+      'تنظيف شقق','تنظيف منازل','تنظيف مكاتب','تنظيف بعد التشطيب',
+      'تنظيف سجاد وموكيت','تنظيف كنب وانتريهات','تنظيف زجاج وواجهات',
+      'تنظيف مطابخ','تنظيف حمامات','مكافحة حشرات'
+    ]
+  },
+  {
+    label:'كهرباء',
+    emoji:'⚡',
+    services:[
+      'كهربائي منازل','تأسيس كهرباء','إصلاح أعطال الكهرباء',
+      'تركيب نجف وإضاءة','تركيب مفاتيح وبرايز','تركيب مراوح سقف',
+      'كهربائي سيارات'
+    ]
+  },
+  {
+    label:'سباكة',
+    emoji:'🚿',
+    services:[
+      'سباك منازل','إصلاح تسريب مياه','تسليك صرف صحي',
+      'تركيب خلاطات','تركيب أطقم حمامات','صيانة سخان مياه',
+      'تركيب مواتير مياه','صيانة خزانات مياه'
+    ]
+  },
+  {
+    label:'تكييف وتبريد',
+    emoji:'❄️',
+    services:[
+      'تركيب تكييف','صيانة تكييف','تنظيف تكييف',
+      'شحن فريون تكييف','صيانة ثلاجات','صيانة ديب فريزر',
+      'صيانة مبرد مياه'
+    ]
+  },
+  {
+    label:'أجهزة منزلية',
+    emoji:'🧺',
+    services:[
+      'صيانة غسالات','صيانة غسالات أطباق','صيانة بوتاجازات',
+      'صيانة أفران','صيانة ميكروويف','صيانة سخانات كهرباء',
+      'صيانة أجهزة منزلية أخرى'
+    ]
+  },
+  {
+    label:'نجارة وأثاث',
+    emoji:'🪚',
+    services:[
+      'نجار موبيليا','نجار أبواب وشبابيك','تصليح أثاث',
+      'تركيب أثاث','تركيب مطابخ','صيانة دواليب',
+      'تغيير كالون باب','تركيب أقفال'
+    ]
+  },
+  {
+    label:'نقاشة وديكور',
+    emoji:'🎨',
+    services:[
+      'نقاش ودهانات','دهانات شقق','جبس بورد','فني ديكور',
+      'ورق حائط','معالجة شروخ الحوائط','ترميمات منزلية'
+    ]
+  },
+  {
+    label:'ألوميتال وزجاج',
+    emoji:'🪟',
+    services:[
+      'فني ألوميتال','صيانة شبابيك ألوميتال','تركيب زجاج',
+      'تصليح أبواب ألوميتال','تركيب سلك شبابيك'
+    ]
+  },
+  {
+    label:'بناء وتشطيبات',
+    emoji:'🧱',
+    services:[
+      'مبلط سيراميك','فني رخام','محارة وبياض',
+      'عامل بناء','تركيب أرضيات','عزل أسطح وحمامات',
+      'صيانة أبواب وشبابيك'
+    ]
+  },
+  {
+    label:'إنترنت وأجهزة',
+    emoji:'💻',
+    services:[
+      'فني كمبيوتر','صيانة لابتوب','صيانة طابعات',
+      'تركيب راوتر','إصلاح أعطال الإنترنت','صيانة موبايلات',
+      'تركيب شبكات داخلية'
+    ]
+  },
+  {
+    label:'نقل وتركيب',
+    emoji:'🚚',
+    services:[
+      'نقل أثاث','فك وتركيب أثاث','نقل أجهزة منزلية',
+      'تركيب ستائر','تركيب رفوف','تركيب مرايات'
+    ]
+  },
+  {
+    label:'خدمات أخرى',
+    emoji:'🛠️',
+    services:[
+      'فني غاز','صيانة أقفال','تركيب أبواب',
+      'فني لحام','صيانة مواتير','فني مضخات',
+      'خدمة صيانة منزلية أخرى'
+    ]
+  }
 ];
 
-const ALL_SERVICES=CATEGORIES.flatMap(category=>category.services);
+const ALL_SERVICES=[...new Set(CATEGORIES.flatMap(category=>category.services))];
 
 let state={
   tab:'new',
@@ -363,13 +473,13 @@ function render(){
                 id="clientNameInput"
                 value="${escAttr(state.clientName)}"
                 oninput="onClientNameInput(this.value)"
-                maxlength="100"
+                maxlength="50"
                 placeholder="اكتب اسمك بالكامل"
                 class="field h-[50px] px-4 text-[13px] font-bold"
                 autocomplete="name"
                 required
               >
-              <p class="mt-1 text-[10px] text-slate-400 font-semibold">اكتب اسمك من حرفين على الأقل.</p>
+              <p class="mt-1 text-[10px] text-slate-400 font-semibold">اكتب اسمك من حرفين إلى 50 حرفًا.</p>
             </div>
 
             <div>
@@ -386,13 +496,14 @@ function render(){
                   <div class="p-2 bg-slate-50 border-b border-slate-100">
                     <input id="svcSearch" value="${escAttr(state.searchService)}" oninput="searchService(this.value)" placeholder="ابحث عن خدمة..." class="field h-10 px-3 text-[12px] font-bold">
                   </div>
-                  <div class="max-h-[260px] overflow-y-auto p-1.5 space-y-1">
+                  <div class="max-h-[300px] overflow-y-auto p-1.5 space-y-1">
                     ${filteredServices.map(service=>{
                       const serviceCat=getCat(service);
                       return `<button type="button" onclick="selectService(${escAttr(JSON.stringify(service))})" class="w-full min-h-11 px-3 rounded-xl text-right text-[13px] font-bold flex items-center gap-2 transition ${state.service===service?'bg-[#0b1b3a] text-white':'hover:bg-blue-50 text-slate-700'}"><span>${serviceCat.emoji}</span><span class="truncate">${escHtml(service)}</span></button>`;
                     }).join('')||'<p class="p-3 text-[12px] text-slate-400 text-center">مفيش نتائج</p>'}
                   </div>
                 </div>`:''}
+              <p class="mt-1 text-[10px] text-slate-400 font-semibold">تقدر تبحث باسم الخدمة للوصول إليها بسرعة.</p>
             </div>
 
             <div>
@@ -474,16 +585,14 @@ function render(){
               </div>
               <span class="shrink-0 text-[10px] font-extrabold px-3 py-1.5 rounded-full bg-blue-50 border border-blue-100 text-blue-800">${escHtml(state.tracked.status||'قيد المراجعة')}</span>
             </div>
-            <div class="mt-4 grid grid-cols-2 gap-2 text-[12px]">
+
+            <div class="mt-4 grid grid-cols-1 gap-2 text-[12px]">
               <div class="soft-card rounded-xl p-3">
-                <p class="text-[10px] text-slate-500 font-bold">الخدمة</p>
+                <p class="text-[10px] text-slate-500 font-bold">الخدمة المطلوبة</p>
                 <p class="font-extrabold mt-1 leading-5">${escHtml(state.tracked.service||'-')}</p>
               </div>
-              <div class="soft-card rounded-xl p-3">
-                <p class="text-[10px] text-slate-500 font-bold">العنوان</p>
-                <p class="font-extrabold mt-1 break-words">${escHtml(state.tracked.area||'-')}</p>
-              </div>
             </div>
+
             <div class="mt-5">
               <h4 class="font-extrabold text-[14px]">عروض الفنيين (${Array.isArray(state.tracked.offers)?state.tracked.offers.length:0})</h4>
               ${(state.tracked.offers||[]).length===0
@@ -590,7 +699,7 @@ function selectService(value){
 }
 
 function onClientNameInput(value){
-  state.clientName=sanitizeInput(value,100);
+  state.clientName=sanitizeInput(value,50);
 }
 
 function onAddressInput(value){
@@ -666,7 +775,7 @@ async function createOrder(){
   if(state.loading)return;
 
   if(!VALIDATORS.name(state.clientName)){
-    showToast('اكتب اسمك بشكل صحيح، من حرفين على الأقل.');
+    showToast('اكتب اسمك بشكل صحيح، من حرفين إلى 50 حرفًا.');
     document.getElementById('clientNameInput')?.focus();
     return;
   }
