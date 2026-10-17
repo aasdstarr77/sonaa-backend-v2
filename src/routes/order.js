@@ -1,3 +1,4 @@
+
 'use strict';
 
 const express = require('express');
@@ -56,10 +57,17 @@ function sanitizeOffer(offer) {
   return safeOffer;
 }
 
-function publicOrder(order) {
+function publicOrder(order, options = {}) {
+  const { includeAddress = true } = options;
+
   const data = typeof order.toObject === 'function'
     ? order.toObject()
     : { ...order };
+
+  // لا نكشف العنوان التفصيلي إلا عند السماح الصريح بذلك.
+  if (!includeAddress) {
+    delete data.address;
+  }
 
   // حماية بيانات العميل في الاستجابات العامة.
   delete data.clientPhone;
@@ -85,11 +93,18 @@ function publicOrder(order) {
 
 const createSchema = Joi.object({
   service: Joi.string().trim().min(2).max(100).required(),
-  area: Joi.string().trim().min(2).max(250),
-  address: Joi.string().trim().min(2).max(250),
+
+  // المنطقة العامة أو الحي.
+  area: Joi.string().trim().min(2).max(250).required(),
+
+  // العنوان التفصيلي منفصل عن المنطقة.
+  address: Joi.string().trim().min(2).max(250).allow('').optional(),
+
   phone: Joi.string().trim().required(),
   clientPhone: Joi.string().trim(),
+
   clientName: Joi.string().trim().max(50).allow(''),
+
   description: Joi.string().trim().min(10).max(1000),
   desc: Joi.string().trim().min(10).max(1000).allow('')
 }).unknown(false);
@@ -105,20 +120,25 @@ function clientTokenFrom(req) {
     return authHeader.slice(7).trim();
   }
 
-  return String(req.body?.clientToken || req.query?.clientToken || '');
+  return String(
+    req.body?.clientToken || req.query?.clientToken || ''
+  );
 }
 
 function verifyClientToken(req, order) {
   const token = clientTokenFrom(req);
 
-  if (!token || !process.env.JWT_SECRET) return false;
+  if (!token || !process.env.JWT_SECRET) {
+    return false;
+  }
 
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
 
     return payload.purpose === 'client-order'
       && String(payload.orderId) === String(order._id)
-      && String(payload.sn).toUpperCase() === String(order.sn).toUpperCase();
+      && String(payload.sn).toUpperCase()
+        === String(order.sn).toUpperCase();
   } catch {
     return false;
   }
@@ -129,7 +149,8 @@ router.post('/', async (req, res, next) => {
   try {
     const body = {
       ...req.body,
-      area: req.body.area || req.body.address,
+
+      // area للمنطقة العامة وaddress للعنوان التفصيلي.
       phone: req.body.clientPhone || req.body.phone,
       description: req.body.description || req.body.desc
     };
@@ -154,11 +175,18 @@ router.post('/', async (req, res, next) => {
       });
     }
 
-    const area = value.area || value.address;
+    const area = String(value.area || '').trim();
+    const address = String(value.address || '').trim();
 
-    if (!area) {
+    if (area.length < 2) {
       return res.status(400).json({
-        message: 'العنوان مطلوب'
+        message: 'المنطقة أو الحي مطلوب'
+      });
+    }
+
+    if (address.length < 2) {
+      return res.status(400).json({
+        message: 'العنوان التفصيلي مطلوب'
       });
     }
 
@@ -176,6 +204,7 @@ router.post('/', async (req, res, next) => {
           sn: generateSN(),
           service: value.service,
           area,
+          address,
           clientName: value.clientName || 'عميل',
           clientPhone,
           description: value.description,
@@ -184,7 +213,9 @@ router.post('/', async (req, res, next) => {
 
         break;
       } catch (err) {
-        if (err.code !== 11000 || attempt === 2) throw err;
+        if (err.code !== 11000 || attempt === 2) {
+          throw err;
+        }
       }
     }
 
@@ -221,12 +252,7 @@ router.post('/', async (req, res, next) => {
 
 /*
  * نشر طلب من لوحة الإدارة.
- *
- * المسار:
  * POST /api/orders/admin/:sn/publish
- *
- * يتطلب توكن إدارة صالحًا.
- * لا يسمح بنشر طلب تم اختياره أو إنهاؤه أو نشره مسبقًا.
  */
 router.post(
   '/admin/:sn/publish',
@@ -247,7 +273,7 @@ router.post(
         });
       }
 
-      // تحديث مشروط يمنع نشر الطلب مرتين بالتزامن.
+      // تحديث مشروط لمنع نشر الطلب مرتين بالتزامن.
       const order = await Order.findOneAndUpdate(
         {
           sn,
@@ -268,7 +294,9 @@ router.post(
       );
 
       if (!order) {
-        const existing = await Order.findOne({ sn }).select('status').lean();
+        const existing = await Order.findOne({ sn })
+          .select('status')
+          .lean();
 
         if (!existing) {
           return res.status(404).json({
@@ -313,7 +341,10 @@ router.get('/available', auth(), async (req, res, next) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    const safeOrders = orders.map(order => publicOrder(order));
+    // الفني يرى المنطقة العامة، ولا يحصل على العنوان التفصيلي هنا.
+    const safeOrders = orders.map(order => publicOrder(order, {
+      includeAddress: false
+    }));
 
     return res.json({
       orders: safeOrders,
@@ -397,7 +428,6 @@ router.post('/:sn/offer', auth(), async (req, res, next) => {
       });
     }
 
-    // لا تقبل عروض على طلب لم تنشره الإدارة.
     if (!ACTIVE_STATUSES.includes(order.status)) {
       return res.status(409).json({
         message: 'الطلب غير منشور أو لم يعد متاحًا للعروض'
@@ -554,10 +584,12 @@ async function trackOrder(req, res, next) {
       });
     }
 
-    // التحقق من التوكن متاح للتوسعة مستقبلًا؛ الاستجابة العامة لا تكشف الهاتف.
-    verifyClientToken(req, order);
+    // لا نعيد العنوان التفصيلي إلا لصاحب الطلب الذي يحمل توكنه الصحيح.
+    const isOrderOwner = verifyClientToken(req, order);
 
-    const safe = publicOrder(order);
+    const safe = publicOrder(order, {
+      includeAddress: isOrderOwner
+    });
 
     return res.json({
       order: safe,
