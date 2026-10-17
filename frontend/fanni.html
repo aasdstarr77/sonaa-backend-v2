@@ -149,6 +149,7 @@ let state={
  loading:false,checkingSession:false,
  orders:[],filteredOrders:[],search:'',filterSkill:'الكل',
  myOffers:[],offerModal:null,offerPrice:'',offerMessage:'',
+ offerError:'',offerSubmitting:false,
  walletFromPhone:'',walletAmount:'',walletRef:'',
  walletLoading:false,walletHistory:[],walletBalance:0,
  error:'',success:'',pendingMsg:''
@@ -320,7 +321,13 @@ function render(){
  <div class="fixed inset-0 z-50 bg-[#07152e]/55 backdrop-blur-sm flex items-end sm:items-center justify-center p-3">
   <div class="w-full max-w-[480px] bg-white rounded-[22px] p-5 shadow-2xl">
    <div class="flex justify-between items-center pb-3 border-b"><div><h3 class="font-extrabold text-[15px]">تقديم عرض</h3><p class="text-[10px] text-slate-500 mt-1">كود الطلب: ${esc(state.offerModal.sn)}</p></div><button onclick="closeOffer()" class="h-9 w-9 rounded-xl bg-slate-100">✕</button></div>
-   <div class="mt-4 space-y-4"><div><label class="field-label">السعر بالجنيه *</label><input class="field" type="number" min="10" max="1000000" step="1" value="${esc(state.offerPrice)}" oninput="state.offerPrice=this.value.slice(0,7)" placeholder="150"></div><div><label class="field-label">رسالتك للعميل *</label><textarea class="field min-h-[100px]" oninput="state.offerMessage=this.value.slice(0,500)" placeholder="اكتب تفاصيل العرض والوقت المتوقع للوصول">${esc(state.offerMessage)}</textarea><p class="text-[10px] text-slate-500 mt-1">من 5 إلى 500 حرف.</p></div><button onclick="submitOffer()" ${state.loading||!approved?'disabled':''} class="primary-btn w-full h-12">${state.loading?'جاري إرسال العرض...':'إرسال العرض للعميل'}</button>${!approved?'<p class="text-[11px] text-amber-700">لا يمكن إرسال عرض قبل اعتماد الحساب.</p>':''}</div>
+   <div class="mt-4 space-y-4">
+    <div><label class="field-label">السعر بالجنيه *</label><input class="field" type="number" min="10" max="1000000" step="1" value="${esc(state.offerPrice)}" oninput="state.offerPrice=this.value.slice(0,7)" placeholder="150"></div>
+    <div><label class="field-label">رسالتك للعميل *</label><textarea class="field min-h-[100px]" oninput="state.offerMessage=this.value.slice(0,500)" placeholder="اكتب تفاصيل العرض والوقت المتوقع للوصول">${esc(state.offerMessage)}</textarea><p class="text-[10px] text-slate-500 mt-1">من 5 إلى 500 حرف.</p></div>
+    ${state.offerError?errorBox(state.offerError):''}
+    <button onclick="submitOffer()" ${state.offerSubmitting||!approved?'disabled':''} class="primary-btn w-full h-12">${state.offerSubmitting?'جاري إرسال العرض...':'إرسال العرض للعميل'}</button>
+    ${!approved?'<p class="text-[11px] text-amber-700">لا يمكن إرسال عرض قبل اعتماد الحساب.</p>':''}
+   </div>
   </div>
  </div>`:''}
  </main>
@@ -430,19 +437,41 @@ async function submitWallet(){
 function openOffer(sn){
  if(!isApproved()){toast('لا يمكن إرسال عرض قبل اعتماد الحساب','error');return}
  if(!V.sn(sn)){toast('كود الطلب غير صحيح','error');return}
- state.offerModal={sn};state.offerPrice='';state.offerMessage='';state.error='';render();
+ state.offerModal={sn};state.offerPrice='';state.offerMessage='';state.offerError='';state.error='';render();
 }
-function closeOffer(){state.offerModal=null;render()}
+function closeOffer(){
+ if(state.offerSubmitting)return;
+ state.offerModal=null;state.offerError='';render();
+}
 async function submitOffer(){
- if(!state.offerModal||state.loading)return;
- if(!isApproved()){toast('لا يمكن إرسال عرض قبل اعتماد الحساب','error');return}
- if(!V.money(state.offerPrice,10,1000000)){toast('السعر يجب أن يكون عددًا صحيحًا من 10 إلى مليون جنيه','error');return}
- if(!V.text(state.offerMessage,5,500)){toast('اكتب رسالة من 5 إلى 500 حرف','error');return}
- state.loading=true;render();
+ // حالة مستقلة للإرسال حتى لا يتعطل العرض أثناء تحميل الطلبات أو المحفظة.
+ if(!state.offerModal||state.offerSubmitting)return;
+ if(!isApproved()){
+  state.offerError='لا يمكن إرسال عرض قبل اعتماد الحساب.';
+  render();return;
+ }
+ const sn=state.offerModal.sn;
+ const price=Number(state.offerPrice);
+ const message=clean(state.offerMessage,500);
+ if(!V.money(price,10,1000000)){
+  state.offerError='السعر يجب أن يكون عددًا صحيحًا من 10 إلى مليون جنيه.';
+  render();return;
+ }
+ if(!V.text(message,5,500)){
+  state.offerError='اكتب رسالة من 5 إلى 500 حرف.';
+  render();return;
+ }
+ state.offerSubmitting=true;state.offerError='';render();
  try{
-  await API.offer(state.offerModal.sn,{price:Number(state.offerPrice),message:clean(state.offerMessage,500)});
-  state.loading=false;state.offerModal=null;render();toast('تم إرسال العرض');await loadMyOffers();
- }catch(e){state.loading=false;render();toast(e.message,'error')}
+  const result=await API.offer(sn,{price,message});
+  state.offerSubmitting=false;state.offerModal=null;state.offerPrice='';state.offerMessage='';state.offerError='';
+  render();toast(result?.message||'تم إرسال العرض بنجاح');
+  await Promise.allSettled([loadMyOffers(),loadOrders()]);
+ }catch(e){
+  state.offerSubmitting=false;
+  state.offerError=e?.message||'تعذر إرسال العرض. حاول مرة أخرى.';
+  render();toast(state.offerError,'error');
+ }
 }
 
 async function start(){
