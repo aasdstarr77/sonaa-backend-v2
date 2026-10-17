@@ -1,3 +1,4 @@
+'use strict';
 
 const express = require('express');
 const Joi = require('joi');
@@ -11,7 +12,9 @@ const { normalizePhone } = require('../utils/phone');
 
 const router = express.Router();
 
-const ACTIVE_STATUSES = ['قيد المراجعة', 'تم النشر', 'وصلتك عروض'];
+// الطلب لا يصبح متاحًا للفنيين إلا بعد نشره من الإدارة.
+const ACTIVE_STATUSES = ['تم النشر', 'وصلتك عروض'];
+const ORDER_EXPIRY_HOURS = 48;
 
 // مطابقة أرقام الموبايل المصرية، سواء محلية أو بمفتاح الدولة.
 const EGYPT_PHONE_PATTERN =
@@ -58,11 +61,11 @@ function publicOrder(order) {
     ? order.toObject()
     : { ...order };
 
-  // منع تسريب بيانات الاتصال، حتى عند وجود توكن العميل.
+  // حماية بيانات العميل في الاستجابات العامة.
   delete data.clientPhone;
   delete data.phone;
 
-  // معرّف الفني الداخلي ليس مطلوبًا في استجابة العميل العامة.
+  // لا نكشف المعرّف الداخلي للفني المعيّن.
   delete data.assignedFanni;
 
   if (typeof data.description === 'string') {
@@ -121,7 +124,7 @@ function verifyClientToken(req, order) {
   }
 }
 
-// إنشاء طلب جديد للعميل
+// إنشاء طلب جديد للعميل؛ يظل قيد المراجعة إلى أن تنشره الإدارة.
 router.post('/', async (req, res, next) => {
   try {
     const body = {
@@ -156,6 +159,12 @@ router.post('/', async (req, res, next) => {
     if (!area) {
       return res.status(400).json({
         message: 'العنوان مطلوب'
+      });
+    }
+
+    if (!process.env.JWT_SECRET) {
+      return res.status(503).json({
+        message: 'إنشاء الطلب غير متاح بسبب إعدادات الخادم'
       });
     }
 
@@ -198,7 +207,7 @@ router.post('/', async (req, res, next) => {
     const safeOrder = publicOrder(order);
 
     return res.status(201).json({
-      message: 'تم إنشاء الطلب بنجاح',
+      message: 'تم إنشاء الطلب بنجاح، وسيتم مراجعته من الإدارة',
       sn: order.sn,
       id: order._id,
       clientToken,
@@ -210,7 +219,84 @@ router.post('/', async (req, res, next) => {
   }
 });
 
-// الطلبات المتاحة للفني المعتمد
+/*
+ * نشر طلب من لوحة الإدارة.
+ *
+ * المسار:
+ * POST /api/orders/admin/:sn/publish
+ *
+ * يتطلب توكن إدارة صالحًا.
+ * لا يسمح بنشر طلب تم اختياره أو إنهاؤه أو نشره مسبقًا.
+ */
+router.post(
+  '/admin/:sn/publish',
+  auth('admin'),
+  async (req, res, next) => {
+    try {
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({
+          message: 'هذه العملية متاحة للإدارة فقط'
+        });
+      }
+
+      const sn = String(req.params.sn || '').toUpperCase();
+
+      if (!validSN(sn)) {
+        return res.status(400).json({
+          message: 'كود الطلب غير صحيح'
+        });
+      }
+
+      // تحديث مشروط يمنع نشر الطلب مرتين بالتزامن.
+      const order = await Order.findOneAndUpdate(
+        {
+          sn,
+          status: 'قيد المراجعة'
+        },
+        {
+          $set: {
+            status: 'تم النشر',
+            expiresAt: new Date(
+              Date.now() + ORDER_EXPIRY_HOURS * 60 * 60 * 1000
+            )
+          }
+        },
+        {
+          new: true,
+          runValidators: true
+        }
+      );
+
+      if (!order) {
+        const existing = await Order.findOne({ sn }).select('status').lean();
+
+        if (!existing) {
+          return res.status(404).json({
+            message: 'الطلب غير موجود'
+          });
+        }
+
+        return res.status(409).json({
+          message: 'الطلب ليس قيد المراجعة، لذلك لم يتم نشره',
+          status: existing.status
+        });
+      }
+
+      return res.json({
+        message: 'تم نشر الطلب للفنيين المعتمدين بنجاح',
+        order: publicOrder(order),
+        data: publicOrder(order)
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/*
+ * الطلبات المتاحة للفني المعتمد.
+ * الطلبات قيد المراجعة لا تظهر هنا.
+ */
 router.get('/available', auth(), async (req, res, next) => {
   try {
     if (req.user.role !== 'admin' && req.user.status !== 'معتمد') {
@@ -227,12 +313,7 @@ router.get('/available', auth(), async (req, res, next) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    const safeOrders = orders.map(order => {
-      const safeOrder = publicOrder(order);
-
-      // الفني لا يحتاج إلى معرّفات الفنيين الآخرين أو أرقامهم.
-      return safeOrder;
-    });
+    const safeOrders = orders.map(order => publicOrder(order));
 
     return res.json({
       orders: safeOrders,
@@ -243,7 +324,7 @@ router.get('/available', auth(), async (req, res, next) => {
   }
 });
 
-// العروض التي أرسلها الفني الحالي
+// العروض التي أرسلها الفني الحالي.
 router.get('/my-offers', auth(), async (req, res, next) => {
   try {
     const orders = await Order.find({
@@ -276,7 +357,7 @@ router.get('/my-offers', auth(), async (req, res, next) => {
   }
 });
 
-// إرسال عرض من فني معتمد
+// إرسال عرض من فني معتمد على طلب منشور وغير منتهٍ.
 router.post('/:sn/offer', auth(), async (req, res, next) => {
   try {
     if (req.user.role !== 'admin' && req.user.status !== 'معتمد') {
@@ -316,9 +397,10 @@ router.post('/:sn/offer', auth(), async (req, res, next) => {
       });
     }
 
+    // لا تقبل عروض على طلب لم تنشره الإدارة.
     if (!ACTIVE_STATUSES.includes(order.status)) {
       return res.status(409).json({
-        message: 'الطلب لم يعد متاحًا للعروض'
+        message: 'الطلب غير منشور أو لم يعد متاحًا للعروض'
       });
     }
 
@@ -338,7 +420,6 @@ router.post('/:sn/offer', auth(), async (req, res, next) => {
       });
     }
 
-    // نحفظ الرسالة الأصلية؛ الإخفاء يطبق عند إرجاعها للعميل.
     order.offers.push({
       fanni: req.userId,
       fanniId: String(req.userId),
@@ -372,7 +453,7 @@ router.post('/:sn/offer', auth(), async (req, res, next) => {
   }
 });
 
-// قبول عرض: يتطلب توكن العميل الصادر عند إنشاء الطلب
+// قبول عرض: يتطلب توكن العميل الصادر عند إنشاء الطلب.
 router.post('/:sn/accept', async (req, res, next) => {
   try {
     const sn = String(req.params.sn || '').toUpperCase();
@@ -404,6 +485,12 @@ router.post('/:sn/accept', async (req, res, next) => {
       });
     }
 
+    if (order.expiresAt && order.expiresAt <= new Date()) {
+      return res.status(409).json({
+        message: 'انتهت مدة استقبال العروض لهذا الطلب'
+      });
+    }
+
     const offer = order.offers.id(offerId);
 
     if (!offer) {
@@ -417,6 +504,7 @@ router.post('/:sn/accept', async (req, res, next) => {
       {
         _id: order._id,
         status: { $in: ACTIVE_STATUSES },
+        expiresAt: { $gt: new Date() },
         'offers._id': offerId
       },
       {
@@ -434,7 +522,7 @@ router.post('/:sn/accept', async (req, res, next) => {
 
     if (!updated) {
       return res.status(409).json({
-        message: 'تم اختيار فني بالفعل، حدّث حالة الطلب'
+        message: 'تم اختيار فني بالفعل أو انتهت صلاحية الطلب؛ حدّث حالة الطلب'
       });
     }
 
@@ -447,7 +535,7 @@ router.post('/:sn/accept', async (req, res, next) => {
   }
 });
 
-// عرض آمن لتتبع الطلب
+// عرض آمن لتتبع الطلب.
 async function trackOrder(req, res, next) {
   try {
     const sn = String(req.params.sn || '').toUpperCase();
@@ -466,7 +554,7 @@ async function trackOrder(req, res, next) {
       });
     }
 
-    // نتحقق من التوكن، مع إبقاء استجابة التتبع خالية من أرقام الاتصال.
+    // التحقق من التوكن متاح للتوسعة مستقبلًا؛ الاستجابة العامة لا تكشف الهاتف.
     verifyClientToken(req, order);
 
     const safe = publicOrder(order);
