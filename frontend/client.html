@@ -72,7 +72,7 @@ function normalizeDigits(value){
 
 /*
   اكتشاف أرقام الموبايل المصرية داخل النصوص.
-  يقبل الأرقام العربية والإنجليزية، والفواصل والرموز والحروف
+  يقبل الأرقام العربية والإنجليزية، والفواصل والرموز
   القصيرة بين الأرقام. لا يُستخدم على خانة تليفون العميل المخصصة.
 */
 function containsPhoneNumber(value){
@@ -375,8 +375,27 @@ const API={
     });
   },
 
-  async sendComplaint(){
-    throw new Error('خدمة الشكاوى غير مرتبطة بالباك إند حاليًا، ولم يتم إرسال الشكوى. يلزم إضافة مسار API للشكاوى قبل تفعيلها.');
+  async sendComplaint(payload){
+    const sn=sanitizeInput(payload?.sn,20).toUpperCase();
+    const text=sanitizeInput(payload?.text,1000);
+
+    if(!VALIDATORS.sn(sn)){
+      throw new Error('كود الطلب غير صحيح.');
+    }
+
+    if(!VALIDATORS.text(text,10,1000)){
+      throw new Error('اكتب تفاصيل الشكوى في 10 حروف على الأقل.');
+    }
+
+    if(containsPhoneNumber(text)){
+      throw new Error('ممنوع كتابة رقم تليفون داخل تفاصيل الشكوى.');
+    }
+
+    return this.request('/api/complaints',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({sn,text})
+    });
   }
 };
 
@@ -465,6 +484,7 @@ let state={
   acceptingOffer:'',
   complaintSn:'',
   complaintText:'',
+  complaintLoading:false,
   showService:false,
   openCategory:'',
   searchService:''
@@ -796,7 +816,7 @@ function render(){
           <div class="h-10 w-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center text-lg">⚠️</div>
           <div>
             <h3 class="font-extrabold text-[15px]">تقديم شكوى</h3>
-            <p class="text-[11px] text-slate-500 mt-0.5">خدمة الشكاوى تحتاج ربطًا بالباك إند قبل تفعيل الإرسال</p>
+            <p class="text-[11px] text-slate-500 mt-0.5">ابعت شكواك للإدارة باستخدام كود الطلب</p>
           </div>
         </div>
         <div class="mt-4 space-y-3">
@@ -807,7 +827,9 @@ function render(){
             <span>${VALIDATORS.text(state.complaintText,10,1000)?'✓ البيانات مكتملة':''}</span>
           </div>
           <p class="text-[10px] text-slate-500">ما تكتبش رقم تليفون داخل الشكوى؛ استخدم بيانات الطلب للتواصل.</p>
-          <button type="button" onclick="sendComplaint()" class="w-full h-[48px] rounded-xl bg-red-600 text-white font-extrabold text-[13px]">إرسال الشكوى</button>
+          <button type="button" onclick="sendComplaint()" ${state.complaintLoading?'disabled':''} class="w-full h-[48px] rounded-xl bg-red-600 text-white font-extrabold text-[13px]">
+            ${state.complaintLoading?'جاري إرسال الشكوى...':'إرسال الشكوى'}
+          </button>
         </div>
       </div>
     </div>`:''}
@@ -1247,33 +1269,45 @@ async function acceptOffer(sn,offerId){
 }
 
 async function sendComplaint(){
-  if(!state.complaintSn||!state.complaintText){
-    showToast('كمّل بيانات الشكوى.');
+  if(state.complaintLoading)return;
+
+  const sn=sanitizeInput(state.complaintSn,20).toUpperCase();
+  const text=sanitizeInput(state.complaintText,1000);
+
+  if(!sn){
+    showToast('اكتب كود الطلب.');
     return;
   }
 
-  if(!VALIDATORS.sn(state.complaintSn)){
-    showToast('كود الطلب غير صحيح.');
+  if(!VALIDATORS.sn(sn)){
+    showToast('كود الطلب غير صحيح. مثال: SN123456');
     return;
   }
 
-  if(!VALIDATORS.text(state.complaintText,10,1000)){
+  if(!VALIDATORS.text(text,10,1000)){
     showToast('اكتب تفاصيل الشكوى في 10 حروف على الأقل.');
     return;
   }
 
-  if(containsPhoneNumber(state.complaintText)){
+  if(containsPhoneNumber(text)){
     showToast('ممنوع كتابة رقم تليفون داخل تفاصيل الشكوى.');
     return;
   }
 
+  state.complaintLoading=true;
+  render();
+
   try{
-    await API.sendComplaint({
-      sn:state.complaintSn,
-      text:state.complaintText
-    });
+    const result=await API.sendComplaint({sn,text});
+
+    state.complaintSn='';
+    state.complaintText='';
+    showToast(result.message||'تم إرسال الشكوى بنجاح.','success');
   }catch(error){
-    showToast(error.message||'خدمة الشكاوى غير مفعّلة حاليًا.');
+    showToast(error.message||'تعذر إرسال الشكوى حاليًا.');
+  }finally{
+    state.complaintLoading=false;
+    render();
   }
 }
 
