@@ -1,4 +1,3 @@
-
 'use strict';
 
 const express = require('express');
@@ -17,11 +16,12 @@ function normalizeDigits(value) {
 function containsPhoneNumber(value) {
   const normalized = normalizeDigits(value);
   const chunks = normalized.match(
-    /\d(?:[\s().+\-_/\\،,؛:]*\d){9,15}/g
+    /\d(?:[\s().+\-_/\\،,؛:]*\d){8,15}/g
   ) || [];
 
   return chunks.some(chunk => {
     const digits = chunk.replace(/\D/g, '');
+
     return /01[0125]\d{8}/.test(digits)
       || /201[0125]\d{8}/.test(digits)
       || /00201[0125]\d{8}/.test(digits);
@@ -29,14 +29,15 @@ function containsPhoneNumber(value) {
 }
 
 function cleanText(value, maxLength) {
-  return String(value || '').trim().slice(0, maxLength);
+  if (typeof value !== 'string') return '';
+  return value.trim().slice(0, maxLength);
 }
 
-// إرسال شكوى باستخدام كود الطلب واسم العميل وتفاصيل الشكوى.
+// إرسال شكوى مرتبطة بطلب موجود.
 router.post('/', async (req, res) => {
   try {
     const sn = cleanText(req.body?.sn, 20).toUpperCase();
-    const clientName = cleanText(req.body?.clientName, 50);
+    const submittedName = cleanText(req.body?.clientName, 50);
     const complaintText = cleanText(
       req.body?.text ?? req.body?.complaintText,
       1000
@@ -49,10 +50,12 @@ router.post('/', async (req, res) => {
       });
     }
 
-    if (clientName.length < 2 || containsPhoneNumber(clientName)) {
+    if (submittedName && (
+      submittedName.length < 2 || containsPhoneNumber(submittedName)
+    )) {
       return res.status(400).json({
         ok: false,
-        message: 'اكتب اسم العميل بشكل صحيح، بدون أرقام تليفونات.'
+        message: 'اسم العميل غير صحيح. اكتب الاسم بدون أرقام تليفونات.'
       });
     }
 
@@ -73,7 +76,9 @@ router.post('/', async (req, res) => {
       });
     }
 
-    const order = await Order.findOne({ sn }).select('_id sn clientName');
+    const order = await Order.findOne({ sn })
+      .select('_id sn clientName')
+      .lean();
 
     if (!order) {
       return res.status(404).json({
@@ -82,7 +87,9 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // لا نعرض بيانات الطلب؛ نحفظ الشكوى فقط.
+    // نعتمد اسم العميل المسجل مع الطلب بدلًا من الاسم المرسل من المتصفح.
+    const clientName = cleanText(order.clientName, 50) || 'عميل';
+
     const complaint = await Complaint.create({
       order: order._id,
       sn: order.sn,
