@@ -1,4 +1,3 @@
-
 'use strict';
 
 const express = require('express');
@@ -143,49 +142,100 @@ const AREA_OPTIONS = [
   'شبرا الخيمة',
   'بهتيم',
   'مسطرد',
-  'القناطر الخيرية'
+  'القناطر الخيرية',
+
+  // أسماء مناطق مستخدمة في واجهة العميل، تُقبل كما هي أيضًا
+  'الوايلي',
+  'منشية ناصر',
+  'الخليفة',
+  'مصر القديمة',
+  'المنيل',
+  'العاصمة الإدارية',
+  'أكتوبر',
+  '6 أكتوبر',
+  'الشيخ زايد',
+  'الحوامدية',
+  'أبو النمرس',
+  'منشأة القناطر',
+  'الصف',
+  'أطفيح',
+  'بنها',
+  'قليوب',
+  'الخانكة',
+  'منطقة أخرى داخل القاهرة الكبرى'
 ];
 
 const ARABIC_DIGITS = '٠١٢٣٤٥٦٧٨٩';
+const PERSIAN_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
 
 /*
- * يسمح هذا النمط بالتقاط أرقام المحمول المصرية حتى لو فُصلت
- * أرقامها بمسافات أو علامات أو حروف قصيرة.
+ * توحيد الأرقام العربية والفارسية إلى أرقام لاتينية قبل التحقق.
  */
-const EGYPT_PHONE_PATTERN =
-  /(?:\+?20|0020)?(?:[^\d]{0,5})0?(?:[^\d]{0,5})1(?:[^\d]{0,5})[0125](?:[^\d]{0,5}[0-9]){8}/gi;
-
-const EGYPT_PHONE_DIGITS_PATTERN =
-  /(?:0020|20)?0?1[0125]\d{8}/;
-
 function toWesternDigits(value) {
-  return String(value).replace(/[٠-٩]/g, digit =>
-    String(ARABIC_DIGITS.indexOf(digit))
-  );
+  return String(value).replace(/[٠-٩۰-۹]/g, digit => {
+    const arabicIndex = ARABIC_DIGITS.indexOf(digit);
+
+    if (arabicIndex !== -1) {
+      return String(arabicIndex);
+    }
+
+    return String(PERSIAN_DIGITS.indexOf(digit));
+  });
 }
 
 /*
- * حماية إضافية: إذا ظل رقم محمول ظاهرًا بعد محاولة الإخفاء،
- * لا نعيد النص الأصلي الذي قد يحتوي على رقم العميل.
+ * اكتشاف رقم محمول مصري حتى لو كُتبت أرقامه بفواصل أو مسافات
+ * أو علامات ترقيم. يُستخدم هذا التحقق لرفض النصوص التي تحتوي
+ * على رقم تواصل، وليس لإخفائه بعد حفظه فقط.
  */
-function sanitizeText(value) {
-  if (typeof value !== 'string') return value;
+function containsEgyptianMobile(value) {
+  if (typeof value !== 'string' || !value.trim()) {
+    return false;
+  }
 
   const normalized = toWesternDigits(value);
+  const chunks = normalized.match(/\d(?:\D{0,6}\d){9,14}/g) || [];
 
-  const sanitized = normalized.replace(
-    EGYPT_PHONE_PATTERN,
-    '[رقم تواصل مخفي]'
-  );
+  return chunks.some(chunk => {
+    const digits = chunk.replace(/\D/g, '');
 
-  const compactDigits = toWesternDigits(sanitized)
-    .replace(/\D/g, '');
+    return /^01[0125]\d{8}$/.test(digits)
+      || /^201[0125]\d{8}$/.test(digits)
+      || /^00201[0125]\d{8}$/.test(digits)
+      || /^20[125]\d{8}$/.test(digits);
+  });
+}
 
-  if (EGYPT_PHONE_DIGITS_PATTERN.test(compactDigits)) {
+/*
+ * حماية إضافية: لا نعيد النص الأصلي إذا احتوى على رقم محمول.
+ */
+function sanitizeText(value) {
+  if (typeof value !== 'string') {
+    return value;
+  }
+
+  if (containsEgyptianMobile(value)) {
     return '[تم إخفاء التفاصيل لاحتوائها على رقم تواصل]';
   }
 
-  return sanitized;
+  return value;
+}
+
+/*
+ * التحقق من جميع الحقول النصية التي يرسلها العميل؛ لا نعتمد على
+ * تحقق الواجهة لأن طلبات API يمكن إرسالها مباشرة إلى الخادم.
+ */
+function findPhoneContainingField(fields) {
+  for (const [fieldName, value] of Object.entries(fields)) {
+    if (
+      typeof value === 'string'
+      && containsEgyptianMobile(value)
+    ) {
+      return fieldName;
+    }
+  }
+
+  return null;
 }
 
 function sanitizeOffer(offer) {
@@ -216,7 +266,9 @@ function publicOrder(order, options = {}) {
     includeClientName = true
   } = options;
 
-  if (!order) return null;
+  if (!order) {
+    return null;
+  }
 
   const data = typeof order.toObject === 'function'
     ? order.toObject()
@@ -355,6 +407,22 @@ router.post('/', async (req, res, next) => {
       return res.status(400).json({
         message: 'بيانات الطلب غير مكتملة أو غير صحيحة',
         details: error.details.map(item => item.message)
+      });
+    }
+
+    const phoneInField = findPhoneContainingField({
+      service: value.service,
+      area: value.area,
+      address: value.address || '',
+      clientName: value.clientName || '',
+      budget: value.budget || '',
+      description: value.description || '',
+      desc: value.desc || ''
+    });
+
+    if (phoneInField) {
+      return res.status(400).json({
+        message: 'ممنوع كتابة رقم موبايل داخل الاسم أو المنطقة أو العنوان أو وصف الطلب أو الميزانية. استخدم خانة رقم الهاتف المخصصة.'
       });
     }
 
