@@ -13,6 +13,73 @@ const router = express.Router();
 
 const ACTIVE_STATUSES = ['قيد المراجعة', 'تم النشر', 'وصلتك عروض'];
 
+// مطابقة أرقام الموبايل المصرية، سواء محلية أو بمفتاح الدولة.
+const EGYPT_PHONE_PATTERN =
+  /(?:\+?20|0020)?[\s().-]*0?1[0125](?:[\s().-]*[0-9٠-٩]){8}/g;
+
+const ARABIC_DIGITS = '٠١٢٣٤٥٦٧٨٩';
+
+function toWesternDigits(value) {
+  return String(value).replace(/[٠-٩]/g, digit =>
+    String(ARABIC_DIGITS.indexOf(digit))
+  );
+}
+
+// إخفاء الأرقام داخل النصوص المعادة فقط، دون تعديل البيانات المخزنة.
+function sanitizeText(value) {
+  if (typeof value !== 'string') return value;
+
+  return toWesternDigits(value).replace(
+    EGYPT_PHONE_PATTERN,
+    '[رقم تواصل مخفي]'
+  );
+}
+
+function sanitizeOffer(offer) {
+  const safeOffer = typeof offer.toObject === 'function'
+    ? offer.toObject()
+    : { ...offer };
+
+  // لا نعيد بيانات الاتصال أو المعرّفات الداخلية للفني للعميل.
+  delete safeOffer.fanniPhone;
+  delete safeOffer.phone;
+  delete safeOffer.fanniId;
+  delete safeOffer.fanni;
+
+  if (typeof safeOffer.message === 'string') {
+    safeOffer.message = sanitizeText(safeOffer.message);
+  }
+
+  return safeOffer;
+}
+
+function publicOrder(order) {
+  const data = typeof order.toObject === 'function'
+    ? order.toObject()
+    : { ...order };
+
+  // منع تسريب بيانات الاتصال، حتى عند وجود توكن العميل.
+  delete data.clientPhone;
+  delete data.phone;
+
+  // معرّف الفني الداخلي ليس مطلوبًا في استجابة العميل العامة.
+  delete data.assignedFanni;
+
+  if (typeof data.description === 'string') {
+    data.description = sanitizeText(data.description);
+  }
+
+  if (typeof data.desc === 'string') {
+    data.desc = sanitizeText(data.desc);
+  }
+
+  if (Array.isArray(data.offers)) {
+    data.offers = data.offers.map(sanitizeOffer);
+  }
+
+  return data;
+}
+
 const createSchema = Joi.object({
   service: Joi.string().trim().min(2).max(100).required(),
   area: Joi.string().trim().min(2).max(250),
@@ -30,14 +97,17 @@ function validSN(sn) {
 
 function clientTokenFrom(req) {
   const authHeader = req.headers.authorization || '';
+
   if (authHeader.startsWith('Bearer ')) {
     return authHeader.slice(7).trim();
   }
+
   return String(req.body?.clientToken || req.query?.clientToken || '');
 }
 
 function verifyClientToken(req, order) {
   const token = clientTokenFrom(req);
+
   if (!token || !process.env.JWT_SECRET) return false;
 
   try {
@@ -49,28 +119,6 @@ function verifyClientToken(req, order) {
   } catch {
     return false;
   }
-}
-
-function publicOrder(order, revealContacts = false) {
-  const data = typeof order.toObject === 'function'
-    ? order.toObject()
-    : { ...order };
-
-  if (!revealContacts) {
-    delete data.clientPhone;
-    delete data.phone;
-
-    data.offers = (data.offers || []).map(offer => {
-      const safeOffer = { ...offer };
-      delete safeOffer.fanniPhone;
-      delete safeOffer.phone;
-      delete safeOffer.fanniId;
-      delete safeOffer.fanni;
-      return safeOffer;
-    });
-  }
-
-  return data;
 }
 
 // إنشاء طلب جديد للعميل
@@ -96,6 +144,7 @@ router.post('/', async (req, res, next) => {
     }
 
     const clientPhone = normalizePhone(value.phone);
+
     if (!clientPhone) {
       return res.status(400).json({
         message: 'رقم هاتف العميل غير صحيح'
@@ -103,8 +152,11 @@ router.post('/', async (req, res, next) => {
     }
 
     const area = value.area || value.address;
+
     if (!area) {
-      return res.status(400).json({ message: 'العنوان مطلوب' });
+      return res.status(400).json({
+        message: 'العنوان مطلوب'
+      });
     }
 
     let order = null;
@@ -120,6 +172,7 @@ router.post('/', async (req, res, next) => {
           description: value.description,
           status: 'قيد المراجعة'
         });
+
         break;
       } catch (err) {
         if (err.code !== 11000 || attempt === 2) throw err;
@@ -127,7 +180,9 @@ router.post('/', async (req, res, next) => {
     }
 
     if (!order) {
-      return res.status(500).json({ message: 'تعذر إنشاء الطلب' });
+      return res.status(500).json({
+        message: 'تعذر إنشاء الطلب'
+      });
     }
 
     const clientToken = jwt.sign(
@@ -140,13 +195,15 @@ router.post('/', async (req, res, next) => {
       { expiresIn: '30d' }
     );
 
+    const safeOrder = publicOrder(order);
+
     return res.status(201).json({
       message: 'تم إنشاء الطلب بنجاح',
       sn: order.sn,
       id: order._id,
       clientToken,
-      order: publicOrder(order),
-      data: publicOrder(order)
+      order: safeOrder,
+      data: safeOrder
     });
   } catch (err) {
     next(err);
@@ -166,20 +223,21 @@ router.get('/available', auth(), async (req, res, next) => {
       status: { $in: ACTIVE_STATUSES },
       expiresAt: { $gt: new Date() }
     })
-      .select('-clientPhone')
+      .select('-clientPhone -phone')
       .sort({ createdAt: -1 })
       .lean();
 
-    const safeOrders = orders.map(order => ({
-      ...order,
-      offers: (order.offers || []).map(offer => {
-        const safeOffer = { ...offer };
-        delete safeOffer.fanniPhone;
-        return safeOffer;
-      })
-    }));
+    const safeOrders = orders.map(order => {
+      const safeOrder = publicOrder(order);
 
-    return res.json({ orders: safeOrders, data: safeOrders });
+      // الفني لا يحتاج إلى معرّفات الفنيين الآخرين أو أرقامهم.
+      return safeOrder;
+    });
+
+    return res.json({
+      orders: safeOrders,
+      data: safeOrders
+    });
   } catch (err) {
     next(err);
   }
@@ -201,6 +259,7 @@ router.get('/my-offers', auth(), async (req, res, next) => {
         if (String(offer.fanni) === String(req.userId)) {
           offers.push({
             ...offer,
+            message: sanitizeText(offer.message),
             orderSn: order.sn,
             orderStatus: order.status
           });
@@ -208,7 +267,10 @@ router.get('/my-offers', auth(), async (req, res, next) => {
       }
     }
 
-    return res.json({ offers, data: offers });
+    return res.json({
+      offers,
+      data: offers
+    });
   } catch (err) {
     next(err);
   }
@@ -226,7 +288,9 @@ router.post('/:sn/offer', auth(), async (req, res, next) => {
     const sn = String(req.params.sn || '').toUpperCase();
 
     if (!validSN(sn)) {
-      return res.status(400).json({ message: 'كود الطلب غير صحيح' });
+      return res.status(400).json({
+        message: 'كود الطلب غير صحيح'
+      });
     }
 
     const schema = Joi.object({
@@ -234,7 +298,9 @@ router.post('/:sn/offer', auth(), async (req, res, next) => {
       message: Joi.string().trim().min(5).max(500).required()
     });
 
-    const result = schema.validate(req.body, { abortEarly: false });
+    const result = schema.validate(req.body, {
+      abortEarly: false
+    });
 
     if (result.error) {
       return res.status(400).json({
@@ -245,7 +311,9 @@ router.post('/:sn/offer', auth(), async (req, res, next) => {
     const order = await Order.findOne({ sn });
 
     if (!order) {
-      return res.status(404).json({ message: 'الطلب غير موجود' });
+      return res.status(404).json({
+        message: 'الطلب غير موجود'
+      });
     }
 
     if (!ACTIVE_STATUSES.includes(order.status)) {
@@ -270,6 +338,7 @@ router.post('/:sn/offer', auth(), async (req, res, next) => {
       });
     }
 
+    // نحفظ الرسالة الأصلية؛ الإخفاء يطبق عند إرجاعها للعميل.
     order.offers.push({
       fanni: req.userId,
       fanniId: String(req.userId),
@@ -281,14 +350,20 @@ router.post('/:sn/offer', auth(), async (req, res, next) => {
     });
 
     order.status = 'وصلتك عروض';
+
     await order.save();
 
     return res.status(201).json({
       message: 'تم إرسال العرض بنجاح',
       orderSn: order.sn,
       offers: order.offers.map(offer => {
-        const safeOffer = offer.toObject();
+        const safeOffer = typeof offer.toObject === 'function'
+          ? offer.toObject()
+          : { ...offer };
+
         delete safeOffer.fanniPhone;
+        delete safeOffer.phone;
+
         return safeOffer;
       })
     });
@@ -312,7 +387,9 @@ router.post('/:sn/accept', async (req, res, next) => {
     const order = await Order.findOne({ sn });
 
     if (!order) {
-      return res.status(404).json({ message: 'الطلب غير موجود' });
+      return res.status(404).json({
+        message: 'الطلب غير موجود'
+      });
     }
 
     if (!verifyClientToken(req, order)) {
@@ -330,10 +407,12 @@ router.post('/:sn/accept', async (req, res, next) => {
     const offer = order.offers.id(offerId);
 
     if (!offer) {
-      return res.status(404).json({ message: 'العرض غير موجود' });
+      return res.status(404).json({
+        message: 'العرض غير موجود'
+      });
     }
 
-    // تحديث مشروط بالحالة الحالية لمنع قبول عرضين متزامنين
+    // تحديث مشروط بالحالة الحالية لمنع قبول عرضين متزامنين.
     const updated = await Order.findOneAndUpdate(
       {
         _id: order._id,
@@ -347,7 +426,10 @@ router.post('/:sn/accept', async (req, res, next) => {
           status: 'تم اختيار فني'
         }
       },
-      { new: true, runValidators: true }
+      {
+        new: true,
+        runValidators: true
+      }
     );
 
     if (!updated) {
@@ -358,32 +440,41 @@ router.post('/:sn/accept', async (req, res, next) => {
 
     return res.json({
       message: 'تم قبول العرض بنجاح',
-      order: publicOrder(updated, true)
+      order: publicOrder(updated)
     });
   } catch (err) {
     next(err);
   }
 });
 
-// عرض عام آمن لتتبع الطلب
+// عرض آمن لتتبع الطلب
 async function trackOrder(req, res, next) {
   try {
     const sn = String(req.params.sn || '').toUpperCase();
 
     if (!validSN(sn)) {
-      return res.status(400).json({ message: 'كود الطلب غير صحيح' });
+      return res.status(400).json({
+        message: 'كود الطلب غير صحيح'
+      });
     }
 
     const order = await Order.findOne({ sn });
 
     if (!order) {
-      return res.status(404).json({ message: 'الطلب غير موجود' });
+      return res.status(404).json({
+        message: 'الطلب غير موجود'
+      });
     }
 
-    const authorized = verifyClientToken(req, order);
-    const safe = publicOrder(order, authorized);
+    // نتحقق من التوكن، مع إبقاء استجابة التتبع خالية من أرقام الاتصال.
+    verifyClientToken(req, order);
 
-    return res.json({ order: safe, data: safe });
+    const safe = publicOrder(order);
+
+    return res.json({
+      order: safe,
+      data: safe
+    });
   } catch (err) {
     next(err);
   }
