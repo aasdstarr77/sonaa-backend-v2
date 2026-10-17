@@ -1,3 +1,4 @@
+
 'use strict';
 
 const express = require('express');
@@ -26,13 +27,6 @@ const loginSchema = Joi.object({
   email: Joi.string().trim().email().optional(),
   password: Joi.string().min(1).required()
 }).or('phone', 'email');
-
-const idSchema = Joi.string().custom((value, helpers) => {
-  if (!mongoose.isValidObjectId(value)) {
-    return helpers.error('any.invalid');
-  }
-  return value;
-});
 
 const amountSchema = Joi.number()
   .strict()
@@ -141,7 +135,6 @@ function getLoginPhone(body) {
 
 /*
  * POST /api/admin/bootstrap
- *
  * إنشاء أول حساب إدارة فقط.
  */
 router.post('/bootstrap', async (req, res, next) => {
@@ -556,7 +549,6 @@ router.post(
 
 /*
  * تعيين رصيد المحفظة مع تسجيل فرق التسوية في دفتر الحركات.
- * التحديث والحركة المالية وسجل القرار تتم داخل معاملة واحدة.
  */
 router.post(
   '/fannis/:id/set-balance',
@@ -768,7 +760,6 @@ router.post(
 
     try {
       session = await mongoose.startSession();
-
       let outcome = null;
 
       await session.withTransaction(async () => {
@@ -936,7 +927,6 @@ router.post(
 
 /*
  * DELETE /api/admin/orders/:sn
- *
  * حذف طلب تجريبي غير مرتبط بعملية مالية أو فني متعيّن.
  */
 router.delete(
@@ -996,10 +986,7 @@ router.delete(
 
 /*
  * DELETE /api/admin/clients/:phone
- *
- * لا يوجد حساب عميل مستقل في قاعدة البيانات الحالية.
- * لذلك حذف العميل يعني حذف طلباته المرتبطة برقم هاتفه.
- * لو أي طلب محمي ماليًا، تتوقف العملية كلها دون حذف جزئي.
+ * حذف طلبات العميل المرتبطة برقم هاتفه.
  */
 router.delete(
   '/clients/:phone',
@@ -1080,16 +1067,18 @@ router.delete(
 /*
  * DELETE /api/admin/fannis/:id
  *
- * يسمح بالحذف عند تصفير الرصيد وعدم وجود شحن معلّق أو طلب نشط.
- * لا تمنع السجلات المالية أو طلبات الشحن المعتمدة/المرفوضة الحذف؛
- * وتظل هذه السجلات محفوظة للتدقيق المالي.
+ * قرار حذف الفني للأدمن.
+ * لا توجد شروط تمنع الحذف بسبب الرصيد أو الطلبات أو الشحنات.
+ * يحتفظ النظام بسجلات الطلبات والشحنات والحركات المالية.
  */
 router.delete(
   '/fannis/:id',
   auth('admin'),
   async (req, res, next) => {
     try {
-      if (!validId(req.params.id)) return sendBadId(res);
+      if (!validId(req.params.id)) {
+        return sendBadId(res);
+      }
 
       const fanni = await Fanni.findOne({
         _id: req.params.id,
@@ -1102,80 +1091,74 @@ router.delete(
         });
       }
 
-      const balance = Number(fanni.walletBalance || 0);
+      const fanniId = fanni._id;
 
-      if (balance !== 0) {
-        return res.status(409).json({
-          message: 'لا يمكن حذف الفني لأن رصيد محفظته ليس صفرًا. سوِّ الرصيد أولًا بالطريقة الصحيحة.'
-        });
-      }
+      // نجمع معلومات للعرض والتدقيق، ولا نستخدمها لمنع الحذف.
+      const [
+        topupCount,
+        pendingTopupCount,
+        transactionCount,
+        relatedOrderCount,
+        activeOrderCount
+      ] = await Promise.all([
+        TopupRequest.countDocuments({ fanni: fanniId }),
 
-      const hasPendingTopup = await TopupRequest.exists({
-        fanni: fanni._id,
-        status: 'قيد المراجعة'
-      });
+        TopupRequest.countDocuments({
+          fanni: fanniId,
+          status: 'قيد المراجعة'
+        }),
 
-      if (hasPendingTopup) {
-        return res.status(409).json({
-          message: 'لا يمكن حذف الفني لأن لديه طلب شحن قيد المراجعة.'
-        });
-      }
+        WalletTransaction.countDocuments({ fanni: fanniId }),
 
-      const activeStatuses = [
-        'قيد المراجعة',
-        'تم النشر',
-        'وصلتك عروض',
-        'تم اختيار فني'
-      ];
+        Order.countDocuments({
+          $or: [
+            { assignedFanni: fanniId },
+            { 'offers.fanni': fanniId }
+          ]
+        }),
 
-      const hasActiveOrder = await Order.exists({
-        status: { $in: activeStatuses },
-        $or: [
-          { assignedFanni: fanni._id },
-          { 'offers.fanni': fanni._id, commissionCharged: true }
-        ]
-      });
+        Order.countDocuments({
+          status: {
+            $in: [
+              'قيد المراجعة',
+              'تم النشر',
+              'وصلتك عروض',
+              'تم اختيار فني'
+            ]
+          },
+          $or: [
+            { assignedFanni: fanniId },
+            { 'offers.fanni': fanniId }
+          ]
+        })
+      ]);
 
-      if (hasActiveOrder) {
-        return res.status(409).json({
-          message: 'لا يمكن حذف الفني لأنه مرتبط بطلب نشط أو بعمولة على طلب لم يُغلق بعد.'
-        });
-      }
+      const summary = {
+        balance: Number(fanni.walletBalance || 0),
+        topupCount,
+        pendingTopupCount,
+        transactionCount,
+        relatedOrderCount,
+        activeOrderCount
+      };
 
-      /*
-       * حذف عروض الفني من الطلبات النشطة غير المسندة إليه.
-       * تبقى الطلبات المكتملة والسجلات المالية القديمة كما هي.
-       */
-      await Order.updateMany(
-        {
-          'offers.fanni': fanni._id,
-          assignedFanni: { $in: [null, undefined] },
-          status: { $in: activeStatuses },
-          commissionCharged: { $ne: true }
-        },
-        {
-          $pull: {
-            offers: { fanni: fanni._id }
-          }
-        }
-      );
-
+      // الحذف لا يعتمد على قيمة الرصيد أو عدد الارتباطات.
       const deleted = await Fanni.deleteOne({
-        _id: fanni._id,
-        role: 'fanni',
-        walletBalance: 0
+        _id: fanniId,
+        role: 'fanni'
       });
 
       if (deleted.deletedCount !== 1) {
         return res.status(409).json({
-          message: 'لم يتم حذف الفني؛ ربما تغيّر رصيده أثناء العملية. حدّث الصفحة وحاول مرة أخرى.'
+          message: 'لم يتم حذف حساب الفني. حدّث القائمة وحاول مرة أخرى.'
         });
       }
 
       return res.json({
-        message: 'تم حذف حساب الفني بنجاح مع الاحتفاظ بالسجلات المالية والطلبات القديمة',
+        message: 'تم حذف حساب الفني. احتُفظ بسجلات الطلبات والشحنات والحركات المالية.',
         deleted: 1,
-        fanniId: String(fanni._id)
+        fanniId: String(fanniId),
+        summary
       });
     } catch (err) {
       next(err);
