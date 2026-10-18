@@ -1,3 +1,4 @@
+
 'use strict';
 
 require('dotenv').config();
@@ -53,31 +54,28 @@ app.use(express.static(frontendPath, {
   dotfiles: 'ignore'
 }));
 
-app.get('/health', (req, res) => {
-  res.json({
-    ok: true,
-    service: 'sonaa-backend-v2',
-    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-    time: new Date().toISOString()
-  });
-});
-
-async function ensureDatabase(req, res, next) {
+// اختبار قاعدة البيانات فعليًا، وليس الاكتفاء بحالة الاتصال.
+async function checkDatabase(req, res) {
   try {
-    if (mongoose.connection.readyState !== 1) {
-      if (!global.__sonaaMongoPromise) {
-        global.__sonaaMongoPromise = connectDB().catch(err => {
-          global.__sonaaMongoPromise = null;
-          throw err;
-        });
-      }
-      await global.__sonaaMongoPromise;
+    await connectDB();
+
+    if (!mongoose.connection.db) {
+      throw new Error('MongoDB connection is not ready');
     }
-    next();
+
+    await mongoose.connection.db.admin().ping();
+
+    return res.status(200).json({
+      ok: true,
+      service: 'sonaa-backend-v2',
+      database: 'connected',
+      time: new Date().toISOString()
+    });
   } catch (err) {
-    console.error('MongoDB connection failed:', err.message);
+    console.error('Database health check failed:', err.message);
+
     if (!res.headersSent) {
-      res.status(503).json({
+      return res.status(503).json({
         ok: false,
         service: 'sonaa-backend-v2',
         database: 'disconnected',
@@ -89,21 +87,49 @@ async function ensureDatabase(req, res, next) {
   }
 }
 
-app.get('/api/health', ensureDatabase, (req, res) => {
-  res.json({
-    ok: true,
-    service: 'sonaa-backend-v2',
-    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-    time: new Date().toISOString()
-  });
-});
+app.get('/health', checkDatabase);
+app.get('/api/health', checkDatabase);
+
+// تأمين المسارات التي تعتمد على قاعدة البيانات.
+async function ensureDatabase(req, res, next) {
+  try {
+    // فحص الصحة له معالج مستقل.
+    // قائمة الخدمات ثابتة ولا تحتاج اتصال MongoDB.
+    if (req.path === '/health' || req.path === '/services') {
+      return next();
+    }
+
+    await connectDB();
+
+    if (mongoose.connection.readyState !== 1) {
+      throw new Error('MongoDB is not connected');
+    }
+
+    return next();
+  } catch (err) {
+    console.error('MongoDB connection failed:', err.message);
+
+    if (!res.headersSent) {
+      return res.status(503).json({
+        ok: false,
+        service: 'sonaa-backend-v2',
+        database: 'disconnected',
+        message: 'قاعدة البيانات غير متاحة حاليًا',
+        code: 'DATABASE_UNAVAILABLE',
+        time: new Date().toISOString()
+      });
+    }
+  }
+}
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 10,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { message: 'محاولات تسجيل الدخول كثيرة، حاول مرة أخرى بعد قليل' }
+  message: {
+    message: 'محاولات تسجيل الدخول كثيرة، حاول مرة أخرى بعد قليل'
+  }
 });
 
 const loginPaths = [
@@ -118,16 +144,14 @@ const loginPaths = [
 
 app.use(loginPaths, loginLimiter);
 
-app.use('/api', (req, res, next) => {
-  if (req.path === '/health') return next();
-  return ensureDatabase(req, res, next);
-});
+// جميع مسارات API التي تعتمد على قاعدة البيانات تمر عبر هذا الوسيط.
+app.use('/api', ensureDatabase);
 
 app.use('/api', publicRouter);
 app.use('/api/complaints', complaintRouter);
 app.use('/api/orders', orderRouter);
 
-// توافق مع مسارات صفحات العميل القديمة
+// التوافق مع المسارات القديمة لواجهة العميل.
 app.use('/api/client/orders', orderRouter);
 app.use('/api/client/order', orderRouter);
 app.use('/api/order', orderRouter);
@@ -139,17 +163,14 @@ app.use('/api/fannis', fanniRouter);
 app.use('/api/technician', fanniRouter);
 app.use('/api/technicians', fanniRouter);
 
-// مسار عروض الفني المتوافق مع الواجهة القديمة - مهم لـ frontend/fanni.html
-// frontend/fanni.html بيطلب POST /api/fanni/orders/:sn/offer
-// لازم يفضل موجود
+// مسار عروض الفني.
 app.use('/api/fanni/orders', orderRouter);
 
 app.use('/api/admin', adminRouter);
 app.use('/api/admins', adminRouter);
 app.use('/api/auth/admin', adminRouter);
 
-// قائمة الطلبات في لوحة الإدارة: للأدمن المصرح له فقط
-// مهم جداً لـ frontend/admin.html - تم إصلاحه ليستخدم populate
+// قائمة الطلبات للأدمن المصرح له فقط.
 const Order = require('./models/Order');
 
 app.get('/api/admin/orders', auth('admin'), async (req, res, next) => {
@@ -160,9 +181,9 @@ app.get('/api/admin/orders', auth('admin'), async (req, res, next) => {
       .limit(500)
       .lean();
 
-    res.json({ orders, data: orders });
+    return res.json({ orders, data: orders });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 });
 
@@ -173,8 +194,15 @@ function sendHtml(res, filename) {
     path.join(__dirname, '..', filename),
     path.join(__dirname, '..', 'frontend', filename)
   ];
-  const file = candidates.find(p => fs.existsSync(p) && fs.statSync(p).isFile());
-  if (!file) return res.status(404).send(`الصفحة ${filename} غير موجودة`);
+
+  const file = candidates.find(
+    p => fs.existsSync(p) && fs.statSync(p).isFile()
+  );
+
+  if (!file) {
+    return res.status(404).send(`الصفحة ${filename} غير موجودة`);
+  }
+
   return res.sendFile(file);
 }
 
@@ -184,7 +212,10 @@ app.get('/fanni', (req, res) => sendHtml(res, 'fanni.html'));
 app.get('/admin', (req, res) => sendHtml(res, 'admin.html'));
 
 app.use('/api', (req, res) => {
-  res.status(404).json({ message: 'مسار API غير موجود', path: req.originalUrl });
+  return res.status(404).json({
+    message: 'مسار API غير موجود',
+    path: req.originalUrl
+  });
 });
 
 app.use(errorHandler);
@@ -193,6 +224,7 @@ module.exports = app;
 
 if (require.main === module) {
   const PORT = process.env.PORT || 3000;
+
   app.listen(PORT, () => {
     console.log(`Sunaa server listening on port ${PORT}`);
   });
