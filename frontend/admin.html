@@ -1585,6 +1585,17 @@ function logout(){
   render();
 }
 
+function applyComplaintFilter(){
+let list=[...state.complaints];
+if(state.filterComplaint!=='الكل')list=list.filter(c=>String(c.status||'جديدة')===state.filterComplaint);
+if(state.search){
+const q=state.search.toLowerCase();
+list=list.filter(c=>[c.sn,c.clientName,c.text,c.status,c.adminNote,c.adminResponse].some(v=>String(v||'').toLowerCase().includes(q)));
+}
+state.filteredComplaints=list;
+if(state.tab==='complaints')render();
+}
+
 async function loadComplaints(){
   if(!getToken())return;
   state.loadingComplaints=true;
