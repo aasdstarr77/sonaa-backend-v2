@@ -1,7 +1,27 @@
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-<head>
+<head><style>
+@font-face {
+  font-family: "Optimistic";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("/fonts/OptimisticAI_VF_Optimized.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Optimistic Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/OptimisticMono_W_TextRegular.woff2") format("woff2");
+}
+:where(html) {
+  font-family: "Optimistic", system-ui, sans-serif;
+}
+:where(code, pre, kbd, samp) {
+  font-family: "Optimistic Mono", ui-monospace, monospace;
+}
+</style>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b1b3a">
@@ -50,71 +70,11 @@ const USER_KEY='fanni_user_v4';
 const IS_DEV=['localhost','127.0.0.1'].includes(location.hostname);
 const log=(...a)=>{if(IS_DEV)console.log(...a)};
 
-const CATEGORIES=[
- {label:'دش وكاميرات وشاشات',emoji:'📡',services:[
-  'تركيب دش','صيانة دش','تركيب كاميرات مراقبة','صيانة كاميرات مراقبة',
-  'تركيب رسيفر','صيانة رسيفر','تعليق شاشة حائط','صيانة شاشة تلفزيون',
-  'تركيب شبكة إنترنت منزلية','صيانة أجهزة استقبال'
- ]},
- {label:'التنظيف',emoji:'🧹',services:[
-  'تنظيف شقق','تنظيف منازل','تنظيف مكاتب','تنظيف بعد التشطيب',
-  'تنظيف سجاد وموكيت','تنظيف كنب وانتريهات','تنظيف زجاج وواجهات',
-  'تنظيف مطابخ','تنظيف حمامات','تنظيف خزانات مياه','تنظيف مراتب',
-  'تنظيف واجهات مباني','مكافحة حشرات'
- ]},
- {label:'الكهرباء',emoji:'⚡',services:[
-  'كهربائي منازل','تأسيس كهرباء','إصلاح أعطال الكهرباء',
-  'تركيب نجف وإضاءة','تركيب مفاتيح وبرايز','تركيب مراوح سقف',
-  'تركيب قواطع كهربائية','صيانة لوحة الكهرباء','كهربائي سيارات'
- ]},
- {label:'السباكة',emoji:'🚿',services:[
-  'سباك منازل','إصلاح تسريب مياه','تسليك صرف صحي','تغيير حوض',
-  'تركيب خلاطات','تغيير خلاطات','تركيب أطقم حمامات',
-  'تركيب مواسير','صيانة سخان مياه','تركيب مواتير مياه',
-  'صيانة خزانات مياه','تركيب قاعدة حمام','إصلاح سيفون'
- ]},
- {label:'التكييف والتبريد',emoji:'❄️',services:[
-  'تركيب تكييف','صيانة تكييف','تنظيف تكييف','شحن فريون تكييف',
-  'صيانة ثلاجات','صيانة ديب فريزر','صيانة مبرد مياه'
- ]},
- {label:'الأجهزة المنزلية',emoji:'🧺',services:[
-  'صيانة غسالات','صيانة غسالات أطباق','صيانة بوتاجازات',
-  'صيانة أفران','صيانة ميكروويف','صيانة سخانات كهرباء',
-  'صيانة أجهزة منزلية أخرى'
- ]},
- {label:'النجارة والأثاث',emoji:'🪚',services:[
-  'نجار موبيليا','نجار أبواب وشبابيك','تصليح أثاث','تركيب أثاث',
-  'تركيب مطابخ','صيانة دواليب','تغيير كالون باب','تركيب أقفال',
-  'إصلاح مفصلات الأبواب'
- ]},
- {label:'النقاشة والديكور',emoji:'🎨',services:[
-  'نقاش ودهانات','دهانات شقق','جبس بورد','فني ديكور',
-  'ورق حائط','معالجة شروخ الحوائط','ترميمات منزلية'
- ]},
- {label:'الألوميتال والزجاج',emoji:'🪟',services:[
-  'فني ألوميتال','صيانة شبابيك ألوميتال','تركيب زجاج',
-  'تصليح أبواب ألوميتال','تركيب سلك شبابيك'
- ]},
- {label:'البناء والتشطيبات',emoji:'🧱',services:[
-  'مبلط سيراميك','فني رخام','محارة وبياض','عامل بناء',
-  'تركيب أرضيات','عزل أسطح وحمامات','صيانة أبواب وشبابيك',
-  'تركيب حجر','تركيب وزر'
- ]},
- {label:'الكمبيوتر والإنترنت',emoji:'💻',services:[
-  'فني كمبيوتر','صيانة لابتوب','صيانة طابعات','تركيب راوتر',
-  'إصلاح أعطال الإنترنت','صيانة موبايلات','تركيب شبكات داخلية'
- ]},
- {label:'النقل والتركيب',emoji:'🚚',services:[
-  'نقل أثاث','فك وتركيب أثاث','نقل أجهزة منزلية',
-  'تركيب ستائر','تركيب رفوف','تركيب مرايات'
- ]},
- {label:'خدمات أخرى',emoji:'🛠️',services:[
-  'فني غاز','صيانة أقفال','تركيب أبواب','فني لحام',
-  'صيانة مواتير','فني مضخات','تركيب سخانات','خدمة صيانة منزلية أخرى'
- ]}
-];
-
-const ALL_SERVICES=[...new Set(CATEGORIES.flatMap(c=>c.services))];
+// === تم التوحيد مع /api/services - المصدر الرسمي الوحيد ===
+let CATEGORIES=[];
+let ALL_SERVICES=[];
+let SERVICES_LOADING=true;
+let SERVICES_ERROR='';
 
 const V={
  phone:v=>/^01[0-25]\d{8}$/.test(String(v||'').replace(/\D/g,'')),
@@ -260,6 +220,35 @@ const API={
  topup:p=>apiPost('/api/fanni/wallet/topup',p),
  walletHistory:()=>apiGet('/api/fanni/wallet/history')
 };
+
+async function loadServices(){
+ SERVICES_LOADING=true;
+ SERVICES_ERROR='';
+ // لا نرسم هنا قبل أول تحميل، لكن لو إعادة محاولة نحدث الواجهة
+ if(CATEGORIES.length||ALL_SERVICES.length||SERVICES_ERROR)render();
+ try{
+  const data=await apiGet('/api/services');
+  const cats=Array.isArray(data.categories)?data.categories:[];
+  const srvs=Array.isArray(data.services)?data.services:[];
+  if(!cats.length||!srvs.length)throw new Error('قائمة الخدمات فارغة من الخادم.');
+  for(const c of cats){
+    if(!c||typeof c.label!=='string'||!Array.isArray(c.services))throw new Error('بيانات الأقسام غير سليمة.');
+  }
+  CATEGORIES=cats;
+  ALL_SERVICES=[...new Set(srvs)];
+  SERVICES_LOADING=false;
+  SERVICES_ERROR='';
+  log('تم تحميل الخدمات للفني:',CATEGORIES.length+' قسم, '+ALL_SERVICES.length+' خدمة');
+ }catch(e){
+  SERVICES_LOADING=false;
+  SERVICES_ERROR=e.message||'تعذر تحميل قائمة الخدمات';
+  CATEGORIES=[];
+  ALL_SERVICES=[];
+  log('فشل تحميل الخدمات للفني',e);
+  toast(SERVICES_ERROR,'error');
+ }
+ render();
+}
 
 let state={
  tab:getToken()?'available':'login',
@@ -458,14 +447,18 @@ function render(){
     <div><label class="field-label">رقم التليفون *</label><input class="field" inputmode="numeric" autocomplete="tel" value="${esc(state.regPhone)}" oninput="state.regPhone=this.value.replace(/\\D/g,'').slice(0,11)" placeholder="01xxxxxxxxx"></div>
 
     <div class="rounded-2xl border p-3">
-     <div class="font-extrabold text-[12px] mb-3">التخصصات *</div>
-     ${CATEGORIES.map(cat=>`<div class="mb-4"><div class="text-[11px] font-extrabold text-slate-600 mb-2">${cat.emoji} ${esc(cat.label)}</div><div class="flex flex-wrap gap-2">${cat.services.map(s=>`<label class="service-chip ${state.regSpecialties.includes(s)?'selected':''}"><input type="checkbox" data-specialty="${esc(s)}" ${state.regSpecialties.includes(s)?'checked':''} onchange="toggleSpecialty(this.dataset.specialty)"><span>${esc(s)}</span></label>`).join('')}</div></div>`).join('')}
+     <div class="font-extrabold text-[12px] mb-3">التخصصات * ${SERVICES_LOADING?'<span class="text-blue-600">(جاري التحميل...)</span>':SERVICES_ERROR?'<span class="text-red-600">(فشل التحميل)</span>':''}</div>
+     ${SERVICES_LOADING?`
+       <div class="py-6 text-center"><div class="inline-block h-6 w-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div><p class="mt-2 text-[11px] font-bold text-slate-600">جاري تحميل التخصصات من الخادم...</p></div>
+     `:SERVICES_ERROR?`
+       <div class="rounded-xl bg-red-50 border border-red-200 p-3 text-center"><p class="text-[11px] font-bold text-red-700">${esc(SERVICES_ERROR)}</p><button onclick="loadServices()" class="mt-2 secondary-btn px-4 py-2 text-[11px]">إعادة المحاولة</button><p class="mt-2 text-[10px] text-slate-500">المصدر الرسمي هو /api/services</p></div>
+     `:CATEGORIES.map(cat=>`<div class="mb-4"><div class="text-[11px] font-extrabold text-slate-600 mb-2">${esc(cat.emoji)} ${esc(cat.label)}</div><div class="flex flex-wrap gap-2">${cat.services.map(s=>`<label class="service-chip ${state.regSpecialties.includes(s)?'selected':''}"><input type="checkbox" data-specialty="${esc(s)}" ${state.regSpecialties.includes(s)?'checked':''} onchange="toggleSpecialty(this.dataset.specialty)"><span>${esc(s)}</span></label>`).join('')}</div></div>`).join('')}
     </div>
 
     <div><label class="field-label">مناطق العمل والأحياء *</label><textarea class="field min-h-[100px]" oninput="state.regAreasText=this.value.slice(0,1000)" placeholder="مثال: المعادي، زهراء المعادي، دار السلام">${esc(state.regAreasText)}</textarea><p class="text-[10px] text-slate-500 mt-1">افصل بين المناطق بفاصلة أو سطر جديد.</p></div>
     <div><label class="field-label">كلمة السر *</label><input type="password" class="field" autocomplete="new-password" value="${esc(state.regPass)}" oninput="state.regPass=this.value.slice(0,100)" placeholder="6 أحرف على الأقل"></div>
 
-    <button onclick="doRegister()" ${state.loading?'disabled':''} class="primary-btn w-full h-12">${state.loading?'جاري إنشاء الحساب...':'إنشاء حساب فني'}</button>
+    <button onclick="doRegister()" ${state.loading||SERVICES_LOADING?'disabled':''} class="primary-btn w-full h-12">${state.loading?'جاري إنشاء الحساب...':SERVICES_LOADING?'جاري تحميل التخصصات...':'إنشاء حساب فني'}</button>
     ${state.error?errorBox(state.error):''}
    </div>`:`
    <h2 class="font-extrabold text-[17px]">دخول الفني</h2><p class="text-[11px] text-slate-500 mt-1 mb-5">ادخل رقم تليفونك وكلمة السر للمتابعة.</p>
@@ -496,7 +489,16 @@ function render(){
    <section class="mt-4 space-y-3">
     <div class="flex justify-between items-center px-1"><h3 class="section-title">الطلبات المتاحة</h3><button onclick="loadOrders()" class="secondary-btn px-3 py-2 text-[11px]">↻ تحديث</button></div>
 
-    <div class="panel p-3 space-y-2"><input class="field" value="${esc(state.search)}" oninput="onSearch(this.value)" placeholder="ابحث بكود الطلب أو المنطقة"><select class="field" onchange="onFilterSkill(this.value)"><option>الكل</option>${ALL_SERVICES.map(s=>`<option ${state.filterSkill===s?'selected':''}>${esc(s)}</option>`).join('')}</select></div>
+    <div class="panel p-3 space-y-2">
+      <input class="field" value="${esc(state.search)}" oninput="onSearch(this.value)" placeholder="ابحث بكود الطلب أو المنطقة">
+      <select class="field" onchange="onFilterSkill(this.value)">
+        <option>الكل</option>
+        ${SERVICES_LOADING?`<option disabled>جاري تحميل الخدمات...</option>`:
+          SERVICES_ERROR?`<option disabled>تعذر تحميل الخدمات</option>`:
+          ALL_SERVICES.map(s=>`<option ${state.filterSkill===s?'selected':''}>${esc(s)}</option>`).join('')}
+      </select>
+      ${SERVICES_ERROR?`<div class="rounded-xl bg-red-50 border border-red-200 p-2 flex justify-between items-center"><span class="text-[11px] text-red-700 font-bold">${esc(SERVICES_ERROR)}</span><button onclick="loadServices()" class="secondary-btn px-3 py-1 text-[10px]">إعادة المحاولة</button></div>`:''}
+    </div>
 
     ${state.loading?'<div class="panel p-6 text-center text-[12px]">جاري تحميل الطلبات...</div>':''}
     ${!state.loading&&!state.filteredOrders.length?'<div class="panel p-8 text-center"><div class="text-2xl">📋</div><p class="text-[13px] font-extrabold mt-3">لا توجد طلبات متاحة حاليًا</p><p class="text-[11px] text-slate-500 mt-1">قد تكون القائمة فارغة أو لا يملك الحساب صلاحية عرض الطلبات.</p></div>':''}
@@ -690,6 +692,9 @@ async function doRegister(){
 
  if(!V.text(state.regName,2,50)){state.error='الاسم لازم يكون حرفين على الأقل';render();return}
  if(!V.phone(state.regPhone)){state.error='رقم التليفون غير صحيح';render();return}
+ if(SERVICES_LOADING){state.error='جاري تحميل قائمة التخصصات، انتظر لحظة.';render();return}
+ if(SERVICES_ERROR){state.error='تعذر تحميل التخصصات: '+SERVICES_ERROR+' - اضغط إعادة المحاولة.';render();return}
+ if(!CATEGORIES.length){state.error='قائمة التخصصات غير متاحة حاليًا.';render();return}
  if(!state.regSpecialties.length){state.error='اختار تخصصًا واحدًا على الأقل';render();return}
 
  const areas=parseAreas(state.regAreasText);
@@ -718,7 +723,7 @@ async function doRegister(){
   state.regSpecialties=[];
   state.regAreasText='';
   state.tab='login';
-  state.pendingMsg='تم إنشاء الحساب بنجاح. حسابك قيد مراجعة الإدارة.';
+  state.pendingMsg='تم إنشاء حساب بنجاح. حسابك قيد مراجعة الإدارة.';
   state.error='';
 
   render();
@@ -943,6 +948,8 @@ async function submitOffer(){
 }
 
 async function start(){
+ // تحميل الخدمات أولاً قبل أي render حتى لا تظهر التسجيل/الفلتر فارغة
+ await loadServices();
  render();
 
  if(!getToken())return;
@@ -962,5 +969,5 @@ async function start(){
 
 start();
 </script>
-</body>
+<script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script></body>
 </html>
