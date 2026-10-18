@@ -1,3 +1,4 @@
+<!-- الجزء الأول - انسخه كامل -->
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -553,8 +554,8 @@ function render(){
             <textarea id="complaintTextInput" oninput="onComplaintText(this.value)" maxlength="1000" placeholder="احكي اللي حصل بالتفصيل..." class="field min-h-[120px] p-4 text-[13px] font-semibold resize-none leading-6">${escHtml(state.complaintText)}</textarea>
           </div>
           <div class="flex justify-between text-[10px] text-slate-400 font-bold">
-            <span>${state.complaintText.length}/1000</span>
-            <span>${VALIDATORS.text(state.complaintText,10,1000)?'✓ تفاصيل الشكوى مكتملة':''}</span>
+            <span id="complaintTextCounter">${state.complaintText.length}/1000</span>
+            <span id="complaintTextStatus">${VALIDATORS.text(state.complaintText,10,1000)?'✓ تفاصيل الشكوى مكتملة':''}</span>
           </div>
           <p class="text-[10px] text-slate-500">ما تكتبش رقم تليفون داخل الاسم أو الشكوى؛ استخدم بيانات الطلب للتواصل.</p>
           <button type="button" onclick="sendComplaint()" ${state.complaintLoading?'disabled':''} class="w-full h-[48px] rounded-xl bg-red-600 text-white font-extrabold text-[13px]">
@@ -762,7 +763,7 @@ async function trackComplaints(){
     if(msg==='EMPTY_FIELDS'){state.complaintTrackError='من فضلك اكتب كود الطلب واسم العميل.';}
     else if(msg==='INVALID_SN'){state.complaintTrackError='كود الطلب غير صحيح. تأكد أن الكود يبدأ بـ SN ويتكون من 6 أرقام.';}
     else if(error.status===404){state.complaintTrackError='لا توجد شكوى مرتبطة بهذا الطلب.';state.complaintTrackResults=null;state.complaintTrackLoading=false;render();return;}
-    else if(error.status===400&&/اسم/i.test(msg)){state.complaintTrackError='الاسم غير مطابق للاسم المسجل مع هذا الطلب.';}
+    else if(error.status===403||(error.status===400&&/اسم/i.test(msg))){state.complaintTrackError='الاسم غير مطابق للاسم المسجل مع هذا الطلب';}
     else if(error.status===400){state.complaintTrackError='البيانات غير صحيحة. تأكد من كود الطلب والاسم.';}
     else{state.complaintTrackError='تعذر الاتصال بالسيرفر. تأكد من الإنترنت وحاول مرة أخرى.';}
     state.complaintTrackResults=null;
@@ -770,8 +771,21 @@ async function trackComplaints(){
 }
 function onComplaintText(value){
   const clean=sanitizeInput(value,1000);
-  if(rejectPhoneInField(clean,'تفاصيل الشكوى')){state.complaintText='';const input=document.getElementById('complaintTextInput');if(input)input.value='';return;}
+  if(rejectPhoneInField(clean,'تفاصيل الشكوى')){
+    state.complaintText='';
+    const input=document.getElementById('complaintTextInput');
+    if(input)input.value='';
+    const counter=document.getElementById('complaintTextCounter');
+    if(counter)counter.textContent='0/1000';
+    const status=document.getElementById('complaintTextStatus');
+    if(status)status.textContent='';
+    return;
+  }
   state.complaintText=clean;
+  const counter=document.getElementById('complaintTextCounter');
+  if(counter)counter.textContent=state.complaintText.length+'/1000';
+  const status=document.getElementById('complaintTextStatus');
+  if(status)status.textContent=VALIDATORS.text(state.complaintText,10,1000)?'✓ تفاصيل الشكوى مكتملة':'';
 }
 function resetForm(){
   state.sn=null;state.clientName='';state.area='';state.address='';state.phone='';state.budget='';state.desc='';state.service='';state.showService=false;state.openCategory='';state.searchService='';state.tab='new';state.loading=false;render();
