@@ -279,8 +279,7 @@ const API={
       if(!cat||typeof cat.label!=='string'||!Array.isArray(cat.services))throw new Error('بيانات الأقسام غير سليمة.');
     }
     return data;
-  },
-  async createOrder(payload){
+  },  async createOrder(payload){
     if(state.servicesLoading){
       throw new Error('جاري تحميل قائمة الخدمات، انتظر لحظة وحاول مرة أخرى.');
     }
