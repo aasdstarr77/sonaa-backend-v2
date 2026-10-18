@@ -1,27 +1,6 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-<head><style>
-@font-face {
-  font-family: "Optimistic";
-  font-style: normal;
-  font-weight: 400 600;
-  font-display: swap;
-  src: url("/fonts/OptimisticAI_VF_Optimized.woff2") format("woff2");
-}
-@font-face {
-  font-family: "Optimistic Mono";
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("/fonts/OptimisticMono_W_TextRegular.woff2") format("woff2");
-}
-:where(html) {
-  font-family: "Optimistic", system-ui, sans-serif;
-}
-:where(code, pre, kbd, samp) {
-  font-family: "Optimistic Mono", ui-monospace, monospace;
-}
-</style>
+<head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b1b3a">
@@ -65,13 +44,10 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--blue)!im
 <body class="min-h-screen antialiased">
 <div id="app"></div>
 <div id="toast" class="fixed bottom-[88px] left-3 right-3 z-[200] pointer-events-none"></div>
-
 <script>
 'use strict';
-
 const IS_DEV=location.hostname==='localhost'||location.hostname==='127.0.0.1';
 const log=(...args)=>{if(IS_DEV)console.log(...args)};
-
 function escHtml(value){
   if(value==null)return '';
   return String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;')
@@ -82,58 +58,45 @@ function sanitizeInput(value,max=500){
   return String(value||'').trim().slice(0,max)
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,'');
 }
-
 function normalizeDigits(value){
   return String(value??'').replace(/[٠-٩۰-۹]/g,d=>{
     const code=d.charCodeAt(0);
     return String(code>=0x0660&&code<=0x0669?code-0x0660:code-0x06F0);
   });
 }
-
 function containsPhoneNumber(value){
   const text=normalizeDigits(value);
   const chunks=text.match(/\d(?:\D{0,6}\d){9,14}/g)||[];
-
   for(const chunk of chunks){
     const digits=chunk.replace(/\D/g,'');
-
     for(let i=0;i<=digits.length-11;i++){
       if(/^01[0125]\d{8}$/.test(digits.slice(i,i+11)))return true;
     }
-
     if(/^201[0125]\d{8}$/.test(digits))return true;
     if(/^00201[0125]\d{8}$/.test(digits))return true;
   }
-
   return false;
 }
-
 function maskPhoneNumbers(value){
   const text=String(value??'');
   const chunks=text.match(/\d(?:\D{0,6}\d){9,14}/g)||[];
   let result=text;
-
   for(const chunk of chunks){
     const digits=normalizeDigits(chunk).replace(/\D/g,'');
     let shouldMask=false;
-
     for(let i=0;i<=digits.length-11;i++){
       if(/^01[0125]\d{8}$/.test(digits.slice(i,i+11))){
         shouldMask=true;
         break;
       }
     }
-
     if(/^201[0125]\d{8}$/.test(digits)||/^00201[0125]\d{8}$/.test(digits)){
       shouldMask=true;
     }
-
     if(shouldMask)result=result.replace(chunk,'[رقم تواصل مخفي]');
   }
-
   return result;
 }
-
 function validateNoPhoneInCustomerFields(payload){
   const fields=[
     ['اسم العميل',payload.clientName],
@@ -144,210 +107,77 @@ function validateNoPhoneInCustomerFields(payload){
     ['تفاصيل الشكوى',payload.complaintText],
     ['رسالة إضافية',payload.message]
   ];
-
   for(const [label,value] of fields){
     if(value!=null&&String(value).trim()&&containsPhoneNumber(value)){
       throw new Error('ممنوع كتابة أرقام التليفونات داخل خانة '+label+'؛ استخدم خانة رقم التليفون المخصصة.');
     }
   }
-
   return true;
 }
-
 const AREA_OPTIONS=[
-  'القاهرة - وسط البلد',
-  'القاهرة - العباسية',
-  'القاهرة - مدينة نصر',
-  'القاهرة - مصر الجديدة',
-  'القاهرة - عين شمس',
-  'القاهرة - المطرية',
-  'القاهرة - المرج',
-  'القاهرة - شبرا',
-  'القاهرة - الساحل',
-  'القاهرة - روض الفرج',
-  'القاهرة - الزيتون',
-  'القاهرة - حدائق القبة',
-  'القاهرة - الوايلي',
-  'القاهرة - منشية ناصر',
-  'القاهرة - المعادي',
-  'القاهرة - زهراء المعادي',
-  'القاهرة - طرة',
-  'القاهرة - حلوان',
-  'القاهرة - التبين',
-  'القاهرة - دار السلام',
-  'القاهرة - البساتين',
-  'القاهرة - المقطم',
-  'القاهرة - الخليفة',
-  'القاهرة - السيدة زينب',
-  'القاهرة - مصر القديمة',
-  'القاهرة - التجمع الأول',
-  'القاهرة - التجمع الثالث',
-  'القاهرة - التجمع الخامس',
-  'القاهرة - الرحاب',
-  'القاهرة - مدينتي',
-  'القاهرة - الشروق',
-  'القاهرة - بدر',
-  'القاهرة - العاصمة الإدارية',
-  'الجيزة - الدقي',
-  'الجيزة - المهندسين',
-  'الجيزة - العجوزة',
-  'الجيزة - إمبابة',
-  'الجيزة - الوراق',
-  'الجيزة - بولاق الدكرور',
-  'الجيزة - فيصل',
-  'الجيزة - الهرم',
-  'الجيزة - الطالبية',
-  'الجيزة - العمرانية',
-  'الجيزة - الجيزة',
-  'الجيزة - المنيل',
-  'الجيزة - حدائق الأهرام',
-  'الجيزة - حدائق أكتوبر',
-  'الجيزة - 6 أكتوبر',
-  'الجيزة - الشيخ زايد',
-  'الجيزة - الحوامدية',
-  'الجيزة - أبو النمرس',
-  'الجيزة - كرداسة',
-  'الجيزة - أوسيم',
-  'الجيزة - منشأة القناطر',
-  'الجيزة - الصف',
-  'الجيزة - أطفيح',
-  'القليوبية - شبرا الخيمة',
-  'القليوبية - الخصوص',
-  'القليوبية - قليوب',
-  'القليوبية - القناطر الخيرية',
-  'القليوبية - العبور',
-  'القليوبية - الخانكة',
-  'القليوبية - بنها',
-  'منطقة أخرى داخل القاهرة الكبرى'
+  'القاهرة - وسط البلد','القاهرة - العباسية','القاهرة - مدينة نصر','القاهرة - مصر الجديدة','القاهرة - عين شمس','القاهرة - المطرية','القاهرة - المرج','القاهرة - شبرا','القاهرة - الساحل','القاهرة - روض الفرج','القاهرة - الزيتون','القاهرة - حدائق القبة','القاهرة - الوايلي','القاهرة - منشية ناصر','القاهرة - المعادي','القاهرة - زهراء المعادي','القاهرة - طرة','القاهرة - حلوان','القاهرة - التبين','القاهرة - دار السلام','القاهرة - البساتين','القاهرة - المقطم','القاهرة - الخليفة','القاهرة - السيدة زينب','القاهرة - مصر القديمة','القاهرة - التجمع الأول','القاهرة - التجمع الثالث','القاهرة - التجمع الخامس','القاهرة - الرحاب','القاهرة - مدينتي','القاهرة - الشروق','القاهرة - بدر','القاهرة - العاصمة الإدارية','الجيزة - الدقي','الجيزة - المهندسين','الجيزة - العجوزة','الجيزة - إمبابة','الجيزة - الوراق','الجيزة - بولاق الدكرور','الجيزة - فيصل','الجيزة - الهرم','الجيزة - الطالبية','الجيزة - العمرانية','الجيزة - الجيزة','الجيزة - المنيل','الجيزة - حدائق الأهرام','الجيزة - حدائق أكتوبر','الجيزة - 6 أكتوبر','الجيزة - الشيخ زايد','الجيزة - الحوامدية','الجيزة - أبو النمرس','الجيزة - كرداسة','الجيزة - أوسيم','الجيزة - منشأة القناطر','الجيزة - الصف','الجيزة - أطفيح','القليوبية - شبرا الخيمة','القليوبية - الخصوص','القليوبية - قليوب','القليوبية - القناطر الخيرية','القليوبية - العبور','القليوبية - الخانكة','القليوبية - بنها','منطقة أخرى داخل القاهرة الكبرى'
 ];
-
 const VALIDATORS={
   phone:value=>/^01[0125]\d{8}$/.test(normalizeDigits(String(value||'')).replace(/\D/g,'')),
   name:value=>String(value||'').trim().length>=2&&String(value||'').trim().length<=50,
   text:(value,min,max)=>String(value||'').trim().length>=min&&String(value||'').trim().length<=max,
   sn:value=>/^SN\d{6}$/i.test(String(value||'').trim())
 };
-
-// === مصدر الخدمات الموحد من الـ API ===
-// CATEGORIES و ALL_SERVICES دلوقتي بيتم تحميلهم من /api/services
 let CATEGORIES=[];
 let ALL_SERVICES=[];
-
 const API={
   tokenKey(sn){return 'sonaa_client_token_'+String(sn||'').toUpperCase()},
-
   saveClientToken(sn,token){
     if(!VALIDATORS.sn(sn)||typeof token!=='string'||!token)return false;
-    try{
-      localStorage.setItem(this.tokenKey(sn),token);
-      return true;
-    }catch(error){
-      log('تعذر حفظ بيانات المتابعة:',error);
-      return false;
-    }
+    try{localStorage.setItem(this.tokenKey(sn),token);return true;}catch(error){log('تعذر حفظ بيانات المتابعة:',error);return false;}
   },
-
   getClientToken(sn){
     if(!VALIDATORS.sn(sn))return '';
-    try{
-      return localStorage.getItem(this.tokenKey(sn))||'';
-    }catch(error){
-      log('تعذر قراءة بيانات المتابعة:',error);
-      return '';
-    }
+    try{return localStorage.getItem(this.tokenKey(sn))||'';}catch(error){log('تعذر قراءة بيانات المتابعة:',error);return '';}
   },
-
   async request(url,options={}){
     let response;
-
     try{
-      response=await fetch(url,{
-        ...options,
-        credentials:'same-origin',
-        headers:{...(options.headers||{})}
-      });
+      response=await fetch(url,{...options,credentials:'same-origin',headers:{...(options.headers||{})}});
     }catch(error){
       log('تعذر إتمام الطلب:',error);
       throw new Error('تعذر الاتصال بالخادم. تأكد من اتصال الإنترنت وحاول مرة أخرى.');
     }
-
     const raw=await response.text();
     let data={};
-
-    try{
-      data=raw?JSON.parse(raw):{};
-    }catch{
-      data={};
-    }
-
+    try{data=raw?JSON.parse(raw):{};}catch{data={};}
     log('استجابة الطلب:',response.status,data);
-
     if(!response.ok){
-      const serverMessage=
-        typeof data.message==='string'&&data.message.trim()
-          ?data.message.trim()
-          :'';
-
-      const error=new Error(
-        serverMessage||
-        (response.status===404
-          ?'لم نتمكن من العثور على البيانات المطلوبة.'
-          :'حصلت مشكلة أثناء تنفيذ الطلب. حاول مرة أخرى.')
-      );
-
+      const serverMessage=typeof data.message==='string'&&data.message.trim()?data.message.trim():'';
+      const error=new Error(serverMessage||(response.status===404?'لم نتمكن من العثور على البيانات المطلوبة.':'حصلت مشكلة أثناء تنفيذ الطلب. حاول مرة أخرى.'));
       error.status=response.status;
       error.details=Array.isArray(data.details)?data.details:[];
       throw error;
     }
-
     return data;
   },
-
   async getServices(){
     const data=await this.request('/api/services',{method:'GET'});
     if(!data||typeof data!=='object')throw new Error('استجابة الخدمات غير سليمة.');
     const categories=Array.isArray(data.categories)?data.categories:[];
     const services=Array.isArray(data.services)?data.services:[];
-    // تحقق بسيط من البنية
     if(!categories.length||!services.length)throw new Error('قائمة الخدمات فارغة من الخادم.');
     for(const cat of categories){
       if(!cat||typeof cat.label!=='string'||!Array.isArray(cat.services))throw new Error('بيانات الأقسام غير سليمة.');
     }
     return data;
   },
-
   async createOrder(payload){
-    // التحقق من الخدمات المحملة من الـ API - المصدر الرسمي الوحيد
-    if(state.servicesLoading){
-      throw new Error('جاري تحميل قائمة الخدمات، انتظر لحظة وحاول مرة أخرى.');
-    }
-    if(state.servicesError){
-      throw new Error('تعذر تحميل قائمة الخدمات. حدّث الصفحة أو حاول مرة أخرى: '+state.servicesError);
-    }
-    if(!ALL_SERVICES.length){
-      throw new Error('قائمة الخدمات غير متاحة حاليًا. حدّث الصفحة وحاول مرة أخرى.');
-    }
-
-    if(!VALIDATORS.name(payload.clientName))
-      throw new Error('اكتب اسمك بشكل صحيح، من حرفين إلى 50 حرفًا.');
-
-    if(!payload.service||!ALL_SERVICES.includes(payload.service))
-      throw new Error('اختار الخدمة المطلوبة من القائمة الرسمية.');
-
-    if(!AREA_OPTIONS.includes(payload.area))
-      throw new Error('اختار المنطقة أو الحي من القائمة.');
-
-    if(!VALIDATORS.text(payload.address,5,250))
-      throw new Error('اكتب العنوان التفصيلي بشكل صحيح.');
-
-    if(!VALIDATORS.phone(payload.phone))
-      throw new Error('رقم التليفون غير صحيح؛ لازم يكون 11 رقم ويبدأ بـ 01.');
-
-    if(!VALIDATORS.text(payload.description,10,1000))
-      throw new Error('اكتب تفاصيل المشكلة في 10 حروف على الأقل.');
-
+    if(state.servicesLoading){throw new Error('جاري تحميل قائمة الخدمات، انتظر لحظة وحاول مرة أخرى.');}
+    if(state.servicesError){throw new Error('تعذر تحميل قائمة الخدمات. حدّث الصفحة أو حاول مرة أخرى: '+state.servicesError);}
+    if(!ALL_SERVICES.length){throw new Error('قائمة الخدمات غير متاحة حاليًا. حدّث الصفحة وحاول مرة أخرى.');}
+    if(!VALIDATORS.name(payload.clientName))throw new Error('اكتب اسمك بشكل صحيح، من حرفين إلى 50 حرفًا.');
+    if(!payload.service||!ALL_SERVICES.includes(payload.service))throw new Error('اختار الخدمة المطلوبة من القائمة الرسمية.');
+    if(!AREA_OPTIONS.includes(payload.area))throw new Error('اختار المنطقة أو الحي من القائمة.');
+    if(!VALIDATORS.text(payload.address,5,250))throw new Error('اكتب العنوان التفصيلي بشكل صحيح.');
+    if(!VALIDATORS.phone(payload.phone))throw new Error('رقم التليفون غير صحيح؛ لازم يكون 11 رقم ويبدأ بـ 01.');
+    if(!VALIDATORS.text(payload.description,10,1000))throw new Error('اكتب تفاصيل المشكلة في 10 حروف على الأقل.');
     validateNoPhoneInCustomerFields(payload);
-
     const data=await this.request('/api/orders',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
@@ -361,179 +191,91 @@ const API={
         budget:sanitizeInput(payload.budget||'',50)
       })
     });
-
     const order=data.order||data.data||{};
     const sn=String(data.sn||order.sn||'').toUpperCase();
     const token=data.clientToken||order.clientToken||'';
-
-    if(!VALIDATORS.sn(sn))
-      throw new Error('استقبل الخادم الرد، لكن كود التتبع غير موجود في الاستجابة.');
-
+    if(!VALIDATORS.sn(sn))throw new Error('استقبل الخادم الرد، لكن كود التتبع غير موجود في الاستجابة.');
     if(token)this.saveClientToken(sn,token);
-
     return {...data,sn,clientToken:token};
   },
-
   async getOrder(sn){
     const cleanSN=sanitizeInput(sn,20).toUpperCase();
-
-    if(!VALIDATORS.sn(cleanSN))
-      throw new Error('كود التتبع غير صحيح. راجع الكود وحاول مرة أخرى.');
-
+    if(!VALIDATORS.sn(cleanSN))throw new Error('كود التتبع غير صحيح. راجع الكود وحاول مرة أخرى.');
     const token=this.getClientToken(cleanSN);
     const headers={};
-
     if(token)headers.Authorization='Bearer '+token;
-
-    const data=await this.request('/api/orders/'+encodeURIComponent(cleanSN),{
-      method:'GET',
-      headers
-    });
-
+    const data=await this.request('/api/orders/'+encodeURIComponent(cleanSN),{method:'GET',headers});
     return data.order||data.data||data;
   },
-
   async acceptOffer(sn,offerId){
     const cleanSN=sanitizeInput(sn,20).toUpperCase();
-
-    if(!VALIDATORS.sn(cleanSN))
-      throw new Error('كود الطلب غير صحيح.');
-
-    if(!offerId)
-      throw new Error('تعذر تحديد العرض المطلوب.');
-
+    if(!VALIDATORS.sn(cleanSN))throw new Error('كود الطلب غير صحيح.');
+    if(!offerId)throw new Error('تعذر تحديد العرض المطلوب.');
     const token=this.getClientToken(cleanSN);
-
-    if(!token)
-      throw new Error('لم نتمكن من تأكيد ملكية الطلب على هذا الجهاز. استخدم الجهاز الذي أنشأت الطلب منه، أو الجهاز الذي حُفظت عليه بيانات المتابعة.');
-
+    if(!token)throw new Error('لم نتمكن من تأكيد ملكية الطلب على هذا الجهاز. استخدم الجهاز الذي أنشأت الطلب منه، أو الجهاز الذي حُفظت عليه بيانات المتابعة.');
     return this.request('/api/orders/'+encodeURIComponent(cleanSN)+'/accept',{
       method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        Authorization:'Bearer '+token
-      },
+      headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},
       body:JSON.stringify({offerId,clientToken:token})
     });
   },
-
   async sendComplaint(payload){
     const sn=sanitizeInput(payload?.sn,20).toUpperCase();
     const clientName=sanitizeInput(payload?.clientName,50);
     const text=sanitizeInput(payload?.text,1000);
-
-    if(!VALIDATORS.sn(sn)){
-      throw new Error('كود الطلب غير صحيح.');
-    }
-
-    if(!VALIDATORS.name(clientName)){
-      throw new Error('اكتب اسم العميل المسجل مع الطلب، من حرفين إلى 50 حرفًا.');
-    }
-
-    if(containsPhoneNumber(clientName)){
-      throw new Error('ممنوع كتابة رقم تليفون داخل اسم العميل.');
-    }
-
-    if(!VALIDATORS.text(text,10,1000)){
-      throw new Error('اكتب تفاصيل الشكوى في 10 حروف على الأقل.');
-    }
-
-    if(containsPhoneNumber(text)){
-      throw new Error('ممنوع كتابة رقم تليفون داخل تفاصيل الشكوى.');
-    }
-
-    return this.request('/api/complaints',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({sn,clientName,text})
-    });
+    if(!VALIDATORS.sn(sn)){throw new Error('كود الطلب غير صحيح.');}
+    if(!VALIDATORS.name(clientName)){throw new Error('اكتب اسم العميل المسجل مع الطلب، من حرفين إلى 50 حرفًا.');}
+    if(containsPhoneNumber(clientName)){throw new Error('ممنوع كتابة رقم تليفون داخل اسم العميل.');}
+    if(!VALIDATORS.text(text,10,1000)){throw new Error('اكتب تفاصيل الشكوى في 10 حروف على الأقل.');}
+    if(containsPhoneNumber(text)){throw new Error('ممنوع كتابة رقم تليفون داخل تفاصيل الشكوى.');}
+    return this.request('/api/complaints',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sn,clientName,text})});
+  },
+  async trackComplaints(payload){
+    const sn=sanitizeInput(payload?.sn,20).toUpperCase();
+    const clientName=sanitizeInput(payload?.clientName,50);
+    if(!sn||!clientName){throw new Error('EMPTY_FIELDS');}
+    if(!VALIDATORS.sn(sn)){throw new Error('INVALID_SN');}
+    if(!VALIDATORS.name(clientName)){throw new Error('INVALID_NAME');}
+    const url='/api/complaints/track?sn='+encodeURIComponent(sn)+'&clientName='+encodeURIComponent(clientName);
+    return this.request(url,{method:'GET'});
   }
 };
-
 let state={
-  tab:'new',
-  service:'',
-  clientName:'',
-  area:'',
-  address:'',
-  phone:'',
-  budget:'',
-  desc:'',
-  loading:false,
-  sn:null,
-  trackInput:'',
-  tracked:null,
-  trackError:'',
-  trackLoading:false,
-  acceptingOffer:'',
-  complaintSn:'',
-  complaintName:'',
-  complaintText:'',
-  complaintLoading:false,
-  showService:false,
-  openCategory:'',
-  searchService:'',
-  // حالة تحميل الخدمات من الـ API
-  servicesLoading:true,
-  servicesError:'',
-  servicesLoaded:false
+  tab:'new',service:'',clientName:'',area:'',address:'',phone:'',budget:'',desc:'',loading:false,sn:null,
+  trackInput:'',tracked:null,trackError:'',trackLoading:false,acceptingOffer:'',
+  complaintSn:'',complaintName:'',complaintText:'',complaintLoading:false,
+  complaintTrackSn:'',complaintTrackName:'',complaintTrackLoading:false,complaintTrackError:'',complaintTrackResults:null,
+  showService:false,openCategory:'',searchService:'',
+  servicesLoading:true,servicesError:'',servicesLoaded:false
 };
-
-function getCat(service){
-  return CATEGORIES.find(c=>c.services.includes(service))||null;
-}
-
+function getCat(service){return CATEGORIES.find(c=>c.services.includes(service))||null;}
 function captureScrollPosition(){
   const list=document.getElementById('serviceList');
-
-  return {
-    pageY:window.scrollY||window.pageYOffset||0,
-    listTop:list?list.scrollTop:0
-  };
+  return {pageY:window.scrollY||window.pageYOffset||0,listTop:list?list.scrollTop:0};
 }
-
 function restoreScrollPosition(position){
   if(!position)return;
-
   const list=document.getElementById('serviceList');
   if(list)list.scrollTop=position.listTop;
-
-  window.scrollTo({
-    top:position.pageY,
-    left:0,
-    behavior:'instant'
-  });
+  window.scrollTo({top:position.pageY,left:0,behavior:'instant'});
 }
-
 function showToast(message,type='error'){
   const el=document.getElementById('toast');
   if(!el)return;
-
   const color=type==='success'?'bg-emerald-600':'bg-[#0b1b3a]';
-
   el.innerHTML=`<div class="pointer-events-auto mx-auto max-w-[480px] rounded-[14px] ${color} text-white text-[13px] font-bold px-4 py-3 shadow-2xl flex justify-between items-center gap-3">
     <span class="leading-6">${escHtml(message)}</span>
     <button onclick="this.parentElement.remove()" class="shrink-0 h-7 px-3 rounded-full bg-white/20">إغلاق</button>
   </div>`;
-
-  setTimeout(()=>{
-    if(el)el.innerHTML='';
-  },4500);
+  setTimeout(()=>{if(el)el.innerHTML='';},4500);
 }
-
 function render(){
   const cat=getCat(state.service);
   const query=state.searchService.trim().toLowerCase();
-
   const matching=CATEGORIES.map(c=>({
     ...c,
-    services:c.services.filter(s=>
-      !query||
-      s.toLowerCase().includes(query)||
-      c.label.toLowerCase().includes(query)
-    )
+    services:c.services.filter(s=>!query||s.toLowerCase().includes(query)||c.label.toLowerCase().includes(query))
   })).filter(c=>c.services.length);
-
   document.getElementById('app').innerHTML=`
   <header class="app-header sticky top-0 z-40 backdrop-blur-xl">
     <div class="mx-auto w-full max-w-[640px] px-3 sm:px-4 h-[62px] flex items-center justify-between gap-2">
@@ -550,14 +292,12 @@ function render(){
       </div>
     </div>
   </header>
-
   <main class="mx-auto w-full max-w-[640px] px-3 sm:px-4 pb-[100px] safe-bottom">
     <div class="mt-4 flex p-1 bg-white rounded-[15px] shadow-sm border border-slate-200 gap-1">
       ${[{id:'new',label:'طلب جديد'},{id:'track',label:'تتبع طلبك'},{id:'complaint',label:'شكوى'}].map(t=>`
         <button type="button" onclick="setTab('${t.id}')" class="flex-1 h-11 rounded-xl text-[12px] font-extrabold ${state.tab===t.id?'tab-active':'tab-idle'}">${t.label}</button>
       `).join('')}
     </div>
-
     ${state.tab==='new'?`
       ${!state.sn?`
       <div class="mt-4 space-y-3 animate-fade">
@@ -568,7 +308,6 @@ function render(){
           </div>
           <a href="./fanni.html" class="shrink-0 h-10 px-4 rounded-xl bg-white text-[#0b1b3a] font-extrabold text-[12px] flex items-center">دخول الفني</a>
         </div>
-
         <div class="panel p-4 sm:p-5">
           <div class="flex items-center gap-3">
             <div class="h-10 w-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center text-xl">📝</div>
@@ -577,17 +316,14 @@ function render(){
               <p class="text-[11px] text-slate-500 mt-0.5">اختار الخدمة واكتب تفاصيلها</p>
             </div>
           </div>
-
           <div class="mt-5 space-y-4">
             <div>
               <label for="clientNameInput" class="text-[12px] font-extrabold mb-1.5 block">👤 اسم العميل</label>
               <input id="clientNameInput" value="${escAttr(state.clientName)}" oninput="onClientNameInput(this.value)" maxlength="50" placeholder="اكتب اسمك بالكامل" class="field h-[50px] px-4 text-[13px] font-bold" autocomplete="name">
               <p class="mt-1 text-[10px] text-slate-400">من حرفين إلى 50 حرفًا. ممنوع كتابة رقم تليفون في هذه الخانة.</p>
             </div>
-
             <div>
               <label class="text-[12px] font-extrabold mb-1.5 block">نوع الخدمة ${state.servicesLoading?'<span class="text-blue-600 font-bold">(جاري التحميل...)</span>':state.servicesError?'<span class="text-red-600">(فشل التحميل)</span>':''}</label>
-
               <button type="button" onclick="toggleService()" aria-expanded="${state.showService?'true':'false'}" ${state.servicesLoading?'disabled':''} class="field h-[60px] px-3.5 text-right flex items-center justify-between ${state.servicesLoading?'opacity-70':''}">
                 <span class="flex items-center gap-2.5 min-w-0">
                   <span class="h-10 w-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0 text-xl">${cat?escHtml(cat.emoji):'🛠️'}</span>
@@ -598,7 +334,6 @@ function render(){
                 </span>
                 <span class="text-slate-500 text-[12px]">${state.showService?'▲':'▼'}</span>
               </button>
-
               ${state.showService?`
               <div id="servicePanel" class="mt-2 rounded-[14px] border border-slate-200 bg-white shadow-lg overflow-hidden">
                 ${state.servicesLoading?`
@@ -617,7 +352,6 @@ function render(){
                   <input id="svcSearch" value="${escAttr(state.searchService)}" oninput="searchService(this.value)" placeholder="ابحث عن خدمة أو قسم..." class="field h-10 px-3 text-[12px] font-bold">
                   <p class="text-[12px] text-slate-700 font-bold mt-2 px-1 leading-6">اختار القسم اللي يناسبك، وبعدها افتحه واختار خدمة واحدة من جواه.</p>
                 </div>
-
                 <div id="serviceList" class="max-h-[390px] overflow-y-auto overscroll-contain p-2 space-y-2">
                   ${query?matching.map(c=>`
                     <div class="category-card">
@@ -647,7 +381,6 @@ function render(){
                         </span>
                         <span class="text-slate-700 text-sm font-black shrink-0">${state.openCategory===c.label?'▲':'▼'}</span>
                       </button>
-
                       ${state.openCategory===c.label?`
                         <div class="border-t border-slate-100 p-1.5 bg-white">
                           ${c.services.map(s=>`
@@ -661,7 +394,6 @@ function render(){
                   `).join('')}
                 </div>`}
               </div>`:''}
-
               <p class="mt-1 text-[11px] text-slate-600 font-semibold">${state.servicesError?'تعذر تحميل الخدمات - اضغط لإعادة المحاولة':'لازم تختار الخدمة قبل إرسال الطلب.'}</p>
             </div>
 
@@ -673,7 +405,6 @@ function render(){
               </select>
               <p class="mt-1 text-[10px] text-slate-500">اختار المنطقة من القائمة، واكتب الشارع ورقم العمارة في العنوان التفصيلي. ممنوع كتابة رقم تليفون هنا.</p>
             </div>
-
             <div>
               <label for="addrInput" class="text-[12px] font-extrabold mb-1.5 flex justify-between gap-2">
                 <span>🏠 العنوان بالتفصيل</span>
@@ -682,7 +413,6 @@ function render(){
               <input id="addrInput" value="${escAttr(state.address)}" oninput="onAddressInput(this.value)" maxlength="250" placeholder="اسم الشارع، رقم العمارة، الدور أو علامة مميزة..." class="field h-[50px] px-4 text-[13px] font-bold" autocomplete="street-address">
               <p class="mt-1 text-[10px] text-slate-500">اكتب عنوان المكان فقط، من غير أرقام تليفونات.</p>
             </div>
-
             <div>
               <label for="phoneInput" class="text-[12px] font-extrabold mb-1.5 flex justify-between gap-2">
                 <span>📞 رقم تليفونك</span>
@@ -691,13 +421,11 @@ function render(){
               <input id="phoneInput" value="${escAttr(state.phone)}" oninput="onPhoneInput(this.value)" inputmode="numeric" type="tel" maxlength="11" placeholder="01012345678" class="field h-[50px] px-4 text-[15px] font-bold tracking-widest" dir="ltr" autocomplete="tel">
               <p class="mt-1 text-[10px] text-slate-500">دي الخانة الوحيدة المخصصة لرقم تليفونك.</p>
             </div>
-
             <div>
               <label for="budgetInput" class="text-[12px] font-extrabold mb-1.5 block">💰 الميزانية المتوقعة (اختياري)</label>
               <input id="budgetInput" value="${escAttr(state.budget)}" oninput="onBudgetInput(this.value)" maxlength="50" placeholder="مثال: من 300 إلى 500 جنيه" class="field h-[50px] px-4 text-[13px] font-bold">
               <p class="mt-1 text-[10px] text-slate-500">اكتب ميزانيتك التقريبية أو اترك الخانة فارغة، من غير أرقام تليفونات.</p>
             </div>
-
             <div>
               <label for="descInput" class="text-[12px] font-extrabold mb-1.5 flex justify-between gap-2">
                 <span>وصف المشكلة وتفاصيل الشغل</span>
@@ -706,7 +434,6 @@ function render(){
               <textarea id="descInput" oninput="onDescInput(this.value)" maxlength="1000" placeholder="احكي المشكلة بالتفصيل، واكتب المطلوب من الفني..." class="field min-h-[112px] p-3.5 text-[13px] font-semibold resize-none leading-6">${escHtml(state.desc)}</textarea>
               <p class="mt-1 text-[10px] text-slate-500">ما تكتبش رقم تليفونك داخل التفاصيل؛ رقمك موجود في الخانة المخصصة له.</p>
             </div>
-
             <button type="button" onclick="createOrder()" ${state.loading||state.servicesLoading?'disabled':''} class="w-full h-[52px] rounded-xl blue-btn font-extrabold text-[14px] flex items-center justify-center gap-2">
               ${state.loading?'جاري الإرسال...':state.servicesLoading?'جاري تحميل الخدمات...':'إرسال الطلب والحصول على كود التتبع'}
             </button>
@@ -733,7 +460,6 @@ function render(){
         </div>
       </div>`}
     `:''}
-
     ${state.tab==='track'?`
     <div class="mt-4 space-y-3 animate-fade">
       <div class="panel p-4 sm:p-5">
@@ -750,7 +476,6 @@ function render(){
         </div>
         ${state.trackError?`<p class="mt-3 text-[12px] font-bold text-red-700 bg-red-50 border border-red-200 rounded-xl p-3">${escHtml(state.trackError)}</p>`:''}
       </div>
-
       ${state.tracked?`
       <div class="panel p-4 sm:p-5">
         <div class="flex justify-between items-start gap-3">
@@ -760,17 +485,14 @@ function render(){
           </div>
           <span class="text-[10px] font-extrabold px-3 py-1.5 rounded-full bg-blue-50 border border-blue-100 text-blue-800">${escHtml(state.tracked.status||'قيد المراجعة')}</span>
         </div>
-
         <div class="mt-4 soft-card rounded-xl p-3">
           <p class="text-[10px] text-slate-500 font-bold">الخدمة المطلوبة</p>
           <p class="font-extrabold mt-1 leading-5">${escHtml(state.tracked.service||'-')}</p>
         </div>
-
         <div class="mt-3 soft-card rounded-xl p-3">
           <p class="text-[10px] text-slate-500 font-bold">تفاصيل الشغل</p>
           <p class="mt-1 text-[13px] font-semibold leading-6 whitespace-pre-wrap break-words">${escHtml(maskPhoneNumbers(state.tracked.description||state.tracked.details||'لا توجد تفاصيل مسجلة.'))}</p>
         </div>
-
         ${state.tracked.status==='تم اختيار فني'?`
           <div class="mt-3 rounded-xl bg-emerald-50 border border-emerald-200 p-4">
             <p class="font-extrabold text-[13px] text-emerald-800">تم قبول العرض وتعيين الفني لطلبك</p>
@@ -785,7 +507,6 @@ function render(){
             `}
           </div>
         `:''}
-
         <div class="mt-5">
           <h4 class="font-extrabold text-[14px]">عروض الفنيين (${Array.isArray(state.tracked.offers)?state.tracked.offers.length:0})</h4>
           ${(state.tracked.offers||[]).length===0
@@ -807,7 +528,6 @@ function render(){
         </div>
       </div>`:''}
     </div>`:''}
-
     ${state.tab==='complaint'?`
     <div class="mt-4 animate-fade">
       <div class="panel p-4 sm:p-5">
@@ -842,9 +562,57 @@ function render(){
           </button>
         </div>
       </div>
+      <!-- قسم متابعة الشكاوى - إضافة جديدة -->
+      <div class="panel p-4 sm:p-5 mt-4">
+        <div class="flex items-center gap-3">
+          <div class="h-10 w-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center text-lg">🔍</div>
+          <div>
+            <h3 class="font-extrabold text-[15px]">متابعة الشكاوى</h3>
+            <p class="text-[11px] text-slate-500 mt-0.5">تابع حالة شكواك ورد الإدارة عليها</p>
+          </div>
+        </div>
+        <div class="mt-4 space-y-3">
+          <div>
+            <label for="complaintTrackSnInput" class="text-[12px] font-extrabold mb-1.5 block">كود الطلب</label>
+            <input id="complaintTrackSnInput" value="${escAttr(state.complaintTrackSn)}" oninput="onComplaintTrackSn(this.value)" placeholder="مثال: SN123456" maxlength="20" class="field h-[48px] px-4 text-[14px] font-black uppercase" dir="ltr">
+          </div>
+          <div>
+            <label for="complaintTrackNameInput" class="text-[12px] font-extrabold mb-1.5 block">اسم العميل</label>
+            <input id="complaintTrackNameInput" value="${escAttr(state.complaintTrackName)}" oninput="onComplaintTrackName(this.value)" placeholder="الاسم المسجل عند إنشاء الطلب" maxlength="50" class="field h-[48px] px-4 text-[13px] font-bold">
+          </div>
+          <button type="button" onclick="trackComplaints()" ${state.complaintTrackLoading?`disabled`:``} class="w-full h-[48px] rounded-xl primary-btn font-extrabold text-[13px]">
+            ${state.complaintTrackLoading?`جاري تحميل الشكاوى...`:`متابعة الشكوى`}
+          </button>
+          ${state.complaintTrackError?`<p class="text-[12px] font-bold text-red-700 bg-red-50 border border-red-200 rounded-xl p-3">${escHtml(state.complaintTrackError)}</p>`:``}
+          ${Array.isArray(state.complaintTrackResults)?`
+            <div class="space-y-3 mt-2">
+              ${state.complaintTrackResults.length===0?`<p class="text-[12px] text-slate-500 bg-slate-50 border border-slate-100 rounded-xl p-4 text-center">لا توجد شكوى مرتبطة بهذا الطلب.</p>`:``}
+              ${state.complaintTrackResults.map(c=>{
+                const created=c.createdAt?new Date(c.createdAt).toLocaleString('ar-EG'):'غير محدد';
+                const status=String(c.status||'جديدة');
+                const sn=String(c.sn||state.complaintTrackSn||'');
+                const hasResponse=typeof c.adminResponse==='string'&&c.adminResponse.trim().length>0;
+                return `<div class="rounded-[14px] border border-slate-200 p-4 bg-white">
+                  <div class="flex justify-between items-start gap-2">
+                    <div>
+                      <p class="text-[10px] text-slate-500 font-bold">كود الطلب</p>
+                      <p class="font-mono font-black text-[13px] text-blue-800 mt-1">${escHtml(sn)}</p>
+                      <p class="text-[10px] text-slate-400 mt-1">${escHtml(created)}</p>
+                    </div>
+                    <span class="shrink-0 text-[10px] font-extrabold px-3 py-1.5 rounded-full bg-blue-50 border border-blue-100 text-blue-800">${escHtml(status)}</span>
+                  </div>
+                  <div class="mt-3 rounded-xl bg-slate-50 border border-slate-100 p-3">
+                    <p class="text-[10px] text-slate-500 font-bold">رد الإدارة</p>
+                    <p class="mt-1 text-[13px] leading-6 whitespace-pre-wrap break-words font-semibold ${hasResponse?`text-slate-800`:`text-slate-400`}">${hasResponse?escHtml(c.adminResponse):`لم ترد الإدارة بعد.`}</p>
+                  </div>
+                </div>`;
+              }).join(``)}
+            </div>
+          `:``}
+        </div>
+      </div>
     </div>`:''}
   </main>
-
   <nav class="fixed bottom-0 inset-x-0 z-30 border-t border-slate-200 bg-white/95 backdrop-blur-xl safe-bottom">
     <div class="mx-auto max-w-[640px] px-2 h-[72px] grid grid-cols-3 gap-1">
       ${[{id:'new',icon:'＋',label:'طلب'},{id:'track',icon:'◉',label:'تتبع'},{id:'complaint',icon:'⚠',label:'شكوى'}].map(t=>`
@@ -856,554 +624,234 @@ function render(){
     </div>
   </nav>`;
 }
-
-function setTab(tab){
-  state.tab=tab;
-  render();
-}
-
+function setTab(tab){state.tab=tab;render();}
 function toggleService(){
-  if(state.servicesLoading){
-    if(state.servicesError)loadServices();
-    return;
-  }
-  if(state.servicesError){
-    loadServices();
-    return;
-  }
+  if(state.servicesLoading){if(state.servicesError)loadServices();return;}
+  if(state.servicesError){loadServices();return;}
   state.showService=!state.showService;
-
-  if(state.showService){
-    state.searchService='';
-    state.openCategory=getCat(state.service)?.label||'';
-  }
-
+  if(state.showService){state.searchService='';state.openCategory=getCat(state.service)?.label||'';}
   render();
 }
-
 function handleOutsideServiceClick(event){
   if(!state.showService)return;
-
   const target=event.target;
   if(!(target instanceof Element))return;
-
   if(target.closest('button[onclick="toggleService()"]'))return;
   if(target.closest('#servicePanel'))return;
-
   const pageY=window.scrollY||window.pageYOffset||0;
-
-  state.showService=false;
-  state.openCategory='';
-  state.searchService='';
-
+  state.showService=false;state.openCategory='';state.searchService='';
   render();
-
-  window.scrollTo({
-    top:pageY,
-    left:0,
-    behavior:'instant'
-  });
+  window.scrollTo({top:pageY,left:0,behavior:'instant'});
 }
-
 function toggleCategory(label){
   const position=captureScrollPosition();
   const opening=state.openCategory!==label;
-
   state.openCategory=opening?label:'';
-
   render();
   restoreScrollPosition(position);
-
   if(opening){
     requestAnimationFrame(()=>{
       const list=document.getElementById('serviceList');
       if(!list)return;
-
       const headings=list.querySelectorAll('.category-head');
-
       for(const heading of headings){
         if(heading.textContent.includes(label)){
           const listRect=list.getBoundingClientRect();
           const headingRect=heading.getBoundingClientRect();
-
-          if(headingRect.top<listRect.top){
-            list.scrollTop-=listRect.top-headingRect.top;
-          }else if(headingRect.bottom>listRect.bottom){
-            list.scrollTop+=headingRect.bottom-listRect.bottom;
-          }
-
+          if(headingRect.top<listRect.top){list.scrollTop-=listRect.top-headingRect.top;}
+          else if(headingRect.bottom>listRect.bottom){list.scrollTop+=headingRect.bottom-listRect.bottom;}
           break;
         }
       }
     });
   }
 }
-
 function searchService(value){
   const input=document.getElementById('svcSearch');
   const pos=input?input.selectionStart:null;
   const position=captureScrollPosition();
-
   state.searchService=sanitizeInput(value,80);
-
   render();
-
   const nextInput=document.getElementById('svcSearch');
   const nextList=document.getElementById('serviceList');
-
   if(nextInput){
-    try{
-      nextInput.focus({preventScroll:true});
-    }catch(error){
-      nextInput.focus();
-    }
-
+    try{nextInput.focus({preventScroll:true});}catch(error){nextInput.focus();}
     if(pos!==null){
-      try{
-        const cursor=Math.min(pos,nextInput.value.length);
-        nextInput.setSelectionRange(cursor,cursor);
-      }catch(error){}
+      try{const cursor=Math.min(pos,nextInput.value.length);nextInput.setSelectionRange(cursor,cursor);}catch(error){}
     }
   }
-
   if(nextList)nextList.scrollTop=position.listTop;
-
-  window.scrollTo({
-    top:position.pageY,
-    left:0,
-    behavior:'instant'
-  });
+  window.scrollTo({top:position.pageY,left:0,behavior:'instant'});
 }
-
 function selectService(serviceName){
   const clean=String(serviceName||'').trim();
-  if(!clean||!ALL_SERVICES.includes(clean)){
-    showToast('الخدمة غير موجودة في القائمة الرسمية.');
-    return;
-  }
-
-  state.service=clean;
-  state.showService=false;
-  state.searchService='';
-  state.openCategory='';
-
-  render();
+  if(!clean||!ALL_SERVICES.includes(clean)){showToast('الخدمة غير موجودة في القائمة الرسمية.');return;}
+  state.service=clean;state.showService=false;state.searchService='';state.openCategory='';render();
 }
-
-// توافق مع الاستدعاء القديم بالـ index - يحولها لاسم الخدمة من القائمة الديناميكية
 function selectServiceByIndex(index){
   const service=ALL_SERVICES[index];
   if(!service)return selectService(service);
   return selectService(service);
 }
-
 function rejectPhoneInField(value,label){
   if(!containsPhoneNumber(value))return false;
   showToast('ممنوع كتابة رقم تليفون داخل خانة '+label+'؛ استخدم خانة رقم التليفون المخصصة.');
   return true;
 }
-
 function onClientNameInput(value){
   const clean=sanitizeInput(value,50);
-  if(rejectPhoneInField(clean,'اسم العميل')){
-    state.clientName='';
-    const input=document.getElementById('clientNameInput');
-    if(input)input.value='';
-    return;
-  }
+  if(rejectPhoneInField(clean,'اسم العميل')){state.clientName='';const input=document.getElementById('clientNameInput');if(input)input.value='';return;}
   state.clientName=clean;
 }
-
 function onAreaInput(value){
-  if(!AREA_OPTIONS.includes(value)&&value!==''){
-    state.area='';
-    return;
-  }
-  if(rejectPhoneInField(value,'المنطقة')){
-    state.area='';
-    const input=document.getElementById('areaInput');
-    if(input)input.value='';
-    return;
-  }
+  if(!AREA_OPTIONS.includes(value)&&value!==''){state.area='';return;}
+  if(rejectPhoneInField(value,'المنطقة')){state.area='';const input=document.getElementById('areaInput');if(input)input.value='';return;}
   state.area=value;
 }
-
 function onAddressInput(value){
   const clean=sanitizeInput(value,250);
-  if(rejectPhoneInField(clean,'العنوان التفصيلي')){
-    state.address='';
-    const input=document.getElementById('addrInput');
-    if(input)input.value='';
-    const counter=document.getElementById('addrCounter');
-    if(counter)counter.textContent='0/250';
-    return;
-  }
-
+  if(rejectPhoneInField(clean,'العنوان التفصيلي')){state.address='';const input=document.getElementById('addrInput');if(input)input.value='';const counter=document.getElementById('addrCounter');if(counter)counter.textContent='0/250';return;}
   state.address=clean;
-  const el=document.getElementById('addrCounter');
-  if(el)el.textContent=state.address.length+'/250';
+  const el=document.getElementById('addrCounter');if(el)el.textContent=state.address.length+'/250';
 }
-
 function onPhoneInput(value){
   state.phone=normalizeDigits(String(value)).replace(/\D/g,'').slice(0,11);
-  const input=document.getElementById('phoneInput');
-  if(input&&input.value!==state.phone)input.value=state.phone;
-
+  const input=document.getElementById('phoneInput');if(input&&input.value!==state.phone)input.value=state.phone;
   const status=document.getElementById('phoneStatus');
-  if(status){
-    const valid=VALIDATORS.phone(state.phone);
-    status.textContent=valid?'✓ صحيح':'11 رقم يبدأ بـ 01';
-    status.className='text-[10px] font-bold '+(valid?'text-emerald-600':'text-slate-400');
-  }
+  if(status){const valid=VALIDATORS.phone(state.phone);status.textContent=valid?'✓ صحيح':'11 رقم يبدأ بـ 01';status.className='text-[10px] font-bold '+(valid?'text-emerald-600':'text-slate-400');}
 }
-
 function onBudgetInput(value){
   const clean=sanitizeInput(value,50);
-  if(rejectPhoneInField(clean,'الميزانية')){
-    state.budget='';
-    const input=document.getElementById('budgetInput');
-    if(input)input.value='';
-    return;
-  }
+  if(rejectPhoneInField(clean,'الميزانية')){state.budget='';const input=document.getElementById('budgetInput');if(input)input.value='';return;}
   state.budget=clean;
 }
-
 function onDescInput(value){
   const clean=sanitizeInput(value,1000);
-  if(rejectPhoneInField(clean,'وصف المشكلة')){
-    state.desc='';
-    const input=document.getElementById('descInput');
-    if(input)input.value='';
-    const counter=document.getElementById('descCounter');
-    if(counter)counter.textContent='0/1000';
-    return;
-  }
-
+  if(rejectPhoneInField(clean,'وصف المشكلة')){state.desc='';const input=document.getElementById('descInput');if(input)input.value='';const counter=document.getElementById('descCounter');if(counter)counter.textContent='0/1000';return;}
   state.desc=clean;
-  const el=document.getElementById('descCounter');
-  if(el)el.textContent=state.desc.length+'/1000';
+  const el=document.getElementById('descCounter');if(el)el.textContent=state.desc.length+'/1000';
 }
-
-function onTrackInput(value){
-  state.trackInput=sanitizeInput(value,20).toUpperCase();
-}
-
+function onTrackInput(value){state.trackInput=sanitizeInput(value,20).toUpperCase();}
 function onComplaintName(value){
   const clean=sanitizeInput(value,50);
-
-  if(rejectPhoneInField(clean,'اسم العميل')){
-    state.complaintName='';
-    const input=document.getElementById('complaintNameInput');
-    if(input)input.value='';
-    return;
-  }
-
+  if(rejectPhoneInField(clean,'اسم العميل')){state.complaintName='';const input=document.getElementById('complaintNameInput');if(input)input.value='';return;}
   state.complaintName=clean;
 }
-
-function onComplaintSn(value){
-  state.complaintSn=sanitizeInput(value,20).toUpperCase();
+function onComplaintSn(value){state.complaintSn=sanitizeInput(value,20).toUpperCase();}
+function onComplaintTrackSn(value){state.complaintTrackSn=sanitizeInput(value,20).toUpperCase();}
+function onComplaintTrackName(value){
+  const clean=sanitizeInput(value,50);
+  if(containsPhoneNumber(clean)){showToast('ممنوع كتابة رقم تليفون داخل اسم العميل.');state.complaintTrackName='';const input=document.getElementById('complaintTrackNameInput');if(input)input.value='';return;}
+  state.complaintTrackName=clean;
 }
-
+async function trackComplaints(){
+  if(state.complaintTrackLoading)return;
+  const sn=String(state.complaintTrackSn||'').trim().toUpperCase();
+  const name=String(state.complaintTrackName||'').trim();
+  if(!sn||!name){state.complaintTrackError='من فضلك اكتب كود الطلب واسم العميل.';state.complaintTrackResults=null;render();return;}
+  if(!VALIDATORS.sn(sn)){state.complaintTrackError='كود الطلب غير صحيح. تأكد أن الكود يبدأ بـ SN ويتكون من 6 أرقام.';state.complaintTrackResults=null;render();return;}
+  if(!VALIDATORS.name(name)){state.complaintTrackError='اكتب اسم العميل بشكل صحيح.';state.complaintTrackResults=null;render();return;}
+  state.complaintTrackLoading=true;state.complaintTrackError='';state.complaintTrackResults=null;render();
+  try{
+    const data=await API.trackComplaints({sn:sn,clientName:name});
+    const list=Array.isArray(data.complaints)?data.complaints:Array.isArray(data.items)?data.items:Array.isArray(data.data)?data.data:[STRIPPED]
+    if(!list.length){state.complaintTrackError='';state.complaintTrackResults=[];}
+    else{state.complaintTrackResults=list;state.complaintTrackError='';}
+  }catch(error){
+    const msg=String(error.message||'');
+    if(msg==='EMPTY_FIELDS'){state.complaintTrackError='من فضلك اكتب كود الطلب واسم العميل.';}
+    else if(msg==='INVALID_SN'){state.complaintTrackError='كود الطلب غير صحيح. تأكد أن الكود يبدأ بـ SN ويتكون من 6 أرقام.';}
+    else if(error.status===404){state.complaintTrackError='لا توجد شكوى مرتبطة بهذا الطلب.';state.complaintTrackResults=null;state.complaintTrackLoading=false;render();return;}
+    else if(error.status===400&&/اسم/i.test(msg)){state.complaintTrackError='الاسم غير مطابق للاسم المسجل مع هذا الطلب.';}
+    else if(error.status===400){state.complaintTrackError='البيانات غير صحيحة. تأكد من كود الطلب والاسم.';}
+    else{state.complaintTrackError='تعذر الاتصال بالسيرفر. تأكد من الإنترنت وحاول مرة أخرى.';}
+    state.complaintTrackResults=null;
+  }finally{state.complaintTrackLoading=false;render();}
+}
 function onComplaintText(value){
   const clean=sanitizeInput(value,1000);
-
-  if(rejectPhoneInField(clean,'تفاصيل الشكوى')){
-    state.complaintText='';
-    const input=document.getElementById('complaintTextInput');
-    if(input)input.value='';
-    return;
-  }
-
+  if(rejectPhoneInField(clean,'تفاصيل الشكوى')){state.complaintText='';const input=document.getElementById('complaintTextInput');if(input)input.value='';return;}
   state.complaintText=clean;
 }
-
 function resetForm(){
-  state.sn=null;
-  state.clientName='';
-  state.area='';
-  state.address='';
-  state.phone='';
-  state.budget='';
-  state.desc='';
-  state.service='';
-  state.showService=false;
-  state.openCategory='';
-  state.searchService='';
-  state.tab='new';
-  state.loading=false;
-  render();
+  state.sn=null;state.clientName='';state.area='';state.address='';state.phone='';state.budget='';state.desc='';state.service='';state.showService=false;state.openCategory='';state.searchService='';state.tab='new';state.loading=false;render();
 }
-
-function trackNow(){
-  state.tab='track';
-  state.trackInput=state.sn||'';
-  render();
-  doTrack();
-}
-
+function trackNow(){state.tab='track';state.trackInput=state.sn||'';render();doTrack();}
 function copySn(){
   if(!state.sn)return;
-
   if(navigator.clipboard&&navigator.clipboard.writeText){
-    navigator.clipboard.writeText(state.sn)
-      .then(()=>showToast('تم نسخ الكود: '+state.sn,'success'))
-      .catch(()=>showToast('تعذر النسخ التلقائي. الكود: '+state.sn));
-  }else{
-    showToast('انسخ الكود يدويًا: '+state.sn,'success');
-  }
+    navigator.clipboard.writeText(state.sn).then(()=>showToast('تم نسخ الكود: '+state.sn,'success')).catch(()=>showToast('تعذر النسخ التلقائي. الكود: '+state.sn));
+  }else{showToast('انسخ الكود يدويًا: '+state.sn,'success');}
 }
-
 async function loadServices(){
-  // منع التحميل المكرر غير الضروري
   if(state.servicesLoading&&state.servicesLoaded)return;
-  state.servicesLoading=true;
-  state.servicesError='';
-  render();
-
+  state.servicesLoading=true;state.servicesError='';render();
   try{
     const data=await API.getServices();
-    // المصدر الرسمي الوحيد هو /api/services
-    CATEGORIES=data.categories;
-    ALL_SERVICES=data.services;
-    // تأكيد أن ALL_SERVICES مطابق للأقسام
+    CATEGORIES=data.categories;ALL_SERVICES=data.services;
     const flat=[...new Set(CATEGORIES.flatMap(c=>c.services))];
-    if(flat.length!==ALL_SERVICES.length){
-      // نثق في data.services كمرجع رسمي، لكن نضمن عدم وجود تكرار
-      ALL_SERVICES=[...new Set(ALL_SERVICES)];
-    }
-    state.servicesLoading=false;
-    state.servicesError='';
-    state.servicesLoaded=true;
-    // لو الخدمة المختارة سابقاً غير موجودة في القائمة الجديدة، امسحها
-    if(state.service&&!ALL_SERVICES.includes(state.service)){
-      state.service='';
-    }
+    if(flat.length!==ALL_SERVICES.length){ALL_SERVICES=[...new Set(ALL_SERVICES)];}
+    state.servicesLoading=false;state.servicesError='';state.servicesLoaded=true;
+    if(state.service&&!ALL_SERVICES.includes(state.service)){state.service='';}
     render();
     log('تم تحميل الخدمات من API:',CATEGORIES.length+' قسم, '+ALL_SERVICES.length+' خدمة');
   }catch(error){
-    state.servicesLoading=false;
-    state.servicesError=error.message||'تعذر تحميل الخدمات';
-    state.servicesLoaded=false;
-    CATEGORIES=[];
-    ALL_SERVICES=[];
-    render();
-    showToast(state.servicesError);
-    log('فشل تحميل الخدمات:',error);
+    state.servicesLoading=false;state.servicesError=error.message||'تعذر تحميل الخدمات';state.servicesLoaded=false;CATEGORIES=[];ALL_SERVICES=[];
+    render();showToast(state.servicesError);log('فشل تحميل الخدمات:',error);
   }
 }
-
 async function createOrder(){
   if(state.loading)return;
-
-  if(state.servicesLoading){
-    showToast('جاري تحميل قائمة الخدمات، انتظر لحظة.');
-    return;
-  }
-  if(state.servicesError||!ALL_SERVICES.length){
-    showToast('قائمة الخدمات غير متاحة حاليًا. اضغط على زر إعادة المحاولة في قائمة الخدمات.');
-    state.showService=true;
-    render();
-    return;
-  }
-
-  if(!VALIDATORS.name(state.clientName)){
-    showToast('اكتب اسمك بشكل صحيح، من حرفين إلى 50 حرفًا.');
-    document.getElementById('clientNameInput')?.focus();
-    return;
-  }
-
-  if(containsPhoneNumber(state.clientName)){
-    showToast('ممنوع كتابة رقم تليفون داخل اسم العميل.');
-    document.getElementById('clientNameInput')?.focus();
-    return;
-  }
-
-  if(!state.service||!ALL_SERVICES.includes(state.service)){
-    showToast('اختار الخدمة المطلوبة من القائمة الرسمية.');
-    state.showService=true;
-    render();
-    return;
-  }
-
-  if(!AREA_OPTIONS.includes(state.area)){
-    showToast('اختار المنطقة أو الحي من القائمة.');
-    document.getElementById('areaInput')?.focus();
-    return;
-  }
-
-  if(!VALIDATORS.text(state.address,5,250)){
-    showToast('اكتب العنوان بالتفصيل، من فضلك.');
-    document.getElementById('addrInput')?.focus();
-    return;
-  }
-
-  if(!state.phone){
-    showToast('اكتب رقم تليفونك.');
-    document.getElementById('phoneInput')?.focus();
-    return;
-  }
-
-  if(!state.desc){
-    showToast('اكتب تفاصيل المشكلة.');
-    document.getElementById('descInput')?.focus();
-    return;
-  }
-
-  if(!VALIDATORS.phone(state.phone)){
-    showToast('رقم التليفون غير صحيح؛ لازم يكون 11 رقم ويبدأ بـ 01.');
-    document.getElementById('phoneInput')?.focus();
-    return;
-  }
-
-  if(!VALIDATORS.text(state.desc,10,1000)){
-    showToast('اكتب تفاصيل المشكلة في 10 حروف على الأقل.');
-    document.getElementById('descInput')?.focus();
-    return;
-  }
-
+  if(state.servicesLoading){showToast('جاري تحميل قائمة الخدمات، انتظر لحظة.');return;}
+  if(state.servicesError||!ALL_SERVICES.length){showToast('قائمة الخدمات غير متاحة حاليًا. اضغط على زر إعادة المحاولة في قائمة الخدمات.');state.showService=true;render();return;}
+  if(!VALIDATORS.name(state.clientName)){showToast('اكتب اسمك بشكل صحيح، من حرفين إلى 50 حرفًا.');document.getElementById('clientNameInput')?.focus();return;}
+  if(containsPhoneNumber(state.clientName)){showToast('ممنوع كتابة رقم تليفون داخل اسم العميل.');document.getElementById('clientNameInput')?.focus();return;}
+  if(!state.service||!ALL_SERVICES.includes(state.service)){showToast('اختار الخدمة المطلوبة من القائمة الرسمية.');state.showService=true;render();return;}
+  if(!AREA_OPTIONS.includes(state.area)){showToast('اختار المنطقة أو الحي من القائمة.');document.getElementById('areaInput')?.focus();return;}
+  if(!VALIDATORS.text(state.address,5,250)){showToast('اكتب العنوان بالتفصيل، من فضلك.');document.getElementById('addrInput')?.focus();return;}
+  if(!state.phone){showToast('اكتب رقم تليفونك.');document.getElementById('phoneInput')?.focus();return;}
+  if(!state.desc){showToast('اكتب تفاصيل المشكلة.');document.getElementById('descInput')?.focus();return;}
+  if(!VALIDATORS.phone(state.phone)){showToast('رقم التليفون غير صحيح؛ لازم يكون 11 رقم ويبدأ بـ 01.');document.getElementById('phoneInput')?.focus();return;}
+  if(!VALIDATORS.text(state.desc,10,1000)){showToast('اكتب تفاصيل المشكلة في 10 حروف على الأقل.');document.getElementById('descInput')?.focus();return;}
   try{
-    validateNoPhoneInCustomerFields({
-      clientName:state.clientName,
-      area:state.area,
-      address:state.address,
-      description:state.desc,
-      budget:state.budget,
-      complaintText:state.complaintText
-    });
-  }catch(error){
-    showToast(error.message);
-    return;
-  }
-
-  state.loading=true;
-  render();
-
+    validateNoPhoneInCustomerFields({clientName:state.clientName,area:state.area,address:state.address,description:state.desc,budget:state.budget,complaintText:state.complaintText});
+  }catch(error){showToast(error.message);return;}
+  state.loading=true;render();
   try{
-    const data=await API.createOrder({
-      clientName:state.clientName,
-      service:state.service,
-      area:state.area,
-      address:state.address,
-      phone:state.phone,
-      budget:state.budget,
-      description:state.desc
-    });
-
-    state.sn=data.sn;
-    state.loading=false;
-    showToast('تم إنشاء الطلب: '+state.sn,'success');
-    render();
-  }catch(error){
-    state.loading=false;
-    showToast(error.message||'تعذر إنشاء الطلب حاليًا.');
-    render();
-  }
+    const data=await API.createOrder({clientName:state.clientName,service:state.service,area:state.area,address:state.address,phone:state.phone,budget:state.budget,description:state.desc});
+    state.sn=data.sn;state.loading=false;showToast('تم إنشاء الطلب: '+state.sn,'success');render();
+  }catch(error){state.loading=false;showToast(error.message||'تعذر إنشاء الطلب حاليًا.');render();}
 }
-
 async function doTrack(){
   if(state.trackLoading)return;
-
   const input=state.trackInput.trim().toUpperCase();
-
-  if(!input){
-    state.trackError='اكتب كود التتبع.';
-    render();
-    return;
-  }
-
-  if(!VALIDATORS.sn(input)){
-    state.trackError='كود التتبع غير صحيح. راجع الكود وحاول مرة أخرى.';
-    render();
-    return;
-  }
-
-  state.trackLoading=true;
-  state.trackError='';
-  state.tracked=null;
-  render();
-
-  try{
-    const order=await API.getOrder(input);
-    state.tracked=order;
-  }catch(error){
-    state.trackError=error.message||'تعذر عرض الطلب حاليًا. حاول مرة أخرى.';
-  }finally{
-    state.trackLoading=false;
-    render();
-  }
+  if(!input){state.trackError='اكتب كود التتبع.';render();return;}
+  if(!VALIDATORS.sn(input)){state.trackError='كود التتبع غير صحيح. راجع الكود وحاول مرة أخرى.';render();return;}
+  state.trackLoading=true;state.trackError='';state.tracked=null;render();
+  try{const order=await API.getOrder(input);state.tracked=order;}catch(error){state.trackError=error.message||'تعذر عرض الطلب حاليًا. حاول مرة أخرى.';}finally{state.trackLoading=false;render();}
 }
-
 async function acceptOffer(sn,offerId){
   if(!confirm('تأكيد قبول هذا العرض؟'))return;
   if(state.acceptingOffer)return;
-
-  state.acceptingOffer=offerId;
-  render();
-
-  try{
-    await API.acceptOffer(sn,offerId);
-    showToast('تم قبول العرض بنجاح','success');
-    state.trackInput=sn;
-    await doTrack();
-  }catch(error){
-    showToast(error.message||'تعذر قبول العرض حاليًا.');
-  }finally{
-    state.acceptingOffer='';
-    render();
-  }
+  state.acceptingOffer=offerId;render();
+  try{await API.acceptOffer(sn,offerId);showToast('تم قبول العرض بنجاح','success');state.trackInput=sn;await doTrack();}catch(error){showToast(error.message||'تعذر قبول العرض حاليًا.');}finally{state.acceptingOffer='';render();}
 }
-
 async function sendComplaint(){
   if(state.complaintLoading)return;
-
-  if(!VALIDATORS.name(state.complaintName)){
-    showToast('اكتب اسم العميل المسجل مع الطلب بشكل صحيح.');
-    document.getElementById('complaintNameInput')?.focus();
-    return;
-  }
-
-  if(!VALIDATORS.sn(state.complaintSn)){
-    showToast('اكتب كود الطلب بشكل صحيح.');
-    document.getElementById('complaintSnInput')?.focus();
-    return;
-  }
-
-  if(!VALIDATORS.text(state.complaintText,10,1000)){
-    showToast('اكتب تفاصيل الشكوى في 10 حروف على الأقل.');
-    document.getElementById('complaintTextInput')?.focus();
-    return;
-  }
-
-  state.complaintLoading=true;
-  render();
-
+  if(!VALIDATORS.name(state.complaintName)){showToast('اكتب اسم العميل المسجل مع الطلب بشكل صحيح.');document.getElementById('complaintNameInput')?.focus();return;}
+  if(!VALIDATORS.sn(state.complaintSn)){showToast('اكتب كود الطلب بشكل صحيح.');document.getElementById('complaintSnInput')?.focus();return;}
+  if(!VALIDATORS.text(state.complaintText,10,1000)){showToast('اكتب تفاصيل الشكوى في 10 حروف على الأقل.');document.getElementById('complaintTextInput')?.focus();return;}
+  state.complaintLoading=true;render();
   try{
-    await API.sendComplaint({
-      sn:state.complaintSn,
-      clientName:state.complaintName,
-      text:state.complaintText
-    });
-
+    await API.sendComplaint({sn:state.complaintSn,clientName:state.complaintName,text:state.complaintText});
     showToast('تم إرسال الشكوى بنجاح، وستتم مراجعتها من الإدارة.','success');
-    state.complaintSn='';
-    state.complaintName='';
-    state.complaintText='';
-  }catch(error){
-    showToast(error.message||'تعذر إرسال الشكوى حاليًا.');
-  }finally{
-    state.complaintLoading=false;
-    render();
-  }
+    state.complaintSn='';state.complaintName='';state.complaintText='';
+  }catch(error){showToast(error.message||'تعذر إرسال الشكوى حاليًا.');}finally{state.complaintLoading=false;render();}
 }
-
-// تحميل الخدمات عند تهيئة الصفحة + الحفاظ على بيانات العميل أثناء إعادة المحاولة
 document.addEventListener('DOMContentLoaded',()=>{
-  loadServices();
-  render();
+  loadServices();render();
   document.addEventListener('click',handleOutsideServiceClick);
 });
-
 render();
 </script>
 </body>
