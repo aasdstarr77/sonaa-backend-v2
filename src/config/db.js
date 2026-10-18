@@ -3,31 +3,54 @@
 
 const mongoose = require('mongoose');
 
-const connectDB = async () => {
+let connectionPromise = null;
+
+async function connectDB() {
   const uri = process.env.MONGO_URI;
 
-  // التحقق من رابط قاعدة البيانات
   if (!uri) {
     throw new Error('متغير MONGO_URI غير مضبوط في إعدادات البيئة');
   }
 
-  try {
-    // إعادة استخدام الاتصال القائم بدل فتح اتصال جديد
-    if (mongoose.connection.readyState === 1) {
-      return mongoose.connection;
-    }
+  if (mongoose.connection.readyState === 1) {
+    return mongoose.connection;
+  }
 
-    const conn = await mongoose.connect(uri, {
-      autoIndex: true
+  // مشاركة محاولة الاتصال الجارية بدل إنشاء محاولات متزامنة.
+  if (connectionPromise) {
+    return connectionPromise;
+  }
+
+  const pending = mongoose.connect(uri, {
+    autoIndex: true,
+    serverSelectionTimeoutMS: 10000,
+    connectTimeoutMS: 10000
+  })
+    .then(() => {
+      console.log(
+        `✓ MongoDB متصل: ${mongoose.connection.host}`
+      );
+
+      return mongoose.connection;
+    })
+    .catch((error) => {
+      console.error(
+        '✗ فشل اتصال MongoDB:',
+        error.message
+      );
+
+      throw error;
+    })
+    .finally(() => {
+      // لا تحتفظ بوعد انتهى؛ حتى يمكن إعادة المحاولة لاحقًا.
+      if (connectionPromise === pending) {
+        connectionPromise = null;
+      }
     });
 
-    console.log(`✓ MongoDB متصل: ${conn.connection.host}`);
+  connectionPromise = pending;
 
-    return conn;
-  } catch (e) {
-    console.error('✗ فشل اتصال MongoDB:', e.message);
-    throw e;
-  }
-};
+  return pending;
+}
 
 module.exports = connectDB;
