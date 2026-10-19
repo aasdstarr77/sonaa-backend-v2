@@ -83,7 +83,7 @@ let state={
   clients:[],filteredClients:[],clientsLoading:false,
   adminUsers:[],adminUsersLoading:false,
   auditLogs:[],regions:[],regionsLoading:false,regionsError:'',notifications:[],walletTransactions:[],walletSelectedFanniId:'',walletLoading:false,settings:{siteName:'صُنّاع',maintenance:false},
-  reports:{},pricing:null,pricingHistory:[],offerFilter:'all',clientSearch:'',supportQuery:'',supportResults:{orders:[],complaints:[]},supportViolations:[],
+  reports:{},pricing:null,pricingHistory:[],offerFilter:'all',clientSearch:'',content:{announcement:'',faqs:[]},supportQuery:'',supportResults:{orders:[],complaints:[]},supportViolations:[],
   search:'',filter:'الكل',filterTopup:'الكل',filterOrder:'الكل',filterComplaint:'الكل',filterClient:'الكل',
   errors:{fannis:'',topups:'',orders:'',complaints:'',services:'',clients:''}, error:''
 };
@@ -681,16 +681,17 @@ function renderSupport(){
  </section>`;
 }
 function renderContent(){
-  return `
-  <section class="mt-4 space-y-4">
-    <div class="rounded-[18px] bg-gradient-to-r from-pink-600 to-rose-600 p-4 text-white"><p class="text-[12px] font-black">إدارة المحتوى وتجربة المستخدم</p><p class="text-[10px] text-pink-100 mt-1">إعلانات • أسئلة شائعة • رسائل صيانة</p></div>
-    <div class="premium-panel p-4 space-y-3">
-      <label class="block"><span class="text-[11px] font-black">رسالة إعلانية في واجهة العميل</span><textarea rows="2" placeholder="عرض خاص..." class="field mt-2"></textarea><button class="mt-2 pill-btn soft-btn w-full">معاينة ونشر</button></label>
-      <div class="border-t pt-3"><h3 class="text-[11px] font-black mb-2">الأسئلة الشائعة</h3><div class="flex gap-2"><input placeholder="سؤال جديد" class="field flex-1"><button class="pill-btn primary-pill">إضافة</button></div></div>
-    </div>
-  </section>`;
+ const c=state.content||{announcement:'',faqs:[]};
+ return `
+ <section class="mt-4 space-y-4">
+ <div class="premium-panel p-4 space-y-3">
+ <label class="block"><span class="text-[11px] font-black">رسالة إعلانية في واجهة العميل</span><textarea id="content-announcement" maxlength="1000" rows="3" class="field mt-2">${escHtml(c.announcement||'')}</textarea></label>
+ <div class="border-t pt-3"><h3 class="text-[11px] font-black mb-2">الأسئلة الشائعة</h3><input id="faq-question" maxlength="250" placeholder="السؤال الجديد" class="field mb-2"><textarea id="faq-answer" maxlength="1000" rows="2" placeholder="الإجابة" class="field mb-2"></textarea><button onclick="addFaq()" class="pill-btn primary-pill w-full">إضافة سؤال</button></div>
+ <div class="space-y-2">${(c.faqs||[]).map((faq,i)=>`<div class="border rounded-xl p-3"><p class="font-black text-[11px]">${escHtml(faq.question)}</p><p class="text-[10px] mt-1">${escHtml(faq.answer)}</p><button onclick="removeFaq(${i})" class="pill-btn soft-btn mt-2">حذف السؤال</button></div>`).join('')||'<p class="text-[10px] text-slate-500">لم تتم إضافة أسئلة بعد.</p>'}</div>
+ <p class="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-3">يُحفظ المحتوى في قاعدة البيانات. واجهة العميل لم تُربط بعد بقراءة الإعلان والأسئلة من هذا المسار، لذلك الحفظ وحده لا ينشره للزوار.</p>
+ <button id="save-content-btn" onclick="saveContent()" class="w-full h-11 rounded-full bg-slate-900 text-white font-black text-[11px]">حفظ المحتوى</button>
+ </div></section>`;
 }
-
 function renderClients(){
   const clients=Array.isArray(state.filteredClients)?state.filteredClients:[];
   return `
@@ -795,6 +796,10 @@ async function changeAdminRole(id){const role=document.getElementById('admin-rol
 async function revokeAdminRole(id){if(!confirm('سحب الصلاحية الإدارية؟ حساب الفني سيظل موجودًا ويعمل كالمعتاد.'))return;try{const data=await tryApi([`/api/admin/admin-users/${encodeURIComponent(id)}`],{method:'DELETE'});showToast(data.message||'تم سحب الصلاحية');await Promise.all([loadAdminUsers(),loadAll()]);}catch(e){showToast(e.message||'تعذر سحب الصلاحية','error');}}
 async function removeOffer(sn,idx){if(!confirm('هل تريد إزالة هذا العرض؟'))return; try{await tryApi([`/api/admin/offers/${encodeURIComponent(sn)}/${idx}`],{method:'DELETE'}); showToast('تمت إزالة العرض'); await loadOrders();}catch(e){showToast(e.message);}}
 async function rejectOffer(sn,idx){if(!confirm('رفض هذا العرض مع سبب؟'))return; try{await tryApi([`/api/admin/offers/${encodeURIComponent(sn)}/${idx}/reject`],{method:'POST',body:JSON.stringify({reason:'غير مناسب'})}); showToast('تم رفض العرض'); await loadOrders();}catch(e){showToast(e.message);}}
+async function loadContent(){try{const data=await tryApi(['/api/admin/content'],{method:'GET'});state.content=data.content||{announcement:'',faqs:[]};if(state.tab==='content')render();}catch(e){showToast(e.message||'تعذر تحميل المحتوى','error');}}
+function addFaq(){const question=String(document.getElementById('faq-question')?.value||'').trim();const answer=String(document.getElementById('faq-answer')?.value||'').trim();if(question.length<2||question.length>250||answer.length<2||answer.length>1000)return showToast('اكتب سؤالًا وإجابة صالحين','error');state.content=state.content||{announcement:'',faqs:[]};state.content.faqs=Array.isArray(state.content.faqs)?state.content.faqs:[];if(state.content.faqs.length>=100)return showToast('الحد الأقصى 100 سؤال','error');state.content.faqs.push({question,answer,active:true});render();}
+function removeFaq(index){if(!state.content||!Array.isArray(state.content.faqs))return;state.content.faqs.splice(index,1);render();}
+async function saveContent(){const announcement=String(document.getElementById('content-announcement')?.value||'').trim();const faqs=Array.isArray(state.content?.faqs)?state.content.faqs:[];const btn=document.getElementById('save-content-btn');if(btn)btn.disabled=true;try{const data=await tryApi(['/api/admin/content'],{method:'PUT',body:JSON.stringify({announcement,faqs})});state.content=data.content||{announcement,faqs};showToast(data.message||'تم حفظ المحتوى');render();}catch(e){showToast(e.message||'تعذر حفظ المحتوى','error');}finally{if(btn)btn.disabled=false;}}
 async function searchSupport(){const q=String(document.getElementById('support-query')?.value||'').trim();if(q.length<2)return showToast('اكتب كود طلب أو رقم هاتف للبحث','error');state.supportQuery=q;try{state.supportResults=await tryApi(['/api/admin/support/search?q='+encodeURIComponent(q)],{method:'GET'});state.supportViolations=[];render();}catch(e){showToast(e.message||'تعذر البحث في الدعم','error');}}
 async function markSupportReview(sn){if(!confirm('وضع علامة مراجعة على الطلب أو الشكوى '+sn+'؟'))return;try{const data=await tryApi(['/api/admin/support/'+encodeURIComponent(sn)+'/review'],{method:'POST',body:JSON.stringify({})});showToast(data.message||'تم وضع علامة المراجعة');await Promise.all([searchSupport(),loadSupportViolations()]);}catch(e){showToast(e.message||'تعذر وضع علامة المراجعة','error');}}
 async function loadSupportViolations(){try{const data=await tryApi(['/api/admin/support/violations'],{method:'GET'});state.supportViolations=extractList(data,['violations','items']);if(state.tab==='support')render();}catch(e){showToast(e.message||'تعذر تحميل سجل الدعم','error');}}
