@@ -16,6 +16,7 @@ const orderRouter = require('./routes/order');
 const fanniRouter = require('./routes/fanni');
 const adminRouter = require('./routes/admin');
 const publicRouter = require('./routes/public');
+const clientRouter = require('./routes/client');
 const complaintRouter = require('./routes/Complaint');
 const { auth } = require('./middleware/auth');
 const errorHandler = require('./middleware/error');
@@ -139,6 +140,7 @@ const loginPaths = [
   '/api/fannis/login',
   '/api/technician/login',
   '/api/technicians/login',
+  '/api/client/login',
   '/api/admin/login',
   '/api/admins/login',
   '/api/auth/admin/login'
@@ -150,6 +152,7 @@ app.use(loginPaths, loginLimiter);
 app.use('/api', ensureDatabase);
 
 app.use('/api', publicRouter);
+app.use('/api/client', clientRouter);
 app.use('/api/complaints', complaintRouter);
 app.use('/api/orders', orderRouter);
 
