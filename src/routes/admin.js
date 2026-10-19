@@ -449,7 +449,7 @@ router.delete('/fannis/:id', auth('admin'), async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-const VALID_LEVELS = ['مبتدئ', 'محترف', 'خبير', 'نخبة', 'أسطوري'];
+const VALID_LEVELS = ['مبتدئ', 'ممارس', 'محترف', 'خبير مبتدئ', 'خبير', 'خبير أول', 'استشاري فني', 'نخبة', 'أسطوري'];
 const VALID_BADGES = ['trusted', 'top_rated', 'verified', 'fast_response', 'premium', 'gold'];
 
 // ترقية مستوى الفني - موثوق مع تاريخ
