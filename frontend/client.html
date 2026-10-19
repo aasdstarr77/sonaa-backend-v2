@@ -272,7 +272,7 @@ let state={
   complaintSn:'',complaintName:'',complaintText:'',complaintLoading:false,
   complaintTrackSn:'',complaintTrackName:'',complaintTrackLoading:false,complaintTrackError:'',complaintTrackResults:null,
   showService:false,openCategory:'',searchService:'',
-  servicesLoading:true,servicesError:'',servicesLoaded:false,publicContent:{announcement:'',faqs:[]}
+  servicesLoading:true,servicesError:'',servicesLoaded:false,publicContent:{siteName:'صُنّاع',announcement:'',faqs:[]}
 };
 function getCat(service){return CATEGORIES.find(c=>c.services.includes(service))||null;}
 function captureScrollPosition(){
@@ -297,7 +297,7 @@ function showToast(message,type='error'){
 }
 function renderAccountGate(){
   var reg=state.accountAuthMode==='register';
-  var h='<main class="min-h-screen px-4 py-8 flex items-center justify-center"><div class="w-full max-w-[440px]"><div class="text-center mb-6"><div class="brand-mark mx-auto h-16 w-16 rounded-2xl flex items-center justify-center text-white text-3xl">📡</div><h1 class="mt-4 text-2xl font-black">صُنّاع</h1><p class="mt-2 text-sm text-slate-600">سجّل دخولك علشان تطلب خدمة وتتابع طلباتك من حسابك.</p></div><div class="panel p-5"><div class="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl"><button type="button" onclick="setAccountAuthMode(\'login\')" class="h-10 rounded-lg text-sm font-extrabold '+(!reg?'tab-active':'text-slate-600')+'">تسجيل الدخول</button><button type="button" onclick="setAccountAuthMode(\'register\')" class="h-10 rounded-lg text-sm font-extrabold '+(reg?'tab-active':'text-slate-600')+'">حساب جديد</button></div><form class="mt-5 space-y-4" onsubmit="submitClientAccount(event)">';
+  var h='<main class="min-h-screen px-4 py-8 flex items-center justify-center"><div class="w-full max-w-[440px]"><div class="text-center mb-6"><div class="brand-mark mx-auto h-16 w-16 rounded-2xl flex items-center justify-center text-white text-3xl">📡</div><h1 class="mt-4 text-2xl font-black">'+escHtml(state.publicContent?.siteName||'صُنّاع')+'</h1><p class="mt-2 text-sm text-slate-600">سجّل دخولك علشان تطلب خدمة وتتابع طلباتك من حسابك.</p></div><div class="panel p-5"><div class="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl"><button type="button" onclick="setAccountAuthMode(\'login\')" class="h-10 rounded-lg text-sm font-extrabold '+(!reg?'tab-active':'text-slate-600')+'">تسجيل الدخول</button><button type="button" onclick="setAccountAuthMode(\'register\')" class="h-10 rounded-lg text-sm font-extrabold '+(reg?'tab-active':'text-slate-600')+'">حساب جديد</button></div><form class="mt-5 space-y-4" onsubmit="submitClientAccount(event)">';
   if(reg)h+='<div><label class="block mb-1.5 text-xs font-extrabold">الاسم بالكامل</label><input id="accountName" required minlength="2" maxlength="50" autocomplete="name" class="field h-12 px-3 text-sm" placeholder="اكتب اسمك"></div>';
   h+='<div><label class="block mb-1.5 text-xs font-extrabold">رقم الموبايل</label><input id="accountPhone" required type="tel" inputmode="tel" autocomplete="tel" maxlength="20" class="field h-12 px-3 text-sm" placeholder="01012345678" dir="ltr"></div><div><label class="block mb-1.5 text-xs font-extrabold">كلمة السر</label><input id="accountPassword" required type="password" minlength="'+(reg?8:1)+'" maxlength="128" autocomplete="'+(reg?'new-password':'current-password')+'" class="field h-12 px-3 text-sm" placeholder="'+(reg?'8 أحرف على الأقل':'اكتب كلمة السر')+'"></div>';
   if(reg)h+='<div><label class="block mb-1.5 text-xs font-extrabold">تأكيد كلمة السر</label><input id="accountConfirmPassword" required type="password" minlength="8" maxlength="128" autocomplete="new-password" class="field h-12 px-3 text-sm" placeholder="أعد كتابة كلمة السر"></div>';
@@ -315,7 +315,7 @@ function renderPublicContent(){
     '</section>';
 }
 async function loadPublicContent(){
-  try{const data=await API.request('/api/content',{method:'GET'});state.publicContent={announcement:String(data.announcement||''),faqs:Array.isArray(data.faqs)?data.faqs:[]};render();}catch(error){log('تعذر تحميل محتوى الواجهة:',error);}
+  try{const data=await API.request('/api/content',{method:'GET'});state.publicContent={siteName:String(data.siteName||'صُنّاع'),announcement:String(data.announcement||''),faqs:Array.isArray(data.faqs)?data.faqs:[]};document.title=state.publicContent.siteName+' - اطلب فني';render();}catch(error){log('تعذر تحميل محتوى الواجهة:',error);}
 }
 function setAccountAuthMode(mode){state.accountAuthMode=mode==='register'?'register':'login';state.accountError='';render();}
 async function submitClientAccount(e){
@@ -411,7 +411,7 @@ function render(){
       <div class="flex items-center gap-2.5 min-w-0">
         <div class="brand-mark h-10 w-10 rounded-xl flex items-center justify-center text-white font-black text-[19px] shrink-0">📡</div>
         <div class="min-w-0">
-          <h1 class="font-extrabold text-[16px] leading-none truncate">صُنّاع</h1>
+          <h1 class="font-extrabold text-[16px] leading-none truncate">${escHtml(state.publicContent?.siteName||'صُنّاع')}</h1>
           <p class="text-[11px] text-slate-500 font-bold mt-1">خدماتك في مكان واحد</p>
         </div>
       </div>
