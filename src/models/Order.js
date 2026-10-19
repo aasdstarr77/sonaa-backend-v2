@@ -150,11 +150,18 @@ enum: [
 'تم الانتهاء',
 'منتهي',
 'اعتذار',
-'منتهي - اعتذار'
+'منتهي - اعتذار',
+'ملغي',
+'مؤرشف'
 ],
 default: 'قيد المراجعة',
 index: true
 },
+
+// سجل آخر إجراء إداري على الطلب.
+adminActionNote: { type: String, trim: true, maxlength: 500, default: '' },
+adminActionAt: { type: Date, default: null },
+adminActionBy: { type: String, trim: true, maxlength: 120, default: '' },
 
 // عروض الفنيين على الطلب.
 offers: {
