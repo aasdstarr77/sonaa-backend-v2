@@ -54,7 +54,6 @@ const fanniSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true,
-    index: true,
     validate: {
       validator: v => /^01[0-9]{9}$/.test(v),
       message: 'رقم الهاتف يجب أن يكون 01xxxxxxxxx'
@@ -189,7 +188,6 @@ const fanniSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
-fanniSchema.index({ phone: 1 }, { unique: true });
 
 // فهارس منفصلة لتجنب جمع مصفوفتين في فهرس مركب واحد
 fanniSchema.index({ status: 1, specialties: 1 });
