@@ -364,7 +364,9 @@ function render(){
                       ${state.openCategory===c.label?`
                         <div class="border-t border-slate-100 p-1.5">
                           ${c.services.map(s=>`
-                            <button type="button" onclick="selectService(${JSON.stringify(s)})" class="service-choice ${state.service===s?'selected':'hover:bg-blue-50'}">
+                            <button type="button" 
+onclick="selectServiceByIndex(${ALL_SERVICES.indexOf(s)})"
+ class="service-choice ${state.service===s?'selected':'hover:bg-blue-50'}">
                               <span>${state.service===s?'✓':'○'}</span>
                               <span>${escHtml(s)}</span>
                             </button>
@@ -385,7 +387,9 @@ function render(){
                       ${state.openCategory===c.label?`
                         <div class="border-t border-slate-100 p-1.5 bg-white">
                           ${c.services.map(s=>`
-                            <button type="button" onclick="selectService(${JSON.stringify(s)})" class="service-choice ${state.service===s?'selected':'hover:bg-blue-50'}">
+                            <button type="button" 
+onclick="selectServiceByIndex(${ALL_SERVICES.indexOf(s)})"
+ class="service-choice ${state.service===s?'selected':'hover:bg-blue-50'}">
                               <span>${state.service===s?'✓':'○'}</span>
                               <span>${escHtml(s)}</span>
                             </button>
