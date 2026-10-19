@@ -739,7 +739,7 @@ async function doLogin(){
   if(!p||!pw){ if(err){err.textContent='اكتب البيانات'; err.classList.remove('hidden');} return; }
   const btn=document.getElementById('login-btn'); if(btn){btn.textContent='جاري...'; btn.disabled=true;}
   try{
-    const payload={password:pw}; if(p.includes('@')){payload.email=p; payload.phone=p;} else {payload.phone=p; payload.email=p;}
+    const payload={password:pw}; if(p.includes('@')) payload.email=p; else payload.phone=p;
     const res=await api('/api/admin/login',{method:'POST',body:JSON.stringify(payload)});
     if(res.ok && (res.data.token||res.data.data?.token)){ setToken(res.data.token||res.data.data.token); render(); loadAll(); }
     else { if(err){err.textContent=res.data.message||'فشل الدخول'; err.classList.remove('hidden');} if(btn){btn.textContent='دخول'; btn.disabled=false;} }
