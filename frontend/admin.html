@@ -635,7 +635,7 @@ function renderSettings(){
       <label class="block"><span class="text-[11px] font-black">اسم المنصة</span><input id="setting-site-name" maxlength="100" value="${escHtml(v.siteName||'صُنّاع')}" class="field mt-2"></label>
       <label class="block"><span class="text-[11px] font-black">رسالة وضع الصيانة</span><textarea id="setting-maintenance-message" rows="2" maxlength="500" class="field mt-2">${escHtml(v.maintenanceMessage||'')}</textarea></label>
       <div class="flex items-center justify-between p-3 rounded-[12px] bg-amber-50 border border-amber-200"><span class="text-[11px] font-black">وضع الصيانة (يوقف طلبات العملاء والفنيين مؤقتًا)</span><label class="relative inline-flex items-center cursor-pointer"><input id="setting-maintenance" type="checkbox" class="sr-only peer" ${v.maintenance?'checked':''}><div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-blue-600"></div></label></div>
-      <label class="block"><span class="text-[11px] font-black">الحد الأقصى لمحاولات تسجيل الفني (محفوظ؛ لم يتم ربطه بمحدد المحاولات بعد)</span><input id="setting-signup-attempts" type="number" min="1" max="100" value="${Number(v.maxFanniSignupAttempts||5)}" class="field mt-2"></label>
+      <label class="block"><span class="text-[11px] font-black">الحد الأقصى لمحاولات تسجيل الفني من نفس عنوان IP خلال 15 دقيقة</span><input id="setting-signup-attempts" type="number" min="1" max="100" value="${Number(v.maxFanniSignupAttempts||5)}" class="field mt-2"></label>
       <button id="save-settings-btn" onclick="saveSettings()" class="w-full h-11 rounded-full bg-slate-900 text-white font-black text-[11px]">حفظ الإعدادات</button>
     </div>
   </section>`;
