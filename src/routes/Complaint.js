@@ -108,8 +108,9 @@ router.get('/track', async (req, res) => {
     }
 
     const complaints = await Complaint.find({
-      sn,
-      clientName: registeredName
+      // بعد التحقق من اسم صاحب الطلب أعلاه، نربط الشكاوى بكود الطلب نفسه.
+      // هذا يعرض أيضًا الشكاوى القديمة إذا اختلف تخزين الاسم فيها عن الاسم الحالي.
+      sn
     })
       .select('sn status adminResponse createdAt updatedAt reviewedAt')
       .sort({ createdAt: -1 })
