@@ -1370,6 +1370,9 @@ async function trackOrder(req, res, next) {
     }
 
     const isOrderOwner = verifyClientToken(req, order);
+    if (!isOrderOwner) {
+      return res.status(403).json({ message: 'سجّل الدخول بحسابك لمتابعة الطلب؛ رقم الطلب وحده لا يكفي لعرض بياناته.' });
+    }
 
     // ملء مستوى وشارات الفني للعروض القديمة دون كشف رقم الهاتف أو بيانات الحساب.
     const fanniIds = [...new Set((order.offers || []).map(offer => String(offer.fanni || '')).filter(Boolean))];
