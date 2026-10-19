@@ -110,7 +110,7 @@ const fanniSchema = new mongoose.Schema({
   // 1. نظام المستويات
   level: {
     type: String,
-    enum: ['مبتدئ', 'محترف', 'خبير', 'نخبة', 'أسطوري'],
+    enum: ['مبتدئ', 'ممارس', 'محترف', 'خبير مبتدئ', 'خبير', 'خبير أول', 'استشاري فني', 'نخبة', 'أسطوري'],
     default: 'مبتدئ',
     index: true
   },
@@ -206,11 +206,15 @@ fanniSchema.methods.calculateLevel = function() {
   const jobs = this.stats?.completedJobs || 0;
   const rating = this.rating?.average || 0;
   const score = this.trustScore || 50;
-  
+
   if (jobs >= 100 && rating >= 4.8 && score >= 90) return 'أسطوري';
-  if (jobs >= 50 && rating >= 4.5 && score >= 80) return 'نخبة';
-  if (jobs >= 20 && rating >= 4.2 && score >= 70) return 'خبير';
-  if (jobs >= 5 && rating >= 4.0) return 'محترف';
+  if (jobs >= 75 && rating >= 4.7 && score >= 85) return 'نخبة';
+  if (jobs >= 60 && rating >= 4.6 && score >= 80) return 'استشاري فني';
+  if (jobs >= 45 && rating >= 4.5 && score >= 75) return 'خبير أول';
+  if (jobs >= 30 && rating >= 4.4 && score >= 70) return 'خبير';
+  if (jobs >= 20 && rating >= 4.2) return 'خبير مبتدئ';
+  if (jobs >= 10 && rating >= 4.0) return 'محترف';
+  if (jobs >= 5) return 'ممارس';
   return 'مبتدئ';
 };
 
