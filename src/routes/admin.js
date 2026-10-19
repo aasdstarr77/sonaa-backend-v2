@@ -863,6 +863,74 @@ router.put('/pricing', auth('admin'), async (req, res, next) => {
     return res.json({ message: 'تم حفظ الأسعار وسجل التغيير', pricing: config.pricing, history: config.history.filter(x => x.key === 'pricing').slice(-100).reverse() });
   } catch (err) { next(err); }
 });
+router.post('/orders/:sn/assign', auth('admin'), async (req, res, next) => {
+  let session;
+  let committed = false;
+  let notification = null;
+  try {
+    if (req.user?.role !== 'admin') return res.status(403).json({ message: 'تعيين الفني وخصم العمولة إجراء مالي متاح للمدير العام فقط' });
+    const sn = String(req.params.sn || '').trim().toUpperCase();
+    const offerId = String(req.body?.offerId || '');
+    const reason = String(req.body?.reason || '').trim();
+    if (!/^SN\d{6}$/.test(sn) || !mongoose.isValidObjectId(offerId)) return res.status(400).json({ message: 'كود الطلب أو العرض غير صحيح' });
+    if (reason.length < 3 || reason.length > 500) return res.status(400).json({ message: 'سبب التعيين مطلوب من 3 إلى 500 حرف' });
+    session = await mongoose.startSession();
+    session.startTransaction();
+    const order = await Order.findOne({ sn }).session(session);
+    if (!order) { await session.abortTransaction(); return res.status(404).json({ message: 'الطلب غير موجود' }); }
+    if (!['تم النشر', 'وصلتك عروض'].includes(order.status) || order.commissionCharged || (order.expiresAt && order.expiresAt <= new Date())) {
+      await session.abortTransaction();
+      return res.status(409).json({ message: 'الطلب ليس متاحًا للتعيين أو انتهت مدته أو سبق خصم العمولة' });
+    }
+    const offer = order.offers.id(offerId);
+    if (!offer || !offer.fanni) { await session.abortTransaction(); return res.status(404).json({ message: 'العرض أو حساب الفني غير موجود' }); }
+    const price = Number(offer.priceNum);
+    if (!Number.isFinite(price) || price <= 0) { await session.abortTransaction(); return res.status(400).json({ message: 'سعر العرض غير صالح' }); }
+    const config = await AdminConfig.findOne({ key: 'main' }).select('pricing').session(session).lean();
+    const pricing = config?.pricing || { commission: 10, minOffer: 1, maxOffer: 1000000 };
+    if (price < Number(pricing.minOffer || 1) || price > Number(pricing.maxOffer || 1000000)) { await session.abortTransaction(); return res.status(409).json({ message: 'سعر العرض خارج الحدود الحالية' }); }
+    const rate = Number(pricing.commission ?? 10);
+    const commission = Math.round((price * rate / 100 + Number.EPSILON) * 100) / 100;
+    const before = await Fanni.findOne({ _id: offer.fanni, role: 'fanni', status: 'معتمد', isFrozen: { $ne: true } }).session(session);
+    if (!before) { await session.abortTransaction(); return res.status(409).json({ message: 'الفني غير معتمد أو محفظته مجمدة' }); }
+    const balanceBefore = Number(before.walletBalance || 0);
+    if (!Number.isFinite(balanceBefore) || balanceBefore < commission) { await session.abortTransaction(); return res.status(409).json({ message: 'رصيد محفظة الفني غير كافٍ للعمولة', requiredCommission: commission, walletBalance: balanceBefore || 0 }); }
+    const after = await Fanni.findOneAndUpdate(
+      { _id: before._id, role: 'fanni', status: 'معتمد', isFrozen: { $ne: true }, walletBalance: { $gte: commission } },
+      { $inc: { walletBalance: -commission } }, { new: true, session, runValidators: true }
+    );
+    if (!after) { await session.abortTransaction(); return res.status(409).json({ message: 'الرصيد تغيّر؛ لم يتم التعيين أو الخصم' }); }
+    const update = await Order.updateOne(
+      { _id: order._id, status: { $in: ['تم النشر', 'وصلتك عروض'] }, commissionCharged: { $ne: true }, 'offers._id': offerId },
+      { $set: { assignedFanni: before._id, assignedFanniName: offer.fanniName || before.name, acceptedOfferId: offer._id, acceptedOfferPrice: price, commissionRate: rate, commissionAmount: commission, commissionCharged: true, commissionChargedAt: new Date(), status: 'تم اختيار فني', adminActionNote: reason, adminActionAt: new Date(), adminActionBy: adminName(req) } },
+      { session, runValidators: true }
+    );
+    if (update.modifiedCount !== 1) { await session.abortTransaction(); return res.status(409).json({ message: 'تغيرت حالة الطلب؛ لم يتم تثبيت الخصم' }); }
+    await new WalletTransaction({
+      fanni: before._id, order: order._id, orderSN: order.sn, type: 'commission', amount: -commission,
+      balanceBefore, balanceAfter: Number(after.walletBalance),
+      description: 'عمولة منصة صُنّاع للتعيين الإداري على الطلب ' + order.sn,
+      idempotencyKey: 'commission:' + String(order._id)
+    }).save({ session });
+    await session.commitTransaction();
+    committed = true;
+    notification = { fanniId: before._id, clientId: order.clientAccount, sn: order.sn, name: before.name };
+    await writeAdminAudit(req, 'تعيين فني وخصم العمولة', 'orders', sn, reason + '؛ الفني: ' + before.name + '؛ العمولة: ' + commission);
+    return res.json({ message: 'تم تعيين الفني وتسجيل خصم العمولة', orderSN: sn, fanniName: before.name, commission: { rate, amount: commission } });
+  } catch (err) {
+    if (session && session.inTransaction()) { try { await session.abortTransaction(); } catch (_) {} }
+    return next(err);
+  } finally {
+    if (session) await session.endSession();
+    if (committed && notification) {
+      try {
+        await createNotification({ recipientRole: 'fanni', recipientId: notification.fanniId, type: 'admin_assignment', title: 'تم تعيينك على طلب', message: 'تم تعيينك على الطلب ' + notification.sn, link: '/fanni', dedupeKey: 'admin-assignment-fanni:' + notification.sn });
+        if (notification.clientId) await createNotification({ recipientRole: 'client', recipientId: notification.clientId, type: 'technician_assigned', title: 'تم تعيين فني على طلبك', message: 'تم تعيين ' + notification.name + ' على الطلب ' + notification.sn, link: '/?tab=orders', dedupeKey: 'admin-assignment-client:' + notification.sn });
+      } catch (notifyError) { console.error('Assignment notification failed:', notifyError.message); }
+    }
+  }
+});
+
 router.get('/wallet/transactions/:fanniId', auth('admin'), async (req,res,next)=>{
   try{
     if(!validId(req.params.fanniId)) return sendBadId(res);
