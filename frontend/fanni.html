@@ -196,6 +196,7 @@ const API={
  available:()=>apiGet('/api/orders/available'),
  myOffers:()=>apiGet('/api/orders/my-offers'),
  complete:sn=>apiPost('/api/orders/'+encodeURIComponent(sn)+'/complete',{}),
+ rateOrder:(sn,p)=>apiPost('/api/orders/'+encodeURIComponent(sn)+'/rating',p),
  offer:(sn,p)=>apiPost('/api/fanni/orders/'+encodeURIComponent(sn)+'/offer',p),
  topup:p=>apiPost('/api/fanni/wallet/topup',p),
  walletHistory:()=>apiGet('/api/fanni/wallet/history')
@@ -599,6 +600,8 @@ function render(){
      </div>
 
      ${renderAcceptedClient(o)}
+     ${o.myRating ? '<div class="rounded-xl border border-emerald-200 bg-emerald-50 p-3"><p class="text-[12px] font-extrabold text-emerald-800">تقييمك للعميل: '+('★'.repeat(Number(o.myRating.stars)||0))+' ('+(Number(o.myRating.stars)||0)+'/5)</p>'+(o.myRating.comment?'<p class="mt-1 text-[12px]">'+esc(o.myRating.comment)+'</p>':'')+'</div>' : '<div class="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-2"><h4 class="text-[13px] font-extrabold text-amber-900">قيّم العميل</h4><p class="text-[11px] text-amber-800">التقييم يظهر لك وللعميل. التعليق اختياري.</p><label class="field-label">عدد النجوم</label><select id="rating-stars-'+esc(o.orderSn)+'" class="field"><option value="5">★★★★★ — 5 نجوم</option><option value="4">★★★★ — 4 نجوم</option><option value="3">★★★ — 3 نجوم</option><option value="2">★★ — نجمتان</option><option value="1">★ — نجمة واحدة</option></select><label class="field-label">تعليق (اختياري)</label><textarea id="rating-comment-'+esc(o.orderSn)+'" maxlength="500" class="field min-h-[72px]" placeholder="ملاحظاتك عن التعامل مع العميل"></textarea><label class="flex items-start gap-2 text-[12px] font-bold text-red-800"><input id="rating-block-'+esc(o.orderSn)+'" type="checkbox" class="mt-1"> عدم استقبال طلبات مستقبلية من هذا العميل (يتفعّل مع نجمة واحدة)</label><button type="button" onclick="submitFanniRating(\''+esc(o.orderSn)+'\')" class="primary-btn w-full h-11 text-[12px]">إرسال التقييم</button></div>'}
+     ${Array.isArray(o.ratings)&&o.ratings.length ? '<div class="rounded-xl border border-slate-200 p-3"><p class="text-[12px] font-extrabold">التقييمات المتبادلة</p>'+o.ratings.map(r=>'<div class="mt-2 border-t border-slate-100 pt-2"><p class="text-[12px] font-bold">'+(r.reviewerRole==='client'?'تقييم العميل لك':'تقييمك للعميل')+' — '+('★'.repeat(Number(r.stars)||0))+' ('+(Number(r.stars)||0)+'/5)</p>'+(r.comment?'<p class="text-[12px] mt-1">'+esc(r.comment)+'</p>':'')+'</div>').join('')+'</div>' : ''}
     </article>`).join('')}
    </section>`:''}
 
@@ -856,6 +859,15 @@ state.myOffers=allOffers.filter(o=>!(o.completed===true||o.orderStatus==='تم �
  }
 }
  
+async function submitFanniRating(sn){
+ const stars=Number(document.getElementById('rating-stars-'+sn)?.value);
+ const comment=String(document.getElementById('rating-comment-'+sn)?.value||'').trim().slice(0,500);
+ const blockFuture=Boolean(document.getElementById('rating-block-'+sn)?.checked);
+ if(!Number.isInteger(stars)||stars<1||stars>5){toast('اختار عدد النجوم','error');return;}
+ if(blockFuture&&stars!==1){toast('إيقاف التعامل متاح مع تقييم نجمة واحدة فقط','error');return;}
+ try{await API.rateOrder(sn,{stars,comment,blockFuture});toast('تم حفظ تقييمك بنجاح');await loadMyOffers();}
+ catch(e){toast(e.message||'تعذر حفظ التقييم','error');}
+}
 async function completeOrder(sn){
  const code=String(sn||'').trim().toUpperCase();
  if(!code){
