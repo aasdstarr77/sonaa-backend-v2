@@ -774,7 +774,7 @@ router.post('/:sn/offer', auth(), async (req, res, next) => {
       !Number.isFinite(price) ||
       price <= 0 ||
       !Number.isFinite(commissionAmount) ||
-      commissionAmount <= 0
+      commissionAmount < 0
     ) {
       return res.status(400).json({
         message: 'سعر العرض غير صالح'
