@@ -858,10 +858,10 @@ async function submitClientRating(sn){
   if(state.ratingSubmitting)return;
   const stars=Number(state.ratingStars);
   if(!Number.isInteger(stars)||stars<1||stars>5){showToast('اختار عدد النجوم.');return;}
+  const blockFuture=stars===1&&Boolean(document.getElementById('clientRatingBlock')?.checked);
+  const comment=String(state.ratingComment||'').trim().slice(0,500);
   state.ratingSubmitting=true;render();
   try{
-    const blockFuture=stars===1&&Boolean(document.getElementById('clientRatingBlock')?.checked);
-    const comment=String(state.ratingComment||'').trim().slice(0,500);
     await API.rateOrder(sn,{stars,comment,blockFuture});
     state.ratingComment='';showToast('تم حفظ تقييمك بنجاح','success');state.trackInput=sn;await doTrack();
   }catch(error){showToast(error.message||'تعذر حفظ التقييم.');}
