@@ -462,7 +462,7 @@ function render(){
    <div class="mt-3 text-[11px] text-blue-100/80 leading-5"><b class="text-white">مناطق العمل:</b> ${esc(areas.join('، ')||'غير محددة')}</div>
   </section>
 
-  <section class="mt-4"><div class="grid grid-cols-4 gap-2">${[['available','📋','الطلبات',state.filteredOrders.length],['myOffers','💼','عروضي',state.myOffers.length],['wallet','💳','المحفظة',''],['profile','👤','حسابي','']].map(t=>`<button onclick="setTab('${t[0]}')" class="rounded-2xl border p-2 flex flex-col items-center justify-center gap-1.5 min-h-[76px] ${state.tab===t[0]?'bg-blue-50 border-blue-300 text-blue-800':'bg-white border-slate-200 text-slate-600'}"><span>${t[1]}</span><span class="text-[10px] font-extrabold">${t[2]}</span>${t[3]!==''?`<span class="text-[9px] rounded-full bg-white border px-2">${t[3]}</span>`:''}</button>`).join('')}</div></section>
+  <section class="mt-4"><div class="grid grid-cols-4 gap-2">${[['available','📋','طلبات متاحه',state.filteredOrders.length],['myOffers','💼','طلبات جاريه',state.myOffers.length],['wallet','💳','محفظتي',''],['profile','👤','حسابي','']].map(t=>`<button onclick="setTab('${t[0]}')" class="rounded-2xl border p-2 flex flex-col items-center justify-center gap-1.5 min-h-[76px] ${state.tab===t[0]?'bg-blue-50 border-blue-300 text-blue-800':'bg-white border-slate-200 text-slate-600'}"><span>${t[1]}</span><span class="text-[10px] font-extrabold">${t[2]}</span>${t[3]!==''?`<span class="text-[9px] rounded-full bg-white border px-2">${t[3]}</span>`:''}</button>`).join('')}</div></section>
 
   ${state.tab==='available'?`
    <section class="mt-4 space-y-3">
