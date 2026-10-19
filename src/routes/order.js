@@ -10,6 +10,7 @@ const { createNotification } = require('../utils/notifications');
 const Fanni = require('../models/Fanni');
 const Rating = require('../models/Rating');
 const WalletTransaction = require('../models/WalletTransaction');
+const AdminConfig = require('../models/AdminConfig');
 const { auth } = require('../middleware/auth');
 const { clientAuth } = require('../middleware/clientAuth');
 const { generateSN } = require('../utils/generateSN');
@@ -24,7 +25,7 @@ const router = express.Router();
 
 const ACTIVE_STATUSES = ['تم النشر', 'وصلتك عروض'];
 const ORDER_EXPIRY_HOURS = 48;
-const COMMISSION_RATE = 10;
+const DEFAULT_COMMISSION_RATE = 10;
 
 /*
  * أسماء المناطق التي تستخدمها واجهة العميل،
@@ -273,6 +274,11 @@ async function hasRatingBlock({ clientPhone, fanniId }) {
     fanniId,
     blockFuture: true
   });
+}
+
+async function currentPricing() {
+  const config = await AdminConfig.findOne({ key: 'main' }).select('pricing').lean();
+  return config?.pricing || { check: 0, commission: DEFAULT_COMMISSION_RATE, minOffer: 1, maxOffer: 1000000 };
 }
 
 function money(value) {
@@ -757,7 +763,12 @@ router.post('/:sn/offer', auth(), async (req, res, next) => {
     }
 
     const price = money(result.value.price);
-    const commissionAmount = money(price * COMMISSION_RATE / 100);
+    const pricing = await currentPricing();
+    if (price < Number(pricing.minOffer || 1) || price > Number(pricing.maxOffer || 1000000)) {
+      return res.status(400).json({ message: `سعر العرض يجب أن يكون بين ${Number(pricing.minOffer || 1)} و${Number(pricing.maxOffer || 1000000)} جنيه` });
+    }
+    const commissionRate = Number.isFinite(Number(pricing.commission)) ? Number(pricing.commission) : DEFAULT_COMMISSION_RATE;
+    const commissionAmount = money(price * commissionRate / 100);
 
     if (
       !Number.isFinite(price) ||
@@ -994,7 +1005,8 @@ router.post('/:sn/accept', async (req, res, next) => {
       });
     }
 
-    const commissionRate = COMMISSION_RATE;
+    const pricing = await currentPricing();
+    const commissionRate = Number.isFinite(Number(pricing.commission)) ? Number(pricing.commission) : DEFAULT_COMMISSION_RATE;
     const commissionAmount = money(price * commissionRate / 100);
 
     if (
