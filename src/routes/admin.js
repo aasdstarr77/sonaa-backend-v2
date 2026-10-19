@@ -1045,8 +1045,9 @@ router.get('/support/search', auth('admin'), async (req, res, next) => {
   try {
     const q = String(req.query.q || '').trim().slice(0, 100);
     if (q.length < 2) return res.status(400).json({ message: 'اكتب رقم طلب أو هاتفًا أو كود تتبع من حرفين على الأقل' });
-    const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\router.put('/settings', auth('admin'), notImplemented('الإعدادات تحتاج Settings Model'));');
-    const rx = new RegExp(escaped, 'i');
+    const literal = q.replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, '');
+    if (literal.length < 2) return res.status(400).json({ message: 'نص البحث غير صالح' });
+    const rx = new RegExp(literal, 'i');
     const [orders, complaints] = await Promise.all([
       Order.find({ $or: [{ sn: rx }, { clientPhone: rx }, { clientName: rx }] }).select('sn service status clientName clientPhone area adminActionNote createdAt').sort({ createdAt: -1 }).limit(30).lean(),
       Complaint.find({ $or: [{ sn: rx }, { clientName: rx }, { text: rx }] }).sort({ createdAt: -1 }).limit(30).lean()
@@ -1057,48 +1058,28 @@ router.get('/support/search', auth('admin'), async (req, res, next) => {
 router.post('/support/:sn/review', auth('admin'), async (req, res, next) => {
   try {
     const sn = String(req.params.sn || '').trim().toUpperCase();
-    if (!/^SN\\d{6}$/.test(sn)) return res.status(400).json({ message: 'كود الطلب غير صالح؛ استخدم SN متبوعًا بستة أرقام' });
+    if (!/^SN\d{6}$/.test(sn)) return res.status(400).json({ message: 'كود الطلب غير صالح؛ استخدم SN متبوعًا بستة أرقام' });
     const complaint = await Complaint.findOne({ sn }).sort({ createdAt: -1 });
-    if (complaint) {
-      complaint.status = 'قيد المراجعة'; complaint.reviewedAt = new Date(); complaint.reviewedBy = adminName(req);
-      await complaint.save();
-    } else {
-      const order = await Order.findOne({ sn });
-      if (!order) return res.status(404).json({ message: 'لا يوجد طلب أو شكوى بهذا الكود' });
-      order.adminActionNote = 'تم وضع علامة مراجعة من أدوات الدعم';
-      order.adminActionAt = new Date(); order.adminActionBy = adminName(req);
-      await order.save();
-    }
+    if (complaint) { complaint.status = 'قيد المراجعة'; complaint.reviewedAt = new Date(); complaint.reviewedBy = adminName(req); await complaint.save(); }
+    else { const order = await Order.findOne({ sn }); if (!order) return res.status(404).json({ message: 'لا يوجد طلب أو شكوى بهذا الكود' }); order.adminActionNote = 'تم وضع علامة مراجعة من أدوات الدعم'; order.adminActionAt = new Date(); order.adminActionBy = adminName(req); await order.save(); }
     await writeAdminAudit(req, 'وضع علامة مراجعة', 'support', sn, 'مراجعة من أدوات الدعم');
     return res.json({ message: 'تم وضع علامة المراجعة', sn });
   } catch (err) { next(err); }
 });
 router.get('/support/violations', auth('admin'), async (req, res, next) => {
-  try {
-    const logs = await AdminAuditLog.find({ category: 'support' }).sort({ createdAt: -1 }).limit(200).lean();
-    return res.json({ violations: logs, items: logs });
-  } catch (err) { next(err); }
+  try { const logs = await AdminAuditLog.find({ category: 'support' }).sort({ createdAt: -1 }).limit(200).lean(); return res.json({ violations: logs, items: logs }); }
+  catch (err) { next(err); }
 });
 router.get('/clients', auth('admin'), async (req, res, next) => {
   try {
     const q = String(req.query.search || '').trim().slice(0, 100);
-    const filter = q ? { $or: [{ name: new RegExp(q.replace(/[.*+?^\${}()|[\]\\]/g, '\\router.put('/settings', auth('admin'), notImplemented('الإعدادات تحتاج Settings Model'));'), 'i') }, { phone: new RegExp(q.replace(/[.*+?^\${}()|[\]\\]/g, '\\router.put('/settings', auth('admin'), notImplemented('الإعدادات تحتاج Settings Model'));'), 'i') }] } : {};
-    const registered = await Client.find(filter).select('name phone status adminNote createdAt').sort({ createdAt: -1 }).limit(200).lean();
-    const orderMatch = q ? { $or: [{ clientName: new RegExp(q.replace(/[.*+?^\${}()|[\]\\]/g, '\\router.put('/settings', auth('admin'), notImplemented('الإعدادات تحتاج Settings Model'));'), 'i') }, { clientPhone: new RegExp(q.replace(/[.*+?^\${}()|[\]\\]/g, '\\router.put('/settings', auth('admin'), notImplemented('الإعدادات تحتاج Settings Model'));'), 'i') }, { sn: new RegExp(q.replace(/[.*+?^\${}()|[\]\\]/g, '\\router.put('/settings', auth('admin'), notImplemented('الإعدادات تحتاج Settings Model'));'), 'i') }] } : {};
-    const orders = await Order.find(orderMatch).select('clientName clientPhone sn createdAt').sort({ createdAt: -1 }).limit(500).lean();
+    const literal = q.replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, '');
+    const rx = literal.length >= 2 ? new RegExp(literal, 'i') : null;
+    const registered = await Client.find(rx ? { $or: [{ name: rx }, { phone: rx }] } : {}).select('name phone status adminNote createdAt').sort({ createdAt: -1 }).limit(200).lean();
+    const orders = await Order.find(rx ? { $or: [{ clientName: rx }, { clientPhone: rx }, { sn: rx }] } : {}).select('clientName clientPhone sn createdAt').sort({ createdAt: -1 }).limit(500).lean();
     const byPhone = new Map();
-    for (const order of orders) {
-      const phone = String(order.clientPhone || '');
-      if (!phone) continue;
-      const item = byPhone.get(phone) || { name: order.clientName || 'عميل', phone, status: 'غير مسجل', orderCount: 0, lastOrder: '' };
-      item.orderCount++; if (!item.lastOrder) item.lastOrder = order.sn || '';
-      byPhone.set(phone, item);
-    }
-    for (const client of registered) {
-      const item = byPhone.get(client.phone) || { name: client.name, phone: client.phone, orderCount: 0, lastOrder: '' };
-      Object.assign(item, { name: client.name, status: client.status, adminNote: client.adminNote || '', registered: true });
-      byPhone.set(client.phone, item);
-    }
+    for (const order of orders) { const phone = String(order.clientPhone || ''); if (!phone) continue; const item = byPhone.get(phone) || { name: order.clientName || 'عميل', phone, status: 'غير مسجل', orderCount: 0, lastOrder: '' }; item.orderCount++; if (!item.lastOrder) item.lastOrder = order.sn || ''; byPhone.set(phone, item); }
+    for (const client of registered) { const item = byPhone.get(client.phone) || { name: client.name, phone: client.phone, orderCount: 0, lastOrder: '' }; Object.assign(item, { name: client.name, status: client.status, adminNote: client.adminNote || '', registered: true }); byPhone.set(client.phone, item); }
     const clients = Array.from(byPhone.values()).sort((a,b) => (b.orderCount || 0) - (a.orderCount || 0)).slice(0, 200);
     return res.set('Cache-Control', 'no-store').json({ clients, items: clients });
   } catch (err) { next(err); }
