@@ -32,10 +32,23 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
+// Restrict browser access to explicitly configured origins. Requests without
+// an Origin header (for example native apps/server-to-server calls) remain valid.
+const allowedOrigins = new Set(
+  String(process.env.ALLOWED_ORIGINS || 'https://sonaa-backend-v2.vercel.app,http://localhost:3000,http://localhost:5173')
+    .split(',')
+    .map(origin => origin.trim())
+    .filter(Boolean)
+);
+
 app.use(cors({
-  origin: true,
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.has(origin)) return callback(null, true);
+    return callback(null, false);
+  },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 204
 }));
 
 app.use(express.json({ limit: '1mb' }));
@@ -156,7 +169,17 @@ app.use('/api', ensureDatabase);
 app.use('/api', publicRouter);
 app.use('/api/client', clientRouter);
 app.use('/api/notifications', notificationsRouter);
-app.use('/api/complaints', complaintRouter);
+
+// Public complaint submission/tracking uses order code + name, so limit attempts
+// to reduce guessing and spam. This is defense-in-depth, not identity proof.
+const complaintLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'محاولات كثيرة. حاول مرة أخرى بعد قليل.' }
+});
+app.use('/api/complaints', complaintLimiter, complaintRouter);
 app.use('/api/orders', orderRouter);
 
 // التوافق مع المسارات القديمة لواجهة العميل.
