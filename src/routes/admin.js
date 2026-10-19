@@ -163,15 +163,15 @@ router.post('/login', validate(loginSchema), async (req, res, next) => {
     }
     const phone = getLoginPhone(req.body);
     if (!phone) { return res.status(401).json({ message: 'بيانات الدخول غير صحيحة' }); }
-    const admin = await Fanni.findOne({ phone, role: 'admin' }).select('+passwordHash');
+    const admin = await Fanni.findOne({ phone, $or: [{ role: 'admin' }, { adminRole: { $in: ['مشرف', 'مشرف أول', 'مدير', 'قراءة فقط'] } }] }).select('+passwordHash');
     if (!admin || !admin.passwordHash || !(await bcrypt.compare(req.body.password, admin.passwordHash))) {
       return res.status(401).json({ message: 'بيانات الدخول غير صحيحة' });
     }
     if (admin.status === 'معلق' || admin.status === 'مرفوض') {
       return res.status(403).json({ message: 'حساب الإدارة غير مسموح له بالدخول' });
     }
-    const token = jwt.sign({ id: admin._id, role: 'admin' }, process.env.JWT_SECRET, { expiresIn: ADMIN_TOKEN_EXPIRY });
-    return res.json({ token, user: { id: String(admin._id), name: admin.name, phone: admin.phone, role: admin.role } });
+    const token = jwt.sign({ id: admin._id, role: admin.role, adminRole: admin.adminRole || null }, process.env.JWT_SECRET, { expiresIn: ADMIN_TOKEN_EXPIRY });
+    return res.json({ token, user: { id: String(admin._id), name: admin.name, phone: admin.phone, role: admin.role, adminRole: admin.adminRole || null } });
   } catch (err) { next(err); }
 });
 
@@ -625,8 +625,72 @@ router.post('/offers/:sn/:idx/reject', auth('admin'), async (req, res, next) => 
 });
 
 function notImplemented(msg){ return (req,res)=>res.status(501).json({message: msg}); }
-router.post('/admin-users', auth('admin'), notImplemented('إنشاء مشرف يحتاج نموذج AdminUser منفصل و RBAC - غير منفذ بعد'));
-router.get('/admin-users', auth('admin'), notImplemented('قائمة المشرفين تحتاج AdminUser Model'));
+
+const ADMIN_ROLES = ['مشرف', 'مشرف أول', 'مدير', 'قراءة فقط'];
+function requireRootAdmin(req, res) {
+  if (req.user?.role !== 'admin') {
+    res.status(403).json({ message: 'إدارة المناصب محصورة في المدير العام' });
+    return false;
+  }
+  return true;
+}
+function publicAdminUser(user) {
+  return { id: String(user._id), name: user.name, phone: user.phone, role: user.role, adminRole: user.adminRole || (user.role === 'admin' ? 'مدير عام' : null), status: user.status };
+}
+router.get('/admin-users', auth('admin'), async (req, res, next) => {
+  try {
+    const users = await Fanni.find({ $or: [{ role: 'admin' }, { adminRole: { $in: ADMIN_ROLES } }] })
+      .select('name phone role adminRole status').sort({ createdAt: -1 }).limit(MAX_LIST_LIMIT).lean();
+    return res.json({ users: users.map(publicAdminUser), data: users.map(publicAdminUser) });
+  } catch (err) { next(err); }
+});
+router.post('/admin-users', auth('admin'), async (req, res, next) => {
+  try {
+    if (!requireRootAdmin(req, res)) return;
+    const fanniId = String(req.body?.fanniId || '');
+    const adminRole = String(req.body?.role || '');
+    if (!validId(fanniId)) return sendBadId(res);
+    if (!ADMIN_ROLES.includes(adminRole)) return res.status(400).json({ message: 'المنصب الإداري غير صالح' });
+    const fanni = await Fanni.findOne({ _id: fanniId, role: 'fanni' });
+    if (!fanni) return res.status(404).json({ message: 'حساب الفني غير موجود' });
+    if (fanni.status !== 'معتمد') return res.status(409).json({ message: 'لا يمكن ترقية فني غير معتمد أو موقوف' });
+    if (fanni.adminRole === adminRole) return res.status(409).json({ message: 'الفني يشغل هذا المنصب بالفعل' });
+    const previous = fanni.adminRole || '';
+    fanni.adminRole = adminRole;
+    fanni.decisions.push({ action: previous ? 'تغيير منصب إداري' : 'ترقية إداري', reason: previous ? `من ${previous} إلى ${adminRole}` : `تعيين ${adminRole}`, date: new Date(), by: adminName(req), byId: req.user?._id, meta: { previousRole: previous, newRole: adminRole } });
+    await fanni.save();
+    return res.status(201).json({ message: `تم تعيين ${fanni.name} بمنصب ${adminRole} مع الاحتفاظ بحساب الفني`, user: publicAdminUser(fanni) });
+  } catch (err) { next(err); }
+});
+router.patch('/admin-users/:id/role', auth('admin'), async (req, res, next) => {
+  try {
+    if (!requireRootAdmin(req, res)) return;
+    if (!validId(req.params.id)) return sendBadId(res);
+    const adminRole = String(req.body?.role || '');
+    if (!ADMIN_ROLES.includes(adminRole)) return res.status(400).json({ message: 'المنصب الإداري غير صالح' });
+    const fanni = await Fanni.findOne({ _id: req.params.id, role: 'fanni' });
+    if (!fanni || !fanni.adminRole) return res.status(404).json({ message: 'المشرف غير موجود' });
+    const previous = fanni.adminRole;
+    if (previous === adminRole) return res.json({ message: 'المنصب لم يتغير', user: publicAdminUser(fanni) });
+    fanni.adminRole = adminRole;
+    fanni.decisions.push({ action: 'تغيير منصب إداري', reason: `من ${previous} إلى ${adminRole}`, date: new Date(), by: adminName(req), byId: req.user?._id, meta: { previousRole: previous, newRole: adminRole } });
+    await fanni.save();
+    return res.json({ message: `تم تغيير المنصب إلى ${adminRole}`, user: publicAdminUser(fanni) });
+  } catch (err) { next(err); }
+});
+router.delete('/admin-users/:id', auth('admin'), async (req, res, next) => {
+  try {
+    if (!requireRootAdmin(req, res)) return;
+    if (!validId(req.params.id)) return sendBadId(res);
+    const fanni = await Fanni.findOne({ _id: req.params.id, role: 'fanni' });
+    if (!fanni || !fanni.adminRole) return res.status(404).json({ message: 'المشرف غير موجود' });
+    const previous = fanni.adminRole;
+    fanni.adminRole = null;
+    fanni.decisions.push({ action: 'سحب صلاحية إدارية', reason: `سحب منصب ${previous} مع الاحتفاظ بحساب الفني`, date: new Date(), by: adminName(req), byId: req.user?._id, meta: { previousRole: previous } });
+    await fanni.save();
+    return res.json({ message: 'تم سحب الصلاحية الإدارية، وحساب الفني ما زال فعالًا', user: publicAdminUser(fanni) });
+  } catch (err) { next(err); }
+});
 router.get('/audit-logs', auth('admin'), notImplemented('سجل التدقيق يحتاج AuditLog Model'));
 router.get('/pricing', auth('admin'), notImplemented('إدارة التسعير تحتاج Pricing Model'));
 router.put('/pricing', auth('admin'), notImplemented('حفظ التسعير يحتاج Pricing Model وتاريخ سريان'));
