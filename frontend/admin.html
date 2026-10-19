@@ -65,6 +65,7 @@ const TOKEN_KEY='admin_token_v3';
 const WALLET='01152822263';
 function escHtml(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function getToken(){try{return localStorage.getItem(TOKEN_KEY)||''}catch{return ''}}
+function currentAdminRoleLabel(){try{const token=getToken();const part=token.split('.')[1];if(!part)return '';const base64=part.replace(/-/g,'+').replace(/_/g,'/');const binary=atob(base64);const json=decodeURIComponent(Array.from(binary,c=>'%'+c.charCodeAt(0).toString(16).padStart(2,'0')).join(''));const payload=JSON.parse(json);if(payload.role==='admin')return 'أدمن رئيسي';return ['قراءة فقط','مشرف','مشرف أول','مدير'].includes(payload.adminRole)?payload.adminRole:'';}catch{return ''}}
 function setToken(t){try{localStorage.setItem(TOKEN_KEY,t)}catch{throw new Error('تعذر حفظ جلسة الدخول')}}
 function clearToken(){try{localStorage.removeItem(TOKEN_KEY)}catch{}}
 function buildUrl(p){const path=p.startsWith('/api')?p:'/api/'+p.replace(/^\/+/,''); if(location.hostname.includes('sonaa-backend-v2')&&location.hostname.endsWith('vercel.app')){return path;} return BASE_URL+path;}
