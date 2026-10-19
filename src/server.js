@@ -95,7 +95,9 @@ async function ensureDatabase(req, res, next) {
   try {
     // فحص الصحة له معالج مستقل.
     // قائمة الخدمات ثابتة ولا تحتاج اتصال MongoDB.
-    if (req.path === '/health' || req.path === '/services') {
+    
+if (req.path === '/health') {
+
       return next();
     }
 
