@@ -435,10 +435,44 @@ router.get('/my-offers', auth(), async (req, res, next) => {
     for (const order of orders) {
       for (const offer of order.offers || []) {
         if (String(offer.fanni) !== String(req.userId)) continue;
-        const isAcceptedByThisFanni = order.status === 'تم اختيار فني' && String(order.assignedFanni) === String(req.userId) && String(order.acceptedOfferId || '') === String(offer._id);
-        const safeOffer = { ...sanitizeOffer(offer), orderSn: order.sn, orderStatus: order.status, service: order.service, accepted: isAcceptedByThisFanni };
-        if (isAcceptedByThisFanni) {
-          safeOffer.client = { name: sanitizeText(order.clientName || ''), phone: order.clientPhone || '', area: order.area || '', address: order.address || '', description: sanitizeText(order.description || ''), budget: order.budget || '', acceptedOfferPrice: order.acceptedOfferPrice, commissionAmount: order.commissionAmount, commissionCharged: Boolean(order.commissionCharged) };
+        
+        const isAssignedToThisFanni =
+          String(order.assignedFanni || '') === String(req.userId) &&
+          String(order.acceptedOfferId || '') === String(offer._id);
+
+        const isAcceptedByThisFanni =
+          order.status === 'تم اختيار فني' && isAssignedToThisFanni;
+
+        const isCompletedByThisFanni =
+          order.status === 'تم الانتهاء' && isAssignedToThisFanni;
+
+        const safeOffer = {
+          ...sanitizeOffer(offer),
+          orderSn: order.sn,
+          orderStatus: order.status,
+          service: order.service,
+          accepted: isAssignedToThisFanni &&
+            ['تم اختيار فني', 'تم الانتهاء'].includes(order.status),
+          completed: isCompletedByThisFanni
+        };
+
+        if (
+          isAssignedToThisFanni &&
+          ['تم اختيار فني', 'تم الانتهاء'].includes(order.status)
+        ) {
+          safeOffer.client = {
+            name: sanitizeText(order.clientName || ''),
+            phone: order.clientPhone || '',
+            area: order.area || '',
+            address: order.address || '',
+            description: sanitizeText(order.description || ''),
+            budget: order.budget || '',
+            acceptedOfferPrice: order.acceptedOfferPrice,
+            commissionAmount: order.commissionAmount,
+            commissionCharged: Boolean(order.commissionCharged)
+          };
+        }
+
         }
         offers.push(safeOffer);
       }
