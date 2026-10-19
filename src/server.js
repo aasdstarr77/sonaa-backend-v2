@@ -214,7 +214,7 @@ function sendHtml(res, filename) {
   return res.sendFile(file);
 }
 
-app.get('/', (req, res) => sendHtml(res, 'client.html'));
+app.get('/', (req, res) => sendHtml(res, 'index.html'));
 app.get('/client', (req, res) => sendHtml(res, 'client.html'));
 app.get('/fanni', (req, res) => sendHtml(res, 'fanni.html'));
 app.get('/admin', (req, res) => sendHtml(res, 'admin.html'));
