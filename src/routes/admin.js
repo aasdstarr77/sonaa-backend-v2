@@ -883,7 +883,56 @@ router.post('/notifications/broadcast', auth('admin'), async (req, res, next) =>
   } catch (error) { return next(error); }
 });
 router.put('/settings', auth('admin'), notImplemented('الإعدادات تحتاج Settings Model'));
-router.post('/reports', auth('admin'), notImplemented('التقارير تحتاج تجميع بيانات حقيقية'));
+router.post('/reports', auth('admin'), async (req, res, next) => {
+  try {
+    const schema = Joi.object({
+      startDate: Joi.string().isoDate().allow('').optional(),
+      endDate: Joi.string().isoDate().allow('').optional(),
+      service: Joi.string().trim().max(100).allow('').optional(),
+      area: Joi.string().trim().max(250).allow('').optional()
+    }).required();
+    const { error, value } = schema.validate(req.body || {}, { abortEarly: false, stripUnknown: true });
+    if (error) return res.status(400).json({ message: 'فلاتر التقرير غير صحيحة', details: error.details.map(item => item.message) });
+    const filter = {};
+    if (value.startDate || value.endDate) {
+      filter.createdAt = {};
+      if (value.startDate) filter.createdAt.$gte = new Date(value.startDate + 'T00:00:00.000Z');
+      if (value.endDate) {
+        const end = new Date(value.endDate + 'T00:00:00.000Z');
+        end.setUTCDate(end.getUTCDate() + 1);
+        filter.createdAt.$lt = end;
+      }
+      if (filter.createdAt.$gte && filter.createdAt.$lt && filter.createdAt.$gte >= filter.createdAt.$lt) {
+        return res.status(400).json({ message: 'تاريخ البداية يجب أن يكون قبل تاريخ النهاية أو مساويًا له' });
+      }
+    }
+    if (value.service) filter.service = value.service;
+    if (value.area) filter.area = value.area;
+
+    const [totalOrders, completedOrders, cancelledOrders, pendingOrders, publishedOrders, topServices, approvedTechnicians, activeClients] = await Promise.all([
+      Order.countDocuments(filter),
+      Order.countDocuments({ ...filter, status: { $in: ['تم الانتهاء', 'منتهي'] } }),
+      Order.countDocuments({ ...filter, status: { $in: ['ملغي', 'منتهي - اعتذار', 'اعتذار'] } }),
+      Order.countDocuments({ ...filter, status: 'قيد المراجعة' }),
+      Order.countDocuments({ ...filter, status: { $in: ['تم النشر', 'وصلتك عروض'] } }),
+      Order.aggregate([
+        { $match: filter },
+        { $group: { _id: '$service', count: { $sum: 1 } } },
+        { $sort: { count: -1, _id: 1 } },
+        { $limit: 10 }
+      ]),
+      Fanni.countDocuments({ role: 'fanni', status: 'معتمد' }),
+      Client.countDocuments({ status: 'نشط' })
+    ]);
+    return res.set('Cache-Control', 'no-store').json({
+      message: 'تم إنشاء التقرير من بيانات قاعدة البيانات',
+      generatedAt: new Date(),
+      filters: { startDate: value.startDate || '', endDate: value.endDate || '', service: value.service || '', area: value.area || '' },
+      summary: { totalOrders, completedOrders, cancelledOrders, pendingOrders, publishedOrders, approvedTechnicians, activeClients },
+      topServices: topServices.map(item => ({ service: item._id || 'غير محدد', count: item.count }))
+    });
+  } catch (error) { return next(error); }
+});
 
 
 
