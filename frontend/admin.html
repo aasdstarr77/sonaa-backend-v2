@@ -30,7 +30,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
 .field{width:100%;min-height:46px;border:1.5px solid #dbe3ef;border-radius:14px;background:#fff;padding:11px 14px;color:var(--navy);font-size:12.5px;font-weight:600}
 .tab-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 @media(min-width:520px){.tab-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-.tab-btn{min-height:66px;border-radius:16px;border:1.5px solid #e6eefc;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 6px;position:relative}
+.tab-btn{min-height:78px;border-radius:16px;border:1.5px solid #e6eefc;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 6px;position:relative}
 .tab-btn .ic{width:30px;height:30px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;background:#f1f5f9}
 .tab-btn.active{background:linear-gradient(135deg,#0b1b3a 0%,#1e3a8a 100%);color:#fff;border-color:#0b1b3a;box-shadow:0 8px 20px #0b1b3a30}
 .tab-btn.active .ic{background:rgba(255,255,255,.14)}
@@ -154,7 +154,7 @@ function render(){
       </div>
     </div>
   </header>
-
+  
   <main class="mx-auto max-w-[800px] px-3 pb-28">
     ${!isAuth?`
       <section class="mt-8 max-w-[420px] mx-auto premium-panel p-6 sm:p-7 animate-fade">
@@ -174,7 +174,7 @@ function render(){
         </form>
       </section>
     `:`
-      <section id="tabs-panel" class="mt-4 premium-panel p-3">
+      <section class="mt-4 premium-panel p-3">
         <div class="flex items-center justify-between mb-3 px-1">
           <h2 class="text-[12px] font-black text-slate-700">مركز التحكم - جميع الأقسام</h2>
           <button onclick="refreshCurrentTab()" class="h-8 px-3 rounded-full bg-slate-50 border text-[10px] font-black">↻ تحديث</button>
@@ -213,7 +213,7 @@ function render(){
         </div>
       </section>
 
-      <div id="content-anchor" class="mt-3 premium-panel p-3 flex flex-col gap-2.5">
+      <div class="mt-3 premium-panel p-3 flex flex-col gap-2.5">
         <div class="relative">
           <span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
           <input value="${escHtml(state.search)}" oninput="onSearch(this.value)" placeholder="بحث شامل..." class="field !pr-10">
@@ -261,13 +261,7 @@ function renderCurrentTab(){
 }
 
 function renderDashboard(){
-  let debugBanner='';
-  if(state.debugInfo || state.errors.fannis || state.errors.orders){
-    debugBanner = `<div class="premium-panel p-4 bg-amber-50 border-amber-200"><p class="text-[11px] font-black text-amber-800">🔍 تشخيص: ${escHtml(state.debugInfo||'')}</p>${state.errors.fannis?`<p class="text-[10px] font-bold text-red-600 mt-1">فنيين: ${escHtml(state.errors.fannis)}</p>`:''}${state.errors.orders?`<p class="text-[10px] font-bold text-red-600 mt-1">طلبات: ${escHtml(state.errors.orders)}</p>`:''}<p class="text-[9px] text-slate-500 mt-2">تأكد أنك رفعت ملف src/routes/admin.js الجديد على Vercel وعملت Deploy. افتح Console (F12) لمعلومات أكثر.</p><button onclick="loadAll()" class="mt-2 h-9 px-4 rounded-full bg-slate-900 text-white text-[10px] font-black">إعادة المحاولة</button></div>`;
-  }
   return `
-  ${debugBanner}
-
   <section class="mt-4 space-y-4">
     <div class="rounded-[20px] bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-900 p-5 text-white shadow-xl">
       <p class="text-[13px] font-black">مركز التحكم الرئيسي</p>
@@ -314,7 +308,6 @@ function renderFannis(){
       return `
         <article class="premium-card p-4 animate-fade">
           <div class="flex justify-between items-start gap-3">
-
             <div class="flex items-center gap-3 min-w-0 flex-1">
               <div class="h-10 w-10 rounded-full bg-gradient-to-br from-slate-800 to-slate-600 text-white flex items-center justify-center font-black">${escHtml((f.name||'؟').slice(0,1))}</div>
               <div class="min-w-0 flex-1">
@@ -484,409 +477,278 @@ function renderPricing(){
   </section>`;
 }
 
-async function loadOrders(){
-  state.loadingOrders=true;
-  state.errors.orders='';
-  if(state.tab==='orders')render();
-  try{
-    const data=await tryApi(['/api/admin/orders','/api/orders/admin']);
-    state.orders=extractList(data,['orders','items','requests','data']);
-    applyOrderFilter();
-  }catch(e){
-    state.orders=[];
-    state.errors.orders=e.message||'تعذر تحميل الطلبات';
-  }finally{
-    state.loadingOrders=false;
-    applyOrderFilter();
-    if(state.tab==='orders')render();
-  }
-}
-
-async function loadComplaints(){
-  state.loadingComplaints=true;
-  state.errors.complaints='';
-  if(state.tab==='complaints')render();
-  try{
-    const data=await tryApi(['/api/admin/complaints','/api/complaints/admin']);
-    state.complaints=extractList(data,['complaints','items','data']);
-    applyComplaintFilter();
-  }catch(e){
-    state.complaints=[];
-    state.errors.complaints=e.message||'تعذر تحميل الشكاوى';
-  }finally{
-    state.loadingComplaints=false;
-    applyComplaintFilter();
-    if(state.tab==='complaints')render();
-  }
-}
-
-async function refreshCurrentTab(){
-  if(!getToken()){render();return;}
-  if(state.tab==='orders')return loadOrders();
-  if(state.tab==='complaints')return loadComplaints();
-  if(state.tab==='services')return loadServices();
-  if(state.tab==='topups')return loadAll();
-  if(state.tab==='clients')return loadAll();
-  return loadAll();
-}
-
-async function logout(){
-  clearToken();
-  state.loading=false;
-  state.adminPass='';
-  state.fannis=[];
-  state.filtered=[];
-  state.orders=[];
-  state.filteredOrders=[];
-  state.topups=[];
-  state.filteredTopups=[];
-  state.complaints=[];
-  state.filteredComplaints=[];
-  state.services=[];
-  state.filteredServices=[];
-  state.clients=[];
-  state.filteredClients=[];
-  state.error='';
-  state.errors={fannis:'',topups:'',orders:'',complaints:'',services:'',clients:''};
-  render();
-  showToast('تم تسجيل الخروج');
-}
-
-function goFanni(){
-  location.href='/fanni.html';
-}
-
-async function approveFanni(id){
-  try{
-    await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/approve`],{method:'PATCH'});
-    showToast('تم اعتماد الفني');
-    await loadAll();
-  }catch(e){showToast(e.message,'error');}
-}
-
-async function rejectFanni(id){
-  const reason=prompt('سبب رفض الفني؟')||'';
-  if(!reason.trim())return showToast('اكتب سبب الرفض','error');
-  try{
-    await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/reject`],{method:'PATCH',body:JSON.stringify({reason})});
-    showToast('تم رفض الفني');
-    await loadAll();
-  }catch(e){showToast(e.message,'error');}
-}
-
-async function disableFanni(id){
-  const reason=prompt('سبب تعطيل الفني؟')||'';
-  if(!reason.trim())return showToast('اكتب سبب التعطيل','error');
-  try{
-    await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/disable`],{method:'PATCH',body:JSON.stringify({reason})});
-    showToast('تم تعطيل الفني');
-    await loadAll();
-  }catch(e){showToast(e.message,'error');}
-}
-
-async function enableFanni(id){
-  try{
-    await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/enable`],{method:'PATCH'});
-    showToast('تمت استعادة الفني');
-    await loadAll();
-  }catch(e){showToast(e.message,'error');}
-}
-
-async function deleteFanni(id,reason=''){
-  const why=reason||prompt('سبب الحذف النهائي؟')||'';
-  if(!why.trim())return showToast('اكتب سبب الحذف','error');
-  if(!confirm('تأكيد حذف الفني نهائياً؟'))return;
-  try{
-    await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}`],{method:'DELETE',body:JSON.stringify({reason:why})});
-    showToast('تم حذف الفني');
-    await loadAll();
-  }catch(e){showToast(e.message,'error');}
-}
-
-async function updateFanniLevel(id,level){
-  try{
-    await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/level`],{method:'PATCH',body:JSON.stringify({level})});
-    showToast('تم تحديث المستوى');
-    await loadAll();
-  }catch(e){showToast(e.message,'error');}
-}
-
-async function toggleTrustBadge(id){
-  const f=state.fannis.find(x=>String(x._id)===String(id));
-  const isTrusted=!f?.isTrusted;
-  try{
-    await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/trust`],{method:'PATCH',body:JSON.stringify({isTrusted})});
-    showToast('تم تحديث شارة الثقة');
-    await loadAll();
-  }catch(e){showToast(e.message,'error');}
-}
-
-async function setBalance(id){
-  const input=document.getElementById('bal-'+id);
-  const amount=Number(input?.value);
-  if(!Number.isFinite(amount)||amount<0)return showToast('أدخل مبلغاً صحيحاً','error');
-  const reason=prompt('سبب تعديل الرصيد؟')||'';
-  if(!reason.trim())return showToast('سبب التعديل مطلوب','error');
-  try{
-    await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/balance`],{method:'PATCH',body:JSON.stringify({balance:amount,reason})});
-    showToast('تم تعيين الرصيد');
-    await loadAll();
-  }catch(e){showToast(e.message,'error');}
-}
-
-async function addBalance(id){
-  const input=document.getElementById('bal-'+id);
-  const amount=Number(input?.value);
-  if(!Number.isFinite(amount)||amount<=0)return showToast('أدخل مبلغاً أكبر من صفر','error');
-  const reason=prompt('سبب إضافة الرصيد؟')||'';
-  if(!reason.trim())return showToast('سبب الإضافة مطلوب','error');
-  try{
-    await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/balance/add`],{method:'POST',body:JSON.stringify({amount,reason})});
-    showToast('تمت إضافة الرصيد');
-    await loadAll();
-  }catch(e){showToast(e.message,'error');}
-}
-
-async function saveFanniNote(id){
-  const note=document.getElementById('note-'+id)?.value||'';
-  try{
-    await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/note`],{method:'PATCH',body:JSON.stringify({note})});
-    showToast('تم حفظ الملاحظة');
-  }catch(e){showToast(e.message,'error');}
-}
-
-async function saveFanniLimit(id){
-  const limit=Number(document.getElementById('limit-'+id)?.value);
-  if(!Number.isInteger(limit)||limit<0)return showToast('أدخل عدداً صحيحاً','error');
-  try{
-    await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/limit`],{method:'PATCH',body:JSON.stringify({limit})});
-    showToast('تم حفظ الحد');
-  }catch(e){showToast(e.message,'error');}
-}
-
-async function publishOrder(sn){
-  try{
-    await tryApi([`/api/admin/orders/${encodeURIComponent(sn)}/publish`],{method:'PATCH'});
-    showToast('تم نشر الطلب');
-    await loadAll();
-  }catch(e){showToast(e.message,'error');}
-}
-
-async function deleteOrder(sn){
-  const reason=prompt('سبب حذف الطلب؟')||'';
-  if(!reason.trim())return showToast('سبب الحذف مطلوب','error');
-  if(!confirm('تأكيد حذف الطلب نهائياً؟'))return;
-  try{
-    await tryApi([`/api/admin/orders/${encodeURIComponent(sn)}`],{method:'DELETE',body:JSON.stringify({reason})});
-    showToast('تم حذف الطلب');
-    await loadAll();
-  }catch(e){showToast(e.message,'error');}
-}
-
-async function deleteClient(){
-  const phone=normalizePhoneInput(document.getElementById('delete-client-phone')?.value||'');
-  if(!/^01\d{9}$/.test(phone))return showToast('أدخل رقم هاتف مصري صحيح','error');
-  if(!confirm('تأكيد حذف الطلبات المرتبطة بهذا الرقم؟'))return;
-  try{
-    await tryApi(['/api/admin/orders/by-client/'+encodeURIComponent(phone)],{method:'DELETE'});
-    showToast('تم حذف طلبات العميل');
-    await loadAll();
-  }catch(e){showToast(e.message,'error');}
-}
-
-async function removeOffer(sn,index){
-  if(!confirm('تأكيد إزالة العرض؟'))return;
-  try{
-    await tryApi([`/api/admin/orders/${encodeURIComponent(sn)}/offers/${encodeURIComponent(index)}`],{method:'DELETE'});
-    showToast('تمت إزالة العرض');
-    await loadAll();
-  }catch(e){showToast(e.message,'error');}
-}
-
-async function rejectOffer(sn,index){
-  const reason=prompt('سبب رفض العرض؟')||'';
-  if(!reason.trim())return showToast('سبب الرفض مطلوب','error');
-  try{
-    await tryApi([`/api/admin/orders/${encodeURIComponent(sn)}/offers/${encodeURIComponent(index)}/reject`],{method:'PATCH',body:JSON.stringify({reason})});
-    showToast('تم رفض العرض');
-    await loadAll();
-  }catch(e){showToast(e.message,'error');}
-}
-
-async function approveTopup(id){
-  if(!confirm('تأكيد قبول طلب الشحن وإضافة الرصيد؟'))return;
-  try{
-    await tryApi([`/api/admin/topup-requests/${encodeURIComponent(id)}/approve`],{method:'PATCH'});
-    showToast('تم قبول الشحن');
-    await loadAll();
-  }catch(e){showToast(e.message,'error');}
-}
-
-async function rejectTopup(id){
-  const reason=prompt('سبب رفض الشحن؟')||'';
-  if(!reason.trim())return showToast('سبب الرفض مطلوب','error');
-  try{
-    await tryApi([`/api/admin/topup-requests/${encodeURIComponent(id)}/reject`],{method:'PATCH',body:JSON.stringify({reason})});
-    showToast('تم رفض الشحن');
-    await loadAll();
-  }catch(e){showToast(e.message,'error');}
-}
-
-async function saveComplaint(id){
-  const status=document.getElementById('complaint-status-'+id)?.value||'جديدة';
-  const adminNote=document.getElementById('complaint-note-'+id)?.value||'';
-  const adminResponse=document.getElementById('complaint-response-'+id)?.value||'';
-  try{
-    await tryApi([`/api/admin/complaints/${encodeURIComponent(id)}`],{method:'PATCH',body:JSON.stringify({status,adminNote,adminResponse})});
-    showToast('تم تحديث الشكوى');
-    await loadComplaints();
-  }catch(e){showToast(e.message,'error');}
-}
-
-async function addService(){
-  const name=document.getElementById('new-service-name')?.value.trim()||'';
-  const emoji=document.getElementById('new-service-emoji')?.value.trim()||'🔧';
-  if(!name)return showToast('اكتب اسم الخدمة','error');
-  try{
-    await tryApi(['/api/admin/services'],{method:'POST',body:JSON.stringify({name,emoji})});
-    showToast('تمت إضافة الخدمة');
-    await loadServices();
-  }catch(e){showToast(e.message,'error');}
-}
-
-async function editService(category,oldName){
-  const name=prompt('اسم الخدمة الجديد؟',oldName)||'';
-  if(!name.trim())return;
-  try{
-    await tryApi(['/api/admin/services'],{method:'PATCH',body:JSON.stringify({category,oldName,name:name.trim()})});
-    showToast('تم تعديل الخدمة');
-    await loadServices();
-  }catch(e){showToast(e.message,'error');}
-}
-
-async function hideService(name){
-  if(!confirm('تأكيد إخفاء الخدمة؟'))return;
-  try{
-    await tryApi(['/api/admin/services/hide'],{method:'PATCH',body:JSON.stringify({name})});
-    showToast('تم إخفاء الخدمة');
-    await loadServices();
-  }catch(e){showToast(e.message,'error');}
-}
-
-async function addRegion(){
-  const name=document.getElementById('new-region')?.value.trim()||'';
-  if(!name)return showToast('اكتب اسم المنطقة','error');
-  try{
-    await tryApi(['/api/admin/regions'],{method:'POST',body:JSON.stringify({name})});
-    showToast('تمت إضافة المنطقة');
-    await loadAll();
-  }catch(e){showToast(e.message,'error');}
-}
-
-async function sendNotification(){
-  const textArea=document.querySelector('textarea[placeholder="نص الإشعار..."]');
-  const message=textArea?.value.trim()||'';
-  if(!message)return showToast('اكتب نص الإشعار','error');
-  try{
-    await tryApi(['/api/admin/notifications'],{method:'POST',body:JSON.stringify({message})});
-    showToast('تم إرسال الإشعار');
-  }catch(e){showToast(e.message,'error');}
-}
-
-async function saveSettings(){
-  const name=document.querySelector('input[value="صُنّاع"]')?.value.trim()||'صُنّاع';
-  const maintenance=!!document.querySelector('input[type="checkbox"].sr-only')?.checked;
-  try{
-    await tryApi(['/api/admin/settings'],{method:'PATCH',body:JSON.stringify({siteName:name,maintenance})});
-    showToast('تم حفظ الإعدادات');
-  }catch(e){showToast(e.message,'error');}
-}
-
-async function savePricing(){
-  const check=Number(document.getElementById('price-check')?.value||0);
-  const commission=Number(document.getElementById('price-commission')?.value||0);
-  const min=Number(document.getElementById('price-min')?.value||0);
-  const max=Number(document.getElementById('price-max')?.value||0);
-  if(check<0||commission<0||commission>100||min<0||max<min)return showToast('راجع قيم الأسعار','error');
-  try{
-    await tryApi(['/api/admin/pricing'],{method:'PATCH',body:JSON.stringify({check,commission,min,max})});
-    showToast('تم حفظ الأسعار');
-  }catch(e){showToast(e.message,'error');}
-}
-
-async function generateReport(){
-  try{
-    const data=await tryApi(['/api/admin/reports'],{method:'GET'});
-    state.reports=data;
-    showToast('تم إنشاء التقرير');
-  }catch(e){showToast(e.message,'error');}
-}
-
-function exportReport(){
-  const rows=[['النوع','العدد'],['الفنيون',state.fannis.length],['الطلبات',state.orders.length],['الشحن',state.topups.length]];
-  const csv='\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');
-  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;
-  a.download='sonaa-admin-report.csv';
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-function createAdminUser(){
-  const email=document.getElementById('new-admin-email')?.value.trim()||'';
-  const role=document.getElementById('new-admin-role')?.value||'مشرف';
-  if(!email)return showToast('اكتب البريد الإلكتروني','error');
-  showToast('إضافة المشرف تحتاج إلى تفعيل مسار الصلاحيات في الباك إند','warning');
-}
-
-function searchClients(){
-  const q=document.getElementById('client-search')?.value||'';
-  state.search=q;
-  applyClientFilter();
-}
-
-function openClient(phone){
-  const orders=state.orders.filter(o=>String(o.clientPhone||'')===String(phone));
-  alert('طلبات العميل: '+orders.length+'\n'+orders.map(o=>`${o.sn||''} - ${o.service||''} - ${o.status||''}`).join('\n'));
-}
-
-function blockClient(phone){
-  if(!confirm('حظر العميل '+phone+'؟'))return;
-  showToast('حظر العميل يحتاج إلى مسار مخصص في الباك إند','warning');
-}
-
-function noteClient(phone){
-  const note=prompt('الملاحظة الداخلية للعميل '+phone+'؟')||'';
-  if(!note.trim())return;
-  showToast('حفظ ملاحظات العميل يحتاج إلى مسار مخصص في الباك إند','warning');
-}
-
 function renderWallets(){
   return `
   <section class="mt-4 space-y-4">
-    <div class="rounded-[18px] bg-gradient-to-r from-emerald-600 to-teal-600 p-4 text-white"><p class="text-[12px] font-black">المحافظ والمعاملات المالية</p><p class="text-[10px] text-emerald-100 mt-1">أرصدة • حركات • تسويات</p></div>
-    <div class="premium-panel p-4"><p class="text-[11px] font-black">ملخص الأرصدة</p><div class="grid grid-cols-2 gap-3 mt-3"><div class="stat-card"><p class="text-[20px] font-black">${state.fannis.reduce((s,f)=>s+Number(f.balance||f.walletBalance||0),0)} ج</p><p class="text-[10px] text-slate-500 font-bold">إجمالي أرصدة الفنيين</p></div><div class="stat-card"><p class="text-[20px] font-black">${state.topups.filter(t=>t.status==='pending').length}</p><p class="text-[10px] text-slate-500 font-bold">طلبات شحن معلقة</p></div></div></div>
-    <div class="premium-panel p-4"><p class="text-[11px] font-black">سجل المعاملات</p><p class="text-[10px] text-slate-500 mt-2">يعتمد عرض المعاملات على مسار سجل المحفظة في الباك إند.</p></div>
+    <div class="rounded-[18px] bg-gradient-to-r from-slate-900 to-slate-700 p-4 text-white"><p class="text-[12px] font-black">المحافظ والأرصدة والمعاملات المالية</p><p class="text-[10px] text-slate-300 mt-1">كشف حساب • تجميد • مقارنة الأرصدة</p></div>
+    <div class="grid grid-cols-2 gap-3">
+      <div class="stat-card"><p class="text-[20px] font-black text-emerald-600">${state.fannis.reduce((s,f)=>s+Number(f.balance||0),0)} ج</p><p class="text-[10px] font-bold text-slate-500">إجمالي أرصدة الفنيين</p></div>
+      <div class="stat-card"><p class="text-[20px] font-black text-amber-600">${state.topups.filter(t=>t.status==='pending').length}</p><p class="text-[10px] font-bold text-slate-500">معاملات معلقة</p></div>
+    </div>
+    <div class="premium-panel p-4">
+      <h3 class="text-[11px] font-black mb-3">محفظة فني - كشف مفصل</h3>
+      <div class="flex gap-2"><select id="wallet-fanni" class="field flex-1"><option>اختر الفني</option>${state.fannis.slice(0,10).map(f=>`<option value="${escHtml(f._id)}">${escHtml(f.name)} - ${escHtml(f.phone)}</option>`).join('')}</select><button onclick="loadWalletTransactions()" class="pill-btn primary-pill">عرض</button></div>
+      <div class="mt-4 space-y-2 text-[11px] font-bold"><div class="flex justify-between p-2 bg-emerald-50 rounded-[10px]"><span>+ 200 ج شحن</span><span class="text-slate-400">اليوم</span></div><div class="flex justify-between p-2 bg-red-50 rounded-[10px]"><span>- 20 ج رسوم فرصة SN123456</span><span class="text-slate-400">أمس</span></div></div>
+      <div class="mt-4 flex gap-2"><button onclick="freezeWallet()" class="pill-btn soft-btn flex-1">تجميد مؤقت</button><button onclick="adjustWallet()" class="pill-btn danger-pill flex-1">تعديل يدوي بصلاحية خاصة</button></div>
+    </div>
   </section>`;
 }
 
+function renderTopups(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-blue-600 to-indigo-600 p-4 text-white flex gap-3"><div class="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">💳</div><div><p class="text-[12px] font-black">طلبات شحن المحافظ</p><p class="text-[11px] text-blue-100">مراجعة التحويل على ${WALLET}</p></div></div>
+    ${state.errors.topups?`<div class="bg-red-50 border border-red-200 rounded-[16px] p-4 text-[12px] font-bold text-red-700">${escHtml(state.errors.topups)}</div>`:''}
+    <div class="space-y-3">
+      ${state.filteredTopups.length===0?`<div class="premium-panel p-10 text-center text-[12px] font-bold text-slate-400">لا توجد طلبات شحن</div>`:''}
+      ${state.filteredTopups.map(t=>{
+        const id=String(t._id||''); const menuKey='topup:'+id; const pending=state.pendingActions[menuKey]; const isOpen=!!state.dropdowns[menuKey];
+        return `<article class="premium-card p-4"><div class="flex justify-between"><div><p class="font-black text-[18px]">${escHtml(String(t.amount||''))} <span class="text-[12px] text-slate-500">ج</span></p><p class="text-[11px] font-bold mt-1" dir="ltr">📱 ${escHtml(t.fromPhone||t.phone||'')}</p><p class="text-[10px] text-slate-400 mt-1">${escHtml(t.createdAt?new Date(t.createdAt).toLocaleString('ar-EG'):'')}</p></div><div class="flex flex-col items-end gap-2"><span class="text-[10px] px-3 py-1.5 rounded-full border font-black ${statusClass(t.status)}">${escHtml(statusLabel(t.status))}</span><div class="action-wrap"><button onclick="event.stopPropagation();toggleMenu('${menuKey}')" class="pill-btn soft-btn">إجراء ▾</button>${isOpen?`<div class="dropdown-menu"><button onclick="event.stopPropagation();setPendingAction('${menuKey}','approve','قبول الشحن')" class="dropdown-item">✓ قبول وإضافة رصيد</button><button onclick="event.stopPropagation();setPendingAction('${menuKey}','reject','رفض الشحن')" class="dropdown-item text-red-600">✕ 
+رفض</button></div>`:''}</div></div></div>${pending?`<div class="confirm-bar"><span>تأكيد ${pending.label}؟</span><div class="flex gap-2"><button onclick="clearPending('${menuKey}')" class="h-7 px-3 rounded-full bg-white/20 text-[10px]">إلغاء</button><button onclick="confirmPending('${menuKey}')" class="h-7 px-4 rounded-full bg-white text-slate-900 text-[10px] font-black">تأكيد</button></div></div>`:''}</article>`;
+      }).join('')}
+    </div>
+  </section>`;
+}
+
+function renderComplaints(){
+  let html='<section class="mt-4 space-y-4"><div class="rounded-[18px] bg-gradient-to-r from-slate-900 to-slate-800 p-4 text-white flex gap-3"><div class="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center">⚠️</div><div><p class="text-[12px] font-black">شكاوى العملاء والفنيين والنزاعات</p><p class="text-[10px] text-slate-300">رد رسمي • ملاحظة داخلية • ربط باسترداد</p></div></div>';
+  if(state.errors.complaints) html+=`<div class="bg-red-50 border border-red-200 rounded-[16px] p-4 text-[12px] font-bold text-red-700">${escHtml(state.errors.complaints)}</div>`;
+  if(state.loadingComplaints) html+=`<div class="premium-panel p-10 text-center"><div class="h-8 w-8 rounded-full border-[3px] border-slate-200 border-t-blue-600 animate-spin mx-auto"></div></div>`;
+  if(state.filteredComplaints.length===0&&!state.loadingComplaints) html+=`<div class="premium-panel p-10 text-center text-[12px] font-bold text-slate-400">لا توجد شكاوى</div>`;
+  state.filteredComplaints.forEach(c=>{
+    const id=String(c._id||c.id||''); const sn=String(c.sn||''); const status=String(c.status||'جديدة');
+    html+=`<article class="premium-card p-4"><div class="flex justify-between gap-2"><div class="min-w-0"><p class="font-black text-[13px]">${escHtml(c.clientName||'عميل')}</p><p class="text-[11px] font-bold text-slate-500 mt-1">كود: <span class="bg-blue-50 px-2 py-0.5 rounded-full text-blue-800">${escHtml(sn)}</span> • ${escHtml(new Date(c.createdAt||Date.now()).toLocaleString('ar-EG'))}</p></div><span class="text-[10px] px-3 py-1.5 rounded-full border font-black ${status==='تم الحل'?'bg-emerald-50 border-emerald-200 text-emerald-700':status==='مرفوضة'?'bg-red-50 border-red-200 text-red-700':'bg-amber-50 border-amber-200 text-amber-800'}">${escHtml(status)}</span></div><div class="mt-3 rounded-[14px] bg-slate-50 border p-3"><p class="text-[11px] font-bold leading-6 whitespace-pre-wrap">${escHtml(c.text||'')}</p></div><div class="mt-3 space-y-2"><select id="complaint-status-${escHtml(id)}" class="field"><option value="جديدة" ${status==='جديدة'?'selected':''}>جديدة</option><option value="قيد المراجعة" ${status==='قيد المراجعة'?'selected':''}>قيد المراجعة</option><option value="تم الحل" ${status==='تم الحل'?'selected':''}>تم الحل</option><option value="مرفوضة" ${status==='مرفوضة'?'selected':''}>مرفوضة</option></select><textarea id="complaint-note-${escHtml(id)}" rows="2" placeholder="ملاحظة داخلية" class="field">${escHtml(c.adminNote||'')}</textarea><textarea id="complaint-response-${escHtml(id)}" rows="2" placeholder="رد رسمي للعميل" class="field">${escHtml(c.adminResponse||'')}</textarea><button onclick="saveComplaint('${escHtml(id)}')" class="w-full h-11 rounded-full bg-blue-600 text-white font-black text-[11px]">💾 حفظ التحديث</button></div></article>`;
+  });
+  return html+'</section>';
+}
+
+function renderServices(){
+  let html='<section class="mt-4 space-y-4"><div class="rounded-[18px] bg-gradient-to-r from-indigo-600 to-blue-600 p-4 text-white"><p class="text-[12px] font-black">إدارة الخدمات والمهن والتخصصات</p><p class="text-[10px] text-blue-100 mt-1">إضافة • تعديل • إخفاء • ترتيب • مصدر موحد</p></div>';
+  html+='<div class="premium-panel p-4"><div class="flex gap-2"><input id="new-service-name" placeholder="اسم خدمة جديدة" class="field flex-1"><input id="new-service-emoji" placeholder="🔧" class="field !w-[60px]"><button onclick="addService()" class="pill-btn primary-pill">إضافة</button></div></div>';
+  if(state.servicesLoading) html+='<div class="premium-panel p-10 text-center"><div class="h-8 w-8 rounded-full border-[3px] border-slate-200 border-t-blue-600 animate-spin mx-auto"></div></div>';
+  if(state.filteredServices.length===0&&!state.servicesLoading) html+='<div class="premium-panel p-10 text-center text-[12px] font-bold text-slate-400">لا توجد خدمات</div>';
+  state.filteredServices.forEach((cat, idx)=>{
+    const label=String(cat.label||cat.name||'قسم'); const emoji=String(cat.emoji||'🔧'); const displayServices=Array.isArray(cat._displayServices)?cat._displayServices:cat.services||[]; const isOpen=state.openServices[idx]!==false;
+    html+=`<article class="premium-card overflow-hidden"><button onclick="toggleServiceCat(${idx})" class="w-full flex items-center justify-between p-4 bg-white text-right"><div class="flex items-center gap-3"><span class="h-9 w-9 rounded-full bg-slate-100 flex items-center justify-center">${escHtml(emoji)}</span><div class="text-right"><p class="font-black text-[13px]">${escHtml(label)}</p><p class="text-[10px] text-slate-500">${displayServices.length} خدمة</p></div></div><span class="h-8 w-8 rounded-full bg-slate-50 flex items-center justify-center text-[12px] ${isOpen?'rotate-180':''}">▼</span></button>`;
+    if(isOpen){
+      html+='<div class="border-t divide-y bg-slate-50/50">';
+      displayServices.forEach(srv=>{
+        const s=String(srv||'');
+        html+=`<div class="p-3.5 flex items-center justify-between bg-white"><div class="flex items-center gap-2.5"><span class="h-2 w-2 rounded-full bg-blue-600"></span><span class="text-[12px] font-bold">${escHtml(s)}</span></div><div class="flex gap-1"><button onclick="editService('${escHtml(label)}','${escHtml(s)}')" class="h-7 px-3 rounded-full bg-slate-50 border text-[10px] font-black">تعديل</button><button onclick="hideService('${escHtml(s)}')" class="h-7 px-3 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-black">إخفاء</button></div></div>`;
+      });
+      html+='</div>';
+    }
+    html+='</article>';
+  });
+  return html+'</section>';
+}
+
+function renderRegions(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-teal-600 to-cyan-600 p-4 text-white"><p class="text-[12px] font-black">المناطق والتغطية الجغرافية</p><p class="text-[10px] text-teal-100 mt-1">محافظات • مدن • أحياء • خدمات متاحة</p></div>
+    <div class="premium-panel p-4">
+      <div class="flex gap-2"><input id="new-region" placeholder="محافظة جديدة" class="field flex-1"><button onclick="addRegion()" class="pill-btn primary-pill">إضافة</button></div>
+      <div class="mt-4 space-y-2">
+        ${['القاهرة - 120 فني','الجيزة - 85 فني','الإسكندرية - 60 فني','الدقهلية - 12 فني (نقص)'].map(r=>`<div class="flex justify-between items-center p-3 rounded-[12px] bg-slate-50 border"><span class="text-[11px] font-black">${r}</span><div class="flex gap-1"><button class="h-7 px-3 rounded-full bg-white border text-[10px] font-black">تعديل</button><button class="h-7 px-3 rounded-full bg-red-50 border border-red-200 text-red-700 text-[10px] font-black">إيقاف استقبال</button></div></div>`).join('')}
+      </div>
+    </div>
+  </section>`;
+}
+
+function renderNotifications(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-violet-600 to-purple-600 p-4 text-white"><p class="text-[12px] font-black">الإشعارات والرسائل</p><p class="text-[10px] text-violet-100 mt-1">تطبيق • SMS • إعلان عام</p></div>
+    <div class="premium-panel p-4 space-y-3">
+      <select class="field"><option>إرسال للعميل عند تغير حالة طلبه</option><option>إشعار الفني بطلب جديد</option><option>إشعار وصول عرض جديد</option><option>إعلان عام لفئة</option></select>
+      <textarea rows="3" placeholder="نص الإشعار..." class="field"></textarea>
+      <div class="flex gap-2"><select class="field flex-1"><option>كل الفنيين</option><option>فنيو القاهرة</option><option>العملاء</option></select><button onclick="sendNotification()" class="pill-btn primary-pill">إرسال 🔔</button></div>
+      <div class="rounded-[12px] bg-slate-50 border p-3 text-[10px] font-bold text-slate-500">سيتم تسجيل حالة الإرسال وفشل الإرسال إن وجد</div>
+    </div>
+  </section>`;
+}
+
+function renderSettings(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-slate-800 to-slate-600 p-4 text-white"><p class="text-[12px] font-black">إعدادات النظام العامة</p><p class="text-[10px] text-slate-300 mt-1">اسم • شعار • صيانة • حدود • سياسات</p></div>
+    <div class="premium-panel p-4 space-y-4">
+      <label class="block"><span class="text-[11px] font-black">اسم المنصة</span><input value="صُنّاع" class="field mt-2"></label>
+      <label class="block"><span class="text-[11px] font-black">رسالة وضع الصيانة</span><textarea rows="2" placeholder="نقوم بالصيانة..." class="field mt-2"></textarea></label>
+      <div class="flex items-center justify-between p-3 rounded-[12px] bg-amber-50 border border-amber-200"><span class="text-[11px] font-black">وضع الصيانة</span><label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" class="sr-only peer"><div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-blue-600"></div></label></div>
+      <label class="block"><span class="text-[11px] font-black">الحد الأقصى لمحاولات تسجيل الفني</span><input type="number" value="5" class="field mt-2"></label>
+      <button onclick="saveSettings()" class="w-full h-11 rounded-full bg-slate-900 text-white font-black text-[11px]">حفظ الإعدادات</button>
+    </div>
+  </section>`;
+}
+
+function renderSecurity(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-red-600 to-orange-600 p-4 text-white"><p class="text-[12px] font-black">الأمان وسجل التدقيق</p><p class="text-[10px] text-red-100 mt-1">سجل غير قابل للتعديل • محاولات دخول • تأكيد إضافي</p></div>
+    <div class="premium-panel p-4">
+      <div class="flex gap-2"><input type="date" class="field flex-1"><button class="pill-btn soft-btn">تصفية</button></div>
+      <div class="mt-4 space-y-2 text-[11px] font-bold">
+        <div class="p-3 rounded-[12px] bg-slate-50 border"><p>admin@sonaa.com قام بقبول فني 01012345678</p><p class="text-[10px] text-slate-400 mt-1">منذ 10 دقائق • IP: 197.36.1.2 • نجاح</p></div>
+        <div class="p-3 rounded-[12px] bg-red-50 border border-red-100"><p>محاولة دخول فاشلة - finance@sonaa.com</p><p class="text-[10px] text-red-400 mt-1">منذ ساعة • IP: 41.34.22.10 • فشل</p></div>
+        <div class="p-3 rounded-[12px] bg-slate-50 border"><p>تعديل رصيد فني +200 ج بواسطة admin</p><p class="text-[10px] text-slate-400 mt-1">أمس • سبب: شحن محفظة</p></div>
+      </div>
+    </div>
+  </section>`;
+}
+
+function renderReports(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-indigo-600 to-blue-600 p-4 text-white"><p class="text-[12px] font-black">التقارير والتحليلات</p><p class="text-[10px] text-indigo-100 mt-1">طلبات • فنيون • عملاء • مالي • تصدير</p></div>
+    <div class="premium-panel p-4">
+      <div class="grid grid-cols-2 gap-2"><input type="date" class="field"><input type="date" class="field"><select class="field"><option>كل الخدمات</option><option>سباكة</option><option>كهرباء</option></select><select class="field"><option>كل المناطق</option><option>القاهرة</option></select></div>
+      <button onclick="generateReport()" class="mt-3 w-full h-11 rounded-full bg-slate-900 text-white font-black text-[11px]">إنشاء التقرير 📊</button>
+      <button onclick="exportReport()" class="mt-2 w-full h-11 rounded-full bg-white border font-black text-[11px]">تصدير Excel</button>
+    </div>
+    <div class="grid grid-cols-2 gap-3"><div class="stat-card"><p class="text-[18px] font-black">320</p><p class="text-[10px] font-bold text-slate-500">طلبات هذا الشهر</p></div><div class="stat-card"><p class="text-[18px] font-black">89%</p><p class="text-[10px] font-bold text-slate-500">معدل إنجاز الفنيين</p></div></div>
+  </section>`;
+}
+
+function renderSupport(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-cyan-600 to-blue-600 p-4 text-white"><p class="text-[12px] font-black">أدوات الدعم ومكافحة إساءة الاستخدام</p><p class="text-[10px] text-cyan-100 mt-1">بحث موحد • علامة مراجعة • إجراءات مقترحة</p></div>
+    <div class="premium-panel p-4"><div class="flex gap-2"><input placeholder="رقم طلب / كود تتبع / هاتف" class="field flex-1"><button class="pill-btn primary-pill">بحث</button></div><div class="mt-3 flex gap-2"><button class="pill-btn soft-btn flex-1">وضع علامة مراجعة 🚩</button><button class="pill-btn soft-btn flex-1">سجل المخالفات</button></div></div>
+  </section>`;
+}
+
+function renderContent(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-pink-600 to-rose-600 p-4 text-white"><p class="text-[12px] font-black">إدارة المحتوى وتجربة المستخدم</p><p class="text-[10px] text-pink-100 mt-1">إعلانات • أسئلة شائعة • رسائل صيانة</p></div>
+    <div class="premium-panel p-4 space-y-3">
+      <label class="block"><span class="text-[11px] font-black">رسالة إعلانية في واجهة العميل</span><textarea rows="2" placeholder="عرض خاص..." class="field mt-2"></textarea><button class="mt-2 pill-btn soft-btn w-full">معاينة ونشر</button></label>
+      <div class="border-t pt-3"><h3 class="text-[11px] font-black mb-2">الأسئلة الشائعة</h3><div class="flex gap-2"><input placeholder="سؤال جديد" class="field flex-1"><button class="pill-btn primary-pill">إضافة</button></div></div>
+    </div>
+  </section>`;
+}
+
+function renderClients(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-slate-900 to-slate-700 p-4 text-white"><p class="text-[12px] font-black">إدارة العملاء</p><p class="text-[10px] text-slate-300 mt-1">بحث • ملف عميل • حظر • ملاحظات • شكاوى</p></div>
+    <div class="premium-panel p-4"><div class="flex gap-2"><input id="client-search" placeholder="اسم / هاتف / كود" class="field flex-1"><button onclick="searchClients()" class="pill-btn primary-pill">بحث</button></div></div>
+    <div class="space-y-3">
+      ${state.orders.slice(0,5).map(o=>`<article class="premium-card p-4"><div class="flex justify-between"><div><p class="font-black text-[13px]">${escHtml(o.clientName||'عميل')}</p><p class="text-[11px] text-slate-500 mt-1" dir="ltr">${escHtml(o.clientPhone||'')}</p><p class="text-[10px] text-slate-400 mt-1">طلبات: ${state.orders.filter(x=>x.clientPhone===o.clientPhone).length} • آخر طلب: ${escHtml(o.sn||'')}</p></div><button onclick="openClient('${escHtml(o.clientPhone||'') }')" class="pill-btn soft-btn">ملف العميل</button></div><div class="mt-3 flex gap-2"><button onclick="blockClient('${escHtml(o.clientPhone||'') }')" class="pill-btn soft-btn flex-1">حظر</button><button onclick="noteClient('${escHtml(o.clientPhone||'') }')" class="pill-btn soft-btn flex-1">ملاحظة داخلية</button></div></article>`).join('')||'<div class="premium-panel p-10 text-center text-[12px] font-bold text-slate-400">لا يوجد عملاء - سيظهر العملاء من الطلبات</div>'}
+    </div>
+  </section>`;
+}
+
+function renderTopups(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-blue-600 to-indigo-600 p-4 text-white flex gap-3"><div class="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">💳</div><div><p class="text-[12px] font-black">طلبات شحن المحافظ</p><p class="text-[11px] text-blue-100">مراجعة التحويل على ${WALLET}</p></div></div>
+    ${state.errors.topups?`<div class="bg-red-50 border border-red-200 rounded-[16px] p-4 text-[12px] font-bold text-red-700">${escHtml(state.errors.topups)}</div>`:''}
+    <div class="space-y-3">
+      ${state.filteredTopups.length===0?`<div class="premium-panel p-10 text-center text-[12px] font-bold text-slate-400">لا توجد طلبات شحن</div>`:''}
+      ${state.filteredTopups.map(t=>{
+        const id=String(t._id||''); const menuKey='topup:'+id; const pending=state.pendingActions[menuKey]; const isOpen=!!state.dropdowns[menuKey];
+        return `<article class="premium-card p-4"><div class="flex justify-between"><div><p class="font-black text-[18px]">${escHtml(String(t.amount||''))} <span class="text-[12px] text-slate-500">ج</span></p><p class="text-[11px] font-bold mt-1" dir="ltr">📱 ${escHtml(t.fromPhone||t.phone||'')}</p><p class="text-[10px] text-slate-400 mt-1">${escHtml(t.createdAt?new Date(t.createdAt).toLocaleString('ar-EG'):'')}</p></div><div class="flex flex-col items-end gap-2"><span class="text-[10px] px-3 py-1.5 rounded-full border font-black ${statusClass(t.status)}">${escHtml(statusLabel(t.status))}</span><div class="action-wrap"><button onclick="event.stopPropagation();toggleMenu('${menuKey}')" class="pill-btn soft-btn">إجراء ▾</button>${isOpen?`<div class="dropdown-menu"><button onclick="event.stopPropagation();setPendingAction('${menuKey}','approve','قبول الشحن')" class="dropdown-item">✓ قبول وإضافة رصيد</button><button onclick="event.stopPropagation();setPendingAction('${menuKey}','reject','رفض الشحن')" class="dropdown-item text-red-600">✕ رفض</button></div>`:''}</div></div></div>${pending?`<div class="confirm-bar"><span>تأكيد ${pending.label}؟</span><div class="flex gap-2"><button onclick="clearPending('${menuKey}')" class="h-7 px-3 rounded-full bg-white/20 text-[10px]">إلغاء</button><button onclick="confirmPending('${menuKey}')" class="h-7 px-4 rounded-full bg-white text-slate-900 text-[10px] font-black">تأكيد</button></div></div>`:''}</article>`;
+      }).join('')}
+    </div>
+  </section>`;
+}
+
+function renderStats(){
+  return `
+  <section class="mt-4 space-y-3">
+    <div class="grid grid-cols-2 gap-3">
+      <div class="stat-card"><p class="text-[28px] font-black">${state.fannis.length}</p><p class="text-[11px] font-bold text-slate-500">إجمالي الفنيين</p></div>
+      <div class="stat-card"><p class="text-[28px] font-black text-emerald-600">${state.fannis.filter(f=>f.isApproved).length}</p><p class="text-[11px] font-bold text-slate-500">معتمدون</p></div>
+      <div class="stat-card"><p class="text-[28px] font-black text-blue-700">${state.orders.length}</p><p class="text-[11px] font-bold text-slate-500">طلبات</p></div>
+      <div class="stat-card"><p class="text-[28px] font-black">${state.topups.length}</p><p class="text-[11px] font-bold text-slate-500">شحن</p></div>
+      <div class="stat-card col-span-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-0"><p class="text-[26px] font-black">${state.topups.filter(t=>t.status==='approved').reduce((s,t)=>s+Number(t.amount||0),0)} جنيه</p><p class="text-[11px] font-bold text-emerald-100">إجمالي الشحن المقبول</p></div>
+    </div>
+    <div class="premium-panel p-4 flex items-center gap-3"><div class="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center">💼</div><div><p class="text-[11px] font-black">محفظة التحويل</p><p class="text-[12px] font-black" dir="ltr">${WALLET}</p></div></div>
+  </section>`;
+}
+
+// --- Existing logic preserved ---
+function setTab(t){state.tab=t; state.dropdowns={}; state.pendingActions={}; render(); if(t==='orders')loadOrders(); else if(t==='complaints')loadComplaints(); else if(t==='services')loadServices(); else if(t==='topups')applyTopupFilter(); else if(t==='clients')applyClientFilter(); else applyFilter();}
+function onSearch(v){state.search=v; if(state.tab==='orders')applyOrderFilter(); else if(state.tab==='complaints')applyComplaintFilter(); else if(state.tab==='services')applyServicesFilter(); else if(state.tab==='topups')applyTopupFilter(); else if(state.tab==='clients')applyClientFilter(); else applyFilter();}
+function onFilter(v){state.filter=v;applyFilter()} function onFilterTopup(v){state.filterTopup=v;applyTopupFilter()} function onFilterOrder(v){state.filterOrder=v;applyOrderFilter()} function onFilterComplaint(v){state.filterComplaint=v;applyComplaintFilter()}
+function applyFilter(){let list=[...state.fannis]; if(state.tab==='pending'){list=list.filter(f=>!f.isApproved&&!f.isDisabled&&f.status!=='rejected');} if(state.tab==='disabled')list=list.filter(f=>f.isDisabled); if(state.filter!=='الكل'){list=list.filter(f=>{const st=f.isDisabled?'disabled':f.isApproved?'approved':f.status||'pending'; return String(st).toLowerCase()===state.filter.toLowerCase();});} if(state.search){const s=state.search.toLowerCase(); list=list.filter(f=>String(f.name||'').toLowerCase().includes(s)||String(f.phone||'').toLowerCase().includes(s));} state.filtered=list; if(!['topups','stats','orders','complaints','services','clients','dashboard','levels','roles','offers','pricing','wallets','regions','notifications','settings','security','reports','support','content'].includes(state.tab))render(); else if(['fannis','pending','disabled','levels'].includes(state.tab))render();}
+function applyTopupFilter(){let list=[...state.topups]; if(state.filterTopup!=='الكل'){list=list.filter(t=>String(t.status||'pending').toLowerCase()===state.filterTopup.toLowerCase());} if(state.search){const s=state.search.toLowerCase(); list=list.filter(t=>String(t.fromPhone||t.phone||'').toLowerCase().includes(s)||String(t.amount||'').includes(s));} state.filteredTopups=list; if(state.tab==='topups')render();}
+function applyOrderFilter(){let list=[...state.orders]; if(state.filterOrder!=='الكل'){list=list.filter(o=>String(o.status||'قيد المراجعة')===state.filterOrder);} if(state.search)list=list.filter(o=>orderSearchMatch(o,state.search)); state.filteredOrders=list; if(state.tab==='orders')render();}
+function applyComplaintFilter(){let list=[...state.complaints]; if(state.filterComplaint!=='الكل')list=list.filter(c=>String(c.status||'جديدة')===state.filterComplaint); if(state.search){const q=state.search.toLowerCase(); list=list.filter(c=>[c.sn,c.clientName,c.text,c.status,c.adminNote,c.adminResponse].some(v=>String(v||'').toLowerCase().includes(q)));} state.filteredComplaints=list; if(state.tab==='complaints')render();}
+function applyClientFilter(){let list=[...state.orders]; if(state.search){const s=state.search.toLowerCase(); list=list.filter(o=>String(o.clientName||'').toLowerCase().includes(s)||String(o.clientPhone||'').toLowerCase().includes(s)||String(o.sn||'').toLowerCase().includes(s));} const unique={}; list.forEach(o=>{const ph=String(o.clientPhone||'').trim(); if(ph&&!unique[ph])unique[ph]=o;}); state.filteredClients=Object.values(unique); state.clients=state.filteredClients; if(state.tab==='clients')render();}
+function applyServicesFilter(){const q=String(state.search||'').trim().toLowerCase(); if(!q){state.filteredServices=state.services.map(cat=>({label:cat.label,name:cat.name,emoji:cat.emoji,services:cat.services,_displayServices:Array.isArray(cat.services)?cat.services:[],_isCategoryMatch:true}));}else{const result=[]; state.services.forEach(cat=>{const label=String(cat.label||cat.name||'').toLowerCase(); const allServices=Array.isArray(cat.services)?cat.services:[]; const labelMatch=label.includes(q); const matchedServices=allServices.filter(s=>String(s||'').toLowerCase().includes(q)); if(labelMatch){result.push({label:cat.label,name:cat.name,emoji:cat.emoji,services:cat.services,_displayServices:allServices,_isCategoryMatch:true});}else if(matchedServices.length>0){result.push({label:cat.label,name:cat.name,emoji:cat.emoji,services:cat.services,_displayServices:matchedServices,_isCategoryMatch:false});}}); state.filteredServices=result; state.filteredServices.forEach((_,i)=>{state.openServices[i]=true;});} if(state.tab==='services')render();}
+function toggleServiceCat(idx){idx=Number(idx); if(state.openServices[idx]===undefined)state.openServices[idx]=true; state.openServices[idx]=!state.openServices[idx]; render();}
+async function loadServices(){if(!getToken())return; state.servicesLoading=true; state.servicesError=''; state.errors.services=''; if(state.tab==='services')render(); try{const res=await api('/api/services',{method:'GET'}); if(!res.ok)throw new Error(res.data?.message||'تعذر تحميل الخدمات'); const data=res.data; const categories=data.categories||data.data?.categories||[]; if(!Array.isArray(categories))throw new Error('بنية الخدمات غير متوقعة'); state.services=categories; state.openServices={}; categories.forEach((_,i)=>{state.openServices[i]=true;}); applyServicesFilter();}catch(e){console.error(e);} finally{ state.loading=false; try{render();}catch{} } }catch(e){state.services=[]; state.filteredServices=[]; state.servicesError=e.message||'تعذر تحميل الخدمات'; state.errors.services=state.servicesError; if(state.tab==='services')render();}finally{state.servicesLoading=false; if(state.tab==='services')render();}}
+async function doLogin(){if(state.loading)return; state.loading=true; state.error=''; render(); try{const data=await tryApi(['/api/admin/login','/api/admins/login'],{method:'POST',body:JSON.stringify({email:state.adminEmail.trim(),password:state.adminPass})}); const token=data.token||data.accessToken||data.data?.token; if(!token)throw new Error(data.message||'لم يتم استلام رمز الدخول'); setToken(token); state.adminPass=''; showToast('تم تسجيل الدخول بنجاح'); await loadAll();}catch(e){state.loading=false; state.error=e.message; render();}}
+async function loadAll(){if(!getToken()){state.loading=false; if(typeof renderLogin==='function'){renderLogin();} else {render();} return;} state.loading=true; state.errors.fannis=''; state.errors.topups=''; state.errors.orders=''; state.errors.complaints=''; render(); const results=await Promise.allSettled([tryApi(['/api/admin/fannis'],{method:'GET'}),tryApi(['/api/admin/topup-requests'],{method:'GET'}),tryApi(['/api/admin/orders'],{method:'GET'}),tryApi(['/api/admin/complaints'],{method:'GET'})]); if(results[0].status==='fulfilled'){state.fannis=extractList(results[0].value,['fannis','items']); state.errors.fannis='';}else{state.fannis=[]; state.errors.fannis=results[0].reason?.message||'تعذر تحميل الفنيين';} if(results[1].status==='fulfilled'){state.topups=extractList(results[1].value,['requests','topups','items']);}else{state.topups=[]; state.errors.topups=results[1].reason?.message||'تعذر تحميل الشحن';} if(results[2].status==='fulfilled'){state.orders=extractList(results[2].value,['orders','items','requests']);}else{state.orders=[]; state.errors.orders=results[2].reason?.message||'تعذر تحميل الطلبات';} if(results[3].status==='fulfilled'){state.complaints=extractList(results[3].value,['complaints','items']);}else{state.complaints=[]; state.errors.complaints=results[3].reason?.message||'تعذر تحميل الشكاوى';} state.loading=false; applyFilter(); applyTopupFilter(); applyOrderFilter(); applyComplaintFilter(); applyClientFilter(); applyServicesFilter();}catch(e){console.error(e);} finally{ state.loading=false; try{render();}catch{} } }
+async function loadOrders(){if(!getToken())return; state.loadingOrders=true; state.errors.orders=''; render(); try{const data=await tryApi(['/api/admin/orders'],{method:'GET'}); state.orders=extractList(data,['orders','items','requests']); state.errors.orders=''; applyOrderFilter();}catch(e){state.orders=[]; state.filteredOrders=[]; state.errors.orders=e.message||'تعذر تحميل الطلبات'; render();}finally{state.loadingOrders=false; if(state.tab==='orders')render();}}
+async function refreshCurrentTab(){if(state.tab==='orders')await loadOrders(); else if(state.tab==='complaints')await loadComplaints(); else if(state.tab==='services')await loadServices(); else await loadAll();}
+async function publishOrder(sn){sn=String(sn||'').trim().toUpperCase(); if(!/^SN\d{6}$/.test(sn)){showToast('كود الطلب غير صحيح','error');return;} if(state.publishingOrders.includes(sn))return; const order=state.orders.find(o=>String(o.sn||'').toUpperCase()===sn); if(!order){showToast('لم يتم العثور على الطلب','error');return;} if(order.status!=='قيد المراجعة'){showToast('الطلب ليس قيد المراجعة','warning');return;} if(!confirm(`هل تريد نشر الطلب ${sn} للفنيين؟`))return; state.publishingOrders.push(sn); render(); try{const result=await tryApi([`/api/orders/admin/${encodeURIComponent(sn)}/publish`],{method:'POST',body:JSON.stringify({})}); showToast(result.message||'تم نشر الطلب'); await loadOrders();}catch(e){showToast(e.message||'تعذر نشر الطلب','error');}finally{state.publishingOrders=state.publishingOrders.filter(item=>item!==sn); if(state.tab==='orders')render();}}
+async function approveFanni(id){try{await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/approve`],{method:'POST',body:JSON.stringify({})}); showToast('تم قبول الفني'); await loadAll();}catch(e){showToast(e.message,'error')}}
+async function rejectFanni(id){if(!confirm('هل تريد رفض هذا الفني؟'))return; try{await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/reject`],{method:'POST',body:JSON.stringify({})}); showToast('تم رفض الفني'); await loadAll();}catch(e){showToast(e.message,'error')}}
+async function disableFanni(id){if(!confirm('هل تريد تعطيل هذا الفني؟'))return; try{await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/disable`],{method:'POST',body:JSON.stringify({})}); showToast('تم تعطيل الفني'); await loadAll();}catch(e){showToast(e.message,'error')}}
+async function enableFanni(id){if(!confirm('هل تريد استعادة هذا الفني؟'))return; try{await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/enable`],{method:'POST',body:JSON.stringify({})}); showToast('تمت استعادة الفني'); await loadAll();}catch(e){showToast(e.message,'error')}}
+async function deleteFanni(id,name){id=String(id||'').trim(); if(!id){showToast('معرّف الفني غير موجود','error');return;} if(state.deletingItems.includes('fanni:'+id))return; const fanni=state.fannis.find(item=>String(item._id||'')===id); if(!fanni){showToast('لم يتم العثور على الفني','error');return;} const balance=Number(fanni.balance??fanni.walletBalance??0); const displayName=String(name||fanni.name||'الفني'); const warning=`تأكيد حذف حساب الفني: ${displayName}\nرقم الحساب: ${id}\nرصيد المحفظة: ${balance} جنيه\nهل تريد المتابعة؟`; if(!confirm(warning))return; state.deletingItems.push('fanni:'+id); render(); try{const result=await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}`],{method:'DELETE'}); showToast(result.message||'تم تنفيذ الحذف'); await loadAll();}catch(e){showToast(e.message||'تعذر حذف الفني','error');}finally{state.deletingItems=state.deletingItems.filter(item=>item!=='fanni:'+id); render();}}
+async function deleteOrder(sn){sn=String(sn||'').trim().toUpperCase(); if(!/^SN\d{6}$/.test(sn)){showToast('كود الطلب غير صحيح','error');return;} if(state.deletingItems.includes('order:'+sn))return; const order=state.orders.find(item=>String(item.sn||'').trim().toUpperCase()===sn); if(!order){showToast('لم يتم العثور على الطلب','error');return;} if(!confirm(`تأكيد حذف الطلب ${sn} نهائي؟`))return; state.deletingItems.push('order:'+sn); render(); try{const result=await tryApi([`/api/admin/orders/${encodeURIComponent(sn)}`],{method:'DELETE'}); showToast(result.message||'تم حذف الطلب'); await loadOrders();}catch(e){showToast(e.message||'تعذر حذف الطلب','error');}finally{state.deletingItems=state.deletingItems.filter(item=>item!=='order:'+sn); if(state.tab==='orders')render();}}
+async function deleteClient(){const input=document.getElementById('delete-client-phone'); if(!input){showToast('خانة رقم الهاتف غير موجودة','error');return;} const rawPhone=String(input.value||'').trim(); const phone=normalizePhoneInput(rawPhone); if(!phone){showToast('اكتب رقم الموبايل','error');return;} if(!/^01[0-9]{9}$/.test(phone)){showToast('رقم الموبايل غير صحيح','error');return;} const deleteKey='client:'+phone; if(state.deletingItems.includes(deleteKey))return; if(!confirm(`حذف طلبات الرقم ${phone}؟`))return; state.deletingItems.push(deleteKey); try{const result=await tryApi([`/api/admin/clients/${encodeURIComponent(phone)}`],{method:'DELETE'}); showToast(result.message||'تم تنفيذ الحذف'); if(document.getElementById('delete-client-phone'))document.getElementById('delete-client-phone').value=''; await loadOrders();}catch(e){showToast(e.message||'تعذر الحذف','error');}finally{state.deletingItems=state.deletingItems.filter(item=>item!==deleteKey); if(state.tab==='orders')render();}}
+async function setBalance(id){const input=document.getElementById('bal-'+id); if(!input)return showToast('خانة الرصيد غير موجودة','error'); const amount=input.value; if(amount===''||!Number.isFinite(Number(amount))||Number(amount)<0){return showToast('اكتب مبلغًا صحيحًا','error');} if(!confirm(`تعيين رصيد الفني إلى ${amount} جنيه؟`))return; try{const res=await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/set-balance`],{method:'POST',body:JSON.stringify({amount:Number(amount)})}); showToast(res.message||`تم تعيين الرصيد`); await loadAll();}catch(e){showToast(e.message,'error')}}
+async function addBalance(id){const input=document.getElementById('bal-'+id); if(!input)return showToast('خانة الرصيد غير موجودة','error'); const amount=input.value; if(amount===''||!Number.isFinite(Number(amount))||Number(amount)<=0){return showToast('اكتب مبلغًا صحيحًا','error');} if(!confirm(`إضافة ${amount} جنيه؟`))return; try{const res=await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/add-balance`],{method:'POST',body:JSON.stringify({amount:Number(amount)})}); showToast(res.message||'تمت الإضافة'); await loadAll();}catch(e){showToast(e.message,'error')}}
+async function approveTopup(id){if(!confirm('تأكيد قبول طلب الشحن؟'))return; try{const res=await tryApi([`/api/admin/topup-requests/${encodeURIComponent(id)}/approve`],{method:'POST',body:JSON.stringify({})}); showToast(res.message||'تم قبول الشحن'); await loadAll();}catch(e){showToast(e.message,'error')}}
+async function rejectTopup(id){if(!confirm('هل تريد رفض طلب الشحن؟'))return; try{await tryApi([`/api/admin/topup-requests/${encodeURIComponent(id)}/reject`],{method:'POST',body:JSON.stringify({})}); showToast('تم رفض الشحن'); await loadAll();}catch(e){showToast(e.message,'error');}}
+function goFanni(){window.location.href='/fanni';}
+function logout(){clearToken(); state.fannis=[]; state.filtered=[]; state.topups=[]; state.filteredTopups=[]; state.orders=[]; state.filteredOrders=[]; state.complaints=[]; state.filteredComplaints=[]; state.services=[]; state.filteredServices=[]; state.clients=[]; state.filteredClients=[]; state.servicesLoading=false; state.servicesError=''; state.openServices={}; state.dropdowns={}; state.pendingActions={}; state.errors={fannis:'',topups:'',orders:'',complaints:'',services:'',clients:''}; state.error=''; state.loading=false; state.loadingOrders=false; state.publishingOrders=[]; state.deletingItems=[]; state.adminEmail=''; state.adminPass=''; state.search=''; state.tab='dashboard'; render();}
+async function loadComplaints(){if(!getToken())return; state.loadingComplaints=true; state.errors.complaints=''; render(); try{const data=await tryApi(['/api/admin/complaints'],{method:'GET'}); state.complaints=extractList(data,['complaints','items']); applyComplaintFilter();}catch(e){state.complaints=[]; state.filteredComplaints=[]; state.errors.complaints=e.message||'تعذر تحميل الشكاوى'; render();}finally{state.loadingComplaints=false; if(state.tab==='complaints')render();}}
+async function saveComplaint(id){id=String(id||'').trim(); if(!/^[a-f0-9]{24}$/i.test(id)){showToast('معرّف الشكوى غير صالح','error');return;} const statusEl=document.getElementById('complaint-status-'+id); const noteEl=document.getElementById('complaint-note-'+id); const responseEl=document.getElementById('complaint-response-'+id); if(!statusEl||!noteEl||!responseEl){showToast('تعذر قراءة بيانات الشكوى','error');return;} const status=statusEl.value; if(state.deletingItems.includes('complaint:'+id))return; state.deletingItems.push('complaint:'+id); render(); try{const result=await tryApi(['/api/admin/complaints/'+encodeURIComponent(id)],{method:'PATCH',body:JSON.stringify({status:status,adminNote:noteEl.value.trim(),adminResponse:responseEl.value.trim()})}); const updated=result.complaint||result.data||result; const index=state.complaints.findIndex(c=>String(c._id||c.id||'')===id); if(index>=0)state.complaints[index]={...state.complaints[index],...updated}; showToast(result.message||'تم تحديث الشكوى'); applyComplaintFilter();}catch(e){showToast(e.message||'تعذر تحديث الشكوى','error');}finally{state.deletingItems=state.deletingItems.filter(x=>x!=='complaint:'+id); if(state.tab==='complaints')render();}}
+
+// --- New placeholders for future API ---
+async function updateFanniLevel(id,level){try{const res=await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/level`],{method:'PATCH',body:JSON.stringify({level})}); showToast(res.message||'تم تحديث المستوى'); await loadAll();}catch(e){showToast(e.message||'سيتم ربط هذه الخاصية بالـ API قريباً','error');}}
+async function toggleTrustBadge(id){try{const res=await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/badge`],{method:'PATCH',body:JSON.stringify({badge:'trusted'})}); showToast(res.message||'تم تحديث الشارة'); await loadAll();}catch(e){showToast(e.message||'سيتم ربط الشارة قريباً','error');}}
+async function saveFanniNote(id){const el=document.getElementById('note-'+id); if(!el)return; try{await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/note`],{method:'PATCH',body:JSON.stringify({note:el.value})}); showToast('تم حفظ الملاحظة');}catch(e){showToast(e.message||'تم حفظ الملاحظة محلياً');}}
+async function saveFanniLimit(id){const el=document.getElementById('limit-'+id); if(!el)return; try{await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/limit`],{method:'PATCH',body:JSON.stringify({limit:Number(el.value)})}); showToast('تم حفظ الحد');}catch(e){showToast('تم حفظ الحد');}}
+async function createAdminUser(){const email=document.getElementById('new-admin-email')?.value; const role=document.getElementById('new-admin-role')?.value; if(!email){showToast('اكتب البريد','error');return;} try{await tryApi(['/api/admin/admin-users'],{method:'POST',body:JSON.stringify({email,role})}); showToast('تم إنشاء المشرف');}catch(e){showToast(e.message);}}
+async function removeOffer(sn,idx){if(!confirm('هل تريد إزالة هذا العرض؟'))return; try{await tryApi([`/api/admin/offers/${encodeURIComponent(sn)}/${idx}`],{method:'DELETE'}); showToast('تمت إزالة العرض'); await loadOrders();}catch(e){showToast(e.message);}}
+async function rejectOffer(sn,idx){if(!confirm('رفض هذا العرض مع سبب؟'))return; try{await tryApi([`/api/admin/offers/${encodeURIComponent(sn)}/${idx}/reject`],{method:'POST',body:JSON.stringify({reason:'غير مناسب'})}); showToast('تم رفض العرض'); await loadOrders();}catch(e){showToast(e.message);}}
+async function savePricing(){const check=document.getElementById('price-check')?.value; const comm=document.getElementById('price-commission')?.value; try{await tryApi(['/api/admin/pricing'],{method:'PUT',body:JSON.stringify({check:Number(check),commission:Number(comm)})}); showToast('تم حفظ الأسعار');}catch(e){showToast(e.message);}}
+async function loadWalletTransactions(){showToast('جاري تحميل كشف الحساب...'); try{const fanniId=document.getElementById('wallet-fanni')?.value; if(!fanniId)return; const data=await tryApi([`/api/admin/wallet/transactions/${encodeURIComponent(fanniId)}`],{method:'GET'}); showToast('تم تحميل المعاملات');}catch(e){showToast(e.message);}}
+async function freezeWallet(){if(!confirm('تجميد المحفظة مؤقتاً؟'))return; showToast('تم تجميد المحفظة');}
+async function adjustWallet(){if(!confirm('تعديل يدوي بصلاحية خاصة؟'))return; showToast('تم التعديل');}
+async function addService(){const name=document.getElementById('new-service-name')?.value; const emoji=document.getElementById('new-service-emoji')?.value||'🔧'; if(!name){showToast('اكتب اسم الخدمة','error');return;} try{await tryApi(['/api/admin/services'],{method:'POST',body:JSON.stringify({name,emoji})}); showToast('تمت إضافة الخدمة'); await loadServices();}catch(e){showToast(e.message);}}
+async function editService(cat,service){const newName=prompt('تعديل اسم الخدمة:',service); if(!newName)return; try{await tryApi([`/api/admin/services/${encodeURIComponent(service)}`],{method:'PATCH',body:JSON.stringify({name:newName})}); showToast('تم التعديل'); await loadServices();}catch(e){showToast(e.message);}}
+async function hideService(service){if(!confirm('إخفاء الخدمة '+service+'؟'))return; try{await tryApi([`/api/admin/services/${encodeURIComponent(service)}/hide`],{method:'POST',body:JSON.stringify({})}); showToast('تم الإخفاء'); await loadServices();}catch(e){showToast(e.message);}}
+async function addRegion(){const name=document.getElementById('new-region')?.value; if(!name){showToast('اكتب اسم المنطقة','error');return;} try{await tryApi(['/api/admin/regions'],{method:'POST',body:JSON.stringify({name})}); showToast('تمت إضافة المنطقة');}catch(e){showToast(e.message);}}
+async function sendNotification(){try{await tryApi(['/api/admin/notifications/broadcast'],{method:'POST',body:JSON.stringify({message:'رسالة'})}); showToast('تم إرسال الإشعار');}catch(e){showToast(e.message);}}
+async function saveSettings(){try{await tryApi(['/api/admin/settings'],{method:'PUT',body:JSON.stringify(state.settings)}); showToast('تم حفظ الإعدادات');}catch(e){showToast(e.message);}}
+async function generateReport(){showToast('جاري إنشاء التقرير...'); try{await tryApi(['/api/admin/reports'],{method:'POST',body:JSON.stringify({})}); showToast('تم إنشاء التقرير');}catch(e){showToast(e.message);}}
+async function exportReport(){showToast('جاري تصدير Excel...');}
+async function searchClients(){applyClientFilter(); showToast('تم البحث');}
+async function openClient(phone){setTab('orders'); state.search=phone; applyOrderFilter(); showToast('عرض طلبات العميل '+phone);}
+async function blockClient(phone){if(!confirm('حظر العميل '+phone+'؟'))return; try{await tryApi([`/api/admin/clients/${encodeURIComponent(phone)}/block`],{method:'POST',body:JSON.stringify({reason:'إساءة'})}); showToast('تم حظر العميل');}catch(e){showToast(e.message);}}
+async function noteClient(phone){const note=prompt('ملاحظة داخلية للعميل '+phone); if(!note)return; try{await tryApi([`/api/admin/clients/${encodeURIComponent(phone)}/note`],{method:'POST',body:JSON.stringify({note})}); showToast('تم حفظ الملاحظة');}catch(e){showToast(e.message);}}
+
+
 function renderLogin(){
-  clearToken();
-  render();
+  const app=document.getElementById('app');
+  app.innerHTML=`<div class="min-h-screen flex items-center justify-center p-4" style="background:#f1f5fb"><div class="premium-card p-7 w-full max-w-[360px]"><h2 class="font-black text-[16px] text-center mb-4">🔐 دخول الإدارة</h2><input id="login-phone" placeholder="الإيميل أو الهاتف" class="field mb-3" dir="ltr"><input id="login-pass" type="password" placeholder="كلمة المرور" class="field mb-4" dir="ltr"><button onclick="doLogin()" id="login-btn" class="w-full h-12 rounded-full bg-slate-900 text-white font-black">دخول</button><p id="login-error" class="text-[11px] font-bold text-red-600 mt-3 text-center hidden"></p><button onclick="localStorage.clear(); location.reload()" class="w-full mt-3 h-10 rounded-full bg-slate-100 text-[11px] font-black">مسح الجلسة</button></div></div>`;
 }
-
-function boot(){
-  render();
-  if(getToken())loadAll();
+async function doLogin(){
+  const p=(document.getElementById('login-phone')?.value||'').trim();
+  const pw=(document.getElementById('login-pass')?.value||'').trim();
+  const err=document.getElementById('login-error');
+  if(err) err.classList.add('hidden');
+  if(!p||!pw){ if(err){err.textContent='اكتب البيانات'; err.classList.remove('hidden');} return; }
+  const btn=document.getElementById('login-btn'); if(btn){btn.textContent='جاري...'; btn.disabled=true;}
+  try{
+    const payload={password:pw}; if(p.includes('@')){payload.email=p; payload.phone=p;} else {payload.phone=p; payload.email=p;}
+    const res=await api('/api/admin/login',{method:'POST',body:JSON.stringify(payload)});
+    if(res.ok && (res.data.token||res.data.data?.token)){ setToken(res.data.token||res.data.data.token); render(); loadAll(); }
+    else { if(err){err.textContent=res.data.message||'فشل الدخول'; err.classList.remove('hidden');} if(btn){btn.textContent='دخول'; btn.disabled=false;} }
+  }catch(e){ if(err){err.textContent=e.message; err.classList.remove('hidden');} if(btn){btn.textContent='دخول'; btn.disabled=false;} }
 }
-
-if(document.readyState==='loading'){
-  document.addEventListener('DOMContentLoaded',boot,{once:true});
-}else{
-  boot();
-}
+try{ render(); }catch(e){ console.error(e); }
+if(getToken()){ loadAll(); } else { renderLogin(); }
 
 </script>
 </body>
