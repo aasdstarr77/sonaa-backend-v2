@@ -136,9 +136,10 @@ router.get('/services', async (req, res, next) => {
 
 router.get('/content', async (req, res, next) => {
   try {
-    const config = await AdminConfig.findOne({ key: 'main' }).select('content').lean();
+    const config = await AdminConfig.findOne({ key: 'main' }).select('content settings.siteName').lean();
     const content = config?.content || { announcement: '', faqs: [] };
     return res.set('Cache-Control', 'no-store').json({
+      siteName: String(config?.settings?.siteName || 'صُنّاع'),
       announcement: String(content.announcement || ''),
       faqs: (Array.isArray(content.faqs) ? content.faqs : []).filter(item => item.active !== false).map(item => ({
         question: String(item.question || ''),
