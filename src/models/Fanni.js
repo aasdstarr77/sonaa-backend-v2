@@ -115,6 +115,13 @@ const fanniSchema = new mongoose.Schema({
     index: true
   },
   levelHistory: [levelHistorySchema],
+  // auto: يُحسب المستوى من الإنجازات؛ manual: يحافظ على اختيار الإدارة حتى تعيد تفعيل التلقائي.
+  levelMode: {
+    type: String,
+    enum: ['auto', 'manual'],
+    default: 'auto',
+    index: true
+  },
   
   // 2. شارات الثقة والتميز
   badges: {
