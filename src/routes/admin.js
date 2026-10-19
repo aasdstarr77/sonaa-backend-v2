@@ -454,11 +454,11 @@ router.post('/orders/:sn/cancel', auth('admin'), validate(Joi.object({
 })), async (req, res, next) => {
   try {
     const sn = String(req.params.sn || '').trim().toUpperCase();
-    if (!/^SN\\d{6}$/.test(sn)) return res.status(400).json({ message: 'كود الطلب غير صالح' });
+    if (!/^SN\d{6}$/.test(sn)) return res.status(400).json({ message: 'كود الطلب غير صالح' });
     const order = await Order.findOne({ sn });
     if (!order) return res.status(404).json({ message: 'الطلب غير موجود' });
-    if (['تم الانتهاء', 'منتهي', 'مؤرشف', 'ملغي'].includes(order.status)) {
-      return res.status(409).json({ message: 'لا يمكن إلغاء طلب منتهي أو ملغي أو مؤرشف' });
+    if (['تم الانتهاء', 'منتهي', 'تم اختيار فني', 'مؤرشف', 'ملغي'].includes(order.status) || order.commissionCharged) {
+      return res.status(409).json({ message: 'لا يمكن إلغاء طلب منتهي أو معيّن لفني أو سبق خصم عمولته أو ملغي أو مؤرشف' });
     }
     order.status = 'ملغي';
     order.adminActionNote = String(req.body.reason || 'إلغاء إداري').trim().slice(0, 500);
@@ -474,7 +474,7 @@ router.post('/orders/:sn/archive', auth('admin'), validate(Joi.object({
 })), async (req, res, next) => {
   try {
     const sn = String(req.params.sn || '').trim().toUpperCase();
-    if (!/^SN\\d{6}$/.test(sn)) return res.status(400).json({ message: 'كود الطلب غير صالح' });
+    if (!/^SN\d{6}$/.test(sn)) return res.status(400).json({ message: 'كود الطلب غير صالح' });
     const order = await Order.findOne({ sn });
     if (!order) return res.status(404).json({ message: 'الطلب غير موجود' });
     if (['قيد المراجعة', 'تم النشر', 'وصلتك عروض', 'تم اختيار فني'].includes(order.status)) {
