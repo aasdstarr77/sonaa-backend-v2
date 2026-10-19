@@ -161,6 +161,11 @@ const API={
   async loginClient(payload){return this.request('/api/client/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});},
   async getClientMe(token){return this.request('/api/client/me',{method:'GET',headers:{Authorization:'Bearer '+token}});},
   async getMyOrders(){return this.request('/api/client/orders',{method:'GET',headers:{Authorization:'Bearer '+state.accountToken}});},
+  async claimOldOrder(sn){
+    const oldToken=this.getClientToken(sn);
+    if(!oldToken)throw new Error('لم نعثر على رمز الملكية القديم لهذا الطلب على هذا الجهاز. لو فقدته، تواصل مع الإدارة.');
+    return this.request('/api/client/orders/claim',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+state.accountToken},body:JSON.stringify({sn,clientToken:oldToken})});
+  },
   async getAreas(){
     const data=await this.request('/api/areas',{method:'GET'});
     return Array.isArray(data?.areas)?data.areas:[];
@@ -337,6 +342,7 @@ async function openAccountOrder(sn){
 }
 function renderOrders(){
   var h='<div class="mt-4 space-y-3"><div class="panel p-4 flex items-center justify-between gap-3"><div><h3 class="font-extrabold text-[15px]">طلباتي</h3><p class="mt-1 text-[11px] text-slate-500">تابع كل طلباتك من هنا.</p></div><button type="button" onclick="loadMyOrders()" class="h-10 px-3 rounded-xl bg-slate-100 text-xs font-extrabold">تحديث</button></div>';
+  h+='<div class="panel p-4"><h4 class="font-extrabold text-sm">ربط طلب قديم</h4><p class="mt-1 text-[11px] leading-5 text-slate-500">لو عندك طلب أنشأته قبل تسجيل الحساب، اكتب رقمه مرة واحدة من نفس الجهاز الذي أنشأته منه، بشرط أن يكون رقم موبايله هو رقم حسابك.</p><div class="mt-3 flex gap-2"><input id="claimOrderSN" maxlength="20" placeholder="SN123456" dir="ltr" class="field h-11 px-3 flex-1 min-w-0 text-sm font-bold uppercase"><button type="button" onclick="claimOldOrder()" class="h-11 px-4 rounded-xl blue-btn text-xs font-extrabold">ربط الطلب</button></div></div>';
   if(state.accountOrdersLoading)return h+'<div class="panel p-8 text-center text-sm font-bold text-slate-500">جاري تحميل طلباتك...</div></div>';
   if(!state.myOrders.length)return h+'<div class="panel p-8 text-center"><div class="text-3xl">📝</div><p class="mt-3 font-extrabold text-sm">لسه ما عندكش طلبات</p><button type="button" onclick="setTab(\'new\')" class="mt-4 h-11 px-5 rounded-xl blue-btn text-xs font-extrabold">إنشاء طلب جديد</button></div></div>';
   h+='<div class="space-y-3">';
@@ -347,6 +353,15 @@ function renderOrders(){
     h+='<button type="button" onclick="openAccountOrder(\''+escAttr(o.sn)+'\')" class="mt-3 w-full h-10 rounded-xl bg-slate-100 text-slate-800 text-xs font-extrabold">تفاصيل الطلب</button></div>';
   });
   return h+'</div></div>';
+}
+async function claimOldOrder(){
+  const sn=String(document.getElementById('claimOrderSN')?.value||'').trim().toUpperCase();
+  if(!VALIDATORS.sn(sn)){showToast('اكتب رقم الطلب القديم بشكل صحيح.');return;}
+  try{
+    const data=await API.claimOldOrder(sn);
+    showToast(data.message||'تم ربط الطلب بنجاح','success');
+    await loadMyOrders(false);render();
+  }catch(error){showToast(error.message||'تعذر ربط الطلب القديم.');}
 }
 async function acceptAccountOffer(sn,id){if(!confirm('تأكيد قبول هذا العرض؟'))return;try{await API.acceptOffer(sn,id);showToast('تم قبول العرض بنجاح','success');await loadMyOrders(false);render();}catch(error){showToast(error.message||'تعذر قبول العرض.');}}
 
