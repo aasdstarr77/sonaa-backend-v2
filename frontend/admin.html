@@ -83,7 +83,7 @@ let state={
   clients:[],filteredClients:[],clientsLoading:false,
   adminUsers:[],adminUsersLoading:false,
   auditLogs:[],regions:[],regionsLoading:false,regionsError:'',notifications:[],walletTransactions:[],walletSelectedFanniId:'',walletLoading:false,settings:{siteName:'صُنّاع',maintenance:false},
-  reports:{},pricing:null,pricingHistory:[],offerFilter:'all',clientSearch:'',
+  reports:{},pricing:null,pricingHistory:[],offerFilter:'all',clientSearch:'',supportQuery:'',supportResults:{orders:[],complaints:[]},supportViolations:[],
   search:'',filter:'الكل',filterTopup:'الكل',filterOrder:'الكل',filterComplaint:'الكل',filterClient:'الكل',
   errors:{fannis:'',topups:'',orders:'',complaints:'',services:'',clients:''}, error:''
 };
@@ -671,13 +671,15 @@ function renderReports(){
 }
 
 function renderSupport(){
-  return `
-  <section class="mt-4 space-y-4">
-    <div class="rounded-[18px] bg-gradient-to-r from-cyan-600 to-blue-600 p-4 text-white"><p class="text-[12px] font-black">أدوات الدعم ومكافحة إساءة الاستخدام</p><p class="text-[10px] text-cyan-100 mt-1">بحث موحد • علامة مراجعة • إجراءات مقترحة</p></div>
-    <div class="premium-panel p-4"><div class="flex gap-2"><input placeholder="رقم طلب / كود تتبع / هاتف" class="field flex-1"><button class="pill-btn primary-pill">بحث</button></div><div class="mt-3 flex gap-2"><button class="pill-btn soft-btn flex-1">وضع علامة مراجعة 🚩</button><button class="pill-btn soft-btn flex-1">سجل المخالفات</button></div></div>
-  </section>`;
+ const result=state.supportResults||{orders:[],complaints:[]};
+ return `
+ <section class="mt-4 space-y-4">
+ <div class="premium-panel p-4"><div class="flex gap-2"><input id="support-query" value="${escHtml(state.supportQuery||'')}" placeholder="رقم طلب / كود تتبع / هاتف" class="field flex-1"><button onclick="searchSupport()" class="pill-btn primary-pill">بحث</button></div><button onclick="loadSupportViolations()" class="pill-btn soft-btn mt-3 w-full">سجل المخالفات / إجراءات الدعم</button></div>
+ ${(result.orders||[]).map(o=>`<article class="premium-card p-3"><p class="font-black">طلب ${escHtml(o.sn)} — ${escHtml(o.clientName||'عميل')} — ${escHtml(o.clientPhone||'')}</p><p class="text-[10px] text-slate-500">${escHtml(o.service||'')} • ${escHtml(o.status||'')}</p><button onclick="markSupportReview('${escHtml(o.sn)}')" class="pill-btn soft-btn mt-2">وضع علامة مراجعة</button></article>`).join('')}
+ ${(result.complaints||[]).map(c=>`<article class="premium-card p-3"><p class="font-black">شكوى ${escHtml(c.sn)} — ${escHtml(c.clientName||'')}</p><p class="text-[10px] text-slate-600">${escHtml(c.text||'')}</p><p class="text-[10px]">الحالة: ${escHtml(c.status||'')}</p><button onclick="markSupportReview('${escHtml(c.sn)}')" class="pill-btn soft-btn mt-2">وضع علامة مراجعة</button></article>`).join('')}
+ ${state.supportViolations?.length?`<div class="premium-panel p-4"><h3 class="font-black mb-2">سجل إجراءات الدعم</h3>${state.supportViolations.map(v=>`<p class="border-b py-2 text-[10px]">${escHtml(v.action)} — ${escHtml(v.target)} • ${escHtml(v.createdAt?new Date(v.createdAt).toLocaleString('ar-EG'):'')}</p>`).join('')}</div>`:''}
+ </section>`;
 }
-
 function renderContent(){
   return `
   <section class="mt-4 space-y-4">
@@ -793,6 +795,9 @@ async function changeAdminRole(id){const role=document.getElementById('admin-rol
 async function revokeAdminRole(id){if(!confirm('سحب الصلاحية الإدارية؟ حساب الفني سيظل موجودًا ويعمل كالمعتاد.'))return;try{const data=await tryApi([`/api/admin/admin-users/${encodeURIComponent(id)}`],{method:'DELETE'});showToast(data.message||'تم سحب الصلاحية');await Promise.all([loadAdminUsers(),loadAll()]);}catch(e){showToast(e.message||'تعذر سحب الصلاحية','error');}}
 async function removeOffer(sn,idx){if(!confirm('هل تريد إزالة هذا العرض؟'))return; try{await tryApi([`/api/admin/offers/${encodeURIComponent(sn)}/${idx}`],{method:'DELETE'}); showToast('تمت إزالة العرض'); await loadOrders();}catch(e){showToast(e.message);}}
 async function rejectOffer(sn,idx){if(!confirm('رفض هذا العرض مع سبب؟'))return; try{await tryApi([`/api/admin/offers/${encodeURIComponent(sn)}/${idx}/reject`],{method:'POST',body:JSON.stringify({reason:'غير مناسب'})}); showToast('تم رفض العرض'); await loadOrders();}catch(e){showToast(e.message);}}
+async function searchSupport(){const q=String(document.getElementById('support-query')?.value||'').trim();if(q.length<2)return showToast('اكتب كود طلب أو رقم هاتف للبحث','error');state.supportQuery=q;try{state.supportResults=await tryApi(['/api/admin/support/search?q='+encodeURIComponent(q)],{method:'GET'});state.supportViolations=[];render();}catch(e){showToast(e.message||'تعذر البحث في الدعم','error');}}
+async function markSupportReview(sn){if(!confirm('وضع علامة مراجعة على الطلب أو الشكوى '+sn+'؟'))return;try{const data=await tryApi(['/api/admin/support/'+encodeURIComponent(sn)+'/review'],{method:'POST',body:JSON.stringify({})});showToast(data.message||'تم وضع علامة المراجعة');await Promise.all([searchSupport(),loadSupportViolations()]);}catch(e){showToast(e.message||'تعذر وضع علامة المراجعة','error');}}
+async function loadSupportViolations(){try{const data=await tryApi(['/api/admin/support/violations'],{method:'GET'});state.supportViolations=extractList(data,['violations','items']);if(state.tab==='support')render();}catch(e){showToast(e.message||'تعذر تحميل سجل الدعم','error');}}
 async function loadAuditLogs(){const btn=document.getElementById('audit-filter-btn');if(btn)btn.disabled=true;try{const date=String(document.getElementById('audit-date')?.value||'');const data=await tryApi(['/api/admin/audit-logs'+(date?'?date='+encodeURIComponent(date):'')],{method:'GET'});state.auditLogs=extractList(data,['logs','items']);if(state.tab==='security')render();}catch(e){state.auditLogs=[];showToast(e.message||'تعذر تحميل سجل التدقيق','error');if(state.tab==='security')render();}finally{if(btn)btn.disabled=false;}}
 async function loadPricing(){try{const data=await tryApi(['/api/admin/pricing'],{method:'GET'});state.pricing=data.pricing||{};state.pricingHistory=Array.isArray(data.history)?data.history:[];if(state.tab==='pricing')render();}catch(e){showToast(e.message||'تعذر تحميل الأسعار','error');}}
 async function savePricing(){const raw={check:document.getElementById('price-check')?.value,commission:document.getElementById('price-commission')?.value,minOffer:document.getElementById('price-min')?.value,maxOffer:document.getElementById('price-max')?.value};const values={check:Number(raw.check),commission:Number(raw.commission),minOffer:Number(raw.minOffer),maxOffer:Number(raw.maxOffer)};if(Object.values(values).some(v=>!Number.isFinite(v))||values.check<0||values.commission<0||values.commission>100||values.minOffer<1||values.maxOffer<values.minOffer)return showToast('راجع القيم: العمولة 0–100 والحدود السعرية صحيحة','error');const btn=document.getElementById('save-pricing-btn');if(btn)btn.disabled=true;try{const data=await tryApi(['/api/admin/pricing'],{method:'PUT',body:JSON.stringify(values)});state.pricing=data.pricing||values;state.pricingHistory=Array.isArray(data.history)?data.history:state.pricingHistory;showToast(data.message||'تم حفظ الأسعار');render();}catch(e){showToast(e.message||'تعذر حفظ الأسعار','error');}finally{if(btn)btn.disabled=false;}}
