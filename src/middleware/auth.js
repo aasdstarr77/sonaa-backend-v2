@@ -12,11 +12,11 @@ function canAccessAdmin(user, req) {
 
   const method = String(req.method || 'GET').toUpperCase();
   const path = String(req.path || '/');
+
+  // إدارة حسابات المشرفين والصلاحيات وسجل التدقيق محصورة في المدير العام.
+  if (path.startsWith('/admin-users') || path === '/bootstrap' || path.startsWith('/audit-logs')) return false;
   if (method === 'GET' || method === 'HEAD') return true;
   if (role === 'قراءة فقط') return false;
-
-  // كل المناصب الإضافية ممنوعة من إدارة المناصب والصلاحيات.
-  if (path.startsWith('/admin-users') || path === '/bootstrap' || path.startsWith('/audit-logs')) return false;
 
   if (role === 'مدير') {
     // المدير التشغيلي لا يغيّر إعدادات الدخول أو التسعير أو الأرصدة/المحافظ.
