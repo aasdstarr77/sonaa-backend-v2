@@ -272,7 +272,7 @@ let state={
   complaintSn:'',complaintName:'',complaintText:'',complaintLoading:false,
   complaintTrackSn:'',complaintTrackName:'',complaintTrackLoading:false,complaintTrackError:'',complaintTrackResults:null,
   showService:false,openCategory:'',searchService:'',
-  servicesLoading:true,servicesError:'',servicesLoaded:false
+  servicesLoading:true,servicesError:'',servicesLoaded:false,publicContent:{announcement:'',faqs:[]}
 };
 function getCat(service){return CATEGORIES.find(c=>c.services.includes(service))||null;}
 function captureScrollPosition(){
@@ -303,7 +303,19 @@ function renderAccountGate(){
   if(reg)h+='<div><label class="block mb-1.5 text-xs font-extrabold">تأكيد كلمة السر</label><input id="accountConfirmPassword" required type="password" minlength="8" maxlength="128" autocomplete="new-password" class="field h-12 px-3 text-sm" placeholder="أعد كتابة كلمة السر"></div>';
   if(state.accountError)h+='<p class="rounded-xl bg-red-50 border border-red-200 p-3 text-xs leading-6 font-bold text-red-700">'+escHtml(state.accountError)+'</p>';
   h+='<button type="submit" '+(state.accountLoading?'disabled':'')+' class="w-full h-12 rounded-xl blue-btn font-extrabold text-sm">'+(state.accountLoading?'جاري التنفيذ...':reg?'إنشاء حساب العميل':'دخول إلى حسابي')+'</button></form><p class="mt-4 text-center text-[10px] leading-5 text-slate-500">كلمة السر لا تُشارك مع أي شخص.</p></div></div></main>';
-  document.getElementById('app').innerHTML=h;
+  document.getElementById('app').innerHTML=h+renderPublicContent();
+}
+function renderPublicContent(){
+  const c=state.publicContent||{announcement:'',faqs:[]};
+  const faqs=Array.isArray(c.faqs)?c.faqs:[];
+  if(!String(c.announcement||'').trim()&&!faqs.length)return '';
+  return '<section class="mx-auto mt-3 w-full max-w-[640px] px-3 sm:px-4 space-y-2">'+
+    (String(c.announcement||'').trim()?'<div class="panel border-blue-200 bg-blue-50 p-3 text-[12px] font-bold leading-6">'+escHtml(c.announcement)+'</div>':'')+
+    (faqs.length?'<details class="panel p-3"><summary class="cursor-pointer text-[12px] font-extrabold">الأسئلة الشائعة</summary><div class="mt-3 space-y-3">'+faqs.map(f=>'<div class="border-t pt-2"><p class="text-[11px] font-extrabold">'+escHtml(f.question)+'</p><p class="mt-1 text-[11px] leading-5 text-slate-600">'+escHtml(f.answer)+'</p></div>').join('')+'</div></details>':'')+
+    '</section>';
+}
+async function loadPublicContent(){
+  try{const data=await API.request('/api/content',{method:'GET'});state.publicContent={announcement:String(data.announcement||''),faqs:Array.isArray(data.faqs)?data.faqs:[]};render();}catch(error){log('تعذر تحميل محتوى الواجهة:',error);}
 }
 function setAccountAuthMode(mode){state.accountAuthMode=mode==='register'?'register':'login';state.accountError='';render();}
 async function submitClientAccount(e){
@@ -411,6 +423,7 @@ function render(){
     </div>
   ${notificationPanel()}
   </header>
+  ${renderPublicContent()}
   <main class="mx-auto w-full max-w-[640px] px-3 sm:px-4 pb-[100px] safe-bottom">
     <div class="mt-4 flex p-1 bg-white rounded-[15px] shadow-sm border border-slate-200 gap-1">
       ${[{id:'new',label:'طلب جديد'},{id:'orders',label:'طلباتي'},{id:'complaint',label:'شكوى'}].map(t=>`
@@ -1012,7 +1025,7 @@ async function sendComplaint(){
   }catch(error){showToast(error.message||'تعذر إرسال الشكوى حاليًا.');}finally{state.complaintLoading=false;render();}
 }
 document.addEventListener('DOMContentLoaded',()=>{
-  loadServices();loadAreas();initializeClientAccount();render();
+  loadServices();loadAreas();loadPublicContent();initializeClientAccount();render();
   document.addEventListener('click',handleOutsideServiceClick);setInterval(function(){if(state.accountToken&&state.account)loadNotifications();},30000);
 });
 render();
