@@ -496,7 +496,7 @@ function render(){
       const categoryId='specialty-category-'+index;
       const isOpen=state.openSpecialtyCategory===cat.label;
       return `<section class="mb-3 overflow-hidden rounded-xl border border-slate-200 bg-white">
-       <button type="button" onclick="toggleSpecialtyCategory(${JSON.stringify(cat.label)})" aria-expanded="${isOpen}" aria-controls="${categoryId}" class="flex w-full items-center justify-between gap-3 bg-slate-50 p-3 text-right">
+       <button type="button" onclick="toggleSpecialtyCategory(this.dataset.category)" data-category="${esc(cat.label)}" aria-expanded="${isOpen}" aria-controls="${categoryId}" class="flex w-full items-center justify-between gap-3 bg-slate-50 p-3 text-right">
         <span class="min-w-0"><span class="block text-[12px] font-extrabold text-slate-800">${esc(cat.emoji)} ${esc(cat.label)}</span><span class="mt-1 block text-[10px] font-bold text-slate-500">${selectedCount?'تم اختيار '+selectedCount+' خدمة':'اضغط لعرض الخدمات'}</span></span>
         <span class="flex shrink-0 items-center gap-2"><span class="rounded-full bg-blue-100 px-2 py-1 text-[10px] font-extrabold text-blue-800">${selectedCount}</span><span class="text-slate-500">${isOpen?'−':'+'}</span></span>
        </button>
