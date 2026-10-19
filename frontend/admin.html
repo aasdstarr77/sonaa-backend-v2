@@ -12,7 +12,7 @@
   --navy:#0b1b3a;--blue:#2563eb;--blue2:#1d4ed8;--gold:#f59e0b;--page:#f1f5fb;--card:#fff;
 }
 *{font-family:'Cairo',system-ui,sans-serif;box-sizing:border-box}
-html{scroll-behavior:smooth}
+html{scroll-behavior:smooth} #content-anchor{scroll-margin-top:120px}
 body{
   margin:0;background: radial-gradient(1200px 600px at 20% -10%, #1e3a8a18, transparent), radial-gradient(800px 400px at 80% 0%, #f59e0b12, transparent), var(--page);
   color:var(--navy);overflow-x:hidden;-webkit-tap-highlight-color:transparent
@@ -30,7 +30,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
 .field{width:100%;min-height:46px;border:1.5px solid #dbe3ef;border-radius:14px;background:#fff;padding:11px 14px;color:var(--navy);font-size:12.5px;font-weight:600}
 .tab-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 @media(min-width:520px){.tab-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-.tab-btn{min-height:78px;border-radius:16px;border:1.5px solid #e6eefc;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 6px;position:relative}
+.tab-btn{min-height:66px;border-radius:16px;border:1.5px solid #e6eefc;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 6px;position:relative}
 .tab-btn .ic{width:30px;height:30px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;background:#f1f5f9}
 .tab-btn.active{background:linear-gradient(135deg,#0b1b3a 0%,#1e3a8a 100%);color:#fff;border-color:#0b1b3a;box-shadow:0 8px 20px #0b1b3a30}
 .tab-btn.active .ic{background:rgba(255,255,255,.14)}
@@ -174,7 +174,7 @@ function render(){
         </form>
       </section>
     `:`
-      <section class="mt-4 premium-panel p-3">
+      <section id="tabs-panel" class="mt-4 premium-panel p-3 sticky top-[62px] z-20 shadow-lg">
         <div class="flex items-center justify-between mb-3 px-1">
           <h2 class="text-[12px] font-black text-slate-700">مركز التحكم - جميع الأقسام</h2>
           <button onclick="refreshCurrentTab()" class="h-8 px-3 rounded-full bg-slate-50 border text-[10px] font-black">↻ تحديث</button>
@@ -213,7 +213,7 @@ function render(){
         </div>
       </section>
 
-      <div class="mt-3 premium-panel p-3 flex flex-col gap-2.5">
+      <div id="content-anchor" class="mt-3 premium-panel p-3 flex flex-col gap-2.5">
         <div class="relative">
           <span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
           <input value="${escHtml(state.search)}" oninput="onSearch(this.value)" placeholder="بحث شامل..." class="field !pr-10">
@@ -671,7 +671,25 @@ function renderStats(){
 }
 
 // --- Existing logic preserved ---
-function setTab(t){state.tab=t; state.dropdowns={}; state.pendingActions={}; render(); if(t==='orders')loadOrders(); else if(t==='complaints')loadComplaints(); else if(t==='services')loadServices(); else if(t==='topups')applyTopupFilter(); else if(t==='clients')applyClientFilter(); else applyFilter();}
+function setTab(t){
+  state.tab=t; 
+  state.dropdowns={}; 
+  state.pendingActions={}; 
+  render(); 
+  setTimeout(()=>{
+    const anchor = document.getElementById('content-anchor');
+    if(anchor){
+      const top = anchor.getBoundingClientRect().top + window.scrollY - 110;
+      window.scrollTo({top: top, behavior: 'smooth'});
+    }
+  }, 120);
+  if(t==='orders')loadOrders(); 
+  else if(t==='complaints')loadComplaints(); 
+  else if(t==='services')loadServices(); 
+  else if(t==='topups')applyTopupFilter(); 
+  else if(t==='clients')applyClientFilter(); 
+  else applyFilter();
+}
 function onSearch(v){state.search=v; if(state.tab==='orders')applyOrderFilter(); else if(state.tab==='complaints')applyComplaintFilter(); else if(state.tab==='services')applyServicesFilter(); else if(state.tab==='topups')applyTopupFilter(); else if(state.tab==='clients')applyClientFilter(); else applyFilter();}
 function onFilter(v){state.filter=v;applyFilter()} function onFilterTopup(v){state.filterTopup=v;applyTopupFilter()} function onFilterOrder(v){state.filterOrder=v;applyOrderFilter()} function onFilterComplaint(v){state.filterComplaint=v;applyComplaintFilter()}
 function applyFilter(){let list=[...state.fannis]; if(state.tab==='pending'){list=list.filter(f=>!f.isApproved&&!f.isDisabled&&f.status!=='rejected');} if(state.tab==='disabled')list=list.filter(f=>f.isDisabled); if(state.filter!=='الكل'){list=list.filter(f=>{const st=f.isDisabled?'disabled':f.isApproved?'approved':f.status||'pending'; return String(st).toLowerCase()===state.filter.toLowerCase();});} if(state.search){const s=state.search.toLowerCase(); list=list.filter(f=>String(f.name||'').toLowerCase().includes(s)||String(f.phone||'').toLowerCase().includes(s));} state.filtered=list; if(!['topups','stats','orders','complaints','services','clients','dashboard','levels','roles','offers','pricing','wallets','regions','notifications','settings','security','reports','support','content'].includes(state.tab))render(); else if(['fannis','pending','disabled','levels'].includes(state.tab))render();}
