@@ -157,6 +157,10 @@ const API={
     }
     return data;
   },
+  async registerClient(payload){return this.request('/api/client/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});},
+  async loginClient(payload){return this.request('/api/client/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});},
+  async getClientMe(token){return this.request('/api/client/me',{method:'GET',headers:{Authorization:'Bearer '+token}});},
+  async getMyOrders(){return this.request('/api/client/orders',{method:'GET',headers:{Authorization:'Bearer '+state.accountToken}});},
   async getAreas(){
     const data=await this.request('/api/areas',{method:'GET'});
     return Array.isArray(data?.areas)?data.areas:[];
@@ -185,7 +189,7 @@ const API={
     validateNoPhoneInCustomerFields(payload);
     const data=await this.request('/api/orders',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json',Authorization:'Bearer '+state.accountToken},
       body:JSON.stringify({
         clientName:sanitizeInput(payload.clientName,50),
         service:sanitizeInput(payload.service,100),
@@ -206,7 +210,7 @@ const API={
   async getOrder(sn){
     const cleanSN=sanitizeInput(sn,20).toUpperCase();
     if(!VALIDATORS.sn(cleanSN))throw new Error('كود التتبع غير صحيح. راجع الكود وحاول مرة أخرى.');
-    const token=this.getClientToken(cleanSN);
+    const token=state.accountToken||this.getClientToken(cleanSN);
     const headers={};
     if(token)headers.Authorization='Bearer '+token;
     const data=await this.request('/api/orders/'+encodeURIComponent(cleanSN),{method:'GET',headers});
@@ -216,7 +220,7 @@ const API={
     const cleanSN=sanitizeInput(sn,20).toUpperCase();
     if(!VALIDATORS.sn(cleanSN))throw new Error('كود الطلب غير صحيح.');
     if(!offerId)throw new Error('تعذر تحديد العرض المطلوب.');
-    const token=this.getClientToken(cleanSN);
+    const token=state.accountToken||this.getClientToken(cleanSN);
     if(!token)throw new Error('لم نتمكن من تأكيد ملكية الطلب على هذا الجهاز. استخدم الجهاز الذي أنشأت الطلب منه، أو الجهاز الذي حُفظت عليه بيانات المتابعة.');
     return this.request('/api/orders/'+encodeURIComponent(cleanSN)+'/accept',{
       method:'POST',
@@ -227,8 +231,8 @@ const API={
   async rateOrder(sn,payload){
     const cleanSN=sanitizeInput(sn,20).toUpperCase();
     if(!VALIDATORS.sn(cleanSN))throw new Error('كود الطلب غير صحيح.');
-    const token=this.getClientToken(cleanSN);
-    if(!token)throw new Error('لازم تتابع الطلب من الجهاز الذي أنشأته منه حتى نتحقق من ملكيتك.');
+    const token=state.accountToken||this.getClientToken(cleanSN);
+    if(!token)throw new Error('لازم تسجّل الدخول بحسابك لمتابعة الطلب حتى نتحقق من ملكيتك.');
     return this.request('/api/orders/'+encodeURIComponent(cleanSN)+'/rating',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({...payload,clientToken:token})});
   },
   async sendComplaint(payload){
@@ -253,6 +257,7 @@ const API={
   }
 };
 let state={
+  account:null,accountToken:(()=>{try{return localStorage.getItem('sonaa_client_account_token')||'';}catch{return '';}})(),accountAuthMode:'login',accountLoading:false,accountError:'',myOrders:[],accountOrdersLoading:false,
   tab:'new',service:'',clientName:'',area:'',address:'',phone:'',budget:'',desc:'',loading:false,sn:null,
   trackInput:'',tracked:null,trackError:'',trackLoading:false,acceptingOffer:'',
   ratingStars:5,ratingComment:'',ratingSubmitting:false,
@@ -282,7 +287,71 @@ function showToast(message,type='error'){
   </div>`;
   setTimeout(()=>{if(el)el.innerHTML='';},4500);
 }
+function renderAccountGate(){
+  var reg=state.accountAuthMode==='register';
+  var h='<main class="min-h-screen px-4 py-8 flex items-center justify-center"><div class="w-full max-w-[440px]"><div class="text-center mb-6"><div class="brand-mark mx-auto h-16 w-16 rounded-2xl flex items-center justify-center text-white text-3xl">📡</div><h1 class="mt-4 text-2xl font-black">صُنّاع</h1><p class="mt-2 text-sm text-slate-600">سجّل دخولك علشان تطلب خدمة وتتابع طلباتك من حسابك.</p></div><div class="panel p-5"><div class="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl"><button type="button" onclick="setAccountAuthMode(\'login\')" class="h-10 rounded-lg text-sm font-extrabold '+(!reg?'tab-active':'text-slate-600')+'">تسجيل الدخول</button><button type="button" onclick="setAccountAuthMode(\'register\')" class="h-10 rounded-lg text-sm font-extrabold '+(reg?'tab-active':'text-slate-600')+'">حساب جديد</button></div><form class="mt-5 space-y-4" onsubmit="submitClientAccount(event)">';
+  if(reg)h+='<div><label class="block mb-1.5 text-xs font-extrabold">الاسم بالكامل</label><input id="accountName" required minlength="2" maxlength="50" autocomplete="name" class="field h-12 px-3 text-sm" placeholder="اكتب اسمك"></div>';
+  h+='<div><label class="block mb-1.5 text-xs font-extrabold">رقم الموبايل</label><input id="accountPhone" required type="tel" inputmode="tel" autocomplete="tel" maxlength="20" class="field h-12 px-3 text-sm" placeholder="01012345678" dir="ltr"></div><div><label class="block mb-1.5 text-xs font-extrabold">كلمة السر</label><input id="accountPassword" required type="password" minlength="'+(reg?8:1)+'" maxlength="128" autocomplete="'+(reg?'new-password':'current-password')+'" class="field h-12 px-3 text-sm" placeholder="'+(reg?'8 أحرف على الأقل':'اكتب كلمة السر')+'"></div>';
+  if(reg)h+='<div><label class="block mb-1.5 text-xs font-extrabold">تأكيد كلمة السر</label><input id="accountConfirmPassword" required type="password" minlength="8" maxlength="128" autocomplete="new-password" class="field h-12 px-3 text-sm" placeholder="أعد كتابة كلمة السر"></div>';
+  if(state.accountError)h+='<p class="rounded-xl bg-red-50 border border-red-200 p-3 text-xs leading-6 font-bold text-red-700">'+escHtml(state.accountError)+'</p>';
+  h+='<button type="submit" '+(state.accountLoading?'disabled':'')+' class="w-full h-12 rounded-xl blue-btn font-extrabold text-sm">'+(state.accountLoading?'جاري التنفيذ...':reg?'إنشاء حساب العميل':'دخول إلى حسابي')+'</button></form><p class="mt-4 text-center text-[10px] leading-5 text-slate-500">كلمة السر لا تُشارك مع أي شخص.</p></div></div></main>';
+  document.getElementById('app').innerHTML=h;
+}
+function setAccountAuthMode(mode){state.accountAuthMode=mode==='register'?'register':'login';state.accountError='';render();}
+async function submitClientAccount(e){
+  e.preventDefault();if(state.accountLoading)return;
+  var reg=state.accountAuthMode==='register',name=String(document.getElementById('accountName')?.value||'').trim();
+  var phone=normalizeDigits(String(document.getElementById('accountPhone')?.value||'')).replace(/\D/g,'');
+  var password=String(document.getElementById('accountPassword')?.value||''),confirmPassword=String(document.getElementById('accountConfirmPassword')?.value||'');
+  if(!VALIDATORS.phone(phone)){state.accountError='رقم الموبايل غير صحيح؛ اكتب 11 رقمًا يبدأ بـ 01.';render();return;}
+  if(reg&&(!VALIDATORS.name(name)||containsPhoneNumber(name))){state.accountError='اكتب اسمك بشكل صحيح من غير أرقام موبايلات.';render();return;}
+  if(reg&&password.length<8){state.accountError='كلمة السر لازم تكون 8 أحرف على الأقل.';render();return;}
+  if(reg&&password!==confirmPassword){state.accountError='كلمة السر وتأكيدها مش متطابقين.';render();return;}
+  state.accountLoading=true;state.accountError='';render();
+  try{
+    var d=reg?await API.registerClient({name:name,phone:phone,password:password,confirmPassword:confirmPassword}):await API.loginClient({phone:phone,password:password});
+    if(!d.token||!d.client)throw new Error('الخادم لم يُرجع بيانات حساب صحيحة.');
+    state.accountToken=d.token;state.account=d.client;try{localStorage.setItem('sonaa_client_account_token',d.token);}catch(e){}
+    state.clientName=d.client.name||name;state.phone=d.client.phone||phone;state.tab='new';state.accountError='';showToast(d.message||'تم تسجيل الدخول بنجاح','success');await loadMyOrders(false);
+  }catch(error){state.accountError=error.message||'تعذر إتمام العملية.';}
+  finally{state.accountLoading=false;render();}
+}
+async function initializeClientAccount(){
+  if(!state.accountToken){render();return;}
+  try{var d=await API.getClientMe(state.accountToken);state.account=d.client||null;if(state.account){state.clientName=state.account.name||'';state.phone=state.account.phone||'';await loadMyOrders(false);}}
+  catch(error){state.accountToken='';state.account=null;try{localStorage.removeItem('sonaa_client_account_token');}catch(e){}}
+  render();
+}
+function logoutClient(){try{localStorage.removeItem('sonaa_client_account_token');}catch(e){}state.accountToken='';state.account=null;state.myOrders=[];state.tracked=null;state.tab='new';state.accountError='';render();}
+async function loadMyOrders(showLoading=true){
+  if(!state.accountToken||!state.account)return;
+  if(showLoading){state.accountOrdersLoading=true;render();}
+  try{var d=await API.getMyOrders();state.myOrders=Array.isArray(d.orders)?d.orders:[];}
+  catch(error){showToast(error.message||'تعذر تحميل طلباتك.');}
+  finally{state.accountOrdersLoading=false;if(showLoading)render();}
+}
+async function openAccountOrder(sn){
+  state.trackInput=sn;state.trackLoading=true;state.trackError='';state.tracked=null;state.tab='track';render();
+  try{state.tracked=await API.getOrder(sn);}catch(error){state.trackError=error.message||'تعذر تحميل تفاصيل الطلب.';}
+  finally{state.trackLoading=false;render();}
+}
+function renderOrders(){
+  var h='<div class="mt-4 space-y-3"><div class="panel p-4 flex items-center justify-between gap-3"><div><h3 class="font-extrabold text-[15px]">طلباتي</h3><p class="mt-1 text-[11px] text-slate-500">تابع كل طلباتك من هنا.</p></div><button type="button" onclick="loadMyOrders()" class="h-10 px-3 rounded-xl bg-slate-100 text-xs font-extrabold">تحديث</button></div>';
+  if(state.accountOrdersLoading)return h+'<div class="panel p-8 text-center text-sm font-bold text-slate-500">جاري تحميل طلباتك...</div></div>';
+  if(!state.myOrders.length)return h+'<div class="panel p-8 text-center"><div class="text-3xl">📝</div><p class="mt-3 font-extrabold text-sm">لسه ما عندكش طلبات</p><button type="button" onclick="setTab(\'new\')" class="mt-4 h-11 px-5 rounded-xl blue-btn text-xs font-extrabold">إنشاء طلب جديد</button></div></div>';
+  h+='<div class="space-y-3">';
+  state.myOrders.forEach(function(o){
+    h+='<div class="panel p-4"><div class="flex items-start justify-between gap-3"><div class="min-w-0"><p class="text-[10px] text-slate-500">مرجع داخلي</p><h4 class="mt-1 font-extrabold text-sm">'+escHtml(o.sn||'طلب')+'</h4><p class="mt-2 text-sm font-extrabold">'+escHtml(o.service||'')+'</p><p class="mt-1 text-[11px] text-slate-500">'+escHtml(o.area||'')+'</p></div><span class="shrink-0 rounded-full bg-blue-50 border border-blue-100 px-3 py-1.5 text-[10px] font-extrabold text-blue-800">'+escHtml(o.status||'قيد المراجعة')+'</span></div><p class="mt-3 text-xs leading-6 text-slate-600">'+escHtml(maskPhoneNumbers(o.description||''))+'</p>';
+    if(Array.isArray(o.offers)&&o.offers.length){h+='<p class="mt-3 text-xs font-extrabold">عروض الفنيين ('+o.offers.length+')</p>';o.offers.forEach(function(v){h+='<div class="mt-2 rounded-xl bg-slate-50 border border-slate-100 p-3"><div class="flex justify-between gap-2"><span class="text-xs font-extrabold">'+escHtml(v.fanniName||'فني')+'</span><span class="text-sm font-black text-blue-700">'+escHtml(v.price==null?'':String(v.price))+' جنيه</span></div><p class="mt-1 text-[11px] leading-5 text-slate-600">'+escHtml(maskPhoneNumbers(v.message||''))+'</p>';if(o.status==='تم اختيار فني')h+='<p class="mt-2 text-[11px] font-extrabold text-emerald-700">تم اختيار فني</p>';else h+='<button type="button" onclick="acceptAccountOffer(\''+escAttr(o.sn)+'\',\''+escAttr(String(v._id||''))+'\')" class="mt-2 w-full h-10 rounded-lg blue-btn text-xs font-extrabold">قبول العرض</button>';h+='</div>';});}
+    else h+='<p class="mt-3 text-[11px] text-slate-500">لا توجد عروض حتى الآن.</p>';
+    h+='<button type="button" onclick="openAccountOrder(\''+escAttr(o.sn)+'\')" class="mt-3 w-full h-10 rounded-xl bg-slate-100 text-slate-800 text-xs font-extrabold">تفاصيل الطلب</button></div>';
+  });
+  return h+'</div></div>';
+}
+async function acceptAccountOffer(sn,id){if(!confirm('تأكيد قبول هذا العرض؟'))return;try{await API.acceptOffer(sn,id);showToast('تم قبول العرض بنجاح','success');await loadMyOrders(false);render();}catch(error){showToast(error.message||'تعذر قبول العرض.');}}
+
 function render(){
+  if(!state.account){renderAccountGate();return;}
   const cat=getCat(state.service);
   const query=state.searchService.trim().toLowerCase();
   const matching=CATEGORIES.map(c=>({
@@ -302,12 +371,13 @@ function render(){
       <div class="flex items-center gap-1.5 shrink-0">
         <a href="./fanni.html" class="h-9 px-3 rounded-xl blue-btn text-[11px] font-extrabold flex items-center">🧑‍🔧 الفني</a>
         <button type="button" onclick="setTab('new')" class="h-9 px-3 rounded-xl primary-btn text-[11px] font-extrabold">طلب جديد +</button>
+        <button type="button" onclick="logoutClient()" class="h-9 px-3 rounded-xl bg-slate-100 text-slate-700 text-[11px] font-extrabold">خروج</button>
       </div>
     </div>
   </header>
   <main class="mx-auto w-full max-w-[640px] px-3 sm:px-4 pb-[100px] safe-bottom">
     <div class="mt-4 flex p-1 bg-white rounded-[15px] shadow-sm border border-slate-200 gap-1">
-      ${[{id:'new',label:'طلب جديد'},{id:'track',label:'تتبع طلبك'},{id:'complaint',label:'شكوى'}].map(t=>`
+      ${[{id:'new',label:'طلب جديد'},{id:'orders',label:'طلباتي'},{id:'track',label:'تفاصيل الطلب'},{id:'complaint',label:'شكوى'}].map(t=>`
         <button type="button" onclick="setTab('${t.id}')" class="flex-1 h-11 rounded-xl text-[12px] font-extrabold ${state.tab===t.id?'tab-active':'tab-idle'}">${t.label}</button>
       `).join('')}
     </div>
@@ -477,6 +547,7 @@ onclick="selectServiceByIndex(${ALL_SERVICES.indexOf(s)})"
         </div>
       </div>`}
     `:''}
+    ${state.tab==='orders'?renderOrders():''}
     ${state.tab==='track'?`
     <div class="mt-4 space-y-3 animate-fade">
       <div class="panel p-4 sm:p-5">
@@ -904,7 +975,7 @@ async function sendComplaint(){
   }catch(error){showToast(error.message||'تعذر إرسال الشكوى حاليًا.');}finally{state.complaintLoading=false;render();}
 }
 document.addEventListener('DOMContentLoaded',()=>{
-  loadServices();loadAreas();render();
+  loadServices();loadAreas();initializeClientAccount();render();
   document.addEventListener('click',handleOutsideServiceClick);
 });
 render();
