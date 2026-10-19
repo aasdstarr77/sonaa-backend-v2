@@ -147,6 +147,13 @@ async function copyWalletNumber(){
 }
 
 
+function onRegAreaSearch(value){
+ state.regAreaSearch=String(value||'').slice(0,60);
+ const cursor=state.regAreaSearch.length;
+ render();
+ const input=document.getElementById('regAreaSearchInput');
+ if(input){input.focus();try{input.setSelectionRange(cursor,cursor);}catch(_){}}
+}
 function toggleRegArea(area){
  const value=clean(area,60);if(!value)return;
  if(value===ALL_AREAS_LABEL){state.regAreas=state.regAreas.includes(ALL_AREAS_LABEL)?[]:[ALL_AREAS_LABEL];state.error='';render();return;}
@@ -540,7 +547,7 @@ function render(){
       <div class="flex items-center justify-between gap-2"><label class="field-label">مناطق العمل والأحياء *</label><span class="rounded-full bg-blue-50 px-2 py-1 text-[10px] font-extrabold text-blue-700">${state.regAreas.includes(ALL_AREAS_LABEL)?'كل المناطق':state.regAreas.length+'/30'}</span></div>
       <p class="mb-2 text-[10px] text-slate-500">اختار المناطق اللي بتشتغل فيها، وتقدر تختار لحد 30 منطقة أو تضيف منطقة جديدة.</p>
       <label class="mb-2 flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 p-3 text-[12px] font-extrabold text-blue-900"><input type="checkbox" ${state.regAreas.includes(ALL_AREAS_LABEL)?'checked':''} onchange="toggleRegArea(ALL_AREAS_LABEL)"> جميع المناطق</label>
-      <input class="field mb-2" value="${esc(state.regAreaSearch)}" oninput="state.regAreaSearch=this.value.slice(0,60);render()" placeholder="ابحث عن منطقة...">
+      <input id="regAreaSearchInput" class="field mb-2" value="${esc(state.regAreaSearch)}" oninput="onRegAreaSearch(this.value)" placeholder="ابحث عن منطقة...">
       <div class="max-h-52 overflow-y-auto rounded-xl border border-slate-200 p-2">
        ${AREA_OPTIONS.filter(area=>!state.regAreaSearch||area.includes(state.regAreaSearch.trim())).map(area=>`<label class="mb-1 flex items-center gap-2 rounded-lg px-2 py-2 text-[11px] font-bold hover:bg-slate-50"><input type="checkbox" ${state.regAreas.includes(area)?'checked':''} ${state.regAreas.includes(ALL_AREAS_LABEL)?'disabled':''} onchange="toggleRegArea(this.dataset.area)" data-area="${esc(area)}"><span>${esc(area)}</span></label>`).join('')||'<p class="p-2 text-[11px] text-slate-500">مفيش مناطق مطابقة للبحث.</p>'}
       </div>
