@@ -637,6 +637,17 @@ function requireRootAdmin(req, res) {
 function publicAdminUser(user) {
   return { id: String(user._id), name: user.name, phone: user.phone, role: user.role, adminRole: user.adminRole || (user.role === 'admin' ? 'مدير عام' : null), status: user.status };
 }
+router.get('/me', auth('admin'), async (req, res) => {
+  const role = req.user.role === 'admin' ? 'أدمن رئيسي' : (req.user.adminRole || '');
+  return res.set('Cache-Control', 'no-store').json({
+    id: String(req.user._id),
+    name: req.user.name,
+    role: req.user.role,
+    adminRole: req.user.adminRole || null,
+    adminRoleLabel: role
+  });
+});
+
 router.get('/admin-users', auth('admin'), async (req, res, next) => {
   try {
     const users = await Fanni.find({ $or: [{ role: 'admin' }, { adminRole: { $in: ADMIN_ROLES } }] })
