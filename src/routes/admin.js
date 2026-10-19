@@ -392,6 +392,39 @@ router.post('/topup-requests/:id/reject', auth('admin'), validate(Joi.object({ r
 });
 
 
+router.patch('/orders/:sn/correct', auth('admin'), validate(Joi.object({
+  clientName: Joi.string().trim().max(50).allow('').optional(),
+  clientPhone: Joi.string().trim().min(10).max(20).required(),
+  service: Joi.string().trim().min(2).max(100).required(),
+  area: Joi.string().trim().min(2).max(250).required(),
+  address: Joi.string().trim().max(250).allow('').optional(),
+  description: Joi.string().trim().max(1000).allow('').optional(),
+  budget: Joi.string().trim().max(50).allow('').optional()
+}).min(1))) , async (req, res, next) => {
+  try {
+    const sn = String(req.params.sn || '').trim().toUpperCase();
+    if (!/^SN\\d{6}$/.test(sn)) return res.status(400).json({ message: 'كود الطلب غير صالح' });
+    const order = await Order.findOne({ sn });
+    if (!order) return res.status(404).json({ message: 'الطلب غير موجود' });
+    if (order.status !== 'قيد المراجعة' || order.assignedFanni || (Array.isArray(order.offers) && order.offers.length > 0)) {
+      return res.status(409).json({ message: 'لا يمكن تصحيح الطلب بعد نشره أو ارتباطه بعروض أو فني. التصحيح متاح قبل النشر فقط.' });
+    }
+    const phone = normalizePhone(req.body.clientPhone);
+    if (!phone || !/^01[0-9]{9}$/.test(phone)) {
+      return res.status(400).json({ message: 'رقم تليفون العميل غير صحيح. أدخل رقم موبايل مصري مكوّنًا من 11 رقمًا.' });
+    }
+    order.clientName = String(req.body.clientName || '').trim() || 'عميل';
+    order.clientPhone = phone;
+    order.service = String(req.body.service || '').trim();
+    order.area = String(req.body.area || '').trim();
+    order.address = String(req.body.address || '').trim();
+    order.description = String(req.body.description || '').trim();
+    order.budget = String(req.body.budget || '').trim();
+    await order.save();
+    return res.json({ message: 'تم حفظ تصحيح بيانات الطلب. راجع البيانات ثم انشره عند التأكد.', order });
+  } catch (err) { next(err); }
+});
+
 router.delete('/orders/:sn', auth('admin'), async (req, res, next) => {
   try {
     const sn = String(req.params.sn || '').trim();
