@@ -237,6 +237,9 @@ const API={
  offer:(sn,p)=>apiPost('/api/fanni/orders/'+encodeURIComponent(sn)+'/offer',p),
  topup:p=>apiPost('/api/fanni/wallet/topup',p),
  walletHistory:()=>apiGet('/api/fanni/wallet/history'),
+ notifications:()=>apiGet('/api/notifications/fanni'),
+ readNotification:id=>api('/api/notifications/fanni/'+encodeURIComponent(id)+'/read',{method:'PATCH'}),
+ readAllNotifications:()=>api('/api/notifications/fanni/read-all',{method:'PATCH'}),
  areas:()=>apiGet('/api/areas')
 };
 
