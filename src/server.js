@@ -141,6 +141,7 @@ const loginPaths = [
   '/api/technician/login',
   '/api/technicians/login',
   '/api/client/login',
+  '/api/client/register',
   '/api/admin/login',
   '/api/admins/login',
   '/api/auth/admin/login'
