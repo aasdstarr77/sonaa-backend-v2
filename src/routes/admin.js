@@ -17,6 +17,8 @@ const WalletTransaction = require('../models/WalletTransaction');
 const { createNotification } = require('../utils/notifications');
 const Service = require('../models/Service');
 const Region = require('../models/Region');
+const AdminConfig = require('../models/AdminConfig');
+const AdminAuditLog = require('../models/AdminAuditLog');
 
 const {
   CATEGORIES,
@@ -803,9 +805,64 @@ router.delete('/admin-users/:id', auth('admin'), async (req, res, next) => {
     return res.json({ message: 'تم سحب الصلاحية الإدارية، وحساب الفني ما زال فعالًا', user: publicAdminUser(fanni) });
   } catch (err) { next(err); }
 });
-router.get('/audit-logs', auth('admin'), notImplemented('سجل التدقيق يحتاج AuditLog Model'));
-router.get('/pricing', auth('admin'), notImplemented('إدارة التسعير تحتاج Pricing Model'));
-router.put('/pricing', auth('admin'), notImplemented('حفظ التسعير يحتاج Pricing Model وتاريخ سريان'));
+async function getAdminConfig() {
+  let config = await AdminConfig.findOne({ key: 'main' });
+  if (!config) config = await AdminConfig.create({ key: 'main' });
+  return config;
+}
+async function writeAdminAudit(req, action, category, target, details) {
+  try {
+    await AdminAuditLog.create({
+      action: String(action || '').slice(0, 100),
+      category: String(category || 'admin').slice(0, 50),
+      target: String(target || '').slice(0, 200),
+      details: String(details || '').slice(0, 1000),
+      adminName: adminName(req),
+      adminId: String(req.user?._id || ''),
+      ip: String(req.ip || '').slice(0, 80)
+    });
+  } catch (err) { console.error('Could not write admin audit log:', err.message); }
+}
+router.get('/audit-logs', auth('admin'), async (req, res, next) => {
+  try {
+    const query = {};
+    if (req.query.date) {
+      const date = new Date(String(req.query.date) + 'T00:00:00.000Z');
+      if (Number.isNaN(date.getTime())) return res.status(400).json({ message: 'التاريخ غير صالح' });
+      const end = new Date(date); end.setUTCDate(end.getUTCDate() + 1);
+      query.createdAt = { $gte: date, $lt: end };
+    }
+    const logs = await AdminAuditLog.find(query).sort({ createdAt: -1 }).limit(200).lean();
+    return res.set('Cache-Control', 'no-store').json({ logs, items: logs });
+  } catch (err) { next(err); }
+});
+router.get('/pricing', auth('admin'), async (req, res, next) => {
+  try {
+    const config = await getAdminConfig();
+    return res.set('Cache-Control', 'no-store').json({ pricing: config.pricing, history: config.history.filter(x => x.key === 'pricing').slice(-100).reverse() });
+  } catch (err) { next(err); }
+});
+router.put('/pricing', auth('admin'), async (req, res, next) => {
+  try {
+    const schema = Joi.object({
+      check: Joi.number().min(0).max(100000).required(),
+      commission: Joi.number().min(0).max(100).required(),
+      minOffer: Joi.number().integer().min(1).max(1000000).required(),
+      maxOffer: Joi.number().integer().min(1).max(1000000).required()
+    }).required();
+    const { error, value } = schema.validate(req.body || {}, { abortEarly: false, stripUnknown: true });
+    if (error) return res.status(400).json({ message: 'تحقق من رسوم الفرصة والعمولة والحدود السعرية' });
+    if (value.minOffer > value.maxOffer) return res.status(400).json({ message: 'الحد الأدنى لا يمكن أن يكون أكبر من الحد الأقصى' });
+    const config = await getAdminConfig();
+    const before = config.pricing.toObject ? config.pricing.toObject() : { ...config.pricing };
+    config.pricing = value;
+    config.history.push({ key: 'pricing', before, after: value, by: adminName(req), byId: String(req.user?._id || ''), reason: 'تعديل الأسعار من لوحة الإدارة', createdAt: new Date() });
+    if (config.history.length > 200) config.history = config.history.slice(-200);
+    await config.save();
+    await writeAdminAudit(req, 'تعديل الأسعار والعمولات', 'pricing', 'pricing', JSON.stringify({ before, after: value }));
+    return res.json({ message: 'تم حفظ الأسعار وسجل التغيير', pricing: config.pricing, history: config.history.filter(x => x.key === 'pricing').slice(-100).reverse() });
+  } catch (err) { next(err); }
+});
 router.get('/wallet/transactions/:fanniId', auth('admin'), async (req,res,next)=>{
   try{
     if(!validId(req.params.fanniId)) return sendBadId(res);
@@ -934,7 +991,118 @@ router.post('/notifications/broadcast', auth('admin'), async (req, res, next) =>
     return res.status(201).json({ message: 'تم إرسال الإشعار داخل التطبيق', sent: inserted.length, audience: value.audience });
   } catch (error) { return next(error); }
 });
-router.put('/settings', auth('admin'), notImplemented('الإعدادات تحتاج Settings Model'));
+router.get('/settings', auth('admin'), async (req, res, next) => {
+  try { const config = await getAdminConfig(); return res.set('Cache-Control', 'no-store').json({ settings: config.settings }); }
+  catch (err) { next(err); }
+});
+router.put('/settings', auth('admin'), async (req, res, next) => {
+  try {
+    const schema = Joi.object({
+      siteName: Joi.string().trim().min(2).max(100).required(),
+      maintenance: Joi.boolean().required(),
+      maintenanceMessage: Joi.string().trim().max(500).allow('').required(),
+      maxFanniSignupAttempts: Joi.number().integer().min(1).max(100).required()
+    }).required();
+    const { error, value } = schema.validate(req.body || {}, { abortEarly: false, stripUnknown: true });
+    if (error) return res.status(400).json({ message: 'بيانات الإعدادات غير صحيحة' });
+    const config = await getAdminConfig();
+    const before = config.settings.toObject ? config.settings.toObject() : { ...config.settings };
+    config.settings = value;
+    config.history.push({ key: 'settings', before, after: value, by: adminName(req), byId: String(req.user?._id || ''), reason: 'تعديل إعدادات النظام', createdAt: new Date() });
+    if (config.history.length > 200) config.history = config.history.slice(-200);
+    await config.save();
+    await writeAdminAudit(req, 'حفظ إعدادات النظام', 'settings', 'settings', JSON.stringify({ before, after: value }));
+    return res.json({ message: 'تم حفظ الإعدادات. ملاحظة: وضع الصيانة وحد محاولات التسجيل محفوظان كإعدادات ولا يفرضان حظرًا على الخادم حتى ربطهما بمسارات التشغيل.', settings: config.settings });
+  } catch (err) { next(err); }
+});
+router.get('/content', auth('admin'), async (req, res, next) => {
+  try { const config = await getAdminConfig(); return res.json({ content: config.content }); }
+  catch (err) { next(err); }
+});
+router.put('/content', auth('admin'), async (req, res, next) => {
+  try {
+    const schema = Joi.object({
+      announcement: Joi.string().trim().max(1000).allow('').required(),
+      faqs: Joi.array().max(100).items(Joi.object({
+        question: Joi.string().trim().min(2).max(250).required(),
+        answer: Joi.string().trim().min(2).max(1000).required(),
+        active: Joi.boolean().default(true)
+      }).required()).required()
+    }).required();
+    const { error, value } = schema.validate(req.body || {}, { abortEarly: false, stripUnknown: true });
+    if (error) return res.status(400).json({ message: 'نص الإعلان أو الأسئلة الشائعة غير صالح' });
+    const config = await getAdminConfig();
+    const before = config.content.toObject ? config.content.toObject() : { ...config.content };
+    config.content = value;
+    config.history.push({ key: 'content', before, after: value, by: adminName(req), byId: String(req.user?._id || ''), reason: 'تعديل محتوى الواجهة', createdAt: new Date() });
+    if (config.history.length > 200) config.history = config.history.slice(-200);
+    await config.save();
+    await writeAdminAudit(req, 'تعديل محتوى الواجهة', 'content', 'content', 'تم حفظ الإعلان والأسئلة الشائعة');
+    return res.json({ message: 'تم حفظ المحتوى في قاعدة البيانات. يلزم ربط واجهة العميل لعرضه.', content: config.content });
+  } catch (err) { next(err); }
+});
+router.get('/support/search', auth('admin'), async (req, res, next) => {
+  try {
+    const q = String(req.query.q || '').trim().slice(0, 100);
+    if (q.length < 2) return res.status(400).json({ message: 'اكتب رقم طلب أو هاتفًا أو كود تتبع من حرفين على الأقل' });
+    const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\router.put('/settings', auth('admin'), notImplemented('الإعدادات تحتاج Settings Model'));');
+    const rx = new RegExp(escaped, 'i');
+    const [orders, complaints] = await Promise.all([
+      Order.find({ $or: [{ sn: rx }, { clientPhone: rx }, { clientName: rx }] }).select('sn service status clientName clientPhone area adminActionNote createdAt').sort({ createdAt: -1 }).limit(30).lean(),
+      Complaint.find({ $or: [{ sn: rx }, { clientName: rx }, { text: rx }] }).sort({ createdAt: -1 }).limit(30).lean()
+    ]);
+    return res.json({ orders, complaints });
+  } catch (err) { next(err); }
+});
+router.post('/support/:sn/review', auth('admin'), async (req, res, next) => {
+  try {
+    const sn = String(req.params.sn || '').trim().toUpperCase();
+    if (!/^SN\\d{6}$/.test(sn)) return res.status(400).json({ message: 'كود الطلب غير صالح؛ استخدم SN متبوعًا بستة أرقام' });
+    const complaint = await Complaint.findOne({ sn }).sort({ createdAt: -1 });
+    if (complaint) {
+      complaint.status = 'قيد المراجعة'; complaint.reviewedAt = new Date(); complaint.reviewedBy = adminName(req);
+      await complaint.save();
+    } else {
+      const order = await Order.findOne({ sn });
+      if (!order) return res.status(404).json({ message: 'لا يوجد طلب أو شكوى بهذا الكود' });
+      order.adminActionNote = 'تم وضع علامة مراجعة من أدوات الدعم';
+      order.adminActionAt = new Date(); order.adminActionBy = adminName(req);
+      await order.save();
+    }
+    await writeAdminAudit(req, 'وضع علامة مراجعة', 'support', sn, 'مراجعة من أدوات الدعم');
+    return res.json({ message: 'تم وضع علامة المراجعة', sn });
+  } catch (err) { next(err); }
+});
+router.get('/support/violations', auth('admin'), async (req, res, next) => {
+  try {
+    const logs = await AdminAuditLog.find({ category: 'support' }).sort({ createdAt: -1 }).limit(200).lean();
+    return res.json({ violations: logs, items: logs });
+  } catch (err) { next(err); }
+});
+router.get('/clients', auth('admin'), async (req, res, next) => {
+  try {
+    const q = String(req.query.search || '').trim().slice(0, 100);
+    const filter = q ? { $or: [{ name: new RegExp(q.replace(/[.*+?^\${}()|[\]\\]/g, '\\router.put('/settings', auth('admin'), notImplemented('الإعدادات تحتاج Settings Model'));'), 'i') }, { phone: new RegExp(q.replace(/[.*+?^\${}()|[\]\\]/g, '\\router.put('/settings', auth('admin'), notImplemented('الإعدادات تحتاج Settings Model'));'), 'i') }] } : {};
+    const registered = await Client.find(filter).select('name phone status adminNote createdAt').sort({ createdAt: -1 }).limit(200).lean();
+    const orderMatch = q ? { $or: [{ clientName: new RegExp(q.replace(/[.*+?^\${}()|[\]\\]/g, '\\router.put('/settings', auth('admin'), notImplemented('الإعدادات تحتاج Settings Model'));'), 'i') }, { clientPhone: new RegExp(q.replace(/[.*+?^\${}()|[\]\\]/g, '\\router.put('/settings', auth('admin'), notImplemented('الإعدادات تحتاج Settings Model'));'), 'i') }, { sn: new RegExp(q.replace(/[.*+?^\${}()|[\]\\]/g, '\\router.put('/settings', auth('admin'), notImplemented('الإعدادات تحتاج Settings Model'));'), 'i') }] } : {};
+    const orders = await Order.find(orderMatch).select('clientName clientPhone sn createdAt').sort({ createdAt: -1 }).limit(500).lean();
+    const byPhone = new Map();
+    for (const order of orders) {
+      const phone = String(order.clientPhone || '');
+      if (!phone) continue;
+      const item = byPhone.get(phone) || { name: order.clientName || 'عميل', phone, status: 'غير مسجل', orderCount: 0, lastOrder: '' };
+      item.orderCount++; if (!item.lastOrder) item.lastOrder = order.sn || '';
+      byPhone.set(phone, item);
+    }
+    for (const client of registered) {
+      const item = byPhone.get(client.phone) || { name: client.name, phone: client.phone, orderCount: 0, lastOrder: '' };
+      Object.assign(item, { name: client.name, status: client.status, adminNote: client.adminNote || '', registered: true });
+      byPhone.set(client.phone, item);
+    }
+    const clients = Array.from(byPhone.values()).sort((a,b) => (b.orderCount || 0) - (a.orderCount || 0)).slice(0, 200);
+    return res.set('Cache-Control', 'no-store').json({ clients, items: clients });
+  } catch (err) { next(err); }
+});
 router.post('/reports', auth('admin'), async (req, res, next) => {
   try {
     const schema = Joi.object({
