@@ -12,11 +12,19 @@ const TopupRequest = require('../models/TopupRequest');
 const Order = require('../models/Order');
 const Complaint = require('../models/Complaint');
 const WalletTransaction = require('../models/WalletTransaction');
+const Service = require('../models/Service');
+
+const {
+  CATEGORIES,
+  ALL_SERVICES,
+  normalizeServiceName,
+  findCategoryByService,
+  findCategoryByLabel
+} = require('../config/professions');
 
 const { auth } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const { normalizePhone } = require('../utils/phone');
-
 const router = express.Router();
 
 const ADMIN_TOKEN_EXPIRY = '1d';
@@ -383,6 +391,7 @@ router.post('/topup-requests/:id/reject', auth('admin'), validate(Joi.object({ r
   } catch (err) { next(err); }
 });
 
+
 router.delete('/orders/:sn', auth('admin'), async (req, res, next) => {
   try {
     const sn = String(req.params.sn || '').trim();
@@ -468,9 +477,499 @@ router.post('/regions', auth('admin'), notImplemented('إضافة منطقة ت�
 router.post('/notifications/broadcast', auth('admin'), notImplemented('الإشعارات تحتاج Notification Service'));
 router.put('/settings', auth('admin'), notImplemented('الإعدادات تحتاج Settings Model'));
 router.post('/reports', auth('admin'), notImplemented('التقارير تحتاج تجميع بيانات حقيقية'));
-router.get('/services', auth('admin'), async (req,res,next)=>{ try{ return res.status(501).json({message:'إدارة الخدمات تتم عبر /api/services العام - مسار الأدمن للإضافة قيد التنفيذ'}); }catch(e){next(e);} });
-router.post('/services', auth('admin'), notImplemented('إضافة خدمة تحتاج نقل الخدمات من config إلى DB'));
-router.patch('/services/:name', auth('admin'), notImplemented('تعديل خدمة - قيد التنفيذ'));
-router.post('/services/:name/hide', auth('admin'), notImplemented('إخفاء خدمة - قيد التنفيذ'));
+
+
+
+// ===================== إدارة الخدمات - مصحح نهائي متوافق مع public.js و Service.js =====================
+function normalizeForCompare(value) {
+  return String(value || '')
+    .normalize('NFC')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase()
+    .replace(/[\u064B-\u065F\u0670]/g, '');
+}
+
+function parseBooleanStrict(value) {
+  if (typeof value === 'boolean') return { ok: true, value };
+  if (value === 'true' || value === 'false') {
+    return { ok: false, reason: 'قيمة isActive يجب أن تكون Boolean حقيقي true/false وليس نص "' + value + '"' };
+  }
+  if (typeof value === 'string') {
+    const low = value.trim().toLowerCase();
+    if (low === 'true' || low === 'false') {
+      return { ok: false, reason: 'قيمة isActive يجب أن تكون Boolean حقيقي وليس نص' };
+    }
+  }
+  return { ok: false, reason: 'قيمة isActive يجب أن تكون true أو false فقط' };
+}
+
+function validateNameField(name) {
+  if (typeof name !== 'string') return 'اسم الخدمة يجب أن يكون نص';
+  const t = name.trim().replace(/\s+/g, ' ');
+  if (t.length < 1) return 'اسم الخدمة لا يمكن أن يكون فارغاً';
+  if (t.length > 100) return 'اسم الخدمة طويل جداً (الحد 100 حرف)';
+  return null;
+}
+
+function validateCategoryField(cat) {
+  if (typeof cat !== 'string') return 'اسم القسم يجب أن يكون نص';
+  const t = cat.trim().replace(/\s+/g, ' ');
+  if (t.length < 1) return 'اسم القسم لا يمكن أن يكون فارغاً';
+  if (t.length > 100) return 'اسم القسم طويل جداً';
+  return null;
+}
+
+function validateSortOrder(val) {
+  if (val === undefined || val === null || val === '') return null;
+  const num = Number(val);
+  if (!Number.isFinite(num) || !Number.isInteger(num) || num < 0 || num > 100000) {
+    return 'sortOrder يجب أن يكون رقم صحيح بين 0 و 100000';
+  }
+  return null;
+}
+
+function buildAdminCategoriesMap(savedServices) {
+  const map = new Map();
+  for (const cat of CATEGORIES) {
+    const key = normalizeForCompare(cat.label);
+    map.set(key, {
+      label: cat.label,
+      emoji: cat.emoji,
+      services: cat.services.map(name => ({
+        name,
+        normalizedName: normalizeForCompare(name),
+        emoji: cat.emoji,
+        isActive: true,
+        source: 'legacy',
+        category: cat.label,
+        dbId: null,
+        sortOrder: 0
+      }))
+    });
+  }
+  for (const saved of savedServices) {
+    const catKey = normalizeForCompare(saved.category);
+    if (!map.has(catKey)) {
+      map.set(catKey, {
+        label: saved.category,
+        emoji: saved.emoji || '🔧',
+        services: []
+      });
+    }
+    const category = map.get(catKey);
+    const serviceKey = normalizeForCompare(saved.name);
+    const existingIdx = category.services.findIndex(s => normalizeForCompare(s.name) === serviceKey);
+    const dbItem = {
+      name: saved.name,
+      normalizedName: normalizeForCompare(saved.name),
+      emoji: saved.emoji || category.emoji || '🔧',
+      isActive: saved.isActive,
+      source: 'database',
+      category: saved.category,
+      dbId: String(saved._id),
+      sortOrder: saved.sortOrder || 0,
+      createdAt: saved.createdAt,
+      updatedAt: saved.updatedAt
+    };
+    if (existingIdx !== -1) {
+      category.services.splice(existingIdx, 1, dbItem);
+    } else {
+      category.services.push(dbItem);
+    }
+  }
+  return map;
+}
+
+async function findServicesByName(rawName) {
+  const norm = normalizeForCompare(rawName);
+  if (!norm) return [];
+  const all = await Service.find({}).lean();
+  return all.filter(s => normalizeForCompare(s.name) === norm);
+}
+
+async function ensureHiddenLegacy(oldName, oldCategoryLabel) {
+  const normOld = normalizeForCompare(oldName);
+  if (!normOld) throw new Error('اسم الخدمة القديم غير صالح للإخفاء');
+  const existing = await Service.findOne({ normalizedName: normOld, category: oldCategoryLabel });
+  if (existing) {
+    if (existing.isActive) {
+      existing.isActive = false;
+      await existing.save();
+    }
+    return existing;
+  }
+  const legacyCat = findCategoryByService(oldName) || findCategoryByLabel(oldCategoryLabel);
+  const emoji = legacyCat ? legacyCat.emoji : '🔧';
+  try {
+    const hidden = await Service.create({
+      name: oldName,
+      category: oldCategoryLabel,
+      emoji,
+      isActive: false,
+      sortOrder: 9999
+    });
+    return hidden;
+  } catch (e) {
+    if (e.code === 11000) {
+      const dup = await Service.findOne({ normalizedName: normOld, category: oldCategoryLabel });
+      if (dup) {
+        if (dup.isActive) {
+          dup.isActive = false;
+          await dup.save();
+        }
+        return dup;
+      }
+      throw e;
+    }
+    throw e;
+  }
+}
+
+router.get('/services', auth('admin'), async (req, res, next) => {
+  try {
+    const savedServices = await Service.find({}).sort({ category: 1, sortOrder: 1, name: 1 }).lean();
+    const map = buildAdminCategoriesMap(savedServices);
+    const categoriesDetailed = Array.from(map.values()).map(cat => ({
+      label: cat.label,
+      name: cat.label,
+      emoji: cat.emoji,
+      services: cat.services.map(s => s.name),
+      _displayServices: cat.services.map(s => s.name),
+      _detailed: cat.services,
+      count: cat.services.length,
+      activeCount: cat.services.filter(s => s.isActive).length
+    }));
+    const allFlat = [];
+    for (const cat of map.values()) {
+      for (const s of cat.services) allFlat.push(s);
+    }
+    return res.json({
+      ok: true,
+      categories: categoriesDetailed,
+      services: allFlat,
+      data: categoriesDetailed,
+      legacyCategories: CATEGORIES
+    });
+  } catch (e) { next(e); }
+});
+
+router.post('/services', auth('admin'), async (req, res, next) => {
+  try {
+    let { name, category, emoji, sortOrder } = req.body;
+
+    const nameErr = validateNameField(name || '');
+    if (nameErr) return res.status(400).json({ message: nameErr });
+    name = String(name).trim().replace(/\s+/g, ' ');
+
+    if (!category || !String(category).trim()) {
+      const found = findCategoryByService(name);
+      category = found ? found.label : 'خدمات أخرى';
+    }
+    const catErr = validateCategoryField(category);
+    if (catErr) return res.status(400).json({ message: catErr });
+    category = String(category).trim().replace(/\s+/g, ' ');
+
+    const sortErr = validateSortOrder(sortOrder);
+    if (sortErr) return res.status(400).json({ message: sortErr });
+
+    if (emoji !== undefined && emoji !== null && emoji !== '') {
+      if (typeof emoji !== 'string' || emoji.trim().length > 10) {
+        return res.status(400).json({ message: 'الرمز التعبيري غير صالح' });
+      }
+    }
+
+    const payload = {
+      name,
+      category,
+      emoji: emoji ? String(emoji).trim() : (findCategoryByLabel(category)?.emoji || findCategoryByService(name)?.emoji || '🔧'),
+      sortOrder: sortOrder !== undefined && sortOrder !== '' ? Number(sortOrder) : 0,
+      isActive: true
+    };
+
+    const service = await Service.create(payload);
+    return res.status(201).json({ ok: true, message: 'تمت إضافة الخدمة', service, data: service });
+  } catch (err) {
+    if (err.code === 11000) {
+      return res.status(409).json({ message: 'الخدمة موجودة بالفعل في نفس القسم' });
+    }
+    next(err);
+  }
+});
+
+router.patch('/services/:name', auth('admin'), async (req, res, next) => {
+  let createdNewService = null;
+  let oldNameForRollback = null;
+  let oldCategoryForRollback = null;
+  try {
+    const rawParam = String(req.params.name || '').trim();
+    if (!rawParam) return res.status(400).json({ message: 'اسم الخدمة الأصلي مطلوب' });
+
+    const { name: newNameRaw, category: newCategoryRaw, emoji, sortOrder, isActive } = req.body;
+    const queryCategory = req.query.category ? String(req.query.category).trim() : null;
+
+    if (newNameRaw !== undefined) {
+      const err = validateNameField(newNameRaw);
+      if (err) return res.status(400).json({ message: err });
+    }
+    if (newCategoryRaw !== undefined) {
+      const err = validateCategoryField(newCategoryRaw);
+      if (err) return res.status(400).json({ message: err });
+    }
+    if (sortOrder !== undefined) {
+      const err = validateSortOrder(sortOrder);
+      if (err) return res.status(400).json({ message: err });
+    }
+    if (emoji !== undefined && emoji !== null && emoji !== '') {
+      if (typeof emoji !== 'string' || emoji.trim().length > 10) {
+        return res.status(400).json({ message: 'الرمز التعبيري غير صالح' });
+      }
+    }
+    if (isActive !== undefined) {
+      const parsed = parseBooleanStrict(isActive);
+      if (!parsed.ok) return res.status(400).json({ message: parsed.reason });
+    }
+
+    let candidates = [];
+    if (mongoose.isValidObjectId(rawParam)) {
+      const byId = await Service.findById(rawParam);
+      if (byId) candidates = [byId];
+    } else {
+      candidates = await findServicesByName(rawParam);
+    }
+
+    if (candidates.length === 0) {
+      const legacyCat = findCategoryByService(rawParam);
+      if (!legacyCat) {
+        return res.status(404).json({ message: 'الخدمة غير موجودة في قاعدة البيانات ولا في القائمة الأساسية' });
+      }
+      if (!newNameRaw || !String(newNameRaw).trim()) {
+        return res.status(400).json({ message: 'خدمات القائمة الأساسية لا يمكن تعديلها مباشرة بدون اسم جديد. أضف خدمة جديدة ثم أخفِ القديمة عبر /hide' });
+      }
+      const newName = String(newNameRaw).trim().replace(/\s+/g, ' ');
+      const targetCategory = newCategoryRaw ? String(newCategoryRaw).trim() : (queryCategory || legacyCat.label);
+
+      try {
+        createdNewService = await Service.create({
+          name: newName,
+          category: targetCategory,
+          emoji: emoji ? String(emoji).trim() : (findCategoryByLabel(targetCategory)?.emoji || legacyCat.emoji),
+          sortOrder: sortOrder !== undefined ? Number(sortOrder) : 0,
+          isActive: true
+        });
+        oldNameForRollback = rawParam;
+        oldCategoryForRollback = legacyCat.label;
+        await ensureHiddenLegacy(rawParam, legacyCat.label);
+        return res.json({ ok: true, message: 'تم إنشاء الخدمة الجديدة وإخفاء القديمة الأساسية حتى لا تظهر مرة أخرى', service: createdNewService });
+      } catch (e) {
+        if (createdNewService) {
+          try { await Service.deleteOne({ _id: createdNewService._id }); } catch {}
+        }
+        if (e.code === 11000) return res.status(409).json({ message: 'الاسم الجديد موجود بالفعل في نفس القسم' });
+        throw e;
+      }
+    }
+
+    if (candidates.length > 1) {
+      const filterCat = queryCategory || (newCategoryRaw ? String(newCategoryRaw).trim() : null);
+      if (!filterCat) {
+        return res.status(409).json({
+          message: 'اسم الخدمة موجود في أكثر من قسم، يجب تحديد القسم',
+          duplicates: candidates.map(c => ({ id: String(c._id), name: c.name, category: c.category, isActive: c.isActive })),
+          hint: 'أرسل ?category=اسم_القسم في الرابط أو category في body'
+        });
+      }
+      const normFilter = normalizeForCompare(filterCat);
+      const matched = candidates.filter(c => normalizeForCompare(c.category) === normFilter);
+      if (matched.length === 0) {
+        return res.status(404).json({ message: 'لم يتم العثور على الخدمة في القسم المحدد', duplicates: candidates.map(c => ({ name: c.name, category: c.category })) });
+      }
+      if (matched.length > 1) {
+        return res.status(409).json({ message: 'يوجد أكثر من خدمة بنفس الاسم في نفس القسم المحدد - راجع البيانات', duplicates: matched.map(c => ({ id: String(c._id), name: c.name, category: c.category })) });
+      }
+      candidates = matched;
+    }
+
+    const serviceDoc = await Service.findById(candidates[0]._id);
+    if (!serviceDoc) return res.status(404).json({ message: 'الخدمة غير موجودة' });
+
+    const oldName = serviceDoc.name;
+    const oldCategory = serviceDoc.category;
+    const oldNormalized = serviceDoc.normalizedName;
+
+    let willRename = false;
+    let newNameForHideCheck = null;
+
+    if (newNameRaw !== undefined) {
+      const nn = String(newNameRaw).trim().replace(/\s+/g, ' ');
+      if (normalizeForCompare(nn) !== normalizeForCompare(oldName)) {
+        willRename = true;
+        newNameForHideCheck = nn;
+        serviceDoc.name = nn;
+      }
+    }
+    if (newCategoryRaw !== undefined) {
+      serviceDoc.category = String(newCategoryRaw).trim().replace(/\s+/g, ' ');
+    }
+    if (emoji !== undefined) serviceDoc.emoji = String(emoji).trim() || serviceDoc.emoji || '🔧';
+    if (sortOrder !== undefined) serviceDoc.sortOrder = Number(sortOrder);
+    if (isActive !== undefined) {
+      serviceDoc.isActive = isActive;
+    }
+
+    try {
+      await serviceDoc.save();
+    } catch (e) {
+      if (e.code === 11000) return res.status(409).json({ message: 'الاسم الجديد مكرر في نفس القسم' });
+      throw e;
+    }
+
+    if (willRename) {
+      const oldLegacy = findCategoryByService(oldName);
+      if (oldLegacy) {
+        try {
+          await ensureHiddenLegacy(oldName, oldLegacy.label);
+        } catch (hideErr) {
+          try {
+            serviceDoc.name = oldName;
+            serviceDoc.category = oldCategory;
+            await serviceDoc.save();
+          } catch (rollbackErr) {
+            return res.status(500).json({
+              message: 'تم تغيير الاسم لكن فشل إخفاء الاسم القديم وفشل التراجع. يجب مراجعة البيانات يدوياً',
+              error: hideErr.message,
+              rollbackError: rollbackErr.message,
+              service: serviceDoc
+            });
+          }
+          return res.status(500).json({
+            message: 'فشل إخفاء الاسم القديم، تم التراجع عن تغيير الاسم. حاول مرة أخرى',
+            error: hideErr.message
+          });
+        }
+      }
+    }
+
+    return res.json({ ok: true, message: 'تم تعديل الخدمة', service: serviceDoc, data: serviceDoc });
+  } catch (err) {
+    if (createdNewService && oldNameForRollback) {
+      try { await Service.deleteOne({ _id: createdNewService._id }); } catch {}
+    }
+    next(err);
+  }
+});
+
+router.post('/services/:name/hide', auth('admin'), async (req, res, next) => {
+  try {
+    const rawParam = String(req.params.name || '').trim();
+    if (!rawParam) return res.status(400).json({ message: 'اسم الخدمة مطلوب' });
+    const queryCategory = req.query.category ? String(req.query.category).trim() : null;
+    const bodyCategory = req.body && req.body.category ? String(req.body.category).trim() : null;
+    const filterCategory = queryCategory || bodyCategory;
+
+    if (filterCategory) {
+      const err = validateCategoryField(filterCategory);
+      if (err) return res.status(400).json({ message: err });
+    }
+
+    let candidates = [];
+    if (mongoose.isValidObjectId(rawParam)) {
+      const byId = await Service.findById(rawParam);
+      if (byId) candidates = [byId];
+    } else {
+      candidates = await findServicesByName(rawParam);
+    }
+
+    if (candidates.length > 1 && !filterCategory) {
+      return res.status(409).json({
+        message: 'اسم الخدمة موجود في أكثر من قسم، حدد القسم لإخفاء الخدمة الصحيحة',
+        duplicates: candidates.map(c => ({ id: String(c._id), name: c.name, category: c.category, isActive: c.isActive }))
+      });
+    }
+
+    let target = null;
+    if (candidates.length === 1) {
+      target = await Service.findById(candidates[0]._id);
+    } else if (candidates.length > 1 && filterCategory) {
+      const normFilter = normalizeForCompare(filterCategory);
+      const matched = candidates.filter(c => normalizeForCompare(c.category) === normFilter);
+      if (matched.length === 0) return res.status(404).json({ message: 'لم يتم العثور على الخدمة في القسم المحدد' });
+      if (matched.length > 1) return res.status(409).json({ message: 'يوجد تكرار في نفس القسم، لا يمكن تحديد الخدمة', duplicates: matched.map(c => ({ id: String(c._id), name: c.name, category: c.category })) });
+      target = await Service.findById(matched[0]._id);
+    }
+
+    if (target) {
+      target.isActive = false;
+      await target.save();
+      return res.json({ ok: true, message: 'تم إخفاء الخدمة - لن تظهر للعملاء بسبب الدمج في public.js', service: target });
+    }
+
+    const legacyCat = findCategoryByService(rawParam);
+    if (legacyCat) {
+      const hidden = await ensureHiddenLegacy(rawParam, legacyCat.label);
+      return res.json({ ok: true, message: 'تم إخفاء الخدمة الأساسية - لن تظهر مرة أخرى في قائمة العميل لأن public.js يتحقق من isActive=false', service: hidden });
+    }
+
+    return res.status(404).json({ message: 'الخدمة غير موجودة في القائمة الأساسية أو قاعدة البيانات' });
+  } catch (e) { next(e); }
+});
+
+router.post('/services/:name/show', auth('admin'), async (req, res, next) => {
+  try {
+    const rawParam = String(req.params.name || '').trim();
+    if (!rawParam) return res.status(400).json({ message: 'اسم الخدمة مطلوب' });
+    const queryCategory = req.query.category ? String(req.query.category).trim() : null;
+    const bodyCategory = req.body && req.body.category ? String(req.body.category).trim() : null;
+    const filterCategory = queryCategory || bodyCategory;
+
+    if (filterCategory) {
+      const err = validateCategoryField(filterCategory);
+      if (err) return res.status(400).json({ message: err });
+    }
+
+    let candidates = [];
+    if (mongoose.isValidObjectId(rawParam)) {
+      const byId = await Service.findById(rawParam);
+      if (byId) candidates = [byId];
+    } else {
+      candidates = await findServicesByName(rawParam);
+    }
+
+    if (candidates.length === 0) {
+      return res.status(404).json({ message: 'الخدمة غير موجودة - لا يمكن إظهار خدمة لم يتم إخفاؤها مسبقاً' });
+    }
+
+    if (candidates.length > 1 && !filterCategory) {
+      return res.status(409).json({
+        message: 'اسم الخدمة موجود في أكثر من قسم، حدد القسم لإظهاره بدقة',
+        duplicates: candidates.map(c => ({ id: String(c._id), name: c.name, category: c.category, isActive: c.isActive }))
+      });
+    }
+
+    let target = null;
+    if (candidates.length === 1) {
+      target = await Service.findById(candidates[0]._id);
+    } else if (candidates.length > 1 && filterCategory) {
+      const normFilter = normalizeForCompare(filterCategory);
+      const matched = candidates.filter(c => normalizeForCompare(c.category) === normFilter);
+      if (matched.length === 0) return res.status(404).json({ message: 'لم يتم العثور على الخدمة في القسم المحدد' });
+      if (matched.length > 1) {
+        return res.status(409).json({
+          message: 'يوجد أكثر من سجل لنفس الخدمة في نفس القسم - يجب تنظيف البيانات يدوياً',
+          duplicates: matched.map(c => ({ id: String(c._id), name: c.name, category: c.category, isActive: c.isActive }))
+        });
+      }
+      target = await Service.findById(matched[0]._id);
+    }
+
+    if (!target) return res.status(404).json({ message: 'الخدمة غير موجودة' });
+
+    target.isActive = true;
+    await target.save();
+    return res.json({ ok: true, message: 'تمت إعادة تفعيل الخدمة', service: target });
+  } catch (e) { next(e); }
+});
+
+
 
 module.exports = router;
