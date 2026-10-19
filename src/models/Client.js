@@ -14,7 +14,6 @@ const clientSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true,
-    index: true,
     trim: true,
     match: /^01[0-9]{9}$/
   },
@@ -33,7 +32,6 @@ const clientSchema = new mongoose.Schema({
   timestamps: true
 });
 
-clientSchema.index({ phone: 1 }, { unique: true });
 
 clientSchema.methods.toSafeJSON = function () {
   const data = this.toObject();
