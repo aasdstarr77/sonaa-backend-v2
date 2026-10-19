@@ -859,6 +859,15 @@ state.myOffers=allOffers.filter(o=>!(o.completed===true||o.orderStatus==='تم �
  }
 }
  
+function toggleFanniRatingBlock(sn){
+ const select=document.getElementById('rating-stars-'+sn);
+ const wrap=document.getElementById('rating-block-wrap-'+sn);
+ if(wrap)wrap.style.display=Number(select?.value)===1?'flex':'none';
+ if(Number(select?.value)!==1){
+  const checkbox=document.getElementById('rating-block-'+sn);
+  if(checkbox)checkbox.checked=false;
+ }
+}
 async function submitFanniRating(sn){
  const stars=Number(document.getElementById('rating-stars-'+sn)?.value);
  const comment=String(document.getElementById('rating-comment-'+sn)?.value||'').trim().slice(0,500);
