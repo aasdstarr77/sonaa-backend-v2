@@ -12,6 +12,7 @@ const TopupRequest = require('../models/TopupRequest');
 const Order = require('../models/Order');
 const Complaint = require('../models/Complaint');
 const WalletTransaction = require('../models/WalletTransaction');
+const { createNotification } = require('../utils/notifications');
 const Service = require('../models/Service');
 
 const {
@@ -216,6 +217,14 @@ router.patch('/complaints/:id', auth('admin'), validate(Joi.object({
     updates.updatedAt = new Date();
     const complaint = await Complaint.findByIdAndUpdate(req.params.id, { $set: updates }, { new: true, runValidators: true }).lean();
     if (!complaint) { return res.status(404).json({ message: 'الشكوى غير موجودة' }); }
+    if (complaint.adminResponse && String(complaint.adminResponse).trim()) {
+      const order = await Order.findOne({ sn: complaint.sn }).select('_id clientAccount').lean();
+      if (order?.clientAccount) await createNotification({
+        recipientRole: 'client', recipientId: order.clientAccount, type: 'complaint_reply',
+        title: 'تم الرد على شكواك', message: 'الإدارة ردت على الشكوى الخاصة بالطلب ' + complaint.sn + '.',
+        link: '/?tab=complaint', dedupeKey: 'complaint-reply:' + String(complaint._id) + ':' + String(complaint.updatedAt || Date.now())
+      });
+    }
     return res.json({ message: 'تم تحديث الشكوى بنجاح', complaint, data: complaint });
   } catch (err) { next(err); }
 });
@@ -249,6 +258,11 @@ router.post('/fannis/:id/approve', auth('admin'), async (req, res, next) => {
     if (fanni.status === 'معتمد') { return res.json({ message: 'الفني معتمد بالفعل', fanni: publicFanni(fanni) }); }
     fanni.status = 'معتمد'; fanni.rejectionReason = undefined; fanni.suspensionReason = undefined; fanni.suspendedAt = undefined;
     fanni.decisions.push(decision(req, 'موافقة')); await fanni.save();
+    await createNotification({
+      recipientRole: 'fanni', recipientId: fanni._id, type: 'account_approved',
+      title: 'تم اعتماد حسابك', message: 'مبروك، الإدارة اعتمدت حسابك وأصبحت تقدر تستخدم خدمات الفني المعتمدة.',
+      link: '/fanni', dedupeKey: 'fanni-approved:' + String(fanni._id)
+    });
     return res.json({ message: 'تم اعتماد الفني بنجاح', fanni: publicFanni(fanni) });
   } catch (err) { next(err); }
 });
@@ -370,6 +384,11 @@ router.post('/topup-requests/:id/approve', auth('admin'), async (req, res, next)
       if (!current) { return res.status(404).json({ message: 'طلب الشحن غير موجود' }); }
       return res.status(409).json({ message: 'تمت معالجة طلب الشحن بالفعل أو أنه غير متاح للمراجعة', status: current.status, isCredited: Boolean(current.isCredited) });
     }
+    await createNotification({
+      recipientRole: 'fanni', recipientId: outcome.topup.fanni, type: 'topup_approved',
+      title: 'تم شحن محفظتك', message: 'تم قبول طلب شحن المحفظة وإضافة ' + outcome.topup.amount + ' جنيه إلى رصيدك.',
+      link: '/fanni', dedupeKey: 'topup-approved:' + String(outcome.topup._id)
+    });
     return res.json({ message: 'تم قبول طلب الشحن وإضافة الرصيد مرة واحدة', request: publicTopup(outcome.topup), balance: outcome.balance });
   } catch (err) {
     if (err.message === 'TOPUP_FANNI_NOT_FOUND') { return res.status(409).json({ message: 'الفني المرتبط بطلب الشحن غير موجود. لم يتم اعتماد العملية' }); }
@@ -387,6 +406,11 @@ router.post('/topup-requests/:id/reject', auth('admin'), validate(Joi.object({ r
       if (!current) { return res.status(404).json({ message: 'طلب الشحن غير موجود' }); }
       return res.status(409).json({ message: 'تمت معالجة طلب الشحن بالفعل أو أنه غير متاح للمراجعة', status: current.status });
     }
+    await createNotification({
+      recipientRole: 'fanni', recipientId: request.fanni, type: 'topup_rejected',
+      title: 'تم رفض طلب الشحن', message: 'تم رفض طلب شحن المحفظة. ' + String(request.reviewReason || '').slice(0, 180),
+      link: '/fanni', dedupeKey: 'topup-rejected:' + String(request._id)
+    });
     return res.json({ message: 'تم رفض طلب الشحن', request: publicTopup(request) });
   } catch (err) { next(err); }
 });
