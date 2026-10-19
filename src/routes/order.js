@@ -1440,6 +1440,11 @@ router.post('/:sn/rating', async (req, res, next) => {
       reviewerId = fanni._id;
     }
 
+    const existingRating = await Rating.exists({ orderId: order._id, reviewerRole });
+    if (existingRating) {
+      return res.status(409).json({ message: 'سبق أن قيّمت هذه المهمة' });
+    }
+
     const rating = await Rating.create({
       orderId: order._id,
       orderSn: order.sn,
