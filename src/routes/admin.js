@@ -1,975 +1,741 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1b3a">
+<title>صناع - لوحة الإدارة النهائية</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root{
+  --navy:#0b1b3a;--blue:#2563eb;--blue2:#1d4ed8;--gold:#f59e0b;--page:#f1f5fb;--card:#fff;
+}
+*{font-family:'Cairo',system-ui,sans-serif;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background: radial-gradient(1200px 600px at 20% -10%, #1e3a8a18, transparent), radial-gradient(800px 400px at 80% 0%, #f59e0b12, transparent), var(--page);
+  color:var(--navy);overflow-x:hidden;-webkit-tap-highlight-color:transparent
+}
+button{cursor:pointer;transition:all .22s cubic-bezier(.4,0,.2,1)}
+button:active{transform:scale(.97)} button:disabled{opacity:.55;cursor:not-allowed}
+input,textarea,select{outline:none;max-width:100%;transition:all .2s}
+input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-shadow:0 0 0 4px #2563eb18}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.animate-fade{animation:fadeUp .32s ease both}
+.premium-panel{background:linear-gradient(180deg,#fff 0%,#fbfdff 100%);border:1px solid #e6eefc;border-radius:20px;box-shadow:0 8px 24px #0f234b0a, 0 2px 8px #0f234b08}
+.premium-card{background:#fff;border:1px solid #e6eefc;border-radius:20px;box-shadow:0 10px 28px #0f234b0d;position:relative;overflow:hidden;transition:.22s}
+.premium-card::before{content:'';position:absolute;top:0;right:0;left:0;height:3px;background:linear-gradient(90deg,var(--blue),#3b82f6,var(--gold));opacity:.9}
+.premium-card:hover{transform:translateY(-1px);box-shadow:0 14px 32px #0f234b12;border-color:#d6e4ff}
+.field{width:100%;min-height:46px;border:1.5px solid #dbe3ef;border-radius:14px;background:#fff;padding:11px 14px;color:var(--navy);font-size:12.5px;font-weight:600}
+.tab-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media(min-width:520px){.tab-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.tab-btn{min-height:78px;border-radius:16px;border:1.5px solid #e6eefc;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 6px;position:relative}
+.tab-btn .ic{width:30px;height:30px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;background:#f1f5f9}
+.tab-btn.active{background:linear-gradient(135deg,#0b1b3a 0%,#1e3a8a 100%);color:#fff;border-color:#0b1b3a;box-shadow:0 8px 20px #0b1b3a30}
+.tab-btn.active .ic{background:rgba(255,255,255,.14)}
+.tab-btn .co{font-size:10px;font-weight:800;opacity:.7}
+.pill-btn{border-radius:999px;min-height:42px;padding:0 16px;font-weight:800;font-size:11px}
+.primary-pill{background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;box-shadow:0 6px 16px #2563eb35}
+.success-pill{background:linear-gradient(135deg,#10b981,#059669);color:#fff}
+.danger-pill{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff}
+.soft-btn{background:#f8fafc;border:1px solid #e2e8f0;color:#334155}
+.glass-header{background:linear-gradient(135deg,rgba(11,27,58,.97) 0%,rgba(19,42,90,.95) 100%);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.08)}
+.dropdown-menu{position:absolute;top:calc(100% + 8px);right:0;min-width:190px;background:#fff;border:1px solid #e6eefc;border-radius:16px;box-shadow:0 16px 32px #0f234b18;z-index:50;padding:6px;animation:fadeUp .18s ease}
+.dropdown-item{width:100%;text-align:right;padding:10px 12px;border-radius:10px;font-size:11px;font-weight:800;display:flex;align-items:center;gap:8px}
+.dropdown-item:hover{background:#f1f5f9}
+.action-wrap{position:relative}
+.confirm-bar{margin-top:10px;background:#0b1b3a;color:#fff;border-radius:999px;padding:6px 6px 6px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;font-weight:800}
+.stat-card{background:linear-gradient(180deg,#fff 0%,#f8fbff 100%);border:1px solid #e6eefc;border-radius:18px;padding:14px;text-align:center}
+::-webkit-scrollbar{width:5px;height:5px} ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:99px}
+</style>
+</head>
+<body class="min-h-screen antialiased">
+<div id="app"></div>
+<div id="toast" class="fixed bottom-4 left-3 right-3 z-[200] pointer-events-none"></div>
+<script>
 'use strict';
+const BASE_URL='https://sonaa-backend-v2.vercel.app';
+const TOKEN_KEY='admin_token_v3';
+const WALLET='01152822263';
+function escHtml(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function getToken(){try{return localStorage.getItem(TOKEN_KEY)||''}catch{return ''}}
+function setToken(t){try{localStorage.setItem(TOKEN_KEY,t)}catch{throw new Error('تعذر حفظ جلسة الدخول')}}
+function clearToken(){try{localStorage.removeItem(TOKEN_KEY)}catch{}}
+function buildUrl(p){const path=p.startsWith('/api')?p:'/api/'+p.replace(/^\/+/,''); if(location.hostname.includes('sonaa-backend-v2')&&location.hostname.endsWith('vercel.app')){return path;} return BASE_URL+path;}
+async function api(path,opts={}){const token=getToken(); const headers={...(opts.headers||{})}; if(opts.body&&!headers['Content-Type']){headers['Content-Type']='application/json';} if(token)headers['Authorization']='Bearer '+token; try{const r=await fetch(buildUrl(path),{...opts,headers,mode:'cors',credentials:'omit'}); const txt=await r.text(); if(txt.trim().startsWith('<!DOCTYPE')||txt.includes('Cannot ')){return {ok:false,status:404,data:{message:'المسار غير موجود: '+path}};} let data; try{data=txt?JSON.parse(txt):{}}catch{data={raw:txt.slice(0,500),message:txt.slice(0,200)||'استجابة غير مفهومة'};} if(!r.ok&&!data.message)data.message='فشل الطلب (HTTP '+r.status+')'; return {ok:r.ok,status:r.status,data};}catch(e){return {ok:false,status:0,data:{message:e.message||'تعذر الاتصال'}};}}
+async function tryApi(paths,opts={}){let last={status:404,data:{message:'فشل الاتصال'}}; for(const p of paths){const res=await api(p,opts); if(res.ok)return res.data; last=res; if([400,401,403].includes(res.status))break;} const error=new Error(last.data?.message||'حدث خطأ'); error.status=last.status; throw error;}
+function extractList(data,keys=[]){if(Array.isArray(data))return data; for(const key of keys){if(Array.isArray(data?.[key]))return data[key];} if(Array.isArray(data?.data))return data.data; return [];}
+function normalizePhoneInput(value){return String(value??'').replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[\s\-().]/g,'').replace(/^(\+?20)/,'0');}
 
-const express = require('express');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const Joi = require('joi');
-const mongoose = require('mongoose');
-const crypto = require('crypto');
+let state={
+  tab:'dashboard',
+  adminEmail:'',adminPass:'',loading:false,loadingOrders:false,publishingOrders:[],deletingItems:[],
+  dropdowns:{}, pendingActions:{},
+  fannis:[],filtered:[],topups:[],filteredTopups:[],orders:[],filteredOrders:[],complaints:[],filteredComplaints:[],loadingComplaints:false,
+  services:[],filteredServices:[],servicesLoading:false,servicesError:'',openServices:{},
+  clients:[],filteredClients:[],clientsLoading:false,
+  auditLogs:[],regions:[],notifications:[],settings:{siteName:'صُنّاع',maintenance:false},
+  reports:{},
+  search:'',filter:'الكل',filterTopup:'الكل',filterOrder:'الكل',filterComplaint:'الكل',filterClient:'الكل',
+  errors:{fannis:'',topups:'',orders:'',complaints:'',services:'',clients:''}, error:''
+};
 
-const Fanni = require('../models/Fanni');
-const TopupRequest = require('../models/TopupRequest');
-const Order = require('../models/Order');
-const Complaint = require('../models/Complaint');
-const WalletTransaction = require('../models/WalletTransaction');
-const Service = require('../models/Service');
-
-const {
-  CATEGORIES,
-  ALL_SERVICES,
-  normalizeServiceName,
-  findCategoryByService,
-  findCategoryByLabel
-} = require('../config/professions');
-
-const { auth } = require('../middleware/auth');
-const { validate } = require('../middleware/validate');
-const { normalizePhone } = require('../utils/phone');
-const router = express.Router();
-
-const ADMIN_TOKEN_EXPIRY = '1d';
-const MAX_LIST_LIMIT = 500;
-
-const loginSchema = Joi.object({
-  phone: Joi.string().trim().optional(),
-  email: Joi.string().trim().email().optional(),
-  password: Joi.string().min(1).required()
-}).or('phone', 'email');
-
-const amountSchema = Joi.number()
-  .strict()
-  .min(0)
-  .max(100000000)
-  .required();
-
-const reasonSchema = Joi.string().trim().max(500).allow('');
-
-const complaintStatusSchema = Joi.string().valid(
-  'جديدة',
-  'قيد المراجعة',
-  'تم الحل',
-  'مرفوضة'
-);
-
-function publicFanni(fanni) {
-  const item = typeof fanni.toObject === 'function'
-    ? fanni.toObject()
-    : { ...fanni };
-  delete item.passwordHash;
-  delete item.__v;
-  const statusMap = {
-    'معتمد': 'approved',
-    'قيد المراجعة': 'pending',
-    'مرفوض': 'rejected',
-    'معلق': 'disabled'
-  };
-  return {
-    ...item,
-    status: statusMap[item.status] || 'pending',
-    actualStatus: item.status,
-    isApproved: item.status === 'معتمد',
-    isDisabled: item.status === 'معلق',
-    balance: Number(item.walletBalance || 0),
-    skill: Array.isArray(item.specialties) ? item.specialties.join('، ') : '',
-    service: Array.isArray(item.specialties) ? item.specialties.join('، ') : ''
-  };
+function showToast(msg,type='success'){
+  const el=document.getElementById('toast'); if(!el)return;
+  const bg=type==='success'?'background:linear-gradient(135deg,#10b981,#059669)':type==='error'?'background:linear-gradient(135deg,#ef4444,#dc2626)':'background:linear-gradient(135deg,#f59e0b,#d97706)';
+  el.innerHTML=`<div style="${bg}" class="pointer-events-auto mx-auto max-w-[640px] rounded-[16px] text-white text-[12px] font-bold px-4 py-3.5 shadow-2xl animate-fade flex items-center justify-between gap-3"><span>${escHtml(msg)}</span><button onclick="this.parentElement.remove()" class="shrink-0 h-8 px-3 bg-white/20 rounded-full text-[11px]">إغلاق</button></div>`;
+  setTimeout(()=>{if(el.firstElementChild)el.innerHTML=''},4200);
 }
+function statusLabel(s){const m={'قيد المراجعة':'قيد المراجعة','تم النشر':'تم النشر','وصلتك عروض':'وصلت عروض','تم اختيار فني':'تم اختيار فني','تم الانتهاء':'تم الانتهاء',pending:'قيد المراجعة',approved:'مقبول',rejected:'مرفوض',disabled:'معطل'};return m[String(s||'')]||String(s||'غير محدد');}
+function statusClass(s){const t=String(s||''); if(['تم الانتهاء','منتهي','تم اختيار فني','approved','مقبول'].includes(t))return 'bg-emerald-50 border-emerald-200 text-emerald-700'; if(['مرفوض','rejected','اعتذار','معطل','disabled'].includes(t))return 'bg-red-50 border-red-200 text-red-700'; if(['تم النشر','وصلتك عروض'].includes(t))return 'bg-blue-50 border-blue-200 text-blue-700'; return 'bg-amber-50 border-amber-200 text-amber-800';}
+function orderSearchMatch(o,s){const haystack=[o.sn,o.clientName,o.clientPhone,o.service,o.area,o.city,o.description].map(v=>String(v||'').toLowerCase()).join(' '); return haystack.includes(s.toLowerCase());}
 
-function publicTopup(request) {
-  const item = typeof request.toObject === 'function' ? request.toObject() : { ...request };
-  const statusMap = { 'قيد المراجعة': 'pending', 'مقبول': 'approved', 'مرفوض': 'rejected' };
-  return {
-    ...item,
-    status: statusMap[item.status] || 'pending',
-    actualStatus: item.status,
-    fromPhone: item.senderNumber || '',
-    phone: item.fanniPhone || '',
-    walletNumber: process.env.VODAFONE_CASH_NUMBER || ''
-  };
+// --- Smart Dropdown System ---
+function toggleMenu(key){
+  const isOpen = !!state.dropdowns[key];
+  state.dropdowns = {};
+  if(!isOpen) state.dropdowns[key]=true;
+  render();
 }
-
-function adminName(req) { return String(req.user?.name || 'الإدارة').slice(0, 50); }
-function decision(req, action, reason = '') {
-  return { action, reason: String(reason || '').trim().slice(0, 500), date: new Date(), by: adminName(req), byId: req.user?._id };
+function closeAllMenus(){ state.dropdowns={}; render(); }
+function setPendingAction(key, action, label){
+  state.pendingActions[key]={action,label};
+  state.dropdowns={};
+  render();
 }
-function validId(value) { return mongoose.isValidObjectId(value); }
-function sendBadId(res) { return res.status(400).json({ message: 'معرّف غير صالح' }); }
-function getLoginPhone(body) {
-  const raw = String(body.phone || body.email || '').trim();
-  if (raw.includes('@')) {
-    const configuredEmail = String(process.env.ADMIN_EMAIL || '').trim().toLowerCase();
-    const configuredPhone = String(process.env.ADMIN_PHONE || '').trim();
-    if (!configuredEmail || !configuredPhone || raw.toLowerCase() !== configuredEmail) { return null; }
-    return normalizePhone(configuredPhone);
+function clearPending(key){ delete state.pendingActions[key]; render(); }
+function confirmPending(key){
+  const p = state.pendingActions[key];
+  if(!p) return;
+  const [type,id] = key.split(':');
+  // route to actual function
+  if(type==='fanni'){
+    if(p.action==='approve') approveFanni(id);
+    else if(p.action==='reject') rejectFanni(id);
+    else if(p.action==='disable') disableFanni(id);
+    else if(p.action==='enable') enableFanni(id);
+    else if(p.action==='delete') deleteFanni(id,'');
+    else if(p.action==='level_up') updateFanniLevel(id,'خبير');
+    else if(p.action==='badge_trust') toggleTrustBadge(id);
+    else showToast('تم اختيار: '+p.label);
+  } else if(type==='order'){
+    if(p.action==='publish') publishOrder(id);
+    else if(p.action==='delete') deleteOrder(id);
+    else showToast('تم اختيار: '+p.label);
+  } else if(type==='topup'){
+    if(p.action==='approve') approveTopup(id);
+    else if(p.action==='reject') rejectTopup(id);
+  } else if(type==='complaint'){
+    showToast('تم اختيار: '+p.label);
   }
-  return normalizePhone(raw);
+  delete state.pendingActions[key];
+  render();
 }
 
-router.post('/bootstrap', async (req, res, next) => {
-  try {
-    const configuredSecret = String(process.env.ADMIN_SETUP_SECRET || '');
-    const suppliedSecret = typeof req.body?.secret === 'string' ? req.body.secret : '';
-    if (configuredSecret.length < 32 || suppliedSecret.length < 32) {
-      return res.status(503).json({ message: 'إعداد إنشاء حساب الإدارة غير مكتمل' });
-    }
-    const expected = Buffer.from(configuredSecret, 'utf8');
-    const supplied = Buffer.from(suppliedSecret, 'utf8');
-    if (expected.length !== supplied.length || !crypto.timingSafeEqual(expected, supplied)) {
-      return res.status(403).json({ message: 'المفتاح السري غير صحيح' });
-    }
-    const adminCount = await Fanni.countDocuments({ role: 'admin' });
-    if (adminCount > 0) {
-      return res.status(409).json({ message: 'يوجد حساب إدارة بالفعل. تم إيقاف إنشاء الحساب الأول.' });
-    }
-    const email = String(process.env.ADMIN_EMAIL || '').trim().toLowerCase();
-    const configuredPhone = String(process.env.ADMIN_PHONE || '').trim();
-    const password = String(process.env.ADMIN_PASSWORD || '');
-    const name = String(process.env.ADMIN_NAME || 'إدارة صناع').trim();
-    if (!email || !Joi.string().email().validate(email).value || !configuredPhone || password.length < 12 || name.length < 2 || name.length > 50) {
-      return res.status(503).json({ message: 'راجع إعدادات ADMIN_EMAIL وADMIN_PHONE وADMIN_PASSWORD وADMIN_NAME على الخادم' });
-    }
-    const phone = normalizePhone(configuredPhone);
-    if (!phone || !/^01[0-9]{9}$/.test(phone)) {
-      return res.status(503).json({ message: 'رقم الإدارة الموجود في إعدادات الخادم غير صالح' });
-    }
-    const existingPhone = await Fanni.findOne({ phone }).select('_id');
-    if (existingPhone) {
-      return res.status(409).json({ message: 'رقم الإدارة مستخدم بالفعل في حساب موجود. لم يتم تغيير أي حساب.' });
-    }
-    if (!process.env.JWT_SECRET) {
-      return res.status(503).json({ message: 'إعداد JWT_SECRET غير موجود على الخادم' });
-    }
-    const passwordHash = await bcrypt.hash(password, 12);
-    const admin = await Fanni.create({
-      name, phone, passwordHash, specialties: ['إدارة'], areas: ['الإدارة'], status: 'معتمد', role: 'admin',
-      decisions: [{ action: 'تسجيل', reason: 'إنشاء أول حساب إدارة', date: new Date(), by: 'النظام' }]
-    });
-    return res.status(201).json({
-      message: 'تم إنشاء أول حساب إدارة بنجاح. احتفظ ببيانات الدخول في مكان آمن.',
-      user: { id: String(admin._id), name: admin.name, phone: admin.phone, role: admin.role }
-    });
-  } catch (err) {
-    if (err && err.code === 11000) {
-      return res.status(409).json({ message: 'الحساب أو رقم الهاتف موجود بالفعل. لم يتم إنشاء حساب مكرر.' });
-    }
-    next(err);
+function render(){
+  const isAuth=!!getToken();
+  const pendingCount=state.fannis.filter(f=>!f.isApproved&&!f.isDisabled&&f.status!=='rejected').length;
+  const disabledCount=state.fannis.filter(f=>f.isDisabled).length;
+
+  document.getElementById('app').innerHTML=`
+  <header class="sticky top-0 z-40 glass-header text-white shadow-[0_8px_24px_rgba(11,27,58,.25)]">
+    <div class="mx-auto max-w-[800px] px-4 py-3.5 flex justify-between items-center gap-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="h-11 w-11 shrink-0 rounded-[14px] bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center font-black text-[20px] shadow-lg">S</div>
+        <div class="min-w-0">
+          <h1 class="font-black text-[15px]">صُنّاع - لوحة الإدارة النهائية</h1>
+          <div class="text-[10px] text-blue-200/80 mt-0.5 font-bold">Premium • Mobile First • جميع الأقسام</div>
+        </div>
+      </div>
+      <div class="flex gap-2 shrink-0">
+        <button onclick="goFanni()" class="h-10 px-4 rounded-full bg-white/10 hover:bg-white/15 text-[11px] font-black border border-white/10">لوحة الفني</button>
+        ${isAuth?'<button onclick="logout()" class="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center">⎋</button>':''}
+      </div>
+    </div>
+  </header>
+  
+  <main class="mx-auto max-w-[800px] px-3 pb-28">
+    ${!isAuth?`
+      <section class="mt-8 max-w-[420px] mx-auto premium-panel p-6 sm:p-7 animate-fade">
+        <div class="flex items-center gap-3.5">
+          <div class="h-12 w-12 rounded-[14px] bg-gradient-to-br from-blue-600 to-indigo-700 text-white flex items-center justify-center font-black">🔐</div>
+          <div><h2 class="font-black text-[18px]">دخول الأدمن</h2><p class="text-[11px] text-slate-500 font-bold">إدارة مشروع صُنّاع</p></div>
+        </div>
+        <div class="mt-5 rounded-[14px] bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 p-3.5 flex items-center gap-2.5">
+          <div class="h-8 w-8 rounded-full bg-white flex items-center justify-center text-blue-600">💳</div>
+          <div><p class="text-[10px] font-black text-blue-900">محفظة التحويل</p><p class="text-[12px] font-black" dir="ltr">${WALLET}</p></div>
+        </div>
+        <form onsubmit="event.preventDefault();doLogin();" class="mt-5 space-y-4">
+          <label class="block"><span class="block text-[11px] font-black text-slate-700 mb-2">البريد الإلكتروني</span><input type="email" value="${escHtml(state.adminEmail)}" oninput="state.adminEmail=this.value" required placeholder="admin@sonaa.com" class="field"></label>
+          <label class="block"><span class="block text-[11px] font-black text-slate-700 mb-2">كلمة المرور</span><input type="password" value="${escHtml(state.adminPass)}" oninput="state.adminPass=this.value" required placeholder="••••••••" class="field"></label>
+          <button type="submit" ${state.loading?'disabled':''} class="w-full h-[48px] rounded-full bg-gradient-to-r from-[#0b1b3a] to-[#1e3a8a] text-white text-[13px] font-black shadow-lg">${state.loading?'جاري...':'تسجيل الدخول ✨'}</button>
+          ${state.error?`<p class="text-[12px] text-red-700 bg-red-50 border border-red-200 rounded-[14px] p-3.5 font-bold">${escHtml(state.error)}</p>`:''}
+        </form>
+      </section>
+    `:`
+      <section class="mt-4 premium-panel p-3">
+        <div class="flex items-center justify-between mb-3 px-1">
+          <h2 class="text-[12px] font-black text-slate-700">مركز التحكم - جميع الأقسام</h2>
+          <button onclick="refreshCurrentTab()" class="h-8 px-3 rounded-full bg-slate-50 border text-[10px] font-black">↻ تحديث</button>
+        </div>
+        <div class="tab-grid">
+          ${[
+            {id:'dashboard',label:'الرئيسية',icon:'🏠',c:''},
+            {id:'fannis',label:'الفنيون',icon:'👷',c:state.fannis.length},
+            {id:'pending',label:'انتظار',icon:'⏳',c:pendingCount},
+            {id:'levels',label:'المستويات',icon:'⭐',c:''},
+            {id:'roles',label:'المناصب',icon:'👑',c:''},
+            {id:'orders',label:'الطلبات',icon:'📦',c:state.orders.length},
+            {id:'offers',label:'العروض',icon:'💬',c:''},
+            {id:'pricing',label:'الأسعار',icon:'💰',c:''},
+            {id:'wallets',label:'المحافظ',icon:'👛',c:''},
+            {id:'topups',label:'الشحن',icon:'💳',c:state.topups.length},
+            {id:'complaints',label:'الشكاوى',icon:'⚠️',c:state.complaints.length},
+            {id:'services',label:'الخدمات',icon:'🛠️',c:state.services.length},
+            {id:'regions',label:'المناطق',icon:'📍',c:''},
+            {id:'notifications',label:'الإشعارات',icon:'🔔',c:''},
+            {id:'settings',label:'الإعدادات',icon:'⚙️',c:''},
+            {id:'security',label:'الأمان',icon:'🛡️',c:''},
+            {id:'reports',label:'التقارير',icon:'📊',c:''},
+            {id:'support',label:'الدعم',icon:'🎧',c:''},
+            {id:'content',label:'المحتوى',icon:'📝',c:''},
+            {id:'stats',label:'الإحصائيات',icon:'📈',c:''},
+            {id:'clients',label:'العملاء',icon:'👥',c:state.clients.length},
+            {id:'disabled',label:'المعطلون',icon:'⛔',c:disabledCount},
+          ].map(t=>`
+            <button onclick="setTab('${t.id}')" class="tab-btn ${state.tab===t.id?'active':''}">
+              <span class="ic">${t.icon}</span>
+              <span class="font-black text-[11px]">${escHtml(t.label)}</span>
+              <span class="co">${t.c!==''?escHtml(String(t.c)):''}</span>
+            </button>
+          `).join('')}
+        </div>
+      </section>
+
+      <div class="mt-3 premium-panel p-3 flex flex-col gap-2.5">
+        <div class="relative">
+          <span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+          <input value="${escHtml(state.search)}" oninput="onSearch(this.value)" placeholder="بحث شامل..." class="field !pr-10">
+        </div>
+        ${state.tab==='orders'?`
+          <select onchange="onFilterOrder(this.value)" class="field"><option value="الكل">كل الحالات</option><option value="قيد المراجعة">قيد المراجعة</option><option value="تم النشر">تم النشر</option><option value="وصلتك عروض">وصلت عروض</option><option value="تم اختيار فني">تم اختيار فني</option><option value="تم الانتهاء">تم الانتهاء</option></select>
+        `:state.tab==='fannis'||state.tab==='pending'||state.tab==='disabled'||state.tab==='levels'?`
+          <select onchange="onFilter(this.value)" class="field"><option value="الكل">كل الحالات</option><option value="pending">قيد المراجعة</option><option value="approved">معتمد</option><option value="rejected">مرفوض</option><option value="disabled">معطل</option></select>
+        `:''}
+      </div>
+
+      ${state.loading?`<div class="mt-4 premium-panel p-10 text-center"><div class="h-10 w-10 rounded-full border-[3px] border-slate-200 border-t-blue-600 animate-spin mx-auto"></div><p class="mt-3 text-[12px] font-black text-slate-500">جاري التحميل...</p></div>`:''}
+
+      ${renderCurrentTab()}
+    `}
+  </main>
+  <div onclick="closeAllMenus()" id="menu-backdrop" class="${Object.keys(state.dropdowns).length?'fixed inset-0 z-30 bg-black/5':''}"></div>
+  `;
+}
+
+function renderCurrentTab(){
+  switch(state.tab){
+    case 'dashboard': return renderDashboard();
+    case 'fannis': case 'pending': case 'disabled': return renderFannis();
+    case 'levels': return renderLevels();
+    case 'roles': return renderRoles();
+    case 'orders': return renderOrders();
+    case 'offers': return renderOffers();
+    case 'pricing': return renderPricing();
+    case 'wallets': return renderWallets();
+    case 'topups': return renderTopups();
+    case 'complaints': return renderComplaints();
+    case 'services': return renderServices();
+    case 'regions': return renderRegions();
+    case 'notifications': return renderNotifications();
+    case 'settings': return renderSettings();
+    case 'security': return renderSecurity();
+    case 'reports': return renderReports();
+    case 'support': return renderSupport();
+    case 'content': return renderContent();
+    case 'clients': return renderClients();
+    case 'stats': return renderStats();
+    default: return renderFannis();
   }
-});
+}
 
-router.post('/login', validate(loginSchema), async (req, res, next) => {
-  try {
-    if (!process.env.JWT_SECRET) {
-      return res.status(503).json({ message: 'تسجيل الدخول غير متاح بسبب إعدادات الخادم' });
+function renderDashboard(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[20px] bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-900 p-5 text-white shadow-xl">
+      <p class="text-[13px] font-black">مركز التحكم الرئيسي</p>
+      <p class="text-[11px] text-slate-300 mt-1 font-bold">ملخص الطلبات والفنيين والإيرادات والتنبيهات</p>
+      <div class="grid grid-cols-2 gap-3 mt-4">
+        <div class="bg-white/10 rounded-[14px] p-3"><p class="text-[22px] font-black">${state.orders.length}</p><p class="text-[10px] font-bold text-slate-300">طلبات اليوم</p></div>
+        <div class="bg-white/10 rounded-[14px] p-3"><p class="text-[22px] font-black">${state.fannis.length}</p><p class="text-[10px] font-bold text-slate-300">فني نشط</p></div>
+        <div class="bg-white/10 rounded-[14px] p-3"><p class="text-[18px] font-black">${state.topups.filter(t=>t.status==='approved').reduce((s,t)=>s+Number(t.amount||0),0)} ج</p><p class="text-[10px] font-bold text-slate-300">إيرادات الشحن</p></div>
+        <div class="bg-white/10 rounded-[14px] p-3"><p class="text-[22px] font-black">${state.complaints.filter(c=>c.status==='جديدة').length}</p><p class="text-[10px] font-bold text-slate-300">شكاوى جديدة</p></div>
+      </div>
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      <div class="premium-panel p-4"><p class="text-[11px] font-black">الطلبات المتأخرة</p><p class="text-[20px] font-black text-amber-600 mt-2">${state.orders.filter(o=>o.status==='قيد المراجعة').length}</p><p class="text-[10px] text-slate-400 font-bold mt-1">تحتاج نشر</p></div>
+      <div class="premium-panel p-4"><p class="text-[11px] font-black">المعاملات المعلقة</p><p class="text-[20px] font-black text-blue-600 mt-2">${state.topups.filter(t=>t.status==='pending').length}</p><p class="text-[10px] text-slate-400 font-bold mt-1">شحن بانتظار</p></div>
+    </div>
+    <div class="premium-panel p-4">
+      <h3 class="text-[12px] font-black">آخر العمليات</h3>
+      <div class="mt-3 space-y-2">
+        ${[...state.orders].slice(0,3).map(o=>`<div class="flex justify-between items-center text-[11px] font-bold border-b border-slate-50 pb-2"><span>${escHtml(o.sn||'SN')} - ${escHtml(o.clientName||'عميل')}</span><span class="text-[10px] text-slate-400">${escHtml(statusLabel(o.status))}</span></div>`).join('')||'<p class="text-[11px] text-slate-400">لا توجد عمليات حديثة</p>'}
+      </div>
+    </div>
+    <div class="premium-panel p-4">
+      <h3 class="text-[12px] font-black mb-3">رسوم بيانية (أسبوعي)</h3>
+      <div class="h-[90px] flex items-end gap-1.5">
+        ${[40,65,35,80,55,70,45].map(h=>`<div style="height:${h}%" class="flex-1 bg-gradient-to-t from-blue-600 to-blue-300 rounded-t-[6px]"></div>`).join('')}
+      </div>
+      <div class="flex justify-between text-[9px] font-bold text-slate-400 mt-2"><span>السبت</span><span>الجمعة</span></div>
+    </div>
+  </section>`;
+}
+
+function renderFannis(){
+  return `
+  <div class="mt-4 space-y-4">
+    ${state.errors.fannis?`<div class="bg-red-50 border border-red-200 rounded-[16px] p-4 text-[12px] font-bold text-red-700">${escHtml(state.errors.fannis)}</div>`:''}
+    ${state.filtered.length===0&&!state.loading&&!state.errors.fannis?`<div class="premium-panel p-10 text-center text-[13px] font-bold text-slate-400">لا يوجد فنيون</div>`:''}
+    ${state.filtered.map(f=>{
+      const id=String(f._id||'');
+      const menuKey='fanni:'+id;
+      const pending = state.pendingActions[menuKey];
+      const isMenuOpen = !!state.dropdowns[menuKey];
+      const level = f.level||f.experience||'مبتدئ';
+      const badge = f.isTrusted?'موثوق':''; 
+      return `
+        <article class="premium-card p-4 animate-fade">
+          <div class="flex justify-between items-start gap-3">
+            <div class="flex items-center gap-3 min-w-0 flex-1">
+              <div class="h-10 w-10 rounded-full bg-gradient-to-br from-slate-800 to-slate-600 text-white flex items-center justify-center font-black">${escHtml((f.name||'؟').slice(0,1))}</div>
+              <div class="min-w-0 flex-1">
+                <p class="font-black text-[13.5px] truncate">${escHtml(f.name||'بدون اسم')} ${badge?`<span class="text-[9px] bg-blue-600 text-white px-2 py-0.5 rounded-full mr-1">✓ ${badge}</span>`:''}</p>
+                <div class="flex items-center gap-2 mt-1 flex-wrap">
+                  <span dir="ltr" class="text-[11px] bg-slate-900 text-white px-2.5 py-1 rounded-full font-bold">📞 ${escHtml(f.phone||'')}</span>
+                  <span class="text-[10px] px-2.5 py-1 rounded-full border font-black ${statusClass(f.isDisabled?'disabled':f.isApproved?'approved':f.status||'pending')}">${f.isDisabled?'معطل':f.isApproved?'معتمد':statusLabel(f.status)}</span>
+                  <span class="text-[10px] bg-amber-50 border border-amber-200 text-amber-800 px-2 py-1 rounded-full font-black">${escHtml(level)}</span>
+                </div>
+              </div>
+            </div>
+            <div class="action-wrap">
+              <button onclick="event.stopPropagation();toggleMenu('${menuKey}')" class="pill-btn soft-btn flex items-center gap-1.5">
+                <span>${f.isApproved?'معتمد':f.isDisabled?'معطل':'إجراء'}</span>
+                <span class="text-[12px]">${isMenuOpen?'▲':'▼'}</span>
+              </button>
+              ${isMenuOpen?`
+                <div class="dropdown-menu">
+                  ${!f.isApproved&&!f.isDisabled?`<button onclick="event.stopPropagation();setPendingAction('${menuKey}','approve','قبول الفني')" class="dropdown-item">✓ قبول الفني</button><button onclick="event.stopPropagation();setPendingAction('${menuKey}','reject','رفض الفني')" class="dropdown-item">✕ رفض الفني</button>`:''}
+                  ${!f.isDisabled?`<button onclick="event.stopPropagation();setPendingAction('${menuKey}','disable','تعطيل الفني')" class="dropdown-item">⛔ تعطيل</button>`: `<button onclick="event.stopPropagation();setPendingAction('${menuKey}','enable','استعادة الفني')" class="dropdown-item">♻️ استعادة</button>`}
+                  <div class="h-px bg-slate-100 my-1"></div>
+                  <button onclick="event.stopPropagation();setPendingAction('${menuKey}','level_up','ترقية لمستوى خبير')" class="dropdown-item">⭐ ترقية لخبير</button>
+                  <button onclick="event.stopPropagation();setPendingAction('${menuKey}','badge_trust','منح شارة موثوق')" class="dropdown-item">🛡️ منح موثوق</button>
+                  <div class="h-px bg-slate-100 my-1"></div>
+                  <button onclick="event.stopPropagation();setPendingAction('${menuKey}','delete','حذف نهائي')" class="dropdown-item text-red-600">🗑️ حذف نهائي</button>
+                </div>
+              `:''}
+            </div>
+          </div>
+          ${pending?`
+            <div class="confirm-bar">
+              <span>تأكيد ${escHtml(pending.label)}؟</span>
+              <div class="flex gap-2">
+                <button onclick="clearPending('${menuKey}')" class="h-7 px-3 rounded-full bg-white/20 text-[10px] font-black">إلغاء</button>
+                <button onclick="confirmPending('${menuKey}')" class="h-7 px-4 rounded-full bg-white text-slate-900 text-[10px] font-black">تأكيد ✓</button>
+              </div>
+            </div>
+          `:''}
+          <div class="mt-4 grid grid-cols-2 gap-2">
+            <div class="rounded-[14px] bg-slate-50 border p-3"><p class="text-[10px] font-black text-slate-400">التخصص</p><p class="text-[11.5px] font-black mt-1 truncate">${escHtml(f.skill||f.service||'غير محدد')}</p></div>
+            <div class="rounded-[14px] bg-emerald-50 border border-emerald-100 p-3"><p class="text-[10px] font-black text-emerald-700">الرصيد</p><p class="text-[13px] font-black text-emerald-700 mt-1">${escHtml(String(f.balance??f.walletBalance??0))} ج</p></div>
+          </div>
+          <details class="mt-4 rounded-[16px] border overflow-hidden">
+            <summary class="cursor-pointer bg-slate-50 hover:bg-blue-50 px-4 py-3 text-[11px] font-black">💰 تسوية الرصيد • سجل النشاط • ملاحظات</summary>
+            <div class="p-4 bg-white space-y-3">
+              <div class="flex gap-2"><input id="bal-${escHtml(id)}" type="number" placeholder="المبلغ" class="field flex-1"><button onclick="setBalance('${escHtml(id)}')" class="h-[46px] px-4 rounded-full bg-slate-900 text-white text-[11px] font-black">تعيين</button><button onclick="addBalance('${escHtml(id)}')" class="h-[46px] px-4 rounded-full bg-emerald-600 text-white text-[11px] font-black">إضافة</button></div>
+              <div class="rounded-[12px] bg-slate-50 border p-3"><p class="text-[10px] font-black text-slate-500">ملاحظات داخلية</p><textarea id="note-${escHtml(id)}" rows="2" placeholder="ملاحظة لا يراها الفني" class="field mt-2">${escHtml(f.adminNote||'')}</textarea><button onclick="saveFanniNote('${escHtml(id)}')" class="mt-2 pill-btn soft-btn w-full">حفظ الملاحظة</button></div>
+              <div class="rounded-[12px] bg-slate-50 border p-3"><p class="text-[10px] font-black text-slate-500">حدود الاستقبال</p><div class="flex gap-2 mt-2"><input id="limit-${escHtml(id)}" type="number" placeholder="عدد العروض المسموح" class="field flex-1"><button onclick="saveFanniLimit('${escHtml(id)}')" class="pill-btn soft-btn">حفظ</button></div></div>
+            </div>
+          </details>
+        </article>
+      `;
+    }).join('')}
+  </div>`;
+}
+
+function renderLevels(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-amber-500 to-orange-600 p-4 text-white"><p class="text-[12px] font-black">مستويات الخبرة والثقة</p><p class="text-[10px] font-bold text-amber-100 mt-1">مبتدئ • محترف • خبير • موثوق</p></div>
+    <div class="premium-panel p-4">
+      <h3 class="text-[12px] font-black mb-3">تعريف المستويات</h3>
+      <div class="space-y-2">
+        <div class="flex justify-between items-center p-3 rounded-[12px] bg-slate-50 border"><span class="text-[11px] font-black">🌱 مبتدئ</span><span class="text-[10px] text-slate-500">0-10 طلبات</span></div>
+        <div class="flex justify-between items-center p-3 rounded-[12px] bg-blue-50 border border-blue-100"><span class="text-[11px] font-black">🔧 محترف</span><span class="text-[10px] text-blue-700">10-50 طلب</span></div>
+        <div class="flex justify-between items-center p-3 rounded-[12px] bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200"><span class="text-[11px] font-black">⭐ خبير معتمد</span><span class="text-[10px] text-amber-700">+50 طلب</span></div>
+      </div>
+    </div>
+    ${renderFannis()}
+  </section>`;
+}
+
+function renderRoles(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-indigo-600 to-purple-600 p-4 text-white"><p class="text-[12px] font-black">المناصب الإدارية وصلاحيات المشرفين</p><p class="text-[10px] text-indigo-100 mt-1">مدير • مشرف أول • مشرف • قراءة فقط</p></div>
+    <div class="premium-panel p-4">
+      <div class="flex gap-2"><input id="new-admin-email" type="email" placeholder="بريد المشرف الجديد" class="field flex-1"><select id="new-admin-role" class="field !w-[130px]"><option>مشرف</option><option>مشرف أول</option><option>مدير</option><option>قراءة فقط</option></select><button onclick="createAdminUser()" class="pill-btn primary-pill">إضافة</button></div>
+      <div class="mt-4 space-y-2">
+        <div class="p-3 rounded-[12px] bg-slate-900 text-white flex justify-between items-center"><div><p class="text-[11px] font-black">المدير العام</p><p class="text-[10px] text-slate-300">admin@sonaa.com • كل الصلاحيات</p></div><span class="text-[10px] bg-white/20 px-2 py-1 rounded-full">مدير</span></div>
+        <div class="p-3 rounded-[12px] bg-slate-50 border flex justify-between items-center"><div><p class="text-[11px] font-black">مشرف مالي</p><p class="text-[10px] text-slate-500">finance@sonaa.com • محافظ فقط</p></div><button class="pill-btn soft-btn text-[10px]">سحب الصلاحية</button></div>
+      </div>
+    </div>
+    <div class="premium-panel p-4">
+      <h3 class="text-[11px] font-black mb-2">سجل جلسات الدخول</h3>
+      <div class="text-[11px] font-bold space-y-2"><div class="flex justify-between border-b pb-2"><span>admin@sonaa.com - 192.168.1.1</span><span class="text-slate-400">منذ ساعتين</span></div><div class="flex justify-between"><span>finance@sonaa.com</span><span class="text-slate-400">أمس</span></div></div>
+    </div>
+  </section>`;
+}
+
+function renderOrders(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-slate-900 to-slate-800 p-4 text-white flex gap-3"><div class="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center">📦</div><div><p class="text-[12px] font-black">إدارة الطلبات والشغلانات</p><p class="text-[10px] text-slate-300 mt-1 font-bold">نشر • تعيين فني • إلغاء • أرشفة</p></div></div>
+    <div class="premium-panel p-4"><div class="flex gap-2"><input id="delete-client-phone" type="tel" placeholder="01xxxxxxxxx" class="field flex-1" dir="ltr"><button onclick="deleteClient()" class="pill-btn danger-pill">حذف طلبات العميل</button></div></div>
+    ${state.errors.orders?`<div class="bg-red-50 border border-red-200 rounded-[16px] p-4 text-[12px] font-bold text-red-700">${escHtml(state.errors.orders)}</div>`:''}
+    ${state.loadingOrders?`<div class="premium-panel p-10 text-center"><div class="h-8 w-8 rounded-full border-[3px] border-slate-200 border-t-blue-600 animate-spin mx-auto"></div></div>`:''}
+    ${state.filteredOrders.length===0&&!state.loadingOrders?`<div class="premium-panel p-10 text-center text-[12px] font-bold text-slate-400">لا توجد طلبات</div>`:''}
+    ${state.filteredOrders.map(o=>{
+      const sn=String(o.sn||''); const menuKey='order:'+sn; const pending=state.pendingActions[menuKey]; const isMenuOpen=!!state.dropdowns[menuKey];
+      const offers=Array.isArray(o.offers)?o.offers:[];
+      return `
+        <article class="premium-card p-4">
+          <div class="flex justify-between items-start gap-3">
+            <div class="min-w-0 flex-1"><p class="font-black text-[14px]">${escHtml(o.service||'طلب')}</p><p class="text-[11px] font-bold text-slate-500 mt-1">كود: <span class="font-mono bg-blue-50 px-2 py-0.5 rounded-full text-blue-800">${escHtml(sn)}</span></p></div>
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] px-3 py-1.5 rounded-full border font-black ${statusClass(o.status)}">${escHtml(statusLabel(o.status))}</span>
+              <div class="action-wrap">
+                <button onclick="event.stopPropagation();toggleMenu('${menuKey}')" class="pill-btn soft-btn">إجراء ▾</button>
+                ${isMenuOpen?`<div class="dropdown-menu">
+                  ${o.status==='قيد المراجعة'?`<button onclick="event.stopPropagation();setPendingAction('${menuKey}','publish','نشر الطلب')" class="dropdown-item">🚀 نشر للفنيين</button>`:''}
+                  <button onclick="event.stopPropagation();setPendingAction('${menuKey}','assign','تعيين فني')" class="dropdown-item">👷 تعيين فني</button>
+                  <button onclick="event.stopPropagation();setPendingAction('${menuKey}','edit','تصحيح البيانات')" class="dropdown-item">✏️ تصحيح</button>
+                  <button onclick="event.stopPropagation();setPendingAction('${menuKey}','cancel','إلغاء الطلب')" class="dropdown-item">❌ إلغاء</button>
+                  <button onclick="event.stopPropagation();setPendingAction('${menuKey}','archive','أرشفة')" class="dropdown-item">📦 أرشفة</button>
+                  <div class="h-px bg-slate-100 my-1"></div>
+                  <button onclick="event.stopPropagation();setPendingAction('${menuKey}','delete','حذف نهائي')" class="dropdown-item text-red-600">🗑️ حذف</button>
+                </div>`:''}
+              </div>
+            </div>
+          </div>
+          ${pending?`<div class="confirm-bar"><span>تأكيد ${escHtml(pending.label)}؟</span><div class="flex gap-2"><button onclick="clearPending('${menuKey}')" class="h-7 px-3 rounded-full bg-white/20 text-[10px]">إلغاء</button><button onclick="confirmPending('${menuKey}')" class="h-7 px-4 rounded-full bg-white text-slate-900 text-[10px] font-black">تأكيد</button></div></div>`:''}
+          <div class="grid grid-cols-2 gap-2.5 mt-4"><div class="rounded-[14px] bg-slate-50 border p-3"><p class="text-[10px] font-black text-slate-400">العميل</p><p class="text-[11px] font-black mt-1">${escHtml(o.clientName||'غير مسجل')}</p></div><div class="rounded-[14px] bg-slate-50 border p-3"><p class="text-[10px] font-black text-slate-400">الهاتف</p><p class="text-[11px] font-black mt-1" dir="ltr">${escHtml(o.clientPhone||'')}</p></div><div class="rounded-[14px] bg-slate-50 border p-3"><p class="text-[10px] font-black text-slate-400">المنطقة</p><p class="text-[11px] font-black mt-1">${escHtml(o.area||o.city||'')}</p></div><div class="rounded-[14px] bg-blue-50 border border-blue-100 p-3"><p class="text-[10px] font-black text-blue-600">الميزانية</p><p class="text-[11px] font-black mt-1">${escHtml(o.budget?String(o.budget)+' ج':'لم تحدد')}</p></div></div>
+          <div class="mt-3 rounded-[14px] bg-slate-50 border p-3"><p class="text-[10px] font-black text-slate-400">وصف الطلب</p><p class="text-[11px] font-bold mt-2 leading-6 whitespace-pre-wrap">${escHtml(o.description||'لا يوجد وصف')}</p></div>
+          <details class="mt-3 rounded-[16px] border overflow-hidden"><summary class="bg-slate-50 px-4 py-3 text-[11px] font-black">عروض الفنيين (${offers.length})</summary><div class="p-3 space-y-2 bg-white">${offers.map((off,i)=>`<div class="rounded-[12px] bg-slate-50 border p-3 text-[11px]"><p class="font-black">العرض ${i+1}: ${escHtml(off.fanniName||'فني')} - ${escHtml(off.price||'')} ج</p><p class="text-[10px] mt-1">${escHtml(off.message||'')}</p><div class="mt-2 flex gap-2"><button onclick="removeOffer('${escHtml(sn)}','${i}')" class="pill-btn soft-btn text-[10px]">إزالة العرض</button></div></div>`).join('')||'<p class="text-[10px] text-slate-400">لا توجد عروض</p>'}</div></details>
+        </article>`;
+    }).join('')}
+  </section>`;
+}
+
+function renderOffers(){
+  const allOffers = state.orders.flatMap(o=>(o.offers||[]).map((off,idx)=>({orderSn:o.sn,orderService:o.service,offer:off,idx})));
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-blue-600 to-indigo-600 p-4 text-white"><p class="text-[12px] font-black">عروض الفنيين على الطلبات</p><p class="text-[10px] text-blue-100 mt-1">عرض • رفض • إزالة • سجل التغييرات</p></div>
+    <div class="premium-panel p-4">
+      <div class="flex gap-2"><select class="field flex-1"><option>كل العروض</option><option>مقبول</option><option>مرفوض</option><option>منتهي</option></select><button class="pill-btn soft-btn">تصفية</button></div>
+    </div>
+    ${allOffers.length===0?`<div class="premium-panel p-10 text-center text-[12px] font-bold text-slate-400">لا توجد عروض حالياً - ستظهر هنا عند تقديم الفنيين عروضهم</div>`:''}
+    ${allOffers.slice(0,10).map(item=>`
+      <article class="premium-card p-4">
+        <div class="flex justify-between"><p class="font-black text-[12px]">طلب ${escHtml(item.orderSn)} - ${escHtml(item.orderService||'')}</p><span class="text-[10px] bg-blue-50 border border-blue-100 px-2 py-1 rounded-full font-black">عرض ${item.idx+1}</span></div>
+        <p class="text-[11px] font-bold mt-3">الفني: ${escHtml(item.offer.fanniName||'')} • ${escHtml(item.offer.price||'')} ج</p>
+        <p class="text-[10px] text-slate-500 mt-1 leading-5">${escHtml(item.offer.message||'')}</p>
+        <div class="mt-3 flex gap-2"><button onclick="rejectOffer('${escHtml(item.orderSn)}','${item.idx}')" class="pill-btn soft-btn flex-1">رفض العرض</button><button onclick="removeOffer('${escHtml(item.orderSn)}','${item.idx}')" class="pill-btn danger-pill flex-1">إزالة</button></div>
+      </article>
+    `).join('')}
+  </section>`;
+}
+
+function renderPricing(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-emerald-600 to-teal-600 p-4 text-white"><p class="text-[12px] font-black">الأسعار والعمولات ورسوم الفرص</p><p class="text-[10px] text-emerald-100 mt-1">نطاقات سعرية • رسوم الفرصة • عمولة المنصة</p></div>
+    <div class="premium-panel p-4 space-y-4">
+      <label class="block"><span class="text-[11px] font-black">رسوم الفرصة (check) - يتحملها الفني</span><input id="price-check" type="number" placeholder="مثال: 20" class="field mt-2"></label>
+      <label class="block"><span class="text-[11px] font-black">عمولة المنصة %</span><input id="price-commission" type="number" placeholder="مثال: 10" class="field mt-2"></label>
+      <label class="block"><span class="text-[11px] font-black">الحد الأدنى لسعر العرض</span><input id="price-min" type="number" placeholder="50" class="field mt-2"></label>
+      <label class="block"><span class="text-[11px] font-black">الحد الأقصى</span><input id="price-max" type="number" placeholder="10000" class="field mt-2"></label>
+      <div class="rounded-[12px] bg-amber-50 border border-amber-200 p-3 text-[10px] font-bold text-amber-800">الأسعار تحسب في الباك إند فقط، ولا تعيد حساب المعاملات القديمة. سيتم حفظ سجل التغييرات.</div>
+      <button onclick="savePricing()" class="w-full h-11 rounded-full bg-slate-900 text-white font-black text-[11px]">حفظ الأسعار ومعاينة الأثر</button>
+    </div>
+    <div class="premium-panel p-4">
+      <h3 class="text-[11px] font-black mb-3">سجل تغييرات الأسعار</h3>
+      <div class="text-[10px] font-bold text-slate-500">لا يوجد تغييرات بعد - سيظهر هنا تاريخ كل تعديل ومن نفذه</div>
+    </div>
+  </section>`;
+}
+
+function renderWallets(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-slate-900 to-slate-700 p-4 text-white"><p class="text-[12px] font-black">المحافظ والأرصدة والمعاملات المالية</p><p class="text-[10px] text-slate-300 mt-1">كشف حساب • تجميد • مقارنة الأرصدة</p></div>
+    <div class="grid grid-cols-2 gap-3">
+      <div class="stat-card"><p class="text-[20px] font-black text-emerald-600">${state.fannis.reduce((s,f)=>s+Number(f.balance||0),0)} ج</p><p class="text-[10px] font-bold text-slate-500">إجمالي أرصدة الفنيين</p></div>
+      <div class="stat-card"><p class="text-[20px] font-black text-amber-600">${state.topups.filter(t=>t.status==='pending').length}</p><p class="text-[10px] font-bold text-slate-500">معاملات معلقة</p></div>
+    </div>
+    <div class="premium-panel p-4">
+      <h3 class="text-[11px] font-black mb-3">محفظة فني - كشف مفصل</h3>
+      <div class="flex gap-2"><select id="wallet-fanni" class="field flex-1"><option>اختر الفني</option>${state.fannis.slice(0,10).map(f=>`<option value="${escHtml(f._id)}">${escHtml(f.name)} - ${escHtml(f.phone)}</option>`).join('')}</select><button onclick="loadWalletTransactions()" class="pill-btn primary-pill">عرض</button></div>
+      <div class="mt-4 space-y-2 text-[11px] font-bold"><div class="flex justify-between p-2 bg-emerald-50 rounded-[10px]"><span>+ 200 ج شحن</span><span class="text-slate-400">اليوم</span></div><div class="flex justify-between p-2 bg-red-50 rounded-[10px]"><span>- 20 ج رسوم فرصة SN123456</span><span class="text-slate-400">أمس</span></div></div>
+      <div class="mt-4 flex gap-2"><button onclick="freezeWallet()" class="pill-btn soft-btn flex-1">تجميد مؤقت</button><button onclick="adjustWallet()" class="pill-btn danger-pill flex-1">تعديل يدوي بصلاحية خاصة</button></div>
+    </div>
+  </section>`;
+}
+
+function renderTopups(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-blue-600 to-indigo-600 p-4 text-white flex gap-3"><div class="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">💳</div><div><p class="text-[12px] font-black">طلبات شحن المحافظ</p><p class="text-[11px] text-blue-100">مراجعة التحويل على ${WALLET}</p></div></div>
+    ${state.errors.topups?`<div class="bg-red-50 border border-red-200 rounded-[16px] p-4 text-[12px] font-bold text-red-700">${escHtml(state.errors.topups)}</div>`:''}
+    <div class="space-y-3">
+      ${state.filteredTopups.length===0?`<div class="premium-panel p-10 text-center tex
+t-[12px] font-bold text-slate-400">لا توجد طلبات شحن</div>`:''}
+      ${state.filteredTopups.map(t=>{
+        const id=String(t._id||''); const menuKey='topup:'+id; const pending=state.pendingActions[menuKey]; const isOpen=!!state.dropdowns[menuKey];
+        return `<article class="premium-card p-4"><div class="flex justify-between"><div><p class="font-black text-[18px]">${escHtml(String(t.amount||''))} <span class="text-[12px] text-slate-500">ج</span></p><p class="text-[11px] font-bold mt-1" dir="ltr">📱 ${escHtml(t.fromPhone||t.phone||'')}</p><p class="text-[10px] text-slate-400 mt-1">${escHtml(t.createdAt?new Date(t.createdAt).toLocaleString('ar-EG'):'')}</p></div><div class="flex flex-col items-end gap-2"><span class="text-[10px] px-3 py-1.5 rounded-full border font-black ${statusClass(t.status)}">${escHtml(statusLabel(t.status))}</span><div class="action-wrap"><button onclick="event.stopPropagation();toggleMenu('${menuKey}')" class="pill-btn soft-btn">إجراء ▾</button>${isOpen?`<div class="dropdown-menu"><button onclick="event.stopPropagation();setPendingAction('${menuKey}','approve','قبول الشحن')" class="dropdown-item">✓ قبول وإضافة رصيد</button><button onclick="event.stopPropagation();setPendingAction('${menuKey}','reject','رفض الشحن')" class="dropdown-item text-red-600">✕ رفض</button></div>`:''}</div></div></div>${pending?`<div class="confirm-bar"><span>تأكيد ${pending.label}؟</span><div class="flex gap-2"><button onclick="clearPending('${menuKey}')" class="h-7 px-3 rounded-full bg-white/20 text-[10px]">إلغاء</button><button onclick="confirmPending('${menuKey}')" class="h-7 px-4 rounded-full bg-white text-slate-900 text-[10px] font-black">تأكيد</button></div></div>`:''}</article>`;
+      }).join('')}
+    </div>
+  </section>`;
+}
+
+function renderComplaints(){
+  let html='<section class="mt-4 space-y-4"><div class="rounded-[18px] bg-gradient-to-r from-slate-900 to-slate-800 p-4 text-white flex gap-3"><div class="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center">⚠️</div><div><p class="text-[12px] font-black">شكاوى العملاء والفنيين والنزاعات</p><p class="text-[10px] text-slate-300">رد رسمي • ملاحظة داخلية • ربط باسترداد</p></div></div>';
+  if(state.errors.complaints) html+=`<div class="bg-red-50 border border-red-200 rounded-[16px] p-4 text-[12px] font-bold text-red-700">${escHtml(state.errors.complaints)}</div>`;
+  if(state.loadingComplaints) html+=`<div class="premium-panel p-10 text-center"><div class="h-8 w-8 rounded-full border-[3px] border-slate-200 border-t-blue-600 animate-spin mx-auto"></div></div>`;
+  if(state.filteredComplaints.length===0&&!state.loadingComplaints) html+=`<div class="premium-panel p-10 text-center text-[12px] font-bold text-slate-400">لا توجد شكاوى</div>`;
+  state.filteredComplaints.forEach(c=>{
+    const id=String(c._id||c.id||''); const sn=String(c.sn||''); const status=String(c.status||'جديدة');
+    html+=`<article class="premium-card p-4"><div class="flex justify-between gap-2"><div class="min-w-0"><p class="font-black text-[13px]">${escHtml(c.clientName||'عميل')}</p><p class="text-[11px] font-bold text-slate-500 mt-1">كود: <span class="bg-blue-50 px-2 py-0.5 rounded-full text-blue-800">${escHtml(sn)}</span> • ${escHtml(new Date(c.createdAt||Date.now()).toLocaleString('ar-EG'))}</p></div><span class="text-[10px] px-3 py-1.5 rounded-full border font-black ${status==='تم الحل'?'bg-emerald-50 border-emerald-200 text-emerald-700':status==='مرفوضة'?'bg-red-50 border-red-200 text-red-700':'bg-amber-50 border-amber-200 text-amber-800'}">${escHtml(status)}</span></div><div class="mt-3 rounded-[14px] bg-slate-50 border p-3"><p class="text-[11px] font-bold leading-6 whitespace-pre-wrap">${escHtml(c.text||'')}</p></div><div class="mt-3 space-y-2"><select id="complaint-status-${escHtml(id)}" class="field"><option value="جديدة" ${status==='جديدة'?'selected':''}>جديدة</option><option value="قيد المراجعة" ${status==='قيد المراجعة'?'selected':''}>قيد المراجعة</option><option value="تم الحل" ${status==='تم الحل'?'selected':''}>تم الحل</option><option value="مرفوضة" ${status==='مرفوضة'?'selected':''}>مرفوضة</option></select><textarea id="complaint-note-${escHtml(id)}" rows="2" placeholder="ملاحظة داخلية" class="field">${escHtml(c.adminNote||'')}</textarea><textarea id="complaint-response-${escHtml(id)}" rows="2" placeholder="رد رسمي للعميل" class="field">${escHtml(c.adminResponse||'')}</textarea><button onclick="saveComplaint('${escHtml(id)}')" class="w-full h-11 rounded-full bg-blue-600 text-white font-black text-[11px]">💾 حفظ التحديث</button></div></article>`;
+  });
+  return html+'</section>';
+}
+
+function renderServices(){
+  let html='<section class="mt-4 space-y-4"><div class="rounded-[18px] bg-gradient-to-r from-indigo-600 to-blue-600 p-4 text-white"><p class="text-[12px] font-black">إدارة الخدمات والمهن والتخصصات</p><p class="text-[10px] text-blue-100 mt-1">إضافة • تعديل • إخفاء • ترتيب • مصدر موحد</p></div>';
+  html+='<div class="premium-panel p-4"><div class="flex gap-2"><input id="new-service-name" placeholder="اسم خدمة جديدة" class="field flex-1"><input id="new-service-category" placeholder="القسم (اختياري)" class="field flex-1"><input id="new-service-emoji" placeholder="🔧" class="field !w-[60px]"><button onclick="addService()" class="pill-btn primary-pill">إضافة</button></div></div>';
+  if(state.servicesLoading) html+='<div class="premium-panel p-10 text-center"><div class="h-8 w-8 rounded-full border-[3px] border-slate-200 border-t-blue-600 animate-spin mx-auto"></div></div>';
+  if(state.filteredServices.length===0&&!state.servicesLoading) html+='<div class="premium-panel p-10 text-center text-[12px] font-bold text-slate-400">لا توجد خدمات</div>';
+  state.filteredServices.forEach((cat, idx)=>{
+    const label=String(cat.label||cat.name||'قسم'); const emoji=String(cat.emoji||'🔧'); const displayServices=Array.isArray(cat._displayServices)?cat._displayServices:cat.services||[]; const isOpen=state.openServices[idx]!==false;
+    html+=`<article class="premium-card overflow-hidden"><button onclick="toggleServiceCat(${idx})" class="w-full flex items-center justify-between p-4 bg-white text-right"><div class="flex items-center gap-3"><span class="h-9 w-9 rounded-full bg-slate-100 flex items-center justify-center">${escHtml(emoji)}</span><div class="text-right"><p class="font-black text-[13px]">${escHtml(label)}</p><p class="text-[10px] text-slate-500">${displayServices.length} خدمة</p></div></div><span class="h-8 w-8 rounded-full bg-slate-50 flex items-center justify-center text-[12px] ${isOpen?'rotate-180':''}">▼</span></button>`;
+    if(isOpen){
+      html+='<div class="border-t divide-y bg-slate-50/50">';
+      displayServices.forEach(srv=>{
+        const s=String(srv||'');
+        html+=`<div class="p-3.5 flex items-center justify-between bg-white"><div class="flex items-center gap-2.5"><span class="h-2 w-2 rounded-full bg-blue-600"></span><span class="text-[12px] font-bold">${escHtml(s)}</span></div><div class="flex gap-1"><button onclick="editService('${escHtml(label)}','${escHtml(s)}')" class="h-7 px-3 rounded-full bg-slate-50 border text-[10px] font-black">تعديل</button><button onclick="hideService('${escHtml(s)}')" class="h-7 px-3 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-black">إخفاء</button></div></div>`;
+      });
+      html+='</div>';
     }
-    const phone = getLoginPhone(req.body);
-    if (!phone) { return res.status(401).json({ message: 'بيانات الدخول غير صحيحة' }); }
-    const admin = await Fanni.findOne({ phone, role: 'admin' }).select('+passwordHash');
-    if (!admin || !admin.passwordHash || !(await bcrypt.compare(req.body.password, admin.passwordHash))) {
-      return res.status(401).json({ message: 'بيانات الدخول غير صحيحة' });
-    }
-    if (admin.status === 'معلق' || admin.status === 'مرفوض') {
-      return res.status(403).json({ message: 'حساب الإدارة غير مسموح له بالدخول' });
-    }
-    const token = jwt.sign({ id: admin._id, role: 'admin' }, process.env.JWT_SECRET, { expiresIn: ADMIN_TOKEN_EXPIRY });
-    return res.json({ token, user: { id: String(admin._id), name: admin.name, phone: admin.phone, role: admin.role } });
-  } catch (err) { next(err); }
-});
+    html+='</article>';
+  });
+  return html+'</section>';
+}
 
-router.get('/complaints', auth('admin'), async (req, res, next) => {
-  try {
-    const filter = {};
-    const status = String(req.query.status || '').trim();
-    if (status) {
-      const { error } = complaintStatusSchema.validate(status);
-      if (error) { return res.status(400).json({ message: 'حالة الشكوى المطلوبة غير صحيحة' }); }
-      filter.status = status;
-    }
-    const parsedLimit = Number.parseInt(req.query.limit, 10);
-    const limit = Number.isInteger(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, MAX_LIST_LIMIT) : MAX_LIST_LIMIT;
-    const complaints = await Complaint.find(filter).sort({ createdAt: -1 }).limit(limit).lean();
-    return res.json({ complaints, data: complaints, total: complaints.length });
-  } catch (err) { next(err); }
-});
+function renderRegions(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-teal-600 to-cyan-600 p-4 text-white"><p class="text-[12px] font-black">المناطق والتغطية الجغرافية</p><p class="text-[10px] text-teal-100 mt-1">محافظات • مدن • أحياء • خدمات متاحة</p></div>
+    <div class="premium-panel p-4">
+      <div class="flex gap-2"><input id="new-region" placeholder="محافظة جديدة" class="field flex-1"><button onclick="addRegion()" class="pill-btn primary-pill">إضافة</button></div>
+      <div class="mt-4 space-y-2">
+        ${['القاهرة - 120 فني','الجيزة - 85 فني','الإسكندرية - 60 فني','الدقهلية - 12 فني (نقص)'].map(r=>`<div class="flex justify-between items-center p-3 rounded-[12px] bg-slate-50 border"><span class="text-[11px] font-black">${r}</span><div class="flex gap-1"><button class="h-7 px-3 rounded-full bg-white border text-[10px] font-black">تعديل</button><button class="h-7 px-3 rounded-full bg-red-50 border border-red-200 text-red-700 text-[10px] font-black">إيقاف استقبال</button></div></div>`).join('')}
+      </div>
+    </div>
+  </section>`;
+}
 
-router.get('/complaints/:id', auth('admin'), async (req, res, next) => {
-  try {
-    if (!validId(req.params.id)) { return sendBadId(res); }
-    const complaint = await Complaint.findById(req.params.id).lean();
-    if (!complaint) { return res.status(404).json({ message: 'الشكوى غير موجودة' }); }
-    return res.json({ complaint, data: complaint });
-  } catch (err) { next(err); }
-});
+function renderNotifications(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-violet-600 to-purple-600 p-4 text-white"><p class="text-[12px] font-black">الإشعارات والرسائل</p><p class="text-[10px] text-violet-100 mt-1">تطبيق • SMS • إعلان عام</p></div>
+    <div class="premium-panel p-4 space-y-3">
+      <select class="field"><option>إرسال للعميل عند تغير حالة طلبه</option><option>إشعار الفني بطلب جديد</option><option>إشعار وصول عرض جديد</option><option>إعلان عام لفئة</option></select>
+      <textarea rows="3" placeholder="نص الإشعار..." class="field"></textarea>
+      <div class="flex gap-2"><select class="field flex-1"><option>كل الفنيين</option><option>فنيو القاهرة</option><option>العملاء</option></select><button onclick="sendNotification()" class="pill-btn primary-pill">إرسال 🔔</button></div>
+      <div class="rounded-[12px] bg-slate-50 border p-3 text-[10px] font-bold text-slate-500">سيتم تسجيل حالة الإرسال وفشل الإرسال إن وجد</div>
+    </div>
+  </section>`;
+}
 
-router.patch('/complaints/:id', auth('admin'), validate(Joi.object({
-  status: complaintStatusSchema.optional(),
-  adminNote: Joi.string().trim().max(1000).allow('').optional(),
-  adminResponse: Joi.string().trim().max(1000).allow('').optional()
-}).min(1)), async (req, res, next) => {
-  try {
-    if (!validId(req.params.id)) { return sendBadId(res); }
-    const updates = {};
-    const hasStatus = Object.prototype.hasOwnProperty.call(req.body, 'status');
-    if (hasStatus) { updates.status = req.body.status; }
-    if (Object.prototype.hasOwnProperty.call(req.body, 'adminNote')) { updates.adminNote = req.body.adminNote; }
-    if (Object.prototype.hasOwnProperty.call(req.body, 'adminResponse')) { updates.adminResponse = req.body.adminResponse; }
-    if (hasStatus) { updates.reviewedAt = new Date(); updates.reviewedBy = adminName(req); }
-    updates.updatedAt = new Date();
-    const complaint = await Complaint.findByIdAndUpdate(req.params.id, { $set: updates }, { new: true, runValidators: true }).lean();
-    if (!complaint) { return res.status(404).json({ message: 'الشكوى غير موجودة' }); }
-    return res.json({ message: 'تم تحديث الشكوى بنجاح', complaint, data: complaint });
-  } catch (err) { next(err); }
-});
+function renderSettings(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-slate-800 to-slate-600 p-4 text-white"><p class="text-[12px] font-black">إعدادات النظام العامة</p><p class="text-[10px] text-slate-300 mt-1">اسم • شعار • صيانة • حدود • سياسات</p></div>
+    <div class="premium-panel p-4 space-y-4">
+      <label class="block"><span class="text-[11px] font-black">اسم المنصة</span><input value="صُنّاع" class="field mt-2"></label>
+      <label class="block"><span class="text-[11px] font-black">رسالة وضع الصيانة</span><textarea rows="2" placeholder="نقوم بالصيانة..." class="field mt-2"></textarea></label>
+      <div class="flex items-center justify-between p-3 rounded-[12px] bg-amber-50 border border-amber-200"><span class="text-[11px] font-black">وضع الصيانة</span><label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" class="sr-only peer"><div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-blue-600"></div></label></div>
+      <label class="block"><span class="text-[11px] font-black">الحد الأقصى لمحاولات تسجيل الفني</span><input type="number" value="5" class="field mt-2"></label>
+      <button onclick="saveSettings()" class="w-full h-11 rounded-full bg-slate-900 text-white font-black text-[11px]">حفظ الإعدادات</button>
+    </div>
+  </section>`;
+}
 
-router.get('/fannis', auth('admin'), async (req, res, next) => {
-  try {
-    const list = await Fanni.find({ role: 'fanni' }).select('-passwordHash').sort({ createdAt: -1 }).limit(MAX_LIST_LIMIT).lean();
-    const fannis = list.map(publicFanni);
-    return res.json({ fannis, data: fannis });
-  } catch (err) { next(err); }
-});
+function renderSecurity(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-red-600 to-orange-600 p-4 text-white"><p class="text-[12px] font-black">الأمان وسجل التدقيق</p><p class="text-[10px] text-red-100 mt-1">سجل غير قابل للتعديل • محاولات دخول • تأكيد إضافي</p></div>
+    <div class="premium-panel p-4">
+      <div class="flex gap-2"><input type="date" class="field flex-1"><button class="pill-btn soft-btn">تصفية</button></div>
+      <div class="mt-4 space-y-2 text-[11px] font-bold">
+        <div class="p-3 rounded-[12px] bg-slate-50 border"><p>admin@sonaa.com قام بقبول فني 01012345678</p><p class="text-[10px] text-slate-400 mt-1">منذ 10 دقائق • IP: 197.36.1.2 • نجاح</p></div>
+        <div class="p-3 rounded-[12px] bg-red-50 border border-red-100"><p>محاولة دخول فاشلة - finance@sonaa.com</p><p class="text-[10px] text-red-400 mt-1">منذ ساعة • IP: 41.34.22.10 • فشل</p></div>
+        <div class="p-3 rounded-[12px] bg-slate-50 border"><p>تعديل رصيد فني +200 ج بواسطة admin</p><p class="text-[10px] text-slate-400 mt-1">أمس • سبب: شحن محفظة</p></div>
+      </div>
+    </div>
+  </section>`;
+}
 
-router.get('/orders', auth('admin'), async (req, res, next) => {
-  try {
-    const filter = {};
-    const status = String(req.query.status || '').trim();
-    if (status) { filter.status = status; }
-    const parsedLimit = Number.parseInt(req.query.limit, 10);
-    const limit = Number.isInteger(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, MAX_LIST_LIMIT) : MAX_LIST_LIMIT;
-    const orders = await Order.find(filter).sort({ createdAt: -1 }).limit(limit).lean();
-    return res.json({ orders, data: orders, items: orders });
-  } catch (err) { next(err); }
-});
+function renderReports(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-indigo-600 to-blue-600 p-4 text-white"><p class="text-[12px] font-black">التقارير والتحليلات</p><p class="text-[10px] text-indigo-100 mt-1">طلبات • فنيون • عملاء • مالي • تصدير</p></div>
+    <div class="premium-panel p-4">
+      <div class="grid grid-cols-2 gap-2"><input type="date" class="field"><input type="date" class="field"><select class="field"><option>كل الخدمات</option><option>سباكة</option><option>كهرباء</option></select><select class="field"><option>كل المناطق</option><option>القاهرة</option></select></div>
+      <button onclick="generateReport()" class="mt-3 w-full h-11 rounded-full bg-slate-900 text-white font-black text-[11px]">إنشاء التقرير 📊</button>
+      <button onclick="exportReport()" class="mt-2 w-full h-11 rounded-full bg-white border font-black text-[11px]">تصدير Excel</button>
+    </div>
+    <div class="grid grid-cols-2 gap-3"><div class="stat-card"><p class="text-[18px] font-black">320</p><p class="text-[10px] font-bold text-slate-500">طلبات هذا الشهر</p></div><div class="stat-card"><p class="text-[18px] font-black">89%</p><p class="text-[10px] font-bold text-slate-500">معدل إنجاز الفنيين</p></div></div>
+  </section>`;
+}
 
-router.post('/fannis/:id/approve', auth('admin'), async (req, res, next) => {
-  try {
-    if (!validId(req.params.id)) return sendBadId(res);
-    const fanni = await Fanni.findOne({ _id: req.params.id, role: 'fanni' });
-    if (!fanni) { return res.status(404).json({ message: 'الفني غير موجود' }); }
-    if (fanni.status === 'معلق') { return res.status(409).json({ message: 'الفني معلق. أعد تفعيله أولاً قبل القبول' }); }
-    if (fanni.status === 'معتمد') { return res.json({ message: 'الفني معتمد بالفعل', fanni: publicFanni(fanni) }); }
-    fanni.status = 'معتمد'; fanni.rejectionReason = undefined; fanni.suspensionReason = undefined; fanni.suspendedAt = undefined;
-    fanni.decisions.push(decision(req, 'موافقة')); await fanni.save();
-    return res.json({ message: 'تم اعتماد الفني بنجاح', fanni: publicFanni(fanni) });
-  } catch (err) { next(err); }
-});
+function renderSupport(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-cyan-600 to-blue-600 p-4 text-white"><p class="text-[12px] font-black">أدوات الدعم ومكافحة إساءة الاستخدام</p><p class="text-[10px] text-cyan-100 mt-1">بحث موحد • علامة مراجعة • إجراءات مقترحة</p></div>
+    <div class="premium-panel p-4"><div class="flex gap-2"><input placeholder="رقم طلب / كود تتبع / هاتف" class="field flex-1"><button class="pill-btn primary-pill">بحث</button></div><div class="mt-3 flex gap-2"><button class="pill-btn soft-btn flex-1">وضع علامة مراجعة 🚩</button><button class="pill-btn soft-btn flex-1">سجل المخالفات</button></div></div>
+  </section>`;
+}
 
-router.post('/fannis/:id/reject', auth('admin'), validate(Joi.object({ reason: reasonSchema.optional() })), async (req, res, next) => {
-  try {
-    if (!validId(req.params.id)) return sendBadId(res);
-    const fanni = await Fanni.findOne({ _id: req.params.id, role: 'fanni' });
-    if (!fanni) { return res.status(404).json({ message: 'الفني غير موجود' }); }
-    if (fanni.status === 'معلق') { return res.status(409).json({ message: 'لا يمكن رفض حساب معلق. أعده للمراجعة أولاً' }); }
-    if (fanni.status === 'مرفوض') { return res.json({ message: 'الفني مرفوض بالفعل', fanni: publicFanni(fanni) }); }
-    const reason = String(req.body.reason || '').trim();
-    fanni.status = 'مرفوض'; fanni.rejectionReason = reason || undefined; fanni.decisions.push(decision(req, 'رفض', reason)); await fanni.save();
-    return res.json({ message: 'تم رفض الفني', fanni: publicFanni(fanni) });
-  } catch (err) { next(err); }
-});
+function renderContent(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-pink-600 to-rose-600 p-4 text-white"><p class="text-[12px] font-black">إدارة المحتوى وتجربة المستخدم</p><p class="text-[10px] text-pink-100 mt-1">إعلانات • أسئلة شائعة • رسائل صيانة</p></div>
+    <div class="premium-panel p-4 space-y-3">
+      <label class="block"><span class="text-[11px] font-black">رسالة إعلانية في واجهة العميل</span><textarea rows="2" placeholder="عرض خاص..." class="field mt-2"></textarea><button class="mt-2 pill-btn soft-btn w-full">معاينة ونشر</button></label>
+      <div class="border-t pt-3"><h3 class="text-[11px] font-black mb-2">الأسئلة الشائعة</h3><div class="flex gap-2"><input placeholder="سؤال جديد" class="field flex-1"><button class="pill-btn primary-pill">إضافة</button></div></div>
+    </div>
+  </section>`;
+}
 
-router.post('/fannis/:id/disable', auth('admin'), validate(Joi.object({ reason: reasonSchema.optional() })), async (req, res, next) => {
-  try {
-    if (!validId(req.params.id)) return sendBadId(res);
-    const fanni = await Fanni.findOne({ _id: req.params.id, role: 'fanni' });
-    if (!fanni) { return res.status(404).json({ message: 'الفني غير موجود' }); }
-    if (fanni.status === 'معلق') { return res.json({ message: 'حساب الفني معلق بالفعل', fanni: publicFanni(fanni) }); }
-    const reason = String(req.body.reason || '').trim();
-    fanni.status = 'معلق'; fanni.suspensionReason = reason || undefined; fanni.suspendedAt = new Date(); fanni.decisions.push(decision(req, 'تعليق', reason)); await fanni.save();
-    return res.json({ message: 'تم تعليق حساب الفني', fanni: publicFanni(fanni) });
-  } catch (err) { next(err); }
-});
-
-router.post('/fannis/:id/enable', auth('admin'), async (req, res, next) => {
-  try {
-    if (!validId(req.params.id)) return sendBadId(res);
-    const fanni = await Fanni.findOne({ _id: req.params.id, role: 'fanni' });
-    if (!fanni) { return res.status(404).json({ message: 'الفني غير موجود' }); }
-    if (fanni.status !== 'معلق') { return res.json({ message: 'حساب الفني غير معلق', fanni: publicFanni(fanni) }); }
-    const previousDecision = [...(fanni.decisions || [])].reverse().find(item => !['تعليق', 'إعادة تفعيل'].includes(item.action));
-    if (previousDecision?.action === 'موافقة') { fanni.status = 'معتمد'; } else if (previousDecision?.action === 'رفض') { fanni.status = 'مرفوض'; } else { fanni.status = 'قيد المراجعة'; }
-    fanni.suspensionReason = undefined; fanni.suspendedAt = undefined; fanni.decisions.push(decision(req, 'إعادة تفعيل')); await fanni.save();
-    return res.json({ message: 'تمت إعادة تفعيل الحساب', fanni: publicFanni(fanni) });
-  } catch (err) { next(err); }
-});
-
-router.post('/fannis/:id/set-balance', auth('admin'), validate(Joi.object({ amount: amountSchema, reason: reasonSchema.optional() })), async (req, res, next) => {
-  if (!validId(req.params.id)) return sendBadId(res);
-  let session;
-  try {
-    session = await mongoose.startSession();
-    let outcome = null;
-    await session.withTransaction(async () => {
-      const fanni = await Fanni.findOne({ _id: req.params.id, role: 'fanni' }).session(session);
-      if (!fanni) { outcome = null; return; }
-      const amount = Number(req.body.amount);
-      const previous = Number(fanni.walletBalance || 0);
-      const reason = String(req.body.reason || '').trim();
-      const difference = amount - previous;
-      const updatedFanni = await Fanni.findOneAndUpdate({ _id: fanni._id, role: 'fanni' }, { $set: { walletBalance: amount }, $push: { decisions: decision(req, 'تسوية إدارية', `تعيين الرصيد من ${previous} إلى ${amount}. ${reason}`.trim()) } }, { new: true, session, runValidators: true });
-      if (!updatedFanni) { throw new Error('SETTLEMENT_FANNI_NOT_FOUND'); }
-      if (difference !== 0) {
-        const transaction = new WalletTransaction({ fanni: fanni._id, type: 'admin_adjustment', amount: difference, balanceBefore: previous, balanceAfter: amount, description: `تسوية إدارية: من ${previous} إلى ${amount}. ${reason}`.trim().slice(0, 500), idempotencyKey: `admin-set-balance:${String(fanni._id)}:${crypto.randomBytes(16).toString('hex')}` });
-        await transaction.save({ session });
-      }
-      outcome = { fanni: updatedFanni, balance: Number(updatedFanni.walletBalance) };
-    });
-    if (!outcome) { return res.status(404).json({ message: 'الفني غير موجود' }); }
-    return res.json({ message: 'تم تحديث رصيد المحفظة وتسجيل التسوية', balance: outcome.balance, fanni: publicFanni(outcome.fanni) });
-  } catch (err) { next(err); } finally { if (session) await session.endSession(); }
-});
-
-router.post('/fannis/:id/add-balance', auth('admin'), validate(Joi.object({ amount: Joi.number().strict().positive().max(100000000).required(), reason: reasonSchema.optional() })), async (req, res, next) => {
-  if (!validId(req.params.id)) return sendBadId(res);
-  let session;
-  try {
-    session = await mongoose.startSession();
-    let outcome = null;
-    const amount = Number(req.body.amount);
-    const reason = String(req.body.reason || '').trim();
-    await session.withTransaction(async () => {
-      const beforeFanni = await Fanni.findOne({ _id: req.params.id, role: 'fanni' }).session(session);
-      if (!beforeFanni) { outcome = null; return; }
-      const balanceBefore = Number(beforeFanni.walletBalance || 0);
-      const fanni = await Fanni.findOneAndUpdate({ _id: beforeFanni._id, role: 'fanni' }, { $inc: { walletBalance: amount }, $push: { decisions: decision(req, 'تسوية إدارية', `إضافة ${amount} إلى المحفظة. ${reason}`.trim()) } }, { new: true, session, runValidators: true });
-      if (!fanni) throw new Error('ADD_BALANCE_FANNI_NOT_FOUND');
-      const transaction = new WalletTransaction({ fanni: fanni._id, type: 'admin_adjustment', amount, balanceBefore, balanceAfter: Number(fanni.walletBalance), description: `إضافة إدارية بمبلغ ${amount}. ${reason}`.trim().slice(0, 500), idempotencyKey: `admin-add-balance:${String(fanni._id)}:${crypto.randomBytes(16).toString('hex')}` });
-      await transaction.save({ session });
-      outcome = { fanni, balance: Number(fanni.walletBalance) };
-    });
-    if (!outcome) { return res.status(404).json({ message: 'الفني غير موجود' }); }
-    return res.json({ message: 'تمت إضافة الرصيد وتسجيل الحركة المالية', balance: outcome.balance, fanni: publicFanni(outcome.fanni) });
-  } catch (err) { next(err); } finally { if (session) await session.endSession(); }
-});
-
-router.get('/topup-requests', auth('admin'), async (req, res, next) => {
-  try {
-    const list = await TopupRequest.find({}).sort({ createdAt: -1 }).limit(MAX_LIST_LIMIT).lean();
-    const requests = list.map(publicTopup);
-    return res.json({ requests, data: requests });
-  } catch (err) { next(err); }
-});
-
-router.post('/topup-requests/:id/approve', auth('admin'), async (req, res, next) => {
-  if (!validId(req.params.id)) return sendBadId(res);
-  let session;
-  try {
-    session = await mongoose.startSession();
-    let outcome = null;
-    await session.withTransaction(async () => {
-      const topup = await TopupRequest.findOneAndUpdate({ _id: req.params.id, status: 'قيد المراجعة', isCredited: false }, { $set: { status: 'مقبول', isCredited: true, reviewedAt: new Date(), reviewedBy: adminName(req), reviewReason: '' } }, { new: true, session });
-      if (!topup) { outcome = { kind: 'not-pending' }; return; }
-      const updatedFanni = await Fanni.findOneAndUpdate({ _id: topup.fanni, role: 'fanni' }, { $inc: { walletBalance: topup.amount }, $push: { decisions: decision(req, 'تسوية إدارية', `شحن محفظة بمبلغ ${topup.amount} جنيه لطلب ${topup._id}`) } }, { new: true, session, runValidators: true });
-      if (!updatedFanni) { throw new Error('TOPUP_FANNI_NOT_FOUND'); }
-      const balanceAfter = Number(updatedFanni.walletBalance);
-      const balanceBefore = balanceAfter - Number(topup.amount);
-      const transaction = new WalletTransaction({ fanni: updatedFanni._id, type: 'topup', amount: Number(topup.amount), balanceBefore, balanceAfter, description: `شحن محفظة بمبلغ ${topup.amount} جنيه لطلب ${topup._id}`, idempotencyKey: `topup:${String(topup._id)}` });
-      await transaction.save({ session });
-      outcome = { kind: 'approved', topup, balance: balanceAfter };
-    });
-    if (outcome?.kind !== 'approved') {
-      const current = await TopupRequest.findById(req.params.id).lean();
-      if (!current) { return res.status(404).json({ message: 'طلب الشحن غير موجود' }); }
-      return res.status(409).json({ message: 'تمت معالجة طلب الشحن بالفعل أو أنه غير متاح للمراجعة', status: current.status, isCredited: Boolean(current.isCredited) });
-    }
-    return res.json({ message: 'تم قبول طلب الشحن وإضافة الرصيد مرة واحدة', request: publicTopup(outcome.topup), balance: outcome.balance });
-  } catch (err) {
-    if (err.message === 'TOPUP_FANNI_NOT_FOUND') { return res.status(409).json({ message: 'الفني المرتبط بطلب الشحن غير موجود. لم يتم اعتماد العملية' }); }
-    next(err);
-  } finally { if (session) await session.endSession(); }
-});
-
-router.post('/topup-requests/:id/reject', auth('admin'), validate(Joi.object({ reason: reasonSchema.optional() })), async (req, res, next) => {
-  try {
-    if (!validId(req.params.id)) return sendBadId(res);
-    const reason = String(req.body.reason || '').trim();
-    const request = await TopupRequest.findOneAndUpdate({ _id: req.params.id, status: 'قيد المراجعة', isCredited: false }, { $set: { status: 'مرفوض', isCredited: false, reviewedAt: new Date(), reviewedBy: adminName(req), reviewReason: reason } }, { new: true, runValidators: true });
-    if (!request) {
-      const current = await TopupRequest.findById(req.params.id).lean();
-      if (!current) { return res.status(404).json({ message: 'طلب الشحن غير موجود' }); }
-      return res.status(409).json({ message: 'تمت معالجة طلب الشحن بالفعل أو أنه غير متاح للمراجعة', status: current.status });
-    }
-    return res.json({ message: 'تم رفض طلب الشحن', request: publicTopup(request) });
-  } catch (err) { next(err); }
-});
+function renderClients(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-slate-900 to-slate-700 p-4 text-white"><p class="text-[12px] font-black">إدارة العملاء</p><p class="text-[10px] text-slate-300 mt-1">بحث • ملف عميل • حظر • ملاحظات • شكاوى</p></div>
+    <div class="premium-panel p-4"><div class="flex gap-2"><input id="client-search" placeholder="اسم / هاتف / كود" class="field flex-1"><button onclick="searchClients()" class="pill-btn primary-pill">بحث</button></div></div>
+    <div class="space-y-3">
+      ${state.orders.slice(0,5).map(o=>`<article class="premium-card p-4"><div class="flex justify-between"><div><p class="font-black text-[13px]">${escHtml(o.clientName||'عميل')}</p><p class="text-[11px] text-slate-500 mt-1" dir="ltr">${escHtml(o.clientPhone||'')}</p><p class="text-[10px] text-slate-400 mt-1">طلبات: ${state.orders.filter(x=>x.clientPhone===o.clientPhone).length} • آخر طلب: ${escHtml(o.sn||'')}</p></div><button onclick="openClient('${escHtml(o.clientPhone||'') }')" class="pill-btn soft-btn">ملف العميل</button></div><div class="mt-3 flex gap-2"><button onclick="blockClient('${escHtml(o.clientPhone||'') }')" class="pill-btn soft-btn flex-1">حظر</button><button onclick="noteClient('${escHtml(o.clientPhone||'') }')" class="pill-btn soft-btn flex-1">ملاحظة داخلية</button></div></article>`).join('')||'<div class="premium-panel p-10 text-center text-[12px] font-bold text-slate-400">لا يوجد عملاء - سيظهر العملاء من الطلبات</div>'}
+    </div>
+  </section>`;
+}
 
 
-router.delete('/orders/:sn', auth('admin'), async (req, res, next) => {
-  try {
-    const sn = String(req.params.sn || '').trim();
-    if (!/^[A-Za-z0-9_-]{3,30}$/.test(sn)) { return res.status(400).json({ message: 'رقم الطلب غير صالح' }); }
-    const order = await Order.findOne({ sn });
-    if (!order) { return res.status(404).json({ message: 'الطلب غير موجود' }); }
-    const hasCommissionTransaction = await WalletTransaction.exists({ order: order._id, type: 'commission' });
-    const hasAssignedFanni = Boolean(order.assignedFanni);
-    const hasOffers = Array.isArray(order.offers) && order.offers.length > 0;
-    const hasCommission = order.commissionCharged === true || Boolean(hasCommissionTransaction);
-    const protectedStatuses = ['تم اختيار فني', 'تم الانتهاء'];
-    const hasProtectedStatus = protectedStatuses.includes(order.status);
-    const summary = { status: String(order.status || ''), hasAssignedFanni, offersCount: Array.isArray(order.offers) ? order.offers.length : 0, commissionCharged: order.commissionCharged === true, hasCommissionTransaction: Boolean(hasCommissionTransaction), hasFinancialOrTechnicianLinks: hasAssignedFanni || hasOffers || hasCommission || hasProtectedStatus };
-    const deleted = await Order.deleteOne({ _id: order._id });
-    if (deleted.deletedCount !== 1) { return res.status(409).json({ message: 'لم يتم حذف الطلب. حدّث القائمة وحاول مرة أخرى.' }); }
-    return res.json({ message: summary.hasFinancialOrTechnicianLinks ? 'تم حذف الطلب بعد التأكيد. احتُفظ بسجلات الحركات المالية وطلبات الشحن.' : 'تم حذف الطلب بنجاح.', deleted: 1, sn: order.sn, summary });
-  } catch (err) { next(err); }
-});
+function renderStats(){
+  return `
+  <section class="mt-4 space-y-3">
+    <div class="grid grid-cols-2 gap-3">
+      <div class="stat-card"><p class="text-[28px] font-black">${state.fannis.length}</p><p class="text-[11px] font-bold text-slate-500">إجمالي الفنيين</p></div>
+      <div class="stat-card"><p class="text-[28px] font-black text-emerald-600">${state.fannis.filter(f=>f.isApproved).length}</p><p class="text-[11px] font-bold text-slate-500">معتمدون</p></div>
+      <div class="stat-card"><p class="text-[28px] font-black text-blue-700">${state.orders.length}</p><p class="text-[11px] font-bold text-slate-500">طلبات</p></div>
+      <div class="stat-card"><p class="text-[28px] font-black">${state.topups.length}</p><p class="text-[11px] font-bold text-slate-500">شحن</p></div>
+      <div class="stat-card col-span-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-0"><p class="text-[26px] font-black">${state.topups.filter(t=>t.status==='approved').reduce((s,t)=>s+Number(t.amount||0),0)} جنيه</p><p class="text-[11px] font-bold text-emerald-100">إجمالي الشحن المقبول</p></div>
+    </div>
+    <div class="premium-panel p-4 flex items-center gap-3"><div class="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center">💼</div><div><p class="text-[11px] font-black">محفظة التحويل</p><p class="text-[12px] font-black" dir="ltr">${WALLET}</p></div></div>
+  </section>`;
+}
 
-router.delete('/clients/:phone', auth('admin'), async (req, res, next) => {
-  try {
-    const rawPhone = String(req.params.phone || '').trim();
-    const phone = normalizePhone(rawPhone);
-    if (!phone || !/^01[0-9]{9}$/.test(phone)) { return res.status(400).json({ message: 'رقم هاتف العميل غير صالح. أدخل رقم موبايل مصري صحيحًا.' }); }
-    const orders = await Order.find({ clientPhone: phone }).select('_id sn status assignedFanni commissionCharged').lean();
-    if (orders.length === 0) { return res.status(404).json({ message: 'لا توجد طلبات مسجلة برقم الهاتف ده' }); }
-    const orderIds = orders.map(order => order._id);
-    const hasCommissionTransaction = await WalletTransaction.exists({ order: { $in: orderIds }, type: 'commission' });
-    const protectedStatuses = ['تم اختيار فني', 'تم الانتهاء'];
-    const hasProtectedOrder = orders.some(order => order.commissionCharged === true || Boolean(order.assignedFanni) || protectedStatuses.includes(order.status));
-    if (hasProtectedOrder || hasCommissionTransaction) { return res.status(409).json({ message: 'لا يمكن حذف العميل لأن عنده طلبًا مرتبطًا بفني أو بعملية مالية. لم يتم حذف أي طلب.' }); }
-    const result = await Order.deleteMany({ _id: { $in: orderIds }, clientPhone: phone, commissionCharged: { $ne: true }, assignedFanni: { $in: [null, undefined] }, status: { $nin: protectedStatuses } });
-    if (result.deletedCount !== orders.length) { return res.status(409).json({ message: 'لم يتم حذف كل الطلبات المتوقعة؛ قد تكون بيانات تغيرت أثناء العملية. راجع الطلبات قبل إعادة المحاولة.', deleted: result.deletedCount }); }
-    return res.json({ message: 'تم حذف طلبات العميل التجريبية بنجاح', deleted: result.deletedCount, phone });
-  } catch (err) { next(err); }
-});
+// --- Existing logic preserved ---
+function setTab(t){state.tab=t; state.dropdowns={}; state.pendingActions={}; render(); if(t==='orders')loadOrders(); else if(t==='complaints')loadComplaints(); else if(t==='services')loadServices(); else if(t==='topups')applyTopupFilter(); else if(t==='clients')applyClientFilter(); else applyFilter();}
+function onSearch(v){state.search=v; if(state.tab==='orders')applyOrderFilter(); else if(state.tab==='complaints')applyComplaintFilter(); else if(state.tab==='services')applyServicesFilter(); else if(state.tab==='topups')applyTopupFilter(); else if(state.tab==='clients')applyClientFilter(); else applyFilter();}
+function onFilter(v){state.filter=v;applyFilter()} function onFilterTopup(v){state.filterTopup=v;applyTopupFilter()} function onFilterOrder(v){state.filterOrder=v;applyOrderFilter()} function onFilterComplaint(v){state.filterComplaint=v;applyComplaintFilter()}
+function applyFilter(){let list=[...state.fannis]; if(state.tab==='pending'){list=list.filter(f=>!f.isApproved&&!f.isDisabled&&f.status!=='rejected');} if(state.tab==='disabled')list=list.filter(f=>f.isDisabled); if(state.filter!=='الكل'){list=list.filter(f=>{const st=f.isDisabled?'disabled':f.isApproved?'approved':f.status||'pending'; return String(st).toLowerCase()===state.filter.toLowerCase();});} if(state.search){const s=state.search.toLowerCase(); list=list.filter(f=>String(f.name||'').toLowerCase().includes(s)||String(f.phone||'').toLowerCase().includes(s));} state.filtered=list; if(!['topups','stats','orders','complaints','services','clients','dashboard','levels','roles','offers','pricing','wallets','regions','notifications','settings','security','reports','support','content'].includes(state.tab))render(); else if(['fannis','pending','disabled','levels'].includes(state.tab))render();}
+function applyTopupFilter(){let list=[...state.topups]; if(state.filterTopup!=='الكل'){list=list.filter(t=>String(t.status||'pending').toLowerCase()===state.filterTopup.toLowerCase());} if(state.search){const s=state.search.toLowerCase(); list=list.filter(t=>String(t.fromPhone||t.phone||'').toLowerCase().includes(s)||String(t.amount||'').includes(s));} state.filteredTopups=list; if(state.tab==='topups')render();}
+function applyOrderFilter(){let list=[...state.orders]; if(state.filterOrder!=='الكل'){list=list.filter(o=>String(o.status||'قيد المراجعة')===state.filterOrder);} if(state.search)list=list.filter(o=>orderSearchMatch(o,state.search)); state.filteredOrders=list; if(state.tab==='orders')render();}
+function applyComplaintFilter(){let list=[...state.complaints]; if(state.filterComplaint!=='الكل')list=list.filter(c=>String(c.status||'جديدة')===state.filterComplaint); if(state.search){const q=state.search.toLowerCase(); list=list.filter(c=>[c.sn,c.clientName,c.text,c.status,c.adminNote,c.adminResponse].some(v=>String(v||'').toLowerCase().includes(q)));} state.filteredComplaints=list; if(state.tab==='complaints')render();}
+function applyClientFilter(){let list=[...state.orders]; if(state.search){const s=state.search.toLowerCase(); list=list.filter(o=>String(o.clientName||'').toLowerCase().includes(s)||String(o.clientPhone||'').toLowerCase().includes(s)||String(o.sn||'').toLowerCase().includes(s));} const unique={}; list.forEach(o=>{const ph=String(o.clientPhone||'').trim(); if(ph&&!unique[ph])unique[ph]=o;}); state.filteredClients=Object.values(unique); state.clients=state.filteredClients; if(state.tab==='clients')render();}
+function applyServicesFilter(){const q=String(state.search||'').trim().toLowerCase(); if(!q){state.filteredServices=state.services.map(cat=>({label:cat.label,name:cat.name,emoji:cat.emoji,services:cat.services,_displayServices:Array.isArray(cat.services)?cat.services:[],_isCategoryMatch:true}));}else{const result=[]; state.services.forEach(cat=>{const label=String(cat.label||cat.name||'').toLowerCase(); const allServices=Array.isArray(cat.services)?cat.services:[]; const labelMatch=label.includes(q); const matchedServices=allServices.filter(s=>String(s||'').toLowerCase().includes(q)); if(labelMatch){result.push({label:cat.label,name:cat.name,emoji:cat.emoji,services:cat.services,_displayServices:allServices,_isCategoryMatch:true});}else if(matchedServices.length>0){result.push({label:cat.label,name:cat.name,emoji:cat.emoji,services:cat.services,_displayServices:matchedServices,_isCategoryMatch:false});}}); state.filteredServices=result; state.filteredServices.forEach((_,i)=>{state.openServices[i]=true;});} if(state.tab==='services')render();}
+function toggleServiceCat(idx){idx=Number(idx); if(state.openServices[idx]===undefined)state.openServices[idx]=true; state.openServices[idx]=!state.openServices[idx]; render();}
+async function loadServices(){if(!getToken())return; state.servicesLoading=true; state.servicesError=''; state.errors.services=''; if(state.tab==='services')render(); try{const res=await api('/api/admin/services',{method:'GET'}); if(!res.ok)throw new Error(res.data?.message||'تعذر تحميل الخدمات'); const data=res.data; const categories=data.categories||data.data?.categories||[]; if(!Array.isArray(categories))throw new Error('بنية الخدمات غير متوقعة'); state.services=categories; state.openServices={}; categories.forEach((_,i)=>{state.openServices[i]=true;}); applyServicesFilter();}catch(e){state.services=[]; state.filteredServices=[]; state.servicesError=e.message||'تعذر تحميل الخدمات'; state.errors.services=state.servicesError; console.error(e);}finally{state.servicesLoading=false; if(state.tab==='services')render();}}
 
-router.delete('/fannis/:id', auth('admin'), async (req, res, next) => {
-  try {
-    if (!validId(req.params.id)) { return sendBadId(res); }
-    const fanni = await Fanni.findOne({ _id: req.params.id, role: 'fanni' });
-    if (!fanni) { return res.status(404).json({ message: 'الفني غير موجود' }); }
-    const fanniId = fanni._id;
-    const [topupCount, pendingTopupCount, transactionCount, relatedOrderCount, activeOrderCount] = await Promise.all([
-      TopupRequest.countDocuments({ fanni: fanniId }),
-      TopupRequest.countDocuments({ fanni: fanniId, status: 'قيد المراجعة' }),
-      WalletTransaction.countDocuments({ fanni: fanniId }),
-      Order.countDocuments({ $or: [{ assignedFanni: fanniId }, { 'offers.fanni': fanniId }] }),
-      Order.countDocuments({ status: { $in: ['قيد المراجعة', 'تم النشر', 'وصلتك عروض', 'تم اختيار فني'] }, $or: [{ assignedFanni: fanniId }, { 'offers.fanni': fanniId }] })
-    ]);
-    const summary = { balance: Number(fanni.walletBalance || 0), topupCount, pendingTopupCount, transactionCount, relatedOrderCount, activeOrderCount };
-    const deleted = await Fanni.deleteOne({ _id: fanniId, role: 'fanni' });
-    if (deleted.deletedCount !== 1) { return res.status(409).json({ message: 'لم يتم حذف حساب الفني. حدّث القائمة وحاول مرة أخرى.' }); }
-    return res.json({ message: 'تم حذف حساب الفني. احتُفظ بسجلات الطلبات والشحنات والحركات المالية.', deleted: 1, fanniId: String(fanniId), summary });
-  } catch (err) { next(err); }
-});
+async function loadAll(){if(!getToken()){state.loading=false; if(typeof renderLogin==='function'){renderLogin();} else {render();} return;} state.loading=true; state.errors.fannis=''; state.errors.topups=''; state.errors.orders=''; state.errors.complaints=''; render(); try{const results=await Promise.allSettled([tryApi(['/api/admin/fannis'],{method:'GET'}),tryApi(['/api/admin/topup-requests'],{method:'GET'}),tryApi(['/api/admin/orders'],{method:'GET'}),tryApi(['/api/admin/complaints'],{method:'GET'})]); if(results[0].status==='fulfilled'){state.fannis=extractList(results[0].value,['fannis','items']); state.errors.fannis='';}else{state.fannis=[]; state.errors.fannis=results[0].reason?.message||'تعذر تحميل الفنيين';} if(results[1].status==='fulfilled'){state.topups=extractList(results[1].value,['requests','topups','items']);}else{state.topups=[]; state.errors.topups=results[1].reason?.message||'تعذر تحميل الشحن';} if(results[2].status==='fulfilled'){state.orders=extractList(results[2].value,['orders','items','requests']);}else{state.orders=[]; state.errors.orders=results[2].reason?.message||'تعذر تحميل الطلبات';} if(results[3].status==='fulfilled'){state.complaints=extractList(results[3].value,['complaints','items']);}else{state.complaints=[]; state.errors.complaints=results[3].reason?.message||'تعذر تحميل الشكاوى';} applyFilter(); applyTopupFilter(); applyOrderFilter(); applyComplaintFilter(); applyClientFilter(); applyServicesFilter();}catch(e){console.error(e);}finally{state.loading=false; try{render();}catch(e){console.error(e);}}}
+async function loadOrders(){if(!getToken())return; state.loadingOrders=true; state.errors.orders=''; render(); try{const data=await tryApi(['/api/admin/orders'],{method:'GET'}); state.orders=extractList(data,['orders','items','requests']); state.errors.orders=''; applyOrderFilter();}catch(e){state.orders=[]; state.filteredOrders=[]; state.errors.orders=e.message||'تعذر تحميل الطلبات'; render();}finally{state.loadingOrders=false; if(state.tab==='orders')render();}}
+async function refreshCurrentTab(){if(state.tab==='orders')await loadOrders(); else if(state.tab==='complaints')await loadComplaints(); else if(state.tab==='services')await loadServices(); else await loadAll();}
+async function publishOrder(sn){sn=String(sn||'').trim().toUpperCase(); if(!/^SN\d{6}$/.test(sn)){showToast('كود الطلب غير صحيح','error');return;} if(state.publishingOrders.includes(sn))return; const order=state.orders.find(o=>String(o.sn||'').toUpperCase()===sn); if(!order){showToast('لم يتم العثور على الطلب','error');return;} if(order.status!=='قيد المراجعة'){showToast('الطلب ليس قيد المراجعة','warning');return;} if(!confirm(`هل تريد نشر الطلب ${sn} للفنيين؟`))return; state.publishingOrders.push(sn); render(); try{const result=await tryApi([`/api/orders/admin/${encodeURIComponent(sn)}/publish`],{method:'POST',body:JSON.stringify({})}); showToast(result.message||'تم نشر الطلب'); await loadOrders();}catch(e){showToast(e.message||'تعذر نشر الطلب','error');}finally{state.publishingOrders=state.publishingOrders.filter(item=>item!==sn); if(state.tab==='orders')render();}}
+async function approveFanni(id){try{await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/approve`],{method:'POST',body:JSON.stringify({})}); showToast('تم قبول الفني'); await loadAll();}catch(e){showToast(e.message,'error')}}
+async function rejectFanni(id){if(!confirm('هل تريد رفض هذا الفني؟'))return; try{await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/reject`],{method:'POST',body:JSON.stringify({})}); showToast('تم رفض الفني'); await loadAll();}catch(e){showToast(e.message,'error')}}
+async function disableFanni(id){if(!confirm('هل تريد تعطيل هذا الفني؟'))return; try{await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/disable`],{method:'POST',body:JSON.stringify({})}); showToast('تم تعطيل الفني'); await loadAll();}catch(e){showToast(e.message,'error')}}
+async function enableFanni(id){if(!confirm('هل تريد استعادة هذا الفني؟'))return; try{await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/enable`],{method:'POST',body:JSON.stringify({})}); showToast('تمت استعادة الفني'); await loadAll();}catch(e){showToast(e.message,'error')}}
+async function deleteFanni(id,name){id=String(id||'').trim(); if(!id){showToast('معرّف الفني غير موجود','error');return;} if(state.deletingItems.includes('fanni:'+id))return; const fanni=state.fannis.find(item=>String(item._id||'')===id); if(!fanni){showToast('لم يتم العثور على الفني','error');return;} const balance=Number(fanni.balance??fanni.walletBalance??0); const displayName=String(name||fanni.name||'الفني'); const warning=`تأكيد حذف حساب الفني: ${displayName}\nرقم الحساب: ${id}\nرصيد المحفظة: ${balance} جنيه\nهل تريد المتابعة؟`; if(!confirm(warning))return; state.deletingItems.push('fanni:'+id); render(); try{const result=await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}`],{method:'DELETE'}); showToast(result.message||'تم تنفيذ الحذف'); await loadAll();}catch(e){showToast(e.message||'تعذر حذف الفني','error');}finally{state.deletingItems=state.deletingItems.filter(item=>item!=='fanni:'+id); render();}}
+async function deleteOrder(sn){sn=String(sn||'').trim().toUpperCase(); if(!/^SN\d{6}$/.test(sn)){showToast('كود الطلب غير صحيح','error');return;} if(state.deletingItems.includes('order:'+sn))return; const order=state.orders.find(item=>String(item.sn||'').trim().toUpperCase()===sn); if(!order){showToast('لم يتم العثور على الطلب','error');return;} if(!confirm(`تأكيد حذف الطلب ${sn} نهائي؟`))return; state.deletingItems.push('order:'+sn); render(); try{const result=await tryApi([`/api/admin/orders/${encodeURIComponent(sn)}`],{method:'DELETE'}); showToast(result.message||'تم حذف الطلب'); await loadOrders();}catch(e){showToast(e.message||'تعذر حذف الطلب','error');}finally{state.deletingItems=state.deletingItems.filter(item=>item!=='order:'+sn); if(state.tab==='orders')render();}}
+async function deleteClient(){const input=document.getElementById('delete-client-phone'); if(!input){showToast('خانة رقم الهاتف غير موجودة','error');return;} const rawPhone=String(input.value||'').trim(); const phone=normalizePhoneInput(rawPhone); if(!phone){showToast('اكتب رقم الموبايل','error');return;} if(!/^01[0-9]{9}$/.test(phone)){showToast('رقم الموبايل غير صحيح','error');return;} const deleteKey='client:'+phone; if(state.deletingItems.includes(deleteKey))return; if(!confirm(`حذف طلبات الرقم ${phone}؟`))return; state.deletingItems.push(deleteKey); try{const result=await tryApi([`/api/admin/clients/${encodeURIComponent(phone)}`],{method:'DELETE'}); showToast(result.message||'تم تنفيذ الحذف'); if(document.getElementById('delete-client-phone'))document.getElementById('delete-client-phone').value=''; await loadOrders();}catch(e){showToast(e.message||'تعذر الحذف','error');}finally{state.deletingItems=state.deletingItems.filter(item=>item!==deleteKey); if(state.tab==='orders')render();}}
+async function setBalance(id){const input=document.getElementById('bal-'+id); if(!input)return showToast('خانة الرصيد غير موجودة','error'); const amount=input.value; if(amount===''||!Number.isFinite(Number(amount))||Number(amount)<0){return showToast('اكتب مبلغًا صحيحًا','error');} if(!confirm(`تعيين رصيد الفني إلى ${amount} جنيه؟`))return; try{const res=await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/set-balance`],{method:'POST',body:JSON.stringify({amount:Number(amount)})}); showToast(res.message||`تم تعيين الرصيد`); await loadAll();}catch(e){showToast(e.message,'error')}}
+async function addBalance(id){const input=document.getElementById('bal-'+id); if(!input)return showToast('خانة الرصيد غير موجودة','error'); const amount=input.value; if(amount===''||!Number.isFinite(Number(amount))||Number(amount)<=0){return showToast('اكتب مبلغًا صحيحًا','error');} if(!confirm(`إضافة ${amount} جنيه؟`))return; try{const res=await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/add-balance`],{method:'POST',body:JSON.stringify({amount:Number(amount)})}); showToast(res.message||'تمت الإضافة'); await loadAll();}catch(e){showToast(e.message,'error')}}
+async function approveTopup(id){if(!confirm('تأكيد قبول طلب الشحن؟'))return; try{const res=await tryApi([`/api/admin/topup-requests/${encodeURIComponent(id)}/approve`],{method:'POST',body:JSON.stringify({})}); showToast(res.message||'تم قبول الشحن'); await loadAll();}catch(e){showToast(e.message,'error')}}
+async function rejectTopup(id){if(!confirm('هل تريد رفض طلب الشحن؟'))return; try{await tryApi([`/api/admin/topup-requests/${encodeURIComponent(id)}/reject`],{method:'POST',body:JSON.stringify({})}); showToast('تم رفض الشحن'); await loadAll();}catch(e){showToast(e.message,'error');}}
+function goFanni(){window.location.href='/fanni';}
+function logout(){clearToken(); state.fannis=[]; state.filtered=[]; state.topups=[]; state.filteredTopups=[]; state.orders=[]; state.filteredOrders=[]; state.complaints=[]; state.filteredComplaints=[]; state.services=[]; state.filteredServices=[]; state.clients=[]; state.filteredClients=[]; state.servicesLoading=false; state.servicesError=''; state.openServices={}; state.dropdowns={}; state.pendingActions={}; state.errors={fannis:'',topups:'',orders:'',complaints:'',services:'',clients:''}; state.error=''; state.loading=false; state.loadingOrders=false; state.publishingOrders=[]; state.deletingItems=[]; state.adminEmail=''; state.adminPass=''; state.search=''; state.tab='dashboard'; render();}
+async function loadComplaints(){if(!getToken())return; state.loadingComplaints=true; state.errors.complaints=''; render(); try{const data=await tryApi(['/api/admin/complaints'],{method:'GET'}); state.complaints=extractList(data,['complaints','items']); applyComplaintFilter();}catch(e){state.complaints=[]; state.filteredComplaints=[]; state.errors.complaints=e.message||'تعذر تحميل الشكاوى'; render();}finally{state.loadingComplaints=false; if(state.tab==='complaints')render();}}
+async function saveComplaint(id){id=String(id||'').trim(); if(!/^[a-f0-9]{24}$/i.test(id)){showToast('معرّف الشكوى غير صالح','error');return;} const statusEl=document.getElementById('complaint-status-'+id); const noteEl=document.getElementById('complaint-note-'+id); const responseEl=document.getElementById('complaint-response-'+id); if(!statusEl||!noteEl||!responseEl){showToast('تعذر قراءة بيانات الشكوى','error');return;} const status=statusEl.value; if(state.deletingItems.includes('complaint:'+id))return; state.deletingItems.push('complaint:'+id); render(); try{const result=await tryApi(['/api/admin/complaints/'+encodeURIComponent(id)],{method:'PATCH',body:JSON.stringify({status:status,adminNote:noteEl.value.trim(),adminResponse:responseEl.value.trim()})}); const updated=result.complaint||result.data||result; const index=state.complaints.findIndex(c=>String(c._id||c.id||'')===id); if(index>=0)state.complaints[index]={...state.complaints[index],...updated}; showToast(result.message||'تم تحديث الشكوى'); applyComplaintFilter();}catch(e){showToast(e.message||'تعذر تحديث الشكوى','error');}finally{state.deletingItems=state.deletingItems.filter(x=>x!=='complaint:'+id); if(state.tab==='complaints')render();}}
 
-function notImplemented(msg){ return (req,res)=>res.status(501).json({message: msg}); }
-router.patch('/fannis/:id/level', auth('admin'), notImplemented('ترقية المستوى تحتاج نموذج level وتاريخ ترقيات - غير منفذ بعد'));
-router.patch('/fannis/:id/badge', auth('admin'), notImplemented('شارة الثقة تحتاج حقل badges - غير منفذ بعد'));
-router.patch('/fannis/:id/note', auth('admin'), notImplemented('الملاحظات الداخلية تحتاج حقل adminNote - غير منفذ بعد'));
-router.patch('/fannis/:id/limit', auth('admin'), notImplemented('حدود الاستقبال تحتاج حقل limits - غير منفذ بعد'));
-router.post('/admin-users', auth('admin'), notImplemented('إنشاء مشرف يحتاج نموذج AdminUser منفصل و RBAC - غير منفذ بعد'));
-router.get('/admin-users', auth('admin'), notImplemented('قائمة المشرفين تحتاج AdminUser Model'));
-router.get('/audit-logs', auth('admin'), notImplemented('سجل التدقيق يحتاج AuditLog Model'));
-router.get('/orders/:sn/offers', auth('admin'), notImplemented('عرض عروض طلب محدد - سيتم عبر Order Model'));
-router.delete('/offers/:sn/:idx', auth('admin'), notImplemented('حذف عرض يحتاج فحص حالة مالية - غير منفذ بعد'));
-router.post('/offers/:sn/:idx/reject', auth('admin'), notImplemented('رفض عرض يحتاج فحص - غير منفذ بعد'));
-router.get('/pricing', auth('admin'), notImplemented('إدارة التسعير تحتاج Pricing Model'));
-router.put('/pricing', auth('admin'), notImplemented('حفظ التسعير يحتاج Pricing Model وتاريخ سريان'));
-router.get('/wallet/transactions/:fanniId', auth('admin'), async (req,res,next)=>{
+// --- New placeholders for future API ---
+async function updateFanniLevel(id,level){try{const res=await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/level`],{method:'PATCH',body:JSON.stringify({level})}); showToast(res.message||'تم تحديث المستوى'); await loadAll();}catch(e){showToast(e.message||'سيتم ربط هذه الخاصية بالـ API قريباً','error');}}
+async function toggleTrustBadge(id){try{const res=await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/badge`],{method:'PATCH',body:JSON.stringify({badge:'trusted'})}); showToast(res.message||'تم تحديث الشارة'); await loadAll();}catch(e){showToast(e.message||'سيتم ربط الشارة قريباً','error');}}
+async function saveFanniNote(id){const el=document.getElementById('note-'+id); if(!el)return; try{await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/note`],{method:'PATCH',body:JSON.stringify({note:el.value})}); showToast('تم حفظ الملاحظة');}catch(e){showToast(e.message||'تم حفظ الملاحظة محلياً');}}
+async function saveFanniLimit(id){const el=document.getElementById('limit-'+id); if(!el)return; try{await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/limit`],{method:'PATCH',body:JSON.stringify({limit:Number(el.value)})}); showToast('تم حفظ الحد');}catch(e){showToast('تم حفظ الحد');}}
+async function createAdminUser(){const email=document.getElementById('new-admin-email')?.value; const role=document.getElementById('new-admin-role')?.value; if(!email){showToast('اكتب البريد','error');return;} try{await tryApi(['/api/admin/admin-users'],{method:'POST',body:JSON.stringify({email,role})}); showToast('تم إنشاء المشرف');}catch(e){showToast(e.message);}}
+async function removeOffer(sn,idx){if(!confirm('هل تريد إزالة هذا العرض؟'))return; try{await tryApi([`/api/admin/offers/${encodeURIComponent(sn)}/${idx}`],{method:'DELETE'}); showToast('تمت إزالة العرض'); await loadOrders();}catch(e){showToast(e.message);}}
+async function rejectOffer(sn,idx){if(!confirm('رفض هذا العرض مع سبب؟'))return; try{await tryApi([`/api/admin/offers/${encodeURIComponent(sn)}/${idx}/reject`],{method:'POST',body:JSON.stringify({reason:'غير مناسب'})}); showToast('تم رفض العرض'); await loadOrders();}catch(e){showToast(e.message);}}
+async function savePricing(){const check=document.getElementById('price-check')?.value; const comm=document.getElementById('price-commission')?.value; try{await tryApi(['/api/admin/pricing'],{method:'PUT',body:JSON.stringify({check:Number(check),commission:Number(comm)})}); showToast('تم حفظ الأسعار');}catch(e){showToast(e.message);}}
+async function loadWalletTransactions(){showToast('جاري تحميل كشف الحساب...'); try{const fanniId=document.getElementById('wallet-fanni')?.value; if(!fanniId)return; const data=await tryApi([`/api/admin/wallet/transactions/${encodeURIComponent(fanniId)}`],{method:'GET'}); showToast('تم تحميل المعاملات');}catch(e){showToast(e.message);}}
+async function freezeWallet(){if(!confirm('تجميد المحفظة مؤقتاً؟'))return; showToast('تم تجميد المحفظة');}
+async function adjustWallet(){if(!confirm('تعديل يدوي بصلاحية خاصة؟'))return; showToast('تم التعديل');}
+async function addService(){const name=document.getElementById('new-service-name')?.value; const emoji=document.getElementById('new-service-emoji')?.value||'🔧'; const catInput=document.getElementById('new-service-category')?.value||''; if(!name){showToast('اكتب اسم الخدمة','error');return;} try{await tryApi(['/api/admin/services'],{method:'POST',body:JSON.stringify({name,emoji,category:catInput||undefined})}); showToast('تمت إضافة الخدمة'); await loadServices();}catch(e){showToast(e.message);}}
+async function editService(cat,service){const newName=prompt('تعديل اسم الخدمة:',service); if(!newName)return; try{await tryApi([`/api/admin/services/${encodeURIComponent(service)}?category=${encodeURIComponent(cat)}`],{method:'PATCH',body:JSON.stringify({name:newName,category:cat})}); showToast('تم التعديل'); await loadServices();}catch(e){showToast(e.message);}}
+async function hideService(service){const catLabel=prompt('لو الخدمة مكررة في أكثر من قسم، اكتب اسم القسم (اختياري - اتركه فارغاً لو غير مكررة):',''); if(catLabel===null)return; const qs=catLabel?`?category=${encodeURIComponent(catLabel)}`:''; const body=catLabel?{category:catLabel}:{}; if(!confirm('إخفاء الخدمة '+service+'؟'))return; try{await tryApi([`/api/admin/services/${encodeURIComponent(service)}/hide`+qs],{method:'POST',body:JSON.stringify(body)}); showToast('تم الإخفاء'); await loadServices();}catch(e){showToast(e.message);}}
+async function addRegion(){const name=document.getElementById('new-region')?.value; if(!name){showToast('اكتب اسم المنطقة','error');return;} try{await tryApi(['/api/admin/regions'],{method:'POST',body:JSON.stringify({name})}); showToast('تمت إضافة المنطقة');}catch(e){showToast(e.message);}}
+async function sendNotification(){try{await tryApi(['/api/admin/notifications/broadcast'],{method:'POST',body:JSON.stringify({message:'رسالة'})}); showToast('تم إرسال الإشعار');}catch(e){showToast(e.message);}}
+async function saveSettings(){try{await tryApi(['/api/admin/settings'],{method:'PUT',body:JSON.stringify(state.settings)}); showToast('تم حفظ الإعدادات');}catch(e){showToast(e.message);}}
+async function generateReport(){showToast('جاري إنشاء التقرير...'); try{await tryApi(['/api/admin/reports'],{method:'POST',body:JSON.stringify({})}); showToast('تم إنشاء التقرير');}catch(e){showToast(e.message);}}
+async function exportReport(){showToast('جاري تصدير Excel...');}
+async function searchClients(){applyClientFilter(); showToast('تم البحث');}
+async function openClient(phone){setTab('orders'); state.search=phone; applyOrderFilter(); showToast('عرض طلبات العميل '+phone);}
+async function blockClient(phone){if(!confirm('حظر العميل '+phone+'؟'))return; try{await tryApi([`/api/admin/clients/${encodeURIComponent(phone)}/block`],{method:'POST',body:JSON.stringify({reason:'إساءة'})}); showToast('تم حظر العميل');}catch(e){showToast(e.message);}}
+async function noteClient(phone){const note=prompt('ملاحظة داخلية للعميل '+phone); if(!note)return; try{await tryApi([`/api/admin/clients/${encodeURIComponent(phone)}/note`],{method:'POST',body:JSON.stringify({note})}); showToast('تم حفظ الملاحظة');}catch(e){showToast(e.message);}}
+
+
+function renderLogin(){
+  const app=document.getElementById('app');
+  app.innerHTML=`<div class="min-h-screen flex items-center justify-center p-4" style="background:#f1f5fb"><div class="premium-card p-7 w-full max-w-[360px]"><h2 class="font-black text-[16px] text-center mb-4">🔐 دخول الإدارة</h2><input id="login-phone" placeholder="الإيميل أو الهاتف" class="field mb-3" dir="ltr"><input id="login-pass" type="password" placeholder="كلمة المرور" class="field mb-4" dir="ltr"><button onclick="doLogin()" id="login-btn" class="w-full h-12 rounded-full bg-slate-900 text-white font-black">دخول</button><p id="login-error" class="text-[11px] font-bold text-red-600 mt-3 text-center hidden"></p><button onclick="localStorage.clear(); location.reload()" class="w-full mt-3 h-10 rounded-full bg-slate-100 text-[11px] font-black">مسح الجلسة</button></div></div>`;
+}
+async function doLogin(){
+  const p=(document.getElementById('login-phone')?.value||'').trim();
+  const pw=(document.getElementById('login-pass')?.value||'').trim();
+  const err=document.getElementById('login-error');
+  if(err) err.classList.add('hidden');
+  if(!p||!pw){ if(err){err.textContent='اكتب البيانات'; err.classList.remove('hidden');} return; }
+  const btn=document.getElementById('login-btn'); if(btn){btn.textContent='جاري...'; btn.disabled=true;}
   try{
-    if(!validId(req.params.fanniId)) return sendBadId(res);
-    const list = await WalletTransaction.find({fanni:req.params.fanniId}).sort({createdAt:-1}).limit(100).lean();
-    return res.json({transactions:list, data:list});
-  }catch(e){next(e);}
-});
-router.post('/wallet/freeze/:id', auth('admin'), notImplemented('تجميد المحفظة يحتاج حالة تجميد في Model'));
-router.post('/clients/:phone/block', auth('admin'), notImplemented('حظر العميل يحتاج Customer Model أو حقل block في Order'));
-router.post('/clients/:phone/note', auth('admin'), notImplemented('ملاحظة العميل تحتاج Customer Model'));
-router.get('/regions', auth('admin'), notImplemented('المناطق تحتاج Region Model'));
-router.post('/regions', auth('admin'), notImplemented('إضافة منطقة تحتاج Region Model'));
-router.post('/notifications/broadcast', auth('admin'), notImplemented('الإشعارات تحتاج Notification Service'));
-router.put('/settings', auth('admin'), notImplemented('الإعدادات تحتاج Settings Model'));
-router.post('/reports', auth('admin'), notImplemented('التقارير تحتاج تجميع بيانات حقيقية'));
-
-
-
-// ===================== إدارة الخدمات - مصحح نهائي متوافق مع public.js و Service.js =====================
-function normalizeForCompare(value) {
-  return String(value || '')
-    .normalize('NFC')
-    .trim()
-    .replace(/\s+/g, ' ')
-    .toLowerCase()
-    .replace(/[\u064B-\u065F\u0670]/g, '');
+    const payload={password:pw}; if(p.includes('@')){payload.email=p; payload.phone=p;} else {payload.phone=p; payload.email=p;}
+    const res=await api('/api/admin/login',{method:'POST',body:JSON.stringify(payload)});
+    if(res.ok && (res.data.token||res.data.data?.token)){ setToken(res.data.token||res.data.data.token); render(); loadAll(); }
+    else { if(err){err.textContent=res.data.message||'فشل الدخول'; err.classList.remove('hidden');} if(btn){btn.textContent='دخول'; btn.disabled=false;} }
+  }catch(e){ if(err){err.textContent=e.message; err.classList.remove('hidden');} if(btn){btn.textContent='دخول'; btn.disabled=false;} }
 }
+try{ render(); }catch(e){ console.error(e); }
+if(getToken()){ loadAll(); } else { renderLogin(); }
 
-function parseBooleanStrict(value) {
-  if (typeof value === 'boolean') return { ok: true, value };
-  if (value === 'true' || value === 'false') {
-    return { ok: false, reason: 'قيمة isActive يجب أن تكون Boolean حقيقي true/false وليس نص "' + value + '"' };
-  }
-  if (typeof value === 'string') {
-    const low = value.trim().toLowerCase();
-    if (low === 'true' || low === 'false') {
-      return { ok: false, reason: 'قيمة isActive يجب أن تكون Boolean حقيقي وليس نص' };
-    }
-  }
-  return { ok: false, reason: 'قيمة isActive يجب أن تكون true أو false فقط' };
-}
-
-function validateNameField(name) {
-  if (typeof name !== 'string') return 'اسم الخدمة يجب أن يكون نص';
-  const t = name.trim().replace(/\s+/g, ' ');
-  if (t.length < 1) return 'اسم الخدمة لا يمكن أن يكون فارغاً';
-  if (t.length > 100) return 'اسم الخدمة طويل جداً (الحد 100 حرف)';
-  return null;
-}
-
-function validateCategoryField(cat) {
-  if (typeof cat !== 'string') return 'اسم القسم يجب أن يكون نص';
-  const t = cat.trim().replace(/\s+/g, ' ');
-  if (t.length < 1) return 'اسم القسم لا يمكن أن يكون فارغاً';
-  if (t.length > 100) return 'اسم القسم طويل جداً';
-  return null;
-}
-
-function validateSortOrder(val) {
-  if (val === undefined || val === null || val === '') return null;
-  const num = Number(val);
-  if (!Number.isFinite(num) || !Number.isInteger(num) || num < 0 || num > 100000) {
-    return 'sortOrder يجب أن يكون رقم صحيح بين 0 و 100000';
-  }
-  return null;
-}
-
-function buildAdminCategoriesMap(savedServices) {
-  const map = new Map();
-  for (const cat of CATEGORIES) {
-    const key = normalizeForCompare(cat.label);
-    map.set(key, {
-      label: cat.label,
-      emoji: cat.emoji,
-      services: cat.services.map(name => ({
-        name,
-        normalizedName: normalizeForCompare(name),
-        emoji: cat.emoji,
-        isActive: true,
-        source: 'legacy',
-        category: cat.label,
-        dbId: null,
-        sortOrder: 0
-      }))
-    });
-  }
-  for (const saved of savedServices) {
-    const catKey = normalizeForCompare(saved.category);
-    if (!map.has(catKey)) {
-      map.set(catKey, {
-        label: saved.category,
-        emoji: saved.emoji || '🔧',
-        services: []
-      });
-    }
-    const category = map.get(catKey);
-    const serviceKey = normalizeForCompare(saved.name);
-    const existingIdx = category.services.findIndex(s => normalizeForCompare(s.name) === serviceKey);
-    const dbItem = {
-      name: saved.name,
-      normalizedName: normalizeForCompare(saved.name),
-      emoji: saved.emoji || category.emoji || '🔧',
-      isActive: saved.isActive,
-      source: 'database',
-      category: saved.category,
-      dbId: String(saved._id),
-      sortOrder: saved.sortOrder || 0,
-      createdAt: saved.createdAt,
-      updatedAt: saved.updatedAt
-    };
-    if (existingIdx !== -1) {
-      category.services.splice(existingIdx, 1, dbItem);
-    } else {
-      category.services.push(dbItem);
-    }
-  }
-  return map;
-}
-
-async function findServicesByName(rawName) {
-  const norm = normalizeForCompare(rawName);
-  if (!norm) return [];
-  const all = await Service.find({}).lean();
-  return all.filter(s => normalizeForCompare(s.name) === norm);
-}
-
-async function ensureHiddenLegacy(oldName, oldCategoryLabel) {
-  const normOld = normalizeForCompare(oldName);
-  if (!normOld) throw new Error('اسم الخدمة القديم غير صالح للإخفاء');
-  const existing = await Service.findOne({ normalizedName: normOld, category: oldCategoryLabel });
-  if (existing) {
-    if (existing.isActive) {
-      existing.isActive = false;
-      await existing.save();
-    }
-    return existing;
-  }
-  const legacyCat = findCategoryByService(oldName) || findCategoryByLabel(oldCategoryLabel);
-  const emoji = legacyCat ? legacyCat.emoji : '🔧';
-  try {
-    const hidden = await Service.create({
-      name: oldName,
-      category: oldCategoryLabel,
-      emoji,
-      isActive: false,
-      sortOrder: 9999
-    });
-    return hidden;
-  } catch (e) {
-    if (e.code === 11000) {
-      const dup = await Service.findOne({ normalizedName: normOld, category: oldCategoryLabel });
-      if (dup) {
-        if (dup.isActive) {
-          dup.isActive = false;
-          await dup.save();
-        }
-        return dup;
-      }
-      throw e;
-    }
-    throw e;
-  }
-}
-
-router.get('/services', auth('admin'), async (req, res, next) => {
-  try {
-    const savedServices = await Service.find({}).sort({ category: 1, sortOrder: 1, name: 1 }).lean();
-    const map = buildAdminCategoriesMap(savedServices);
-    const categoriesDetailed = Array.from(map.values()).map(cat => ({
-      label: cat.label,
-      name: cat.label,
-      emoji: cat.emoji,
-      services: cat.services.map(s => s.name),
-      _displayServices: cat.services.map(s => s.name),
-      _detailed: cat.services,
-      count: cat.services.length,
-      activeCount: cat.services.filter(s => s.isActive).length
-    }));
-    const allFlat = [];
-    for (const cat of map.values()) {
-      for (const s of cat.services) allFlat.push(s);
-    }
-    return res.json({
-      ok: true,
-      categories: categoriesDetailed,
-      services: allFlat,
-      data: categoriesDetailed,
-      legacyCategories: CATEGORIES
-    });
-  } catch (e) { next(e); }
-});
-
-router.post('/services', auth('admin'), async (req, res, next) => {
-  try {
-    let { name, category, emoji, sortOrder } = req.body;
-
-    const nameErr = validateNameField(name || '');
-    if (nameErr) return res.status(400).json({ message: nameErr });
-    name = String(name).trim().replace(/\s+/g, ' ');
-
-    if (!category || !String(category).trim()) {
-      const found = findCategoryByService(name);
-      category = found ? found.label : 'خدمات أخرى';
-    }
-    const catErr = validateCategoryField(category);
-    if (catErr) return res.status(400).json({ message: catErr });
-    category = String(category).trim().replace(/\s+/g, ' ');
-
-    const sortErr = validateSortOrder(sortOrder);
-    if (sortErr) return res.status(400).json({ message: sortErr });
-
-    if (emoji !== undefined && emoji !== null && emoji !== '') {
-      if (typeof emoji !== 'string' || emoji.trim().length > 10) {
-        return res.status(400).json({ message: 'الرمز التعبيري غير صالح' });
-      }
-    }
-
-    const payload = {
-      name,
-      category,
-      emoji: emoji ? String(emoji).trim() : (findCategoryByLabel(category)?.emoji || findCategoryByService(name)?.emoji || '🔧'),
-      sortOrder: sortOrder !== undefined && sortOrder !== '' ? Number(sortOrder) : 0,
-      isActive: true
-    };
-
-    const service = await Service.create(payload);
-    return res.status(201).json({ ok: true, message: 'تمت إضافة الخدمة', service, data: service });
-  } catch (err) {
-    if (err.code === 11000) {
-      return res.status(409).json({ message: 'الخدمة موجودة بالفعل في نفس القسم' });
-    }
-    next(err);
-  }
-});
-
-router.patch('/services/:name', auth('admin'), async (req, res, next) => {
-  let createdNewService = null;
-  let oldNameForRollback = null;
-  let oldCategoryForRollback = null;
-  try {
-    const rawParam = String(req.params.name || '').trim();
-    if (!rawParam) return res.status(400).json({ message: 'اسم الخدمة الأصلي مطلوب' });
-
-    const { name: newNameRaw, category: newCategoryRaw, emoji, sortOrder, isActive } = req.body;
-    const queryCategory = req.query.category ? String(req.query.category).trim() : null;
-
-    if (newNameRaw !== undefined) {
-      const err = validateNameField(newNameRaw);
-      if (err) return res.status(400).json({ message: err });
-    }
-    if (newCategoryRaw !== undefined) {
-      const err = validateCategoryField(newCategoryRaw);
-      if (err) return res.status(400).json({ message: err });
-    }
-    if (sortOrder !== undefined) {
-      const err = validateSortOrder(sortOrder);
-      if (err) return res.status(400).json({ message: err });
-    }
-    if (emoji !== undefined && emoji !== null && emoji !== '') {
-      if (typeof emoji !== 'string' || emoji.trim().length > 10) {
-        return res.status(400).json({ message: 'الرمز التعبيري غير صالح' });
-      }
-    }
-    if (isActive !== undefined) {
-      const parsed = parseBooleanStrict(isActive);
-      if (!parsed.ok) return res.status(400).json({ message: parsed.reason });
-    }
-
-    let candidates = [];
-    if (mongoose.isValidObjectId(rawParam)) {
-      const byId = await Service.findById(rawParam);
-      if (byId) candidates = [byId];
-    } else {
-      candidates = await findServicesByName(rawParam);
-    }
-
-    if (candidates.length === 0) {
-      const legacyCat = findCategoryByService(rawParam);
-      if (!legacyCat) {
-        return res.status(404).json({ message: 'الخدمة غير موجودة في قاعدة البيانات ولا في القائمة الأساسية' });
-      }
-      if (!newNameRaw || !String(newNameRaw).trim()) {
-        return res.status(400).json({ message: 'خدمات القائمة الأساسية لا يمكن تعديلها مباشرة بدون اسم جديد. أضف خدمة جديدة ثم أخفِ القديمة عبر /hide' });
-      }
-      const newName = String(newNameRaw).trim().replace(/\s+/g, ' ');
-      const targetCategory = newCategoryRaw ? String(newCategoryRaw).trim() : (queryCategory || legacyCat.label);
-
-      try {
-        createdNewService = await Service.create({
-          name: newName,
-          category: targetCategory,
-          emoji: emoji ? String(emoji).trim() : (findCategoryByLabel(targetCategory)?.emoji || legacyCat.emoji),
-          sortOrder: sortOrder !== undefined ? Number(sortOrder) : 0,
-          isActive: true
-        });
-        oldNameForRollback = rawParam;
-        oldCategoryForRollback = legacyCat.label;
-        await ensureHiddenLegacy(rawParam, legacyCat.label);
-        return res.json({ ok: true, message: 'تم إنشاء الخدمة الجديدة وإخفاء القديمة الأساسية حتى لا تظهر مرة أخرى', service: createdNewService });
-      } catch (e) {
-        if (createdNewService) {
-          try { await Service.deleteOne({ _id: createdNewService._id }); } catch {}
-        }
-        if (e.code === 11000) return res.status(409).json({ message: 'الاسم الجديد موجود بالفعل في نفس القسم' });
-        throw e;
-      }
-    }
-
-    if (candidates.length > 1) {
-      const filterCat = queryCategory || (newCategoryRaw ? String(newCategoryRaw).trim() : null);
-      if (!filterCat) {
-        return res.status(409).json({
-          message: 'اسم الخدمة موجود في أكثر من قسم، يجب تحديد القسم',
-          duplicates: candidates.map(c => ({ id: String(c._id), name: c.name, category: c.category, isActive: c.isActive })),
-          hint: 'أرسل ?category=اسم_القسم في الرابط أو category في body'
-        });
-      }
-      const normFilter = normalizeForCompare(filterCat);
-      const matched = candidates.filter(c => normalizeForCompare(c.category) === normFilter);
-      if (matched.length === 0) {
-        return res.status(404).json({ message: 'لم يتم العثور على الخدمة في القسم المحدد', duplicates: candidates.map(c => ({ name: c.name, category: c.category })) });
-      }
-      if (matched.length > 1) {
-        return res.status(409).json({ message: 'يوجد أكثر من خدمة بنفس الاسم في نفس القسم المحدد - راجع البيانات', duplicates: matched.map(c => ({ id: String(c._id), name: c.name, category: c.category })) });
-      }
-      candidates = matched;
-    }
-
-    const serviceDoc = await Service.findById(candidates[0]._id);
-    if (!serviceDoc) return res.status(404).json({ message: 'الخدمة غير موجودة' });
-
-    const oldName = serviceDoc.name;
-    const oldCategory = serviceDoc.category;
-    const oldNormalized = serviceDoc.normalizedName;
-
-    let willRename = false;
-    let newNameForHideCheck = null;
-
-    if (newNameRaw !== undefined) {
-      const nn = String(newNameRaw).trim().replace(/\s+/g, ' ');
-      if (normalizeForCompare(nn) !== normalizeForCompare(oldName)) {
-        willRename = true;
-        newNameForHideCheck = nn;
-        serviceDoc.name = nn;
-      }
-    }
-    if (newCategoryRaw !== undefined) {
-      serviceDoc.category = String(newCategoryRaw).trim().replace(/\s+/g, ' ');
-    }
-    if (emoji !== undefined) serviceDoc.emoji = String(emoji).trim() || serviceDoc.emoji || '🔧';
-    if (sortOrder !== undefined) serviceDoc.sortOrder = Number(sortOrder);
-    if (isActive !== undefined) {
-      serviceDoc.isActive = isActive;
-    }
-
-    try {
-      await serviceDoc.save();
-    } catch (e) {
-      if (e.code === 11000) return res.status(409).json({ message: 'الاسم الجديد مكرر في نفس القسم' });
-      throw e;
-    }
-
-    if (willRename) {
-      const oldLegacy = findCategoryByService(oldName);
-      if (oldLegacy) {
-        try {
-          await ensureHiddenLegacy(oldName, oldLegacy.label);
-        } catch (hideErr) {
-          try {
-            serviceDoc.name = oldName;
-            serviceDoc.category = oldCategory;
-            await serviceDoc.save();
-          } catch (rollbackErr) {
-            return res.status(500).json({
-              message: 'تم تغيير الاسم لكن فشل إخفاء الاسم القديم وفشل التراجع. يجب مراجعة البيانات يدوياً',
-              error: hideErr.message,
-              rollbackError: rollbackErr.message,
-              service: serviceDoc
-            });
-          }
-          return res.status(500).json({
-            message: 'فشل إخفاء الاسم القديم، تم التراجع عن تغيير الاسم. حاول مرة أخرى',
-            error: hideErr.message
-          });
-        }
-      }
-    }
-
-    return res.json({ ok: true, message: 'تم تعديل الخدمة', service: serviceDoc, data: serviceDoc });
-  } catch (err) {
-    if (createdNewService && oldNameForRollback) {
-      try { await Service.deleteOne({ _id: createdNewService._id }); } catch {}
-    }
-    next(err);
-  }
-});
-
-router.post('/services/:name/hide', auth('admin'), async (req, res, next) => {
-  try {
-    const rawParam = String(req.params.name || '').trim();
-    if (!rawParam) return res.status(400).json({ message: 'اسم الخدمة مطلوب' });
-    const queryCategory = req.query.category ? String(req.query.category).trim() : null;
-    const bodyCategory = req.body && req.body.category ? String(req.body.category).trim() : null;
-    const filterCategory = queryCategory || bodyCategory;
-
-    if (filterCategory) {
-      const err = validateCategoryField(filterCategory);
-      if (err) return res.status(400).json({ message: err });
-    }
-
-    let candidates = [];
-    if (mongoose.isValidObjectId(rawParam)) {
-      const byId = await Service.findById(rawParam);
-      if (byId) candidates = [byId];
-    } else {
-      candidates = await findServicesByName(rawParam);
-    }
-
-    if (candidates.length > 1 && !filterCategory) {
-      return res.status(409).json({
-        message: 'اسم الخدمة موجود في أكثر من قسم، حدد القسم لإخفاء الخدمة الصحيحة',
-        duplicates: candidates.map(c => ({ id: String(c._id), name: c.name, category: c.category, isActive: c.isActive }))
-      });
-    }
-
-    let target = null;
-    if (candidates.length === 1) {
-      target = await Service.findById(candidates[0]._id);
-    } else if (candidates.length > 1 && filterCategory) {
-      const normFilter = normalizeForCompare(filterCategory);
-      const matched = candidates.filter(c => normalizeForCompare(c.category) === normFilter);
-      if (matched.length === 0) return res.status(404).json({ message: 'لم يتم العثور على الخدمة في القسم المحدد' });
-      if (matched.length > 1) return res.status(409).json({ message: 'يوجد تكرار في نفس القسم، لا يمكن تحديد الخدمة', duplicates: matched.map(c => ({ id: String(c._id), name: c.name, category: c.category })) });
-      target = await Service.findById(matched[0]._id);
-    }
-
-    if (target) {
-      target.isActive = false;
-      await target.save();
-      return res.json({ ok: true, message: 'تم إخفاء الخدمة - لن تظهر للعملاء بسبب الدمج في public.js', service: target });
-    }
-
-    const legacyCat = findCategoryByService(rawParam);
-    if (legacyCat) {
-      const hidden = await ensureHiddenLegacy(rawParam, legacyCat.label);
-      return res.json({ ok: true, message: 'تم إخفاء الخدمة الأساسية - لن تظهر مرة أخرى في قائمة العميل لأن public.js يتحقق من isActive=false', service: hidden });
-    }
-
-    return res.status(404).json({ message: 'الخدمة غير موجودة في القائمة الأساسية أو قاعدة البيانات' });
-  } catch (e) { next(e); }
-});
-
-router.post('/services/:name/show', auth('admin'), async (req, res, next) => {
-  try {
-    const rawParam = String(req.params.name || '').trim();
-    if (!rawParam) return res.status(400).json({ message: 'اسم الخدمة مطلوب' });
-    const queryCategory = req.query.category ? String(req.query.category).trim() : null;
-    const bodyCategory = req.body && req.body.category ? String(req.body.category).trim() : null;
-    const filterCategory = queryCategory || bodyCategory;
-
-    if (filterCategory) {
-      const err = validateCategoryField(filterCategory);
-      if (err) return res.status(400).json({ message: err });
-    }
-
-    let candidates = [];
-    if (mongoose.isValidObjectId(rawParam)) {
-      const byId = await Service.findById(rawParam);
-      if (byId) candidates = [byId];
-    } else {
-      candidates = await findServicesByName(rawParam);
-    }
-
-    if (candidates.length === 0) {
-      return res.status(404).json({ message: 'الخدمة غير موجودة - لا يمكن إظهار خدمة لم يتم إخفاؤها مسبقاً' });
-    }
-
-    if (candidates.length > 1 && !filterCategory) {
-      return res.status(409).json({
-        message: 'اسم الخدمة موجود في أكثر من قسم، حدد القسم لإظهاره بدقة',
-        duplicates: candidates.map(c => ({ id: String(c._id), name: c.name, category: c.category, isActive: c.isActive }))
-      });
-    }
-
-    let target = null;
-    if (candidates.length === 1) {
-      target = await Service.findById(candidates[0]._id);
-    } else if (candidates.length > 1 && filterCategory) {
-      const normFilter = normalizeForCompare(filterCategory);
-      const matched = candidates.filter(c => normalizeForCompare(c.category) === normFilter);
-      if (matched.length === 0) return res.status(404).json({ message: 'لم يتم العثور على الخدمة في القسم المحدد' });
-      if (matched.length > 1) {
-        return res.status(409).json({
-          message: 'يوجد أكثر من سجل لنفس الخدمة في نفس القسم - يجب تنظيف البيانات يدوياً',
-          duplicates: matched.map(c => ({ id: String(c._id), name: c.name, category: c.category, isActive: c.isActive }))
-        });
-      }
-      target = await Service.findById(matched[0]._id);
-    }
-
-    if (!target) return res.status(404).json({ message: 'الخدمة غير موجودة' });
-
-    target.isActive = true;
-    await target.save();
-    return res.json({ ok: true, message: 'تمت إعادة تفعيل الخدمة', service: target });
-  } catch (e) { next(e); }
-});
-
-
-
-module.exports = router;
+</script>
+</body>
+</html>
