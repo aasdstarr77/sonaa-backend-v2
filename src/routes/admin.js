@@ -1113,7 +1113,7 @@ router.get('/support/search', auth('admin'), async (req, res, next) => {
   try {
     const q = String(req.query.q || '').trim().slice(0, 100);
     if (q.length < 2) return res.status(400).json({ message: 'اكتب رقم طلب أو هاتفًا أو كود تتبع من حرفين على الأقل' });
-    const literal = q.replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, '');
+    const literal = q.replace(/[^a-zA-Z0-9\u0600-\u06FF ]/g, '').replace(/\s+/g, ' ');
     if (literal.length < 2) return res.status(400).json({ message: 'نص البحث غير صالح' });
     const rx = new RegExp(literal, 'i');
     const [orders, complaints] = await Promise.all([
@@ -1141,7 +1141,7 @@ router.get('/support/violations', auth('admin'), async (req, res, next) => {
 router.get('/clients', auth('admin'), async (req, res, next) => {
   try {
     const q = String(req.query.search || '').trim().slice(0, 100);
-    const literal = q.replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, '');
+    const literal = q.replace(/[^a-zA-Z0-9\u0600-\u06FF ]/g, '').replace(/\s+/g, ' ');
     const rx = literal.length >= 2 ? new RegExp(literal, 'i') : null;
     const registered = await Client.find(rx ? { $or: [{ name: rx }, { phone: rx }] } : {}).select('name phone status adminNote createdAt').sort({ createdAt: -1 }).limit(200).lean();
     const orders = await Order.find(rx ? { $or: [{ clientName: rx }, { clientPhone: rx }, { sn: rx }] } : {}).select('clientName clientPhone sn createdAt').sort({ createdAt: -1 }).limit(500).lean();
