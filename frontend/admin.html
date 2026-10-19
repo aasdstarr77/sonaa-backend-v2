@@ -688,8 +688,8 @@ function renderContent(){
  <label class="block"><span class="text-[11px] font-black">رسالة إعلانية في واجهة العميل</span><textarea id="content-announcement" maxlength="1000" rows="3" class="field mt-2">${escHtml(c.announcement||'')}</textarea></label>
  <div class="border-t pt-3"><h3 class="text-[11px] font-black mb-2">الأسئلة الشائعة</h3><input id="faq-question" maxlength="250" placeholder="السؤال الجديد" class="field mb-2"><textarea id="faq-answer" maxlength="1000" rows="2" placeholder="الإجابة" class="field mb-2"></textarea><button onclick="addFaq()" class="pill-btn primary-pill w-full">إضافة سؤال</button></div>
  <div class="space-y-2">${(c.faqs||[]).map((faq,i)=>`<div class="border rounded-xl p-3"><p class="font-black text-[11px]">${escHtml(faq.question)}</p><p class="text-[10px] mt-1">${escHtml(faq.answer)}</p><button onclick="removeFaq(${i})" class="pill-btn soft-btn mt-2">حذف السؤال</button></div>`).join('')||'<p class="text-[10px] text-slate-500">لم تتم إضافة أسئلة بعد.</p>'}</div>
- <p class="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-3">يُحفظ المحتوى في قاعدة البيانات. واجهة العميل لم تُربط بعد بقراءة الإعلان والأسئلة من هذا المسار، لذلك الحفظ وحده لا ينشره للزوار.</p>
- <button id="save-content-btn" onclick="saveContent()" class="w-full h-11 rounded-full bg-slate-900 text-white font-black text-[11px]">حفظ المحتوى</button>
+ <p class="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-3">سيظهر الإعلان والأسئلة النشطة في واجهة العميل بعد الحفظ وتحديث الصفحة.</p>
+ <button id="save-content-btn" onclick="saveContent()" class="w-full h-11 rounded-full bg-slate-900 text-white font-black text-[11px]">حفظ ونشر المحتوى</button>
  </div></section>`;
 }
 function renderClients(){
