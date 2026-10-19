@@ -455,7 +455,7 @@ function renderOffers(){
     </div>
     ${allOffers.length===0?`<div class="premium-panel p-10 text-center text-[12px] font-bold text-slate-400">لا توجد عروض حالياً - ستظهر هنا عند تقديم الفنيين عروضهم</div>`:''}
     ${allOffers.slice(0,10).map(item=>`
-      <article class="premium-card p-4">
+      <article class="premium-card p-4 ${isOpen?'menu-active':''}">
         <div class="flex justify-between"><p class="font-black text-[12px]">طلب ${escHtml(item.orderSn)} - ${escHtml(item.orderService||'')}</p><span class="text-[10px] bg-blue-50 border border-blue-100 px-2 py-1 rounded-full font-black">عرض ${item.idx+1}</span></div>
         <p class="text-[11px] font-bold mt-3">الفني: ${escHtml(item.offer.fanniName||'')} • ${escHtml(item.offer.price||'')} ج</p>
         <p class="text-[10px] text-slate-500 mt-1 leading-5">${escHtml(item.offer.message||'')}</p>
