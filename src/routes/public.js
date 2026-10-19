@@ -3,6 +3,7 @@
 
 const express = require('express');
 const Settings = require('../models/Settings');
+const AdminConfig = require('../models/AdminConfig');
 const Service = require('../models/Service');
 const Fanni = require('../models/Fanni');
 const { AREA_OPTIONS, ALL_AREAS_LABEL, normalizeArea } = require('../config/areas');
@@ -131,6 +132,20 @@ router.get('/services', async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+});
+
+router.get('/content', async (req, res, next) => {
+  try {
+    const config = await AdminConfig.findOne({ key: 'main' }).select('content').lean();
+    const content = config?.content || { announcement: '', faqs: [] };
+    return res.set('Cache-Control', 'no-store').json({
+      announcement: String(content.announcement || ''),
+      faqs: (Array.isArray(content.faqs) ? content.faqs : []).filter(item => item.active !== false).map(item => ({
+        question: String(item.question || ''),
+        answer: String(item.answer || '')
+      }))
+    });
+  } catch (err) { next(err); }
 });
 
 /*
