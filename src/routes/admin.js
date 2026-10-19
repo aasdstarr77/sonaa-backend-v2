@@ -888,8 +888,8 @@ router.post('/services', auth('admin'), async (req, res, next) => {
       isActive: true
     };
 
-    c
-onst service = await Service.create(payload);
+    const service = await Service.create(payload);
+    
     return res.status(201).json({ ok: true, message: 'تمت إضافة الخدمة', service, data: service });
   } catch (err) {
     if (err.code === 11000) {
