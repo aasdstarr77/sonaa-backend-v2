@@ -1011,7 +1011,7 @@ router.post('/:sn/accept', async (req, res, next) => {
 
     if (
       !Number.isFinite(commissionAmount) ||
-      commissionAmount <= 0
+      commissionAmount < 0
     ) {
       await session.abortTransaction();
       return res.status(400).json({
