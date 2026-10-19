@@ -12,6 +12,7 @@ const fs = require('fs');
 const path = require('path');
 
 const connectDB = require('./config/db');
+const AdminConfig = require('./models/AdminConfig');
 const orderRouter = require('./routes/order');
 const fanniRouter = require('./routes/fanni');
 const adminRouter = require('./routes/admin');
@@ -139,6 +140,23 @@ if (req.path === '/health') {
 
     if (mongoose.connection.readyState !== 1) {
       throw new Error('MongoDB is not connected');
+    }
+
+    // Maintenance mode blocks customer/technician APIs while keeping admin access
+    // and public configuration/service lists available to display the notice.
+    const maintenanceExempt = ['/health', '/content', '/services', '/areas', '/vodafone-cash'];
+    const isAdminPath = req.path.startsWith('/admin') ||
+      req.path.startsWith('/admins') || req.path.startsWith('/auth/admin');
+    if (!isAdminPath && !maintenanceExempt.includes(req.path)) {
+      const config = await AdminConfig.findOne({ key: 'main' })
+        .select('settings.maintenance settings.maintenanceMessage')
+        .lean();
+      if (config?.settings?.maintenance) {
+        return res.status(503).json({
+          message: String(config.settings.maintenanceMessage || 'النظام في وضع الصيانة مؤقتًا. حاول مرة أخرى لاحقًا.'),
+          code: 'MAINTENANCE_MODE'
+        });
+      }
     }
 
     return next();
