@@ -235,7 +235,9 @@ function render(){
 
       ${state.loading?`<div class="mt-4 premium-panel p-10 text-center"><div class="h-10 w-10 rounded-full border-[3px] border-slate-200 border-t-blue-600 animate-spin mx-auto"></div><p class="mt-3 text-[12px] font-black text-slate-500">جاري التحميل...</p></div>`:''}
 
-      ${renderCurrentTab()}
+      <div id="admin-tab-content" class="scroll-mt-24">
+        ${renderCurrentTab()}
+      </div>
     `}
   </main>
   <div onclick="closeAllMenus()" id="menu-backdrop" class="${Object.keys(state.dropdowns).length?'fixed inset-0 z-30 bg-black/5':''}"></div>
@@ -681,7 +683,7 @@ function renderStats(){
 }
 
 // --- Existing logic preserved ---
-function setTab(t){state.tab=t; state.dropdowns={}; state.pendingActions={}; render(); if(t==='orders')loadOrders(); else if(t==='roles')loadAdminUsers(); else if(t==='complaints')loadComplaints(); else if(t==='services')loadServices(); else if(t==='topups')applyTopupFilter(); else if(t==='clients')applyClientFilter(); else applyFilter();}
+function setTab(t){state.tab=t; state.dropdowns={}; state.pendingActions={}; render(); const target=document.getElementById('admin-tab-content'); if(target) target.scrollIntoView({behavior:'smooth',block:'start'}); if(t==='orders')loadOrders(); else if(t==='roles')loadAdminUsers(); else if(t==='complaints')loadComplaints(); else if(t==='services')loadServices(); else if(t==='topups')applyTopupFilter(); else if(t==='clients')applyClientFilter(); else applyFilter();}
 function onSearch(v){state.search=v; if(state.tab==='orders')applyOrderFilter(); else if(state.tab==='complaints')applyComplaintFilter(); else if(state.tab==='services')applyServicesFilter(); else if(state.tab==='topups')applyTopupFilter(); else if(state.tab==='clients')applyClientFilter(); else applyFilter();}
 function onFilter(v){state.filter=v;applyFilter()} function onFilterTopup(v){state.filterTopup=v;applyTopupFilter()} function onFilterOrder(v){state.filterOrder=v;applyOrderFilter()} function onFilterComplaint(v){state.filterComplaint=v;applyComplaintFilter()}
 function applyFilter(){let list=[...state.fannis]; if(state.tab==='pending'){list=list.filter(f=>!f.isApproved&&!f.isDisabled&&f.status!=='rejected');} if(state.tab==='disabled')list=list.filter(f=>f.isDisabled); if(state.filter!=='الكل'){list=list.filter(f=>{const st=f.isDisabled?'disabled':f.isApproved?'approved':f.status||'pending'; return String(st).toLowerCase()===state.filter.toLowerCase();});} if(state.search){const s=state.search.toLowerCase(); list=list.filter(f=>String(f.name||'').toLowerCase().includes(s)||String(f.phone||'').toLowerCase().includes(s));} state.filtered=list; if(!['topups','stats','orders','complaints','services','clients','dashboard','levels','roles','offers','pricing','wallets','regions','notifications','settings','security','reports','support','content'].includes(state.tab))render(); else if(['fannis','pending','disabled','levels'].includes(state.tab))render();}
