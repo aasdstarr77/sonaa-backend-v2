@@ -474,7 +474,7 @@ function render(){
                 <div id="serviceList" class="max-h-[390px] overflow-y-auto overscroll-contain p-2 space-y-2">
                   ${query?matching.map(c=>`
                     <div class="category-card">
-                      <button type="button" onclick='toggleCategory(${JSON.stringify(c.label)})' aria-expanded="${state.openCategory===c.label?'true':'false'}" class="category-head">
+                      <button type="button" onclick='toggleCategory(${escAttr(JSON.stringify(c.label))})' aria-expanded="${state.openCategory===c.label?'true':'false'}" class="category-head">
                         <span class="text-xl">${escHtml(c.emoji)}</span>
                         <span class="font-extrabold text-[13px] flex-1">${escHtml(c.label)}</span>
                         <span class="text-[11px] text-slate-600 font-bold">${c.services.length} خدمة</span>
@@ -494,7 +494,7 @@ onclick="selectServiceByIndex(${ALL_SERVICES.indexOf(s)})"
                   `).join('')||'<p class="p-4 text-[12px] text-slate-500 text-center">مفيش نتائج مطابقة.</p>'
                   :CATEGORIES.map(c=>`
                     <div class="category-card">
-                      <button type="button" onclick='toggleCategory(${JSON.stringify(c.label)})' aria-expanded="${state.openCategory===c.label?'true':'false'}" class="category-head">
+                      <button type="button" onclick='toggleCategory(${escAttr(JSON.stringify(c.label))})' aria-expanded="${state.openCategory===c.label?'true':'false'}" class="category-head">
                         <span class="h-11 w-11 rounded-xl bg-blue-50 flex items-center justify-center text-2xl shrink-0">${escHtml(c.emoji)}</span>
                         <span class="flex-1 min-w-0">
                           <span class="block font-extrabold text-[14px] text-slate-900">${escHtml(c.label)}</span>
