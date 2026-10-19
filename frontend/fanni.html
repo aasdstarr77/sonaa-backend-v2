@@ -530,6 +530,33 @@ function render(){
      ${o?.accepted===true && o.orderStatus==='تم اختيار فني' ? `<button data-sn="${esc(o.orderSn||o.sn||o.order?.sn||'')}" onclick="completeOrder(this.dataset.sn)" class="primary-btn w-full h-11 text-[12px]">إنهاء المهمة</button>` : ''}
     </article>`).join('')}
    </section>`:''}
+     ${state.tab==='completed'?`
+   <section class="mt-4 space-y-3">
+    <div class="flex justify-between items-center">
+     <h3 class="section-title">المهام المكتملة</h3>
+     <button onclick="loadMyOffers()" class="secondary-btn px-3 py-2 text-[11px]">تحديث</button>
+    </div>
+
+    ${!state.completedOffers.length?'<div class="panel p-8 text-center"><div class="text-2xl">🏁</div><p class="text-[13px] font-extrabold mt-3">لا توجد مهام مكتملة</p><p class="text-[11px] text-slate-500 mt-1">المهام التي تنهيها ستظهر هنا.</p></div>':state.completedOffers.map(o=>`<article class="panel p-4 space-y-3">
+     <div class="flex justify-between gap-3">
+      <div>
+       <div class="text-[10px] text-slate-500">كود الطلب</div>
+       <b class="font-mono text-[12px]">${esc(o.orderSn||o.sn||o.order?.sn||'')}</b>
+      </div>
+      <div>
+       <div class="text-[10px] text-slate-500">سعر عرضك</div>
+       <b class="text-blue-700">${esc(o.price??o.priceNum??'غير متاح')} جنيه</b>
+      </div>
+     </div>
+
+     <div class="flex flex-wrap items-center gap-2">
+      <span class="text-[10px] rounded-full px-3 py-1 font-extrabold bg-emerald-50 text-emerald-800 border border-emerald-100">تم إنهاء المهمة</span>
+      ${o.service?`<span class="text-[10px] rounded-full bg-blue-50 text-blue-800 px-3 py-1">${esc(o.service)}</span>`:''}
+     </div>
+
+     ${renderAcceptedClient(o)}
+    </article>`).join('')}
+   </section>`:''}
 
   ${state.tab==='wallet'?`
    <section class="mt-4 space-y-4">
