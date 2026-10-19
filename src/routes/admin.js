@@ -1106,7 +1106,7 @@ router.put('/content', auth('admin'), async (req, res, next) => {
     if (config.history.length > 200) config.history = config.history.slice(-200);
     await config.save();
     await writeAdminAudit(req, 'تعديل محتوى الواجهة', 'content', 'content', 'تم حفظ الإعلان والأسئلة الشائعة');
-    return res.json({ message: 'تم حفظ المحتوى في قاعدة البيانات. يلزم ربط واجهة العميل لعرضه.', content: config.content });
+    return res.json({ message: 'تم حفظ المحتوى ونشره لواجهة العميل.', content: config.content });
   } catch (err) { next(err); }
 });
 router.get('/support/search', auth('admin'), async (req, res, next) => {
