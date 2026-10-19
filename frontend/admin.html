@@ -27,6 +27,10 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
 .premium-card{background:#fff;border:1px solid #e6eefc;border-radius:20px;box-shadow:0 10px 28px #0f234b0d;position:relative;overflow:hidden;transition:.22s}
 .premium-card::before{content:'';position:absolute;top:0;right:0;left:0;height:3px;background:linear-gradient(90deg,var(--blue),#3b82f6,var(--gold));opacity:.9}
 .premium-card:hover{transform:translateY(-1px);box-shadow:0 14px 32px #0f234b12;border-color:#d6e4ff} 
+  .premium-card.menu-active{
+  z-index:60;
+  overflow:visible;
+  }
 .premium-card.menu-active{z-index:60;overflow:visible}
 .field{width:100%;min-height:46px;border:1.5px solid #dbe3ef;border-radius:14px;background:#fff;padding:11px 14px;color:var(--navy);font-size:12.5px;font-weight:600}
 .tab-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
@@ -413,7 +417,7 @@ function renderOrders(){
       const sn=String(o.sn||''); const menuKey='order:'+sn; const pending=state.pendingActions[menuKey]; const isMenuOpen=!!state.dropdowns[menuKey];
       const offers=Array.isArray(o.offers)?o.offers:[];
       return `
-        <article class="premium-card p-4">
+        <article class="premium-card p-4 ${isMenuOpen?'menu-active':''}">
           <div class="flex justify-between items-start gap-3">
             <div class="min-w-0 flex-1"><p class="font-black text-[14px]">${escHtml(o.service||'طلب')}</p><p class="text-[11px] font-bold text-slate-500 mt-1">كود: <span class="font-mono bg-blue-50 px-2 py-0.5 rounded-full text-blue-800">${escHtml(sn)}</span></p></div>
             <div class="flex items-center gap-2">
