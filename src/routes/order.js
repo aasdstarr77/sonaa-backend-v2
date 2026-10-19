@@ -534,6 +534,73 @@ router.post('/:sn/accept', async (req, res, next) => {
   return res.status(500).json({ message: 'تعذر إكمال عملية قبول العرض' });
 });
 
+router.post('/:sn/complete', auth(), async (req, res, next) => {
+  try {
+    if (req.user.role !== 'fanni') {
+      return res.status(403).json({
+        message: 'إكمال المهمة متاح للفني المعيّن فقط'
+      });
+    }
+
+    const sn = String(req.params.sn || '').toUpperCase();
+
+    if (!/^SN\d{6}$/.test(sn)) {
+      return res.status(400).json({
+        message: 'كود الطلب غير صحيح'
+      });
+    }
+
+    const order = await Order.findOneAndUpdate(
+      {
+        sn,
+        status: 'تم اختيار فني',
+        assignedFanni: req.userId
+      },
+      {
+        $set: { status: 'تم الانتهاء' }
+      },
+      {
+        new: true,
+        runValidators: true
+      }
+    );
+
+    if (!order) {
+      const existing = await Order.findOne({ sn }).select(
+        'sn status assignedFanni'
+      );
+
+      if (!existing) {
+        return res.status(404).json({
+          message: 'الطلب غير موجود'
+        });
+      }
+
+      if (String(existing.assignedFanni || '') !== String(req.userId)) {
+        return res.status(403).json({
+          message: 'هذا الطلب غير مسند إليك'
+        });
+      }
+
+      return res.status(409).json({
+        message: existing.status === 'تم الانتهاء'
+          ? 'المهمة مكتملة بالفعل'
+          : 'حالة الطلب لا تسمح بإكمال المهمة'
+      });
+    }
+
+    return res.json({
+      message: 'تم إكمال المهمة بنجاح',
+      order: {
+        sn: order.sn,
+        status: order.status
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get('/:sn/assigned-details', auth(), async (req, res, next) => {
   try {
     const sn = String(req.params.sn || '').toUpperCase();
