@@ -27,6 +27,7 @@ function canAccessAdmin(user, req) {
   }
 
   const isComplaintDecision = method === 'PATCH' && /^\/complaints\/[^/]+$/.test(path);
+  const isSupportReview = method === 'POST' && /^\/support\/[^/]+\/review$/.test(path);
   const isFanniDecision = method === 'POST' && /^\/fannis\/[^/]+\/(approve|reject|disable|enable)$/.test(path);
   const isOfferDecision = method === 'POST' && /^\/offers\/[^/]+\/[^/]+\/reject$/.test(path);
   if (role === 'مشرف أول') {
@@ -34,10 +35,10 @@ function canAccessAdmin(user, req) {
     const isOfferRemoval = method === 'DELETE' && /^\/offers\/[^/]+\/[^/]+$/.test(path);
     const isOrderRemoval = method === 'DELETE' && /^\/orders\/[^/]+$/.test(path);
     const isServiceWrite = ['POST', 'PATCH'].includes(method) && path.startsWith('/services');
-    return isComplaintDecision || isFanniDecision || isOfferDecision || isFanniManagement || isOfferRemoval || isOrderRemoval || isServiceWrite;
+    return isComplaintDecision || isSupportReview || isFanniDecision || isOfferDecision || isFanniManagement || isOfferRemoval || isOrderRemoval || isServiceWrite;
   }
   // المشرف: قرارات الشكاوى الأساسية واعتماد/رفض/تعليق الفنيين ورفض العرض.
-  return isComplaintDecision || isFanniDecision || isOfferDecision;
+  return isComplaintDecision || isSupportReview || isFanniDecision || isOfferDecision;
 }
 
 function auth(requiredRole = null) {
