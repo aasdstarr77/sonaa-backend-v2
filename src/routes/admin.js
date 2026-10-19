@@ -8,6 +8,8 @@ const mongoose = require('mongoose');
 const crypto = require('crypto');
 
 const Fanni = require('../models/Fanni');
+const Client = require('../models/Client');
+const Notification = require('../models/Notification');
 const TopupRequest = require('../models/TopupRequest');
 const Order = require('../models/Order');
 const Complaint = require('../models/Complaint');
@@ -844,7 +846,42 @@ router.post('/clients/:phone/block', auth('admin'), notImplemented('حظر ال�
 router.post('/clients/:phone/note', auth('admin'), notImplemented('ملاحظة العميل تحتاج Customer Model'));
 router.get('/regions', auth('admin'), notImplemented('المناطق تحتاج Region Model'));
 router.post('/regions', auth('admin'), notImplemented('إضافة منطقة تحتاج Region Model'));
-router.post('/notifications/broadcast', auth('admin'), notImplemented('الإشعارات تحتاج Notification Service'));
+router.post('/notifications/broadcast', auth('admin'), async (req, res, next) => {
+  try {
+    const schema = Joi.object({
+      title: Joi.string().trim().min(2).max(100).required(),
+      message: Joi.string().trim().min(2).max(300).required(),
+      audience: Joi.string().valid('fannis', 'cairo_fannis', 'clients', 'all').required()
+    }).required();
+    const { error, value } = schema.validate(req.body, { abortEarly: false, stripUnknown: true });
+    if (error) return res.status(400).json({ message: 'بيانات الإشعار غير صحيحة', details: error.details.map(item => item.message) });
+
+    const MAX_BROADCAST_RECIPIENTS = 1000;
+    const targets = [];
+    if (value.audience === 'fannis' || value.audience === 'all' || value.audience === 'cairo_fannis') {
+      const fanniFilter = { role: 'fanni', status: 'معتمد' };
+      if (value.audience === 'cairo_fannis') fanniFilter.areas = { $regex: 'القاهرة', $options: 'i' };
+      const fannis = await Fanni.find(fanniFilter).select('_id').limit(MAX_BROADCAST_RECIPIENTS + 1).lean();
+      targets.push(...fannis.map(item => ({ recipientRole: 'fanni', recipientId: item._id })));
+    }
+    if (value.audience === 'clients' || value.audience === 'all') {
+      const clients = await Client.find({ status: 'نشط' }).select('_id').limit(MAX_BROADCAST_RECIPIENTS + 1).lean();
+      targets.push(...clients.map(item => ({ recipientRole: 'client', recipientId: item._id })));
+    }
+    if (targets.length > MAX_BROADCAST_RECIPIENTS) {
+      return res.status(413).json({ message: 'عدد المستلمين أكبر من الحد المسموح (1000). اختر فئة أصغر.' });
+    }
+    if (!targets.length) return res.status(404).json({ message: 'لا يوجد مستلمون نشطون في الفئة المحددة' });
+
+    const createdAt = new Date();
+    const documents = targets.map(target => ({
+      ...target, type: 'announcement', title: value.title, message: value.message,
+      link: '', readAt: null, createdAt, updatedAt: createdAt
+    }));
+    const inserted = await Notification.insertMany(documents, { ordered: false });
+    return res.status(201).json({ message: 'تم إرسال الإشعار داخل التطبيق', sent: inserted.length, audience: value.audience });
+  } catch (error) { return next(error); }
+});
 router.put('/settings', auth('admin'), notImplemented('الإعدادات تحتاج Settings Model'));
 router.post('/reports', auth('admin'), notImplemented('التقارير تحتاج تجميع بيانات حقيقية'));
 
