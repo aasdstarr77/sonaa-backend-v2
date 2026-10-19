@@ -215,10 +215,11 @@ const loginPaths = [
 ];
 
 app.use(loginPaths, loginLimiter);
-app.use(['/api/fanni/register', '/api/fannis/register', '/api/technician/register', '/api/technicians/register'], fanniRegistrationLimiter);
+
 
 // جميع مسارات API التي تعتمد على قاعدة البيانات تمر عبر هذا الوسيط.
 app.use('/api', ensureDatabase);
+app.use(['/api/fanni/register', '/api/fannis/register', '/api/technician/register', '/api/technicians/register'], fanniRegistrationLimiter);
 
 app.use('/api', publicRouter);
 app.use('/api/client', clientRouter);
