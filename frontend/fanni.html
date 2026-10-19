@@ -298,7 +298,7 @@ function setTab(tab){
  render();
 
  if(tab==='available')loadOrders();
- if(tab==='myOffers')loadMyOffers();
+if(tab==='myOffers'||tab==='completed')loadMyOffers();
  if(tab==='wallet')loadWalletHistory();
  if(tab==='profile')loadProfile();
 }
