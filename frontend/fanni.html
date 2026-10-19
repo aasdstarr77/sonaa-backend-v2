@@ -234,7 +234,7 @@ let state={
  tab:getToken()?'available':'login',
  loginPhone:'',loginPass:'',
  regName:'',regPhone:'',regPass:'',regPassConfirm:'',
- regSpecialties:[],regAreasText:'',
+ regSpecialties:[],regAreasText:'',openSpecialtyCategory:'',
  loading:false,checkingSession:false,
  orders:[],filteredOrders:[],search:'',filterSkill:'الكل',
  myOffers:[],completedOffers:[],offerModal:null,offerPrice:'',offerMessage:'',
@@ -302,6 +302,11 @@ function setTab(tab){
 if(tab==='myOffers'||tab==='completed')loadMyOffers();
  if(tab==='wallet')loadWalletHistory();
  if(tab==='profile')loadProfile();
+}
+
+function toggleSpecialtyCategory(label){
+ state.openSpecialtyCategory=state.openSpecialtyCategory===label?'':label;
+ render();
 }
 
 function toggleSpecialty(s){
@@ -486,7 +491,18 @@ function render(){
        <div class="py-6 text-center"><div class="inline-block h-6 w-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div><p class="mt-2 text-[11px] font-bold text-slate-600">جاري تحميل التخصصات من الخادم...</p></div>
      `:SERVICES_ERROR?`
        <div class="rounded-xl bg-red-50 border border-red-200 p-3 text-center"><p class="text-[11px] font-bold text-red-700">${esc(SERVICES_ERROR)}</p><button onclick="loadServices()" class="mt-2 secondary-btn px-4 py-2 text-[11px]">إعادة المحاولة</button><p class="mt-2 text-[10px] text-slate-500">المصدر الرسمي هو /api/services</p></div>
-     `:CATEGORIES.map(cat=>`<div class="mb-4"><div class="text-[11px] font-extrabold text-slate-600 mb-2">${esc(cat.emoji)} ${esc(cat.label)}</div><div class="flex flex-wrap gap-2">${cat.services.map(s=>`<label class="service-chip ${state.regSpecialties.includes(s)?'selected':''}"><input type="checkbox" data-specialty="${esc(s)}" ${state.regSpecialties.includes(s)?'checked':''} onchange="toggleSpecialty(this.dataset.specialty)"><span>${esc(s)}</span></label>`).join('')}</div></div>`).join('')}
+     `:CATEGORIES.map((cat,index)=>{
+      const selectedCount=cat.services.filter(s=>state.regSpecialties.includes(s)).length;
+      const categoryId='specialty-category-'+index;
+      const isOpen=state.openSpecialtyCategory===cat.label;
+      return \`<section class="mb-3 overflow-hidden rounded-xl border border-slate-200 bg-white">
+       <button type="button" onclick="toggleSpecialtyCategory(\${JSON.stringify(cat.label)})" aria-expanded="\${isOpen}" aria-controls="\${categoryId}" class="flex w-full items-center justify-between gap-3 bg-slate-50 p-3 text-right">
+        <span class="min-w-0"><span class="block text-[12px] font-extrabold text-slate-800">\${esc(cat.emoji)} \${esc(cat.label)}</span><span class="mt-1 block text-[10px] font-bold text-slate-500">\${selectedCount?'تم اختيار '+selectedCount+' خدمة':'اضغط لعرض الخدمات'}</span></span>
+        <span class="flex shrink-0 items-center gap-2"><span class="rounded-full bg-blue-100 px-2 py-1 text-[10px] font-extrabold text-blue-800">\${selectedCount}</span><span class="text-slate-500">\${isOpen?'−':'+'}</span></span>
+       </button>
+       \${isOpen?\`<div id="\${categoryId}" class="flex flex-wrap gap-2 border-t border-slate-100 p-3">\${cat.services.map(s=>\`<label class="service-chip \${state.regSpecialties.includes(s)?'selected':''}"><input type="checkbox" data-specialty="\${esc(s)}" \${state.regSpecialties.includes(s)?'checked':''} onchange="toggleSpecialty(this.dataset.specialty)"><span>\${esc(s)}</span></label>\`).join('')}</div>\`:''}
+      </section>\`;
+     }).join('')}
     </div>
 
     <div><label class="field-label">مناطق العمل والأحياء *</label><textarea class="field min-h-[100px]" oninput="state.regAreasText=this.value.slice(0,1000)" placeholder="مثال: المعادي، زهراء المعادي، دار السلام">${esc(state.regAreasText)}</textarea><p class="text-[10px] text-slate-500 mt-1">افصل بين المناطق بفاصلة أو سطر جديد.</p></div>
