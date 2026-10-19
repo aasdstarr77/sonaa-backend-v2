@@ -1012,7 +1012,8 @@ router.post('/:sn/accept', async (req, res, next) => {
     const fanniBefore = await Fanni.findOne({
       _id: fanniId,
       role: 'fanni',
-      status: 'معتمد'
+      status: 'معتمد',
+      isFrozen: { $ne: true }
     }).session(session);
 
     if (!fanniBefore) {
@@ -1043,6 +1044,7 @@ router.post('/:sn/accept', async (req, res, next) => {
         _id: fanniId,
         role: 'fanni',
         status: 'معتمد',
+        isFrozen: { $ne: true },
         walletBalance: { $gte: commissionAmount }
       },
       {
