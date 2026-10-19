@@ -118,6 +118,7 @@ function publicOrder(order, options = {}) {
 
   delete data.clientPhone;
   delete data.phone;
+  delete data.clientAccount;
   delete data.assignedFanni;
   delete data.assignedFanniPhone;
 
