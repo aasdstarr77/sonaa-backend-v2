@@ -908,6 +908,9 @@ router.post('/:sn/accept', async (req, res, next) => {
   let session;
   let responsePayload = null;
   let responseStatus = 200;
+  let notificationFanniId = null;
+  let notificationClientId = null;
+  let notificationOrderId = null;
 
   try {
     session = await mongoose.startSession();
@@ -1108,6 +1111,10 @@ router.post('/:sn/accept', async (req, res, next) => {
       throw new Error('ORDER_NOT_FOUND_AFTER_UPDATE');
     }
 
+    notificationFanniId = fanniId;
+    notificationClientId = updatedOrder.clientAccount || null;
+    notificationOrderId = updatedOrder._id;
+
     responsePayload = {
       message: 'تم قبول العرض وخصم عمولة المنصة بنجاح',
       commission: {
@@ -1143,16 +1150,16 @@ router.post('/:sn/accept', async (req, res, next) => {
   if (responsePayload && responseStatus === 200 && responsePayload.order) {
     const acceptedOrder = responsePayload.order;
     await createNotification({
-      recipientRole: 'fanni', recipientId: acceptedOrder.assignedFanni, type: 'offer_accepted',
+      recipientRole: 'fanni', recipientId: notificationFanniId, type: 'offer_accepted',
       title: 'تم قبول عرضك', message: 'العميل قبل عرضك على الطلب ' + acceptedOrder.sn + '.',
-      link: '/fanni', dedupeKey: 'offer-accepted:' + String(acceptedOrder._id || acceptedOrder.sn)
+      link: '/fanni', dedupeKey: 'offer-accepted:' + String(notificationOrderId || acceptedOrder.sn)
     });
-    const clientAccountId = acceptedOrder.clientAccount;
+    const clientAccountId = notificationClientId;
     if (clientAccountId) {
       await createNotification({
         recipientRole: 'client', recipientId: clientAccountId, type: 'offer_accepted',
         title: 'تم اختيار الفني', message: 'تم قبول العرض على طلبك ' + acceptedOrder.sn + '.',
-        link: '/?tab=orders', dedupeKey: 'client-offer-accepted:' + String(acceptedOrder._id || acceptedOrder.sn)
+        link: '/?tab=orders', dedupeKey: 'client-offer-accepted:' + String(notificationOrderId || acceptedOrder.sn)
       });
     }
   }
