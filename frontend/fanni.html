@@ -440,7 +440,7 @@ function render(){
   <div class="mx-auto max-w-[680px] px-3 py-3 flex items-center justify-between gap-3">
    <div class="flex items-center gap-3 min-w-0">
     <div class="h-11 w-11 rounded-2xl bg-blue-600 flex items-center justify-center font-black text-[21px] shrink-0">S</div>
-    <div class="min-w-0"><h1 class="font-extrabold text-[16px]">صناع</h1><div class="text-[10px] text-blue-100/75 mt-0.5 truncate">${authenticated?esc(user?.name||'فني')+' · الرصيد '+esc(balance)+' جنيه':'لوحة الفني والخدمات'}</div></div>
+    <div class="min-w-0"><h1 class="font-extrabold text-[16px]">صناع</h1><div class="text-[10px] text-blue-100/75 mt-0.5 truncate">${authenticated?esc(user?.name||'فني')+' · الرصيد '+esc(balance)+' جنيه':'لوحة الفني والخدمات'}</div>${authenticated?`<div class="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-amber-200/30 bg-amber-400/15 px-2.5 py-1 text-[10px] font-extrabold text-amber-100"><span>مستواك المهني:</span><span>${esc(user?.level||'مبتدئ')}</span></div>`:''}</div>
    </div>
    <div class="flex items-center gap-2 shrink-0">
     <button onclick="goClient()" class="h-9 px-3 rounded-xl bg-blue-600 text-[11px] font-extrabold">لوحة العميل</button>
