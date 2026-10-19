@@ -656,6 +656,10 @@ function render(){
     <div class="flex items-center gap-3 pb-4 border-b"><div class="text-2xl">👤</div><div><h3 class="section-title">بيانات حسابي</h3><p class="text-[10px] text-slate-500 mt-1">بيانات الحساب من السيرفر</p></div><button onclick="loadProfile()" class="secondary-btn mr-auto px-3 py-2 text-[10px]">تحديث</button></div>
 
     <div class="mt-4 space-y-3 text-[12px]">${[['الاسم',user?.name],['رقم الهاتف',user?.phone],['حالة الحساب',user?.status],['التخصصات',specialties.join('، ')],['مناطق العمل',areas.join('، ')],['رصيد المحفظة',balance+' جنيه']].map(x=>`<div class="rounded-xl bg-slate-50 border p-3"><div class="text-[10px] text-slate-500 mb-1">${x[0]}</div><b>${esc(x[1]||'غير متاح')}</b></div>`).join('')}</div>
+    <div class="mt-4 rounded-xl border border-emerald-100 bg-emerald-50/60 p-3">
+     <div class="font-extrabold text-[12px] text-emerald-900">شاراتي</div>
+     <div class="mt-2 flex flex-wrap gap-1.5">${(Array.isArray(user?.badges)?user.badges:[]).map(b=>({trusted:'✓ فني موثوق',top_rated:'★ الأعلى تقييمًا',verified:'✓ تم التحقق',fast_response:'⚡ سريع الاستجابة',premium:'◆ فني مميز',gold:'★ الشارة الذهبية'}[b]||'')).filter(Boolean).map(label=>`<span class="rounded-full border border-emerald-200 bg-white px-2.5 py-1 text-[10px] font-extrabold text-emerald-800">${esc(label)}</span>`).join('')||'<span class="text-[11px] text-slate-500">لا توجد شارات ممنوحة حاليًا</span>'}</div>
+    </div>
 
     <button onclick="logout()" class="mt-4 w-full h-11 rounded-xl bg-red-50 border border-red-100 text-red-700 font-extrabold text-[12px]">تسجيل الخروج</button>
    </section>`:''}

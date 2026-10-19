@@ -533,6 +533,7 @@ onclick="selectServiceByIndex(${ALL_SERVICES.indexOf(s)})"
                   <span class="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-extrabold text-amber-800">${escHtml(offer.fanniLevel||'المستوى غير متاح')}</span>
                   <span class="font-black text-[15px] text-blue-700">${escHtml(offer.price==null?'':String(offer.price))} جنيه</span>
                 </div>
+                ${(Array.isArray(offer.fanniBadges)?offer.fanniBadges:[]).length?'<div class="mt-2 flex flex-wrap gap-1.5">'+(offer.fanniBadges||[]).map(b=>({trusted:'✓ فني موثوق',top_rated:'★ الأعلى تقييمًا',verified:'✓ تم التحقق',fast_response:'⚡ سريع الاستجابة',premium:'◆ فني مميز',gold:'★ الشارة الذهبية'}[b]||'')).filter(Boolean).map(label=>'<span class="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-extrabold text-emerald-800">'+escHtml(label)+'</span>').join('')+'</div>':''}
                 <p class="mt-2 text-[12px] bg-slate-50 border border-slate-100 rounded-xl p-2.5 leading-6 break-words whitespace-pre-wrap">${escHtml(maskPhoneNumbers(offer.message||'بدون رسالة'))}</p>
                 
 ${state.tracked.status==='تم اختيار فني'

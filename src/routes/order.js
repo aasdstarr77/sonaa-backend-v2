@@ -1017,6 +1017,7 @@ router.post('/:sn/offer', auth(), async (req, res, next) => {
       fanniId: String(req.userId),
       fanniName: req.user.name,
       fanniLevel: fanni.level || 'مبتدئ',
+      fanniBadges: Array.isArray(fanni.badges) ? fanni.badges : [],
       fanniPhone: req.user.phone,
       price: String(price),
       priceNum: price,
@@ -1547,13 +1548,15 @@ async function trackOrder(req, res, next) {
 
     const isOrderOwner = verifyClientToken(req, order);
 
-    // ملء مستوى الفني للعروض القديمة أيضًا دون كشف رقم الهاتف أو بيانات الحساب.
+    // ملء مستوى وشارات الفني للعروض القديمة دون كشف رقم الهاتف أو بيانات الحساب.
     const fanniIds = [...new Set((order.offers || []).map(offer => String(offer.fanni || '')).filter(Boolean))];
     if (fanniIds.length) {
-      const fannis = await Fanni.find({ _id: { $in: fanniIds } }).select('_id level').lean();
-      const levelsById = new Map(fannis.map(fanni => [String(fanni._id), fanni.level || 'مبتدئ']));
+      const fannis = await Fanni.find({ _id: { $in: fanniIds } }).select('_id level badges').lean();
+      const fannisById = new Map(fannis.map(fanni => [String(fanni._id), fanni]));
       for (const offer of order.offers || []) {
-        offer.fanniLevel = levelsById.get(String(offer.fanni || '')) || offer.fanniLevel || 'مبتدئ';
+        const fanni = fannisById.get(String(offer.fanni || ''));
+        offer.fanniLevel = fanni?.level || offer.fanniLevel || 'مبتدئ';
+        offer.fanniBadges = Array.isArray(fanni?.badges) ? fanni.badges : (offer.fanniBadges || []);
       }
     }
 

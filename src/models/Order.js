@@ -27,6 +27,13 @@ maxlength: 30,
 default: 'مبتدئ'
 },
 
+// لقطة من شارات الفني وقت تقديم العرض، وتُحدّث للعروض القديمة عند عرض الطلب.
+fanniBadges: {
+type: [String],
+enum: ['trusted', 'top_rated', 'verified', 'fast_response', 'premium', 'gold'],
+default: []
+},
+
 fanniPhone: {
 type: String,
 trim: true
