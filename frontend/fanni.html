@@ -338,6 +338,16 @@ function fanniCanHandleServiceFrontend(specialties, serviceName) {
  return selected.includes(normalize(category.label));
 }
 
+function hasSubmittedOffer(sn){
+ const target=String(sn||'').trim().toUpperCase();
+ if(!target)return false;
+
+ return [...state.myOffers,...state.completedOffers].some(offer=>{
+  const offerSn=String(offer?.orderSn||offer?.sn||offer?.order?.sn||'').trim().toUpperCase();
+  return offerSn===target;
+ });
+}
+
 function applyFilter() {
  const specialties = Array.isArray(currentUser?.specialties)
   ? currentUser.specialties
@@ -548,7 +558,9 @@ function render(){
         <p class="text-[12px] bg-slate-50 rounded-xl leading-6 break-words">${esc(String(o.description||o.desc||'بدون وصف').slice(0,180))}</p>
        </div>
 
-       <button data-sn="${esc(sn)}" onclick="openOffer(this.dataset.sn)" ${!approved?'disabled':''} class="primary-btn w-full h-11 text-[12px]">${approved?'تقديم عرض لهذا الطلب':'العروض بعد اعتماد الحساب'}</button>
+       ${hasSubmittedOffer(sn)
+        ? '<div class="w-full rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-center text-[12px] font-extrabold text-amber-800">✓ تم تقديم عرضك على هذا الطلب — في انتظار رد العميل</div>'
+        : `<button data-sn="${esc(sn)}" onclick="openOffer(this.dataset.sn)" ${!approved?'disabled':''} class="primary-btn w-full h-11 text-[12px]">${approved?'تقديم عرض لهذا الطلب':'العروض بعد اعتماد الحساب'}</button>`}
       </article>`;
     }).join('')}
    </section>`:''}
@@ -830,8 +842,23 @@ async function loadOrders(){
  render();
 
  try{
-  const data=await API.available();
+  const [availableResult, offersResult]=await Promise.allSettled([
+   API.available(),
+   API.myOffers()
+  ]);
+
+  if(availableResult.status==='rejected')throw availableResult.reason;
+
+  const data=availableResult.value;
   state.orders=extractList(data,['orders','requests','items']);
+
+  // تحميل عروض الفني أيضًا حتى لا يظهر زر تقديم العرض مرة أخرى بعد تحديث الصفحة.
+  if(offersResult.status==='fulfilled'){
+   const allOffers=extractList(offersResult.value,['offers','items','requests']);
+   state.completedOffers=allOffers.filter(o=>o.completed===true||o.orderStatus==='تم الانتهاء');
+   state.myOffers=allOffers.filter(o=>!(o.completed===true||o.orderStatus==='تم الانتهاء'));
+  }
+
   applyFilter();
   state.loading=false;
   render();
