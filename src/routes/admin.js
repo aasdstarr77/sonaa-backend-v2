@@ -16,6 +16,7 @@ const Complaint = require('../models/Complaint');
 const WalletTransaction = require('../models/WalletTransaction');
 const { createNotification } = require('../utils/notifications');
 const Service = require('../models/Service');
+const Region = require('../models/Region');
 
 const {
   CATEGORIES,
@@ -874,8 +875,29 @@ router.post('/clients/:phone/note', auth('admin'), async (req, res, next) => {
     return res.json({ message: 'تم حفظ الملاحظة الداخلية وسجلها', client: { id: String(client._id), name: client.name, phone: client.phone, adminNote: client.adminNote } });
   } catch (error) { return next(error); }
 });
-router.get('/regions', auth('admin'), notImplemented('المناطق تحتاج Region Model'));
-router.post('/regions', auth('admin'), notImplemented('إضافة منطقة تحتاج Region Model'));
+router.get('/regions', auth('admin'), async (req, res, next) => {
+  try {
+    const regions = await Region.find({}).sort({ isActive: -1, name: 1 }).limit(500).lean();
+    return res.set('Cache-Control', 'no-store').json({ regions, items: regions });
+  } catch (error) { return next(error); }
+});
+
+router.post('/regions', auth('admin'), async (req, res, next) => {
+  try {
+    const schema = Joi.object({ name: Joi.string().trim().min(2).max(100).required() }).required();
+    const { error, value } = schema.validate(req.body || {}, { abortEarly: false, stripUnknown: true });
+    if (error) return res.status(400).json({ message: 'اسم المنطقة مطلوب من حرفين إلى 100 حرف' });
+    const name = value.name.normalize('NFC').trim().replace(/\\s+/g, ' ');
+    const normalizedName = name.toLocaleLowerCase('ar-EG');
+    const exists = await Region.findOne({ normalizedName }).select('_id name').lean();
+    if (exists) return res.status(409).json({ message: 'المنطقة موجودة بالفعل', region: exists });
+    const region = await Region.create({ name, createdBy: adminName(req) });
+    return res.status(201).json({ message: 'تمت إضافة المنطقة إلى قائمة مناطق الإدارة', region });
+  } catch (error) {
+    if (error && error.code === 11000) return res.status(409).json({ message: 'المنطقة موجودة بالفعل' });
+    return next(error);
+  }
+});
 router.post('/notifications/broadcast', auth('admin'), async (req, res, next) => {
   try {
     const schema = Joi.object({
