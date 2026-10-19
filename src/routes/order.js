@@ -799,12 +799,19 @@ router.post('/:sn/offer', auth(), async (req, res, next) => {
       _id: req.userId,
       role: 'fanni',
       status: 'معتمد'
-    }).select('specialties walletBalance level');
+    }).select('specialties walletBalance level isFrozen limits');
 
     if (!fanni) {
       return res.status(403).json({
         message: 'حساب الفني غير موجود أو غير معتمد'
       });
+    }
+
+    if (fanni.isFrozen === true) {
+      return res.status(403).json({ message: 'محفظتك مجمدة مؤقتًا؛ تواصل مع الإدارة قبل تقديم عروض جديدة' });
+    }
+    if (fanni.limits?.isLimited === true) {
+      return res.status(403).json({ message: 'حسابك عليه حدود استقبال تمنع تقديم عروض جديدة حاليًا' });
     }
 
     if (!fanniCanHandleService(fanni.specialties, order.service)) {
