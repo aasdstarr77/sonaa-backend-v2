@@ -483,6 +483,7 @@ async function loadNotifications(){if(!getToken())return;try{const data=await AP
 async function toggleNotifications(){state.notificationsOpen=!state.notificationsOpen;if(state.notificationsOpen)await loadNotifications();render();}
 async function openNotification(id){try{await API.readNotification(id);}catch(e){}state.notifications=state.notifications.map(n=>n.id===id?Object.assign({},n,{read:true}):n);state.notificationsUnread=Math.max(0,state.notificationsUnread-1);state.notificationsOpen=false;render();}
 async function markAllNotificationsRead(){try{await API.readAllNotifications();state.notifications=state.notifications.map(n=>Object.assign({},n,{read:true}));state.notificationsUnread=0;render();}catch(e){toast(e.message||'تعذر تحديث الإشعارات','error');}}
+function notificationBadge(){return state.notificationsUnread?'<span class="absolute -right-1 -top-1 min-w-[17px] rounded-full bg-red-600 px-1 text-[9px] font-black text-white">'+(state.notificationsUnread>99?'99+':state.notificationsUnread)+'</span>':'';}
 function notificationPanel(){if(!state.notificationsOpen)return '';var html='<div class="fixed inset-0 z-[99]" onclick="state.notificationsOpen=false;render()"></div><div class="fixed left-3 right-3 top-[70px] z-[100] mx-auto max-w-[420px] overflow-hidden rounded-2xl border border-amber-200 bg-white text-slate-800 shadow-2xl"><div class="flex items-center justify-between gap-2 border-b p-3"><b class="text-[13px]">الإشعارات</b><button onclick="markAllNotificationsRead()" class="text-[10px] font-extrabold text-blue-700">تعليم الكل كمقروء</button></div><div class="max-h-[60vh] overflow-y-auto">';if(!state.notifications.length)html+='<p class="p-6 text-center text-[12px] text-slate-500">مفيش إشعارات لحد دلوقتي.</p>';state.notifications.forEach(n=>{html+='<button type="button" data-fanni-notification-id="'+esc(n.id)+'" class="block w-full border-b p-3 text-right '+(n.read?'bg-white':'bg-amber-50')+'"><b class="block text-[12px]">'+esc(n.title)+'</b><span class="mt-1 block text-[11px] leading-5 text-slate-600">'+esc(n.message)+'</span><small class="mt-1 block text-[9px] text-slate-400">'+(n.createdAt?new Date(n.createdAt).toLocaleString('ar-EG'):'')+'</small></button>';});return html+'</div></div>';}
 document.addEventListener('click',e=>{const item=e.target.closest('[data-fanni-notification-id]');if(item)openNotification(item.getAttribute('data-fanni-notification-id'));});
 function render(){
@@ -501,7 +502,7 @@ function render(){
     <div class="h-11 w-11 rounded-2xl bg-blue-600 flex items-center justify-center font-black text-[21px] shrink-0">S</div>
     <div class="min-w-0"><h1 class="font-extrabold text-[16px]">صناع</h1><div class="text-[10px] text-blue-100/75 mt-0.5 truncate">${authenticated?esc(user?.name||'فني')+' · الرصيد '+esc(balance)+' جنيه':'لوحة الفني والخدمات'}</div>${authenticated?`<div class="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-amber-200/30 bg-amber-400/15 px-2.5 py-1 text-[10px] font-extrabold text-amber-100"><span>مستواك المهني:</span><span>${esc(user?.level||'مبتدئ')}</span></div>`:''}</div>
    </div>
-   <div class="flex items-center gap-2 shrink-0"><button onclick="toggleNotifications()" aria-label="الإشعارات" class="relative h-9 w-9 rounded-xl border border-amber-200 bg-amber-50 text-[18px] text-amber-600">🔔<span id="notificationBadge" class="absolute -right-1 -top-1 min-w-[17px] rounded-full bg-red-600 px-1 text-[9px] font-black text-white"></span></button>
+   <div class="flex items-center gap-2 shrink-0"><button onclick="toggleNotifications()" aria-label="الإشعارات" class="relative h-9 w-9 rounded-xl border border-amber-200 bg-amber-50 text-[18px] text-amber-600">🔔${notificationBadge()}</button>
     <button onclick="goClient()" class="h-9 px-3 rounded-xl bg-blue-600 text-[11px] font-extrabold">لوحة العميل</button>
     ${authenticated?'<button onclick="logout()" class="h-9 px-3 rounded-xl bg-white/10 text-[11px] font-bold">خروج</button>':''}
    </div>
@@ -1165,6 +1166,7 @@ async function start(){
  }
 }
 
+setInterval(function(){if(getToken())loadNotifications();},30000);
 start();
 </script>
 </body>
