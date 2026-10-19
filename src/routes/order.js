@@ -7,6 +7,7 @@ const jwt = require('jsonwebtoken');
 
 const Order = require('../models/Order');
 const Fanni = require('../models/Fanni');
+const Rating = require('../models/Rating');
 const WalletTransaction = require('../models/WalletTransaction');
 const { auth } = require('../middleware/auth');
 const { generateSN } = require('../utils/generateSN');
@@ -441,6 +442,26 @@ function verifyClientToken(req, order) {
   }
 }
 
+
+function publicRatings(ratings) {
+  return (ratings || []).map(rating => ({
+    reviewerRole: rating.reviewerRole,
+    stars: rating.stars,
+    comment: rating.comment || '',
+    createdAt: rating.createdAt
+  }));
+}
+
+async function hasRatingBlock({ clientPhone, fanniId }) {
+  const phone = normalizePhone(clientPhone);
+  if (!phone || !fanniId) return false;
+  return Rating.exists({
+    clientPhone: phone,
+    fanniId,
+    blockFuture: true
+  });
+}
+
 function money(value) {
   return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 }
@@ -679,16 +700,41 @@ router.get('/available', auth(), async (req, res, next) => {
       status: { $in: ACTIVE_STATUSES },
       expiresAt: { $gt: new Date() }
     })
-      .select('-clientPhone -phone -address -clientName')
+      .select('-phone -address -clientName')
       .sort({ createdAt: -1 })
       .lean();
 
-    const matchingOrders =
+    let matchingOrders =
       req.user.role === 'admin'
         ? orders
         : orders.filter(order =>
             fanniCanHandleService(specialties, order.service)
           );
+
+    if (req.user.role === 'fanni') {
+      const blockedRatings = await Rating.find({
+        fanniId: req.userId,
+        blockFuture: true
+      }).select('clientPhone').lean();
+      const blockedPhones = new Set(
+        blockedRatings.map(item => normalizePhone(item.clientPhone)).filter(Boolean)
+      );
+      matchingOrders = matchingOrders.filter(order =>
+        !blockedPhones.has(normalizePhone(order.clientPhone))
+      );
+      // Also hide this technician from customers who blocked them.
+      const clientBlocks = await Rating.find({
+        reviewerRole: 'client',
+        fanniId: req.userId,
+        blockFuture: true
+      }).select('clientPhone').lean();
+      const clientBlockedPhones = new Set(
+        clientBlocks.map(item => normalizePhone(item.clientPhone)).filter(Boolean)
+      );
+      matchingOrders = matchingOrders.filter(order =>
+        !clientBlockedPhones.has(normalizePhone(order.clientPhone))
+      );
+    }
 
     const safeOrders = matchingOrders.map(order =>
       publicOrder(order, {
@@ -748,6 +794,14 @@ router.get('/my-offers', auth(), async (req, res, next) => {
           accepted: isAcceptedByThisFanni,
           completed: isCompletedByThisFanni
         };
+
+        if (isCompletedByThisFanni) {
+          const ratings = await Rating.find({ orderId: order._id }).sort({ createdAt: 1 }).lean();
+          safeOffer.ratings = publicRatings(ratings);
+          safeOffer.myRating = publicRatings(
+            ratings.filter(rating => rating.reviewerRole === 'fanni')
+          )[0] || null;
+        }
 
         if (isAcceptedByThisFanni) {
           safeOffer.client = {
@@ -880,6 +934,24 @@ router.post('/:sn/offer', auth(), async (req, res, next) => {
     if (!fanniCanHandleService(fanni.specialties, order.service)) {
       return res.status(403).json({
         message: 'هذا الطلب خارج تخصصات حسابك المعتمدة'
+      });
+    }
+
+    if (await hasRatingBlock({ clientPhone: order.clientPhone, fanniId: req.userId })) {
+      return res.status(403).json({
+        message: 'لا يمكنك تقديم عرض على هذا الطلب بناءً على إعدادات التقييم السابقة'
+      });
+    }
+
+    const clientBlockedThisFanni = await Rating.exists({
+      reviewerRole: 'client',
+      fanniId: req.userId,
+      clientPhone: normalizePhone(order.clientPhone),
+      blockFuture: true
+    });
+    if (clientBlockedThisFanni) {
+      return res.status(403).json({
+        message: 'هذا العميل طلب عدم إظهار طلباته لك'
       });
     }
 
@@ -1312,6 +1384,104 @@ router.get('/:sn/assigned-details', auth(), async (req, res, next) => {
   }
 });
 
+
+router.post('/:sn/rating', async (req, res, next) => {
+  try {
+    const sn = String(req.params.sn || '').toUpperCase();
+    if (!validSN(sn)) {
+      return res.status(400).json({ message: 'كود الطلب غير صحيح' });
+    }
+
+    const schema = Joi.object({
+      stars: Joi.number().integer().min(1).max(5).required(),
+      comment: Joi.string().trim().max(500).allow('').default(''),
+      blockFuture: Joi.boolean().default(false),
+      clientToken: Joi.string().allow('').optional()
+    }).unknown(false);
+    const { error, value } = schema.validate(req.body || {}, { abortEarly: false });
+    if (error) {
+      return res.status(400).json({ message: 'اختار تقييمًا من نجمة إلى 5 نجوم، والتعليق اختياري بحد أقصى 500 حرف' });
+    }
+    if (value.blockFuture && value.stars !== 1) {
+      return res.status(400).json({ message: 'إيقاف التعامل متاح فقط مع تقييم نجمة واحدة' });
+    }
+
+    const order = await Order.findOne({ sn });
+    if (!order) return res.status(404).json({ message: 'الطلب غير موجود' });
+    if (order.status !== 'تم الانتهاء' || !order.assignedFanni) {
+      return res.status(409).json({ message: 'التقييم متاح بعد إكمال المهمة فعليًا فقط' });
+    }
+
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.startsWith('Bearer ')
+      ? authHeader.slice(7).trim()
+      : String(value.clientToken || '');
+    let reviewerRole = '';
+    let reviewerId = null;
+
+    if (verifyClientToken({ ...req, body: { ...(req.body || {}), clientToken: token }, headers: {} }, order)) {
+      reviewerRole = 'client';
+    } else {
+      if (!token || !process.env.JWT_SECRET) {
+        return res.status(401).json({ message: 'تعذر التحقق من ملكية الطلب أو حساب الفني' });
+      }
+      let payload;
+      try { payload = jwt.verify(token, process.env.JWT_SECRET); }
+      catch { return res.status(401).json({ message: 'جلسة غير صالحة أو منتهية' }); }
+      if (!payload.id) {
+        return res.status(403).json({ message: 'هذه الجلسة لا تسمح بتقييم المهمة' });
+      }
+      const fanni = await Fanni.findById(payload.id).select('_id role status name');
+      if (!fanni || fanni.role !== 'fanni' || fanni.status !== 'معتمد' ||
+          String(fanni._id) !== String(order.assignedFanni)) {
+        return res.status(403).json({ message: 'التقييم متاح للفني المعيّن على هذه المهمة فقط' });
+      }
+      reviewerRole = 'fanni';
+      reviewerId = fanni._id;
+    }
+
+    const rating = await Rating.create({
+      orderId: order._id,
+      orderSn: order.sn,
+      clientPhone: normalizePhone(order.clientPhone),
+      fanniId: order.assignedFanni,
+      reviewerRole,
+      reviewerId,
+      stars: value.stars,
+      comment: sanitizeText(value.comment || ''),
+      blockFuture: Boolean(value.blockFuture)
+    });
+
+    if (reviewerRole === 'client') {
+      const aggregate = await Rating.aggregate([
+        { $match: { fanniId: order.assignedFanni, reviewerRole: 'client' } },
+        { $group: { _id: null, average: { $avg: '$stars' }, count: { $sum: 1 } } }
+      ]);
+      const stats = aggregate[0] || { average: 0, count: 0 };
+      await Fanni.updateOne(
+        { _id: order.assignedFanni },
+        { $set: { 'rating.average': Math.round(stats.average * 100) / 100, 'rating.count': stats.count } }
+      );
+    }
+
+    return res.status(201).json({
+      message: 'تم حفظ تقييمك بنجاح، وأصبح ظاهرًا للطرفين',
+      rating: {
+        reviewerRole: rating.reviewerRole,
+        stars: rating.stars,
+        comment: rating.comment,
+        blockFuture: rating.blockFuture,
+        createdAt: rating.createdAt
+      }
+    });
+  } catch (err) {
+    if (err && err.code === 11000) {
+      return res.status(409).json({ message: 'سبق أن قيّمت هذه المهمة' });
+    }
+    next(err);
+  }
+});
+
 async function trackOrder(req, res, next) {
   try {
     const sn = String(req.params.sn || '').toUpperCase();
@@ -1336,6 +1506,13 @@ async function trackOrder(req, res, next) {
       includeAddress: isOrderOwner,
       includeAssignedFanniPhone: isOrderOwner
     });
+
+    if (isOrderOwner && order.status === 'تم الانتهاء') {
+      const ratings = await Rating.find({ orderId: order._id }).sort({ createdAt: 1 }).lean();
+      safe.ratings = publicRatings(ratings);
+      safe.myRating = publicRatings(ratings.filter(rating => rating.reviewerRole === 'client'))[0] || null;
+      safe.canRate = !safe.myRating;
+    }
 
     return res.json({
       order: safe,
