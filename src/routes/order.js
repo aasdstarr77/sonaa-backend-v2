@@ -1140,6 +1140,23 @@ router.post('/:sn/accept', async (req, res, next) => {
     if (session) await session.endSession();
   }
 
+  if (responsePayload && responseStatus === 200 && responsePayload.order) {
+    const acceptedOrder = responsePayload.order;
+    await createNotification({
+      recipientRole: 'fanni', recipientId: acceptedOrder.assignedFanni, type: 'offer_accepted',
+      title: 'تم قبول عرضك', message: 'العميل قبل عرضك على الطلب ' + acceptedOrder.sn + '.',
+      link: '/fanni', dedupeKey: 'offer-accepted:' + String(acceptedOrder._id || acceptedOrder.sn)
+    });
+    const clientAccountId = acceptedOrder.clientAccount;
+    if (clientAccountId) {
+      await createNotification({
+        recipientRole: 'client', recipientId: clientAccountId, type: 'offer_accepted',
+        title: 'تم اختيار الفني', message: 'تم قبول العرض على طلبك ' + acceptedOrder.sn + '.',
+        link: '/?tab=orders', dedupeKey: 'client-offer-accepted:' + String(acceptedOrder._id || acceptedOrder.sn)
+      });
+    }
+  }
+
   if (responsePayload) {
     return res.status(responseStatus).json(responsePayload);
   }
