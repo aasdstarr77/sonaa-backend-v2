@@ -156,7 +156,7 @@ const fanniSchema = new mongoose.Schema({
   },
 
   // 5. تجميد المحفظة
-  fanniSchema.index({ isFrozen: 1 });
+  isFrozen: { type: Boolean, default: false },
   frozenAt: { type: Date },
   frozenReason: { type: String, maxlength: 500 },
   frozenBy: { type: String },
