@@ -923,7 +923,7 @@ router.post('/:sn/offer', auth(), async (req, res, next) => {
       _id: req.userId,
       role: 'fanni',
       status: 'معتمد'
-    }).select('specialties walletBalance');
+    }).select('specialties walletBalance level');
 
     if (!fanni) {
       return res.status(403).json({
