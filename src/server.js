@@ -186,6 +186,22 @@ const loginLimiter = rateLimit({
   }
 });
 
+const fanniRegistrationLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: async () => {
+    try {
+      const config = await AdminConfig.findOne({ key: 'main' })
+        .select('settings.maxFanniSignupAttempts')
+        .lean();
+      const configured = Number(config?.settings?.maxFanniSignupAttempts);
+      return Number.isInteger(configured) && configured >= 1 && configured <= 100 ? configured : 5;
+    } catch (_) { return 5; }
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'تم تجاوز الحد المسموح لمحاولات تسجيل الفني. حاول مرة أخرى بعد 15 دقيقة.' }
+});
+
 const loginPaths = [
   '/api/fanni/login',
   '/api/fannis/login',
@@ -199,6 +215,7 @@ const loginPaths = [
 ];
 
 app.use(loginPaths, loginLimiter);
+app.use(['/api/fanni/register', '/api/fannis/register', '/api/technician/register', '/api/technicians/register'], fanniRegistrationLimiter);
 
 // جميع مسارات API التي تعتمد على قاعدة البيانات تمر عبر هذا الوسيط.
 app.use('/api', ensureDatabase);
