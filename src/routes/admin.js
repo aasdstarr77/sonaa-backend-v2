@@ -1102,7 +1102,7 @@ router.put('/content', auth('admin'), async (req, res, next) => {
     const config = await getAdminConfig();
     const before = config.content.toObject ? config.content.toObject() : { ...config.content };
     config.content = value;
-    config.history.push({ key: 'content', before, after: value, by: adminName(req), byId: String(req.user?._id || ''), reason: 'تعديل محتوى الواجهة', createdAt: new Date() });
+    config.history.push({ key: 'content', before: { announcementLength: String(before.announcement || '').length, faqCount: Array.isArray(before.faqs) ? before.faqs.length : 0 }, after: { announcementLength: String(value.announcement || '').length, faqCount: value.faqs.length }, by: adminName(req), byId: String(req.user?._id || ''), reason: 'تعديل محتوى الواجهة', createdAt: new Date() });
     if (config.history.length > 200) config.history = config.history.slice(-200);
     await config.save();
     await writeAdminAudit(req, 'تعديل محتوى الواجهة', 'content', 'content', 'تم حفظ الإعلان والأسئلة الشائعة');
