@@ -377,7 +377,7 @@ function render(){
   </header>
   <main class="mx-auto w-full max-w-[640px] px-3 sm:px-4 pb-[100px] safe-bottom">
     <div class="mt-4 flex p-1 bg-white rounded-[15px] shadow-sm border border-slate-200 gap-1">
-      ${[{id:'new',label:'طلب جديد'},{id:'orders',label:'طلباتي'},{id:'track',label:'تفاصيل الطلب'},{id:'complaint',label:'شكوى'}].map(t=>`
+      ${[{id:'new',label:'طلب جديد'},{id:'orders',label:'طلباتي'},{id:'complaint',label:'شكوى'}].map(t=>`
         <button type="button" onclick="setTab('${t.id}')" class="flex-1 h-11 rounded-xl text-[12px] font-extrabold ${state.tab===t.id?'tab-active':'tab-idle'}">${t.label}</button>
       `).join('')}
     </div>
@@ -532,17 +532,17 @@ onclick="selectServiceByIndex(${ALL_SERVICES.indexOf(s)})"
       <div class="mt-4 panel p-5 sm:p-7 text-center animate-fade">
         <div class="mx-auto h-16 w-16 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-[28px] text-emerald-600">✓</div>
         <h3 class="mt-4 text-[19px] font-extrabold">تم إنشاء طلبك بنجاح!</h3>
-        <p class="mt-1 text-[12px] text-slate-500">احتفظ بالكود علشان تقدر تتابع طلبك</p>
+        <p class="mt-1 text-[12px] text-slate-500">تقدر تتابع طلبك من حسابك في قسم «طلباتي» من غير ما تدخل الرقم كل مرة</p>
         <div class="mt-5 rounded-[16px] bg-gradient-to-l from-[#0b1b3a] to-[#173c6c] p-4 flex items-center justify-between gap-3">
           <div class="text-right min-w-0">
-            <p class="text-[11px] text-blue-100">كود التتبع</p>
+            <p class="text-[11px] text-blue-100">رقم مرجعي داخلي</p>
             <p class="mt-1 text-[22px] font-black text-white tracking-wider select-all break-all">${escHtml(state.sn)}</p>
           </div>
           <button type="button" onclick="copySn()" class="shrink-0 h-10 px-4 rounded-xl bg-white text-[#0b1b3a] font-extrabold text-[12px]">نسخ الكود</button>
         </div>
-        <div class="mt-4 rounded-xl bg-blue-50 border border-blue-100 p-3 text-[11px] text-blue-900 font-bold leading-6">احتفظ بكود الطلب واستخدم نفس الجهاز لمتابعة الطلب وقبول العرض.</div>
+        <div class="mt-4 rounded-xl bg-blue-50 border border-blue-100 p-3 text-[11px] text-blue-900 font-bold leading-6">متابعة الطلبات وقبول العروض متاحان من حسابك في قسم «طلباتي».</div>
         <div class="mt-5 grid grid-cols-2 gap-2">
-          <button type="button" onclick="trackNow()" class="h-[46px] rounded-xl primary-btn font-extrabold text-[12px]">تتبع الطلب</button>
+          <button type="button" onclick="trackNow()" class="h-[46px] rounded-xl primary-btn font-extrabold text-[12px]">عرض طلباتي</button>
           <button type="button" onclick="resetForm()" class="h-[46px] rounded-xl bg-slate-100 text-slate-700 font-extrabold text-[12px]">طلب جديد</button>
         </div>
       </div>`}
@@ -889,7 +889,7 @@ function onComplaintText(value){
 function resetForm(){
   state.sn=null;state.clientName='';state.area='';state.address='';state.phone='';state.budget='';state.desc='';state.service='';state.showService=false;state.openCategory='';state.searchService='';state.tab='new';state.loading=false;render();
 }
-function trackNow(){state.tab='track';state.trackInput=state.sn||'';render();doTrack();}
+function trackNow(){state.tab='orders';loadMyOrders();}
 function copySn(){
   if(!state.sn)return;
   if(navigator.clipboard&&navigator.clipboard.writeText){
@@ -914,6 +914,7 @@ async function loadServices(){
   }
 }
 async function createOrder(){
+  if(!state.account||!state.accountToken){showToast('سجّل دخولك بحساب العميل قبل إرسال الطلب.');render();return;}
   if(state.loading)return;
   if(state.servicesLoading){showToast('جاري تحميل قائمة الخدمات، انتظر لحظة.');return;}
   if(state.servicesError||!ALL_SERVICES.length){showToast('قائمة الخدمات غير متاحة حاليًا. اضغط على زر إعادة المحاولة في قائمة الخدمات.');state.showService=true;render();return;}
