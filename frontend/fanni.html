@@ -195,6 +195,7 @@ const API={
  profile:()=>apiGet('/api/fanni/me'),
  available:()=>apiGet('/api/orders/available'),
  myOffers:()=>apiGet('/api/orders/my-offers'),
+ complete:sn=>apiPost('/api/orders/'+encodeURIComponent(sn)+'/complete',{}),
  offer:(sn,p)=>apiPost('/api/fanni/orders/'+encodeURIComponent(sn)+'/offer',p),
  topup:p=>apiPost('/api/fanni/wallet/topup',p),
  walletHistory:()=>apiGet('/api/fanni/wallet/history')
@@ -526,6 +527,7 @@ function render(){
      ${o.message?`<div class="rounded-xl border border-slate-100 bg-slate-50 p-3"><div class="text-[10px] text-slate-500 font-extrabold mb-1">رسالة العرض</div><p class="text-[12px] leading-6 break-words">${esc(o.message)}</p></div>`:''}
 
      ${renderAcceptedClient(o)}
+     ${o?.accepted===true && o.orderStatus==='تم اختيار فني' ? `<button data-sn="${esc(o.orderSn||o.sn||o.order?.sn||'')}" onclick="completeOrder(this.dataset.sn)" class="primary-btn w-full h-11 text-[12px]">إنهاء المهمة</button>` : ''}
     </article>`).join('')}
    </section>`:''}
 
@@ -780,7 +782,25 @@ async function loadMyOffers(){
   }
  }
 }
+ 
+async function completeOrder(sn){
+ const code=String(sn||'').trim().toUpperCase();
+ if(!code){
+  toast('كود الطلب غير موجود','error');
+  return;
+ }
 
+ if(!confirm('هل تؤكد إنك أنهيت تنفيذ المهمة؟')) return;
+
+ try{
+  const result=await API.complete(code);
+  toast(result?.message||'تم إكمال المهمة بنجاح');
+  await loadMyOffers();
+ }catch(e){
+  toast(e?.message||'تعذر إكمال المهمة','error');
+ }
+ }
+ 
 async function loadWalletHistory(){
  if(!getToken())return;
 
