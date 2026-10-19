@@ -12,7 +12,7 @@
   --navy:#0b1b3a;--blue:#2563eb;--blue2:#1d4ed8;--gold:#f59e0b;--page:#f1f5fb;--card:#fff;
 }
 *{font-family:'Cairo',system-ui,sans-serif;box-sizing:border-box}
-html{scroll-behavior:smooth} #content-anchor{scroll-margin-top:120px}
+html{scroll-behavior:smooth}
 body{
   margin:0;background: radial-gradient(1200px 600px at 20% -10%, #1e3a8a18, transparent), radial-gradient(800px 400px at 80% 0%, #f59e0b12, transparent), var(--page);
   color:var(--navy);overflow-x:hidden;-webkit-tap-highlight-color:transparent
@@ -174,7 +174,7 @@ function render(){
         </form>
       </section>
     `:`
-      <section id="tabs-panel" class="mt-4 premium-panel p-3 sticky top-[62px] z-20 shadow-lg">
+      <section id="tabs-panel" class="mt-4 premium-panel p-3">
         <div class="flex items-center justify-between mb-3 px-1">
           <h2 class="text-[12px] font-black text-slate-700">مركز التحكم - جميع الأقسام</h2>
           <button onclick="refreshCurrentTab()" class="h-8 px-3 rounded-full bg-slate-50 border text-[10px] font-black">↻ تحديث</button>
@@ -676,13 +676,6 @@ function setTab(t){
   state.dropdowns={}; 
   state.pendingActions={}; 
   render(); 
-  setTimeout(()=>{
-    const anchor = document.getElementById('content-anchor');
-    if(anchor){
-      const top = anchor.getBoundingClientRect().top + window.scrollY - 110;
-      window.scrollTo({top: top, behavior: 'smooth'});
-    }
-  }, 120);
   if(t==='orders')loadOrders(); 
   else if(t==='complaints')loadComplaints(); 
   else if(t==='services')loadServices(); 
