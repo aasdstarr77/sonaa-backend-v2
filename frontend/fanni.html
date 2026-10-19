@@ -771,7 +771,9 @@ async function loadMyOffers(){
 
  try{
   const data=await API.myOffers();
-  state.myOffers=extractList(data,['offers','items','requests']);
+  const allOffers=extractList(data,['offers','items','requests']);
+state.completedOffers=allOffers.filter(o=>o.completed===true||o.orderStatus==='تم الانتهاء');
+state.myOffers=allOffers.filter(o=>!(o.completed===true||o.orderStatus==='تم الانتهاء'));
   applyFilter();
   render();
  }catch(e){
