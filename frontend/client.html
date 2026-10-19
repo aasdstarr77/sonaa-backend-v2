@@ -220,6 +220,13 @@ const API={
       body:JSON.stringify({offerId,clientToken:token})
     });
   },
+  async rateOrder(sn,payload){
+    const cleanSN=sanitizeInput(sn,20).toUpperCase();
+    if(!VALIDATORS.sn(cleanSN))throw new Error('كود الطلب غير صحيح.');
+    const token=this.getClientToken(cleanSN);
+    if(!token)throw new Error('لازم تتابع الطلب من الجهاز الذي أنشأته منه حتى نتحقق من ملكيتك.');
+    return this.request('/api/orders/'+encodeURIComponent(cleanSN)+'/rating',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({...payload,clientToken:token})});
+  },
   async sendComplaint(payload){
     const sn=sanitizeInput(payload?.sn,20).toUpperCase();
     const clientName=sanitizeInput(payload?.clientName,50);
@@ -244,6 +251,7 @@ const API={
 let state={
   tab:'new',service:'',clientName:'',area:'',address:'',phone:'',budget:'',desc:'',loading:false,sn:null,
   trackInput:'',tracked:null,trackError:'',trackLoading:false,acceptingOffer:'',
+  ratingStars:5,ratingComment:'',ratingSubmitting:false,
   complaintSn:'',complaintName:'',complaintText:'',complaintLoading:false,
   complaintTrackSn:'',complaintTrackName:'',complaintTrackLoading:false,complaintTrackError:'',complaintTrackResults:null,
   showService:false,openCategory:'',searchService:'',
@@ -535,6 +543,8 @@ ${state.tracked.status==='تم اختيار فني'
               </div>`;
             }).join('')}
         </div>
+        ${state.tracked.status==='تم الانتهاء' && state.tracked.canRate ? '<div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4"><h4 class="font-extrabold text-[14px] text-amber-900">قيّم الفني بعد انتهاء المهمة</h4><p class="mt-1 text-[11px] text-amber-800">تقييمك يظهر لك وللفني، والتعليق اختياري.</p><label class="block mt-3 text-[12px] font-extrabold">عدد النجوم</label><select class="field mt-1" onchange="state.ratingStars=Number(this.value);render()">'+[5,4,3,2,1].map(n=>'<option value="'+n+'" '+(state.ratingStars===n?'selected':'')+'>'+('★'.repeat(n))+' — '+n+' نجوم</option>').join('')+'</select><label class="block mt-3 text-[12px] font-extrabold">تعليق (اختياري)</label><textarea id="clientRatingComment" class="field mt-1 min-h-[80px]" maxlength="500" placeholder="اكتب ملاحظتك عن التعامل..." oninput="state.ratingComment=this.value">'+escHtml(state.ratingComment)+'</textarea>'+(state.ratingStars===1?'<label class="mt-3 flex items-start gap-2 text-[12px] font-bold text-red-800"><input id="clientRatingBlock" type="checkbox" class="mt-1"> عدم عرض طلباتي المستقبلية على هذا الفني</label>':'')+'<button type="button" onclick="submitClientRating(\''+escAttr(state.tracked.sn)+'\')" '+(state.ratingSubmitting?'disabled':'')+' class="mt-3 w-full h-11 rounded-xl bg-amber-500 text-white font-extrabold text-[12px]">'+(state.ratingSubmitting?'جاري حفظ التقييم...':'إرسال التقييم')+'</button></div>' : ''}
+        ${Array.isArray(state.tracked.ratings)&&state.tracked.ratings.length ? '<div class="mt-4 rounded-xl border border-slate-200 p-4"><h4 class="font-extrabold text-[13px]">التقييمات المتبادلة</h4>'+state.tracked.ratings.map(r=>'<div class="mt-3 border-t border-slate-100 pt-3"><p class="text-[12px] font-extrabold">'+(r.reviewerRole==='client'?'تقييم العميل للفني':'تقييم الفني للعميل')+' — '+('★'.repeat(Math.max(0,Math.min(5,Number(r.stars)||0))))+' '+(Number(r.stars)||0)+'/5</p>'+(r.comment?'<p class="mt-1 text-[12px] leading-5 text-slate-600">'+escHtml(r.comment)+'</p>':'')+'</div>').join('')+'</div>' : ''}
       </div>`:''}
     </div>`:''}
     ${state.tab==='complaint'?`
@@ -843,6 +853,19 @@ async function createOrder(){
     const data=await API.createOrder({clientName:state.clientName,service:state.service,area:state.area,address:state.address,phone:state.phone,budget:state.budget,description:state.desc});
     state.sn=data.sn;state.loading=false;showToast('تم إنشاء الطلب: '+state.sn,'success');render();
   }catch(error){state.loading=false;showToast(error.message||'تعذر إنشاء الطلب حاليًا.');render();}
+}
+async function submitClientRating(sn){
+  if(state.ratingSubmitting)return;
+  const stars=Number(state.ratingStars);
+  if(!Number.isInteger(stars)||stars<1||stars>5){showToast('اختار عدد النجوم.');return;}
+  state.ratingSubmitting=true;render();
+  try{
+    const blockFuture=stars===1&&Boolean(document.getElementById('clientRatingBlock')?.checked);
+    const comment=String(state.ratingComment||'').trim().slice(0,500);
+    await API.rateOrder(sn,{stars,comment,blockFuture});
+    state.ratingComment='';showToast('تم حفظ تقييمك بنجاح','success');state.trackInput=sn;await doTrack();
+  }catch(error){showToast(error.message||'تعذر حفظ التقييم.');}
+  finally{state.ratingSubmitting=false;render();}
 }
 async function doTrack(){
   if(state.trackLoading)return;
