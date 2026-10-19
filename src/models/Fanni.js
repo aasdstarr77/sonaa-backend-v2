@@ -197,6 +197,7 @@ fanniSchema.index({ status: 1, areas: 1 });
 fanniSchema.index({ level: 1, status: 1 });
 fanniSchema.index({ trustScore: -1 });
 fanniSchema.index({ badges: 1 });
+// فهرس واحد لحالة تجميد المحفظة
 fanniSchema.index({ isFrozen: 1 });
 fanniSchema.index({ createdAt: -1 });
 
