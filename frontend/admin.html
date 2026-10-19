@@ -690,17 +690,14 @@ function renderContent(){
 }
 
 function renderClients(){
+  const clients=Array.isArray(state.filteredClients)?state.filteredClients:[];
   return `
   <section class="mt-4 space-y-4">
-    <div class="rounded-[18px] bg-gradient-to-r from-slate-900 to-slate-700 p-4 text-white"><p class="text-[12px] font-black">إدارة العملاء</p><p class="text-[10px] text-slate-300 mt-1">بحث • ملف عميل • حظر • ملاحظات • شكاوى</p></div>
-    <div class="premium-panel p-4"><div class="flex gap-2"><input id="client-search" placeholder="اسم / هاتف / كود" class="field flex-1"><button onclick="searchClients()" class="pill-btn primary-pill">بحث</button></div></div>
-    <div class="space-y-3">
-      ${state.orders.slice(0,5).map(o=>`<article class="premium-card p-4"><div class="flex justify-between"><div><p class="font-black text-[13px]">${escHtml(o.clientName||'عميل')}</p><p class="text-[11px] text-slate-500 mt-1" dir="ltr">${escHtml(o.clientPhone||'')}</p><p class="text-[10px] text-slate-400 mt-1">طلبات: ${state.orders.filter(x=>x.clientPhone===o.clientPhone).length} • آخر طلب: ${escHtml(o.sn||'')}</p></div><button onclick="openClient('${escHtml(o.clientPhone||'') }')" class="pill-btn soft-btn">ملف العميل</button></div><div class="mt-3 flex gap-2"><button onclick="blockClient('${escHtml(o.clientPhone||'') }')" class="pill-btn soft-btn flex-1">حظر</button><button onclick="noteClient('${escHtml(o.clientPhone||'') }')" class="pill-btn soft-btn flex-1">ملاحظة داخلية</button></div></article>`).join('')||'<div class="premium-panel p-10 text-center text-[12px] font-bold text-slate-400">لا يوجد عملاء - سيظهر العملاء من الطلبات</div>'}
-    </div>
+    <div class="premium-panel p-4"><div class="flex gap-2"><input id="client-search" value="${escHtml(state.clientSearch||'')}" placeholder="اسم / هاتف / كود الطلب" class="field flex-1"><button onclick="searchClients()" class="pill-btn primary-pill">بحث</button></div></div>
+    ${state.clientsLoading?'<p class="premium-panel p-4">جاري تحميل العملاء...</p>':''}
+    ${clients.map(c=>`<article class="premium-card p-4"><p class="font-black">${escHtml(c.name||'عميل')}</p><p dir="ltr">${escHtml(c.phone||'')}</p><p class="text-[10px]">${c.registered?'حساب مسجل':'طلب بدون حساب'} • الطلبات: ${Number(c.orderCount||0)}</p><div class="flex gap-2 mt-3"><button onclick="openClient('${escHtml(c.phone||'')}')" class="pill-btn soft-btn">طلبات العميل</button><button onclick="blockClient('${escHtml(c.phone||'')}')" ${c.registered?'':'disabled'} class="pill-btn soft-btn">حظر</button><button onclick="noteClient('${escHtml(c.phone||'')}')" ${c.registered?'':'disabled'} class="pill-btn soft-btn">ملاحظة</button></div></article>`).join('')||'<div class="premium-panel p-8 text-center">لا توجد نتائج</div>'}
   </section>`;
 }
-
-
 function renderStats(){
   return `
   <section class="mt-4 space-y-3">
