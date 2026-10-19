@@ -400,10 +400,10 @@ router.patch('/orders/:sn/correct', auth('admin'), validate(Joi.object({
   address: Joi.string().trim().max(250).allow('').optional(),
   description: Joi.string().trim().max(1000).allow('').optional(),
   budget: Joi.string().trim().max(50).allow('').optional()
-}).min(1))) , async (req, res, next) => {
+}).min(1)), async (req, res, next) => {
   try {
     const sn = String(req.params.sn || '').trim().toUpperCase();
-    if (!/^SN\\d{6}$/.test(sn)) return res.status(400).json({ message: 'كود الطلب غير صالح' });
+    if (!/^SN\d{6}$/.test(sn)) return res.status(400).json({ message: 'كود الطلب غير صالح' });
     const order = await Order.findOne({ sn });
     if (!order) return res.status(404).json({ message: 'الطلب غير موجود' });
     if (order.status !== 'قيد المراجعة' || order.assignedFanni || (Array.isArray(order.offers) && order.offers.length > 0)) {
