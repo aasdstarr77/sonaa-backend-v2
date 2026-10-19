@@ -1508,6 +1508,16 @@ async function trackOrder(req, res, next) {
 
     const isOrderOwner = verifyClientToken(req, order);
 
+    // ملء مستوى الفني للعروض القديمة أيضًا دون كشف رقم الهاتف أو بيانات الحساب.
+    const fanniIds = [...new Set((order.offers || []).map(offer => String(offer.fanni || '')).filter(Boolean))];
+    if (fanniIds.length) {
+      const fannis = await Fanni.find({ _id: { $in: fanniIds } }).select('_id level').lean();
+      const levelsById = new Map(fannis.map(fanni => [String(fanni._id), fanni.level || 'مبتدئ']));
+      for (const offer of order.offers || []) {
+        offer.fanniLevel = levelsById.get(String(offer.fanni || '')) || offer.fanniLevel || 'مبتدئ';
+      }
+    }
+
     const safe = publicOrder(order, {
       includeAddress: isOrderOwner,
       includeAssignedFanniPhone: isOrderOwner
