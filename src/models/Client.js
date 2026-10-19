@@ -27,7 +27,14 @@ const clientSchema = new mongoose.Schema({
     enum: ['نشط', 'معلق'],
     default: 'نشط',
     index: true
-  }
+  },
+  adminNote: { type: String, trim: true, maxlength: 2000, default: '' },
+  adminNotesHistory: [{
+    note: { type: String, trim: true, maxlength: 2000, required: true },
+    date: { type: Date, default: Date.now },
+    by: { type: String, trim: true, maxlength: 50, default: 'الإدارة' },
+    byId: { type: mongoose.Schema.Types.ObjectId, ref: 'Fanni' }
+  }]
 }, {
   timestamps: true
 });
