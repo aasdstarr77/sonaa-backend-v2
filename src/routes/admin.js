@@ -1080,7 +1080,7 @@ router.put('/settings', auth('admin'), async (req, res, next) => {
     if (config.history.length > 200) config.history = config.history.slice(-200);
     await config.save();
     await writeAdminAudit(req, 'حفظ إعدادات النظام', 'settings', 'settings', JSON.stringify({ before, after: value }));
-    return res.json({ message: 'تم حفظ الإعدادات. وضع الصيانة مفعل على طلبات العملاء والفنيين؛ حد محاولات التسجيل محفوظ فقط ولم يتم ربطه بمحدد المحاولات بعد.', settings: config.settings });
+    return res.json({ message: 'تم حفظ الإعدادات. وضع الصيانة مفعل على طلبات العملاء والفنيين؛ حد محاولات تسجيل الفني لكل IP خلال 15 دقيقة مطبق.', settings: config.settings });
   } catch (err) { next(err); }
 });
 router.get('/content', auth('admin'), async (req, res, next) => {
