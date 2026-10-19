@@ -10,6 +10,7 @@ const Fanni = require('../models/Fanni');
 const Rating = require('../models/Rating');
 const WalletTransaction = require('../models/WalletTransaction');
 const { auth } = require('../middleware/auth');
+const { clientAuth } = require('../middleware/clientAuth');
 const { generateSN } = require('../utils/generateSN');
 const { normalizePhone } = require('../utils/phone');
 const {
@@ -237,6 +238,11 @@ function verifyClientToken(req, order) {
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
 
+    if (payload.role === 'client') {
+      return Boolean(order.clientAccount) &&
+        String(payload.id) === String(order.clientAccount);
+    }
+
     return (
       payload.purpose === 'client-order' &&
       String(payload.orderId) === String(order._id) &&
@@ -306,11 +312,13 @@ function getAcceptedOffer(order, offerId) {
   return order.offers.id(offerId);
 }
 
-router.post('/', async (req, res, next) => {
+router.post('/', clientAuth, async (req, res, next) => {
   try {
     const body = {
       ...req.body,
-      phone: req.body.clientPhone || req.body.phone,
+      // الاسم ورقم الهاتف مصدرهما الحساب الموثّق، وليس حقولًا يرسلها المتصفح.
+      clientName: req.client.name,
+      phone: req.client.phone,
       description: req.body.description || req.body.desc
     };
 
@@ -386,6 +394,7 @@ router.post('/', async (req, res, next) => {
       try {
         order = await Order.create({
           sn: generateSN(),
+          clientAccount: req.clientId,
           service: value.service,
           area,
           address,
