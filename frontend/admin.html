@@ -26,7 +26,8 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
 .premium-panel{background:linear-gradient(180deg,#fff 0%,#fbfdff 100%);border:1px solid #e6eefc;border-radius:20px;box-shadow:0 8px 24px #0f234b0a, 0 2px 8px #0f234b08}
 .premium-card{background:#fff;border:1px solid #e6eefc;border-radius:20px;box-shadow:0 10px 28px #0f234b0d;position:relative;overflow:hidden;transition:.22s}
 .premium-card::before{content:'';position:absolute;top:0;right:0;left:0;height:3px;background:linear-gradient(90deg,var(--blue),#3b82f6,var(--gold));opacity:.9}
-.premium-card:hover{transform:translateY(-1px);box-shadow:0 14px 32px #0f234b12;border-color:#d6e4ff}
+.premium-card:hover{transform:translateY(-1px);box-shadow:0 14px 32px #0f234b12;border-color:#d6e4ff} 
+.premium-card.menu-active{z-index:60;overflow:visible}
 .field{width:100%;min-height:46px;border:1.5px solid #dbe3ef;border-radius:14px;background:#fff;padding:11px 14px;color:var(--navy);font-size:12.5px;font-weight:600}
 .tab-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 @media(min-width:520px){.tab-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
@@ -306,7 +307,9 @@ function renderFannis(){
       const level = f.level||f.experience||'مبتدئ';
       const badge = f.isTrusted?'موثوق':''; 
       return `
-        <article class="premium-card p-4 animate-fade">
+        
+<article class="premium-card p-4 animate-fade ${isMenuOpen?'menu-active':''}">
+
           <div class="flex justify-between items-start gap-3">
             <div class="flex items-center gap-3 min-w-0 flex-1">
               <div class="h-10 w-10 rounded-full bg-gradient-to-br from-slate-800 to-slate-600 text-white flex items-center justify-center font-black">${escHtml((f.name||'؟').slice(0,1))}</div>
