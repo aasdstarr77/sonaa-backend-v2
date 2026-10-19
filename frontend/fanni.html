@@ -444,7 +444,7 @@ function render(){
    <div class="space-y-4">
     <div><label class="field-label">رقم التليفون</label><input class="field" inputmode="numeric" autocomplete="tel" value="${esc(state.loginPhone)}" oninput="state.loginPhone=this.value.replace(/\\D/g,'').slice(0,11)" placeholder="01xxxxxxxxx"></div>
     <div><label class="field-label">كلمة السر</label><input type="password" class="field" autocomplete="current-password" value="${esc(state.loginPass)}" oninput="state.loginPass=this.value" placeholder="اكتب كلمة السر"></div>
-    <button onclick="doLogin()" ${state.loading?'disabled':''} class="primary-btn w-full h-12">${state.loading?'جاري تسجيل الدخول...':'دخول اللوحة'}</button>
+    <button onclick="doLogin()" ${state.loading?'disabled':''} class="primary-btn w-full h-12">${state.loading?'جاري تسجيل الدخول...':' تسجيل الدخول'}</button>
     ${state.pendingMsg?`<div class="rounded-xl bg-amber-50 border border-amber-200 p-3 text-center text-[12px] font-bold text-amber-800">${esc(state.pendingMsg)}</div>`:''}
     ${state.error?errorBox(state.error):''}
    </div>`}
