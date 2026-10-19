@@ -83,7 +83,7 @@ let state={
   clients:[],filteredClients:[],clientsLoading:false,
   adminUsers:[],adminUsersLoading:false,
   auditLogs:[],regions:[],regionsLoading:false,regionsError:'',notifications:[],walletTransactions:[],walletSelectedFanniId:'',walletLoading:false,settings:{siteName:'صُنّاع',maintenance:false},
-  reports:{},pricing:null,pricingHistory:[],
+  reports:{},pricing:null,pricingHistory:[],offerFilter:'all',
   search:'',filter:'الكل',filterTopup:'الكل',filterOrder:'الكل',filterComplaint:'الكل',filterClient:'الكل',
   errors:{fannis:'',topups:'',orders:'',complaints:'',services:'',clients:''}, error:''
 };
@@ -479,22 +479,34 @@ function renderOrders(){
 }
 
 function renderOffers(){
-  const allOffers = state.orders.flatMap(o=>(o.offers||[]).map((off,idx)=>({orderSn:o.sn,orderService:o.service,offer:off,idx})));
+  const allOffers = state.orders.flatMap(o=>(o.offers||[]).map((off,idx)=>({orderSn:o.sn,orderService:o.service,order:o,offer:off,idx})));
+  const filter=state.offerFilter||'all';
+  const visible=allOffers.filter(item=>{
+    const accepted=!!item.order.acceptedOfferId&&String(item.order.acceptedOfferId)===String(item.offer._id);
+    const expired=!!item.order.expiresAt&&new Date(item.order.expiresAt).getTime()<=Date.now()&&!accepted;
+    if(filter==='accepted')return accepted;
+    if(filter==='pending')return !accepted&&!expired;
+    if(filter==='expired')return expired;
+    return true;
+  });
   return `
   <section class="mt-4 space-y-4">
-    <div class="rounded-[18px] bg-gradient-to-r from-blue-600 to-indigo-600 p-4 text-white"><p class="text-[12px] font-black">عروض الفنيين على الطلبات</p><p class="text-[10px] text-blue-100 mt-1">عرض • رفض • إزالة • سجل التغييرات</p></div>
-    <div class="premium-panel p-4">
-      <div class="flex gap-2"><select class="field flex-1"><option>كل العروض</option><option>مقبول</option><option>مرفوض</option><option>منتهي</option></select><button class="pill-btn soft-btn">تصفية</button></div>
-    </div>
-    ${allOffers.length===0?`<div class="premium-panel p-10 text-center text-[12px] font-bold text-slate-400">لا توجد عروض حالياً - ستظهر هنا عند تقديم الفنيين عروضهم</div>`:''}
-    ${allOffers.slice(0,10).map(item=>`
+    <div class="rounded-[18px] bg-gradient-to-r from-blue-600 to-indigo-600 p-4 text-white"><p class="text-[12px] font-black">عروض الفنيين على الطلبات</p><p class="text-[10px] text-blue-100 mt-1">تصفية حسب حالة العرض الحقيقية المحسوبة من الطلب.</p></div>
+    <div class="premium-panel p-4"><div class="flex gap-2"><select id="offer-filter" onchange="state.offerFilter=this.value;render()" class="field flex-1"><option value="all" ${filter==='all'?'selected':''}>كل العروض</option><option value="accepted" ${filter==='accepted'?'selected':''}>العروض المقبولة</option><option value="pending" ${filter==='pending'?'selected':''}>غير المقبولة وغير المنتهية</option><option value="expired" ${filter==='expired'?'selected':''}>منتهية</option></select><button onclick="loadAll()" class="pill-btn soft-btn">تحديث</button></div></div>
+    ${visible.length===0?`<div class="premium-panel p-10 text-center text-[12px] font-bold text-slate-400">لا توجد عروض مطابقة للتصفية.</div>`:''}
+    ${visible.slice(0,200).map(item=>{
+      const accepted=!!item.order.acceptedOfferId&&String(item.order.acceptedOfferId)===String(item.offer._id);
+      const expired=!!item.order.expiresAt&&new Date(item.order.expiresAt).getTime()<=Date.now()&&!accepted;
+      const status=accepted?'مقبول':expired?'منتهي':'قيد الانتظار';
+      return `
       <article class="premium-card p-4">
-        <div class="flex justify-between"><p class="font-black text-[12px]">طلب ${escHtml(item.orderSn)} - ${escHtml(item.orderService||'')}</p><span class="text-[10px] bg-blue-50 border border-blue-100 px-2 py-1 rounded-full font-black">عرض ${item.idx+1}</span></div>
+        <div class="flex justify-between gap-2"><p class="font-black text-[12px]">طلب ${escHtml(item.orderSn)} - ${escHtml(item.orderService||'')}</p><span class="text-[10px] bg-blue-50 border border-blue-100 px-2 py-1 rounded-full font-black">${status}</span></div>
         <p class="text-[11px] font-bold mt-3">الفني: ${escHtml(item.offer.fanniName||'')} • ${escHtml(item.offer.price||'')} ج</p>
         <p class="text-[10px] text-slate-500 mt-1 leading-5">${escHtml(item.offer.message||'')}</p>
-        <div class="mt-3 flex gap-2"><button onclick="rejectOffer('${escHtml(item.orderSn)}','${item.idx}')" class="pill-btn soft-btn flex-1">رفض العرض</button><button onclick="removeOffer('${escHtml(item.orderSn)}','${item.idx}')" class="pill-btn danger-pill flex-1">إزالة</button></div>
-      </article>
-    `).join('')}
+        <div class="mt-3 flex gap-2"><button onclick="rejectOffer('${escHtml(item.orderSn)}','${item.idx}')" class="pill-btn soft-btn flex-1" ${accepted?'disabled':''}>رفض العرض</button><button onclick="removeOffer('${escHtml(item.orderSn)}','${item.idx}')" class="pill-btn danger-pill flex-1" ${accepted?'disabled':''}>إزالة</button></div>
+      </article>`;
+    }).join('')}
+    ${visible.length>200?'<p class="text-center text-[10px] text-slate-500">يُعرض أول 200 عرض مطابق. استخدم التصفية لتضييق النتائج.</p>':''}
   </section>`;
 }
 
