@@ -261,6 +261,10 @@ function renderCurrentTab(){
 }
 
 function renderDashboard(){
+  if(state.debugInfo){
+    // will be injected in html
+  }
+
   return `
   <section class="mt-4 space-y-4">
     <div class="rounded-[20px] bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-900 p-5 text-white shadow-xl">
@@ -504,7 +508,6 @@ function renderTopups(){
       ${state.filteredTopups.map(t=>{
         const id=String(t._id||''); const menuKey='topup:'+id; const pending=state.pendingActions[menuKey]; const isOpen=!!state.dropdowns[menuKey];
         return `<article class="premium-card p-4"><div class="flex justify-between"><div><p class="font-black text-[18px]">${escHtml(String(t.amount||''))} <span class="text-[12px] text-slate-500">ج</span></p><p class="text-[11px] font-bold mt-1" dir="ltr">📱 ${escHtml(t.fromPhone||t.phone||'')}</p><p class="text-[10px] text-slate-400 mt-1">${escHtml(t.createdAt?new Date(t.createdAt).toLocaleString('ar-EG'):'')}</p></div><div class="flex flex-col items-end gap-2"><span class="text-[10px] px-3 py-1.5 rounded-full border font-black ${statusClass(t.status)}">${escHtml(statusLabel(t.status))}</span><div class="action-wrap"><button onclick="event.stopPropagation();toggleMenu('${menuKey}')" class="pill-btn soft-btn">إجراء ▾</button>${isOpen?`<div class="dropdown-menu"><button onclick="event.stopPropagation();setPendingAction('${menuKey}','approve','قبول الشحن')" class="dropdown-item">✓ قبول وإضافة رصيد</button><button onclick="event.stopPropagation();setPendingAction('${menuKey}','reject','رفض الشحن')" class="dropdown-item text-red-600">✕ رفض</button></div>`:''}</div></div></div>${pending?`<div class="confirm-bar"><span>تأكيد ${pending.label}؟</span><div class="flex gap-2"><button onclick="clearPending('${menuKey}')" class="h-7 px-3 rounded-full bg-white/20 text-[10px]">إلغاء</button><button onclick="confirmPending('${menuKey}')" class="h-7 px-4 rounded-full bg-white text-slate-900 text-[10px] font-black">تأكيد</button></div></div>`:''}</article>`;
-
       }).join('')}
     </div>
   </section>`;
@@ -517,7 +520,8 @@ function renderComplaints(){
   if(state.filteredComplaints.length===0&&!state.loadingComplaints) html+=`<div class="premium-panel p-10 text-center text-[12px] font-bold text-slate-400">لا توجد شكاوى</div>`;
   state.filteredComplaints.forEach(c=>{
     const id=String(c._id||c.id||''); const sn=String(c.sn||''); const status=String(c.status||'جديدة');
-    html+=`<article class="premium-card p-4"><div class="flex justify-between gap-2"><div class="min-w-0"><p class="font-black text-[13px]">${escHtml(c.clientName||'عميل')}</p><p class="text-[11px] font-bold text-slate-500 mt-1">كود: <span class="bg-blue-50 px-2 py-0.5 rounded-full text-blue-800">${escHtml(sn)}</span> • ${escHtml(new Date(c.createdAt||Date.now()).toLocaleString('ar-EG'))}</p></div><span class="text-[10px] px-3 py-1.5 rounded-full border font-black ${status==='تم الحل'?'bg-emerald-50 border-emerald-200 text-emerald-700':status==='مرفوضة'?'bg-red-50 border-red-200 text-red-700':'bg-amber-50 border-amber-200 text-amber-800'}">${escHtml(status)}</span></div><div class="mt-3 rounded-[14px] bg-slate-50 border p-3"><p class="text-[11px] font-bold leading-6 whitespace-pre-wrap">${escHtml(c.text||'')}</p></div><div class="mt-3 space-y-2"><select id="complaint-status-${escHtml(id)}" class="field"><option value="جديدة" ${status==='جديدة'?'selected':''}>جديدة</option><option value="قيد المراجعة" ${status==='قيد المراجعة'?'selected':''}>قيد المراجعة</option><option value="تم الحل" ${status==='تم الحل'?'selected':''}>تم الحل</option><option value="مرفوضة" ${status==='مرفوضة'?'selected':''}>مرفوضة</option></select><textarea id="complaint-note-${escHtml(id)}" rows="2" placeholder="ملاحظة داخلية" class="field">${escHtml(c.adminNote||'')}</textarea><textarea id="complaint-response-${escHtml(id)}" rows="2" placeholder="رد رسمي للعميل" class="field">${escHtml(c.adminResponse||'')}</textarea><button onclick="saveComplaint('${escHtml(id)}')" class="w-full h-11 rounded-full bg-blue-600 text-white font-black text-[11px]">💾 حفظ التحديث</button></div></article>`;
+    html+=`<article class="premium-card p-4"><div class="flex justify-between gap-2"><div class="min-w-0"><p class="font-black text-[13px]">${escHtml(c.clientName||'عميل')}</p><p class="text-[11px] font-bold text-slate-500 mt-1">كود: <span class="bg-blue-50 px-2 py-0.5 rounded-full text-blue-800">${escHtml(sn)}</span> • ${escHtml(new Date(c.createdAt||Date.now()).toLocaleString('ar-EG'))}</p></div><span class="text-[10px] px-3 py-1.5 rounded-full border font-black ${status==='تم الحل'?'bg-emerald-50 border-emerald-200 text-emerald-700':status==='مرفوضة'?'bg-red-50 border-red-200 text-red-700':'bg-amber-50 border-amber-200 text-amber-800'}">${escHtml(status)}</span></div><div class="mt-3 rounded-[14px] bg-slate-50 border p-3"><p class="text-[11px] font-bold leading-6 whitespace-pre-wrap">${escHtml(c.text||'')}</p></div><div class="mt-3 space-y-2"><select id="complaint-status-${escHtml(id)}" class="field"><option value="جديدة" ${status==='جديدة'?'selected':''}>جديدة</option><option value="قيد المراجعة" ${status==='قيد المراجعة'?'selected':''}>قيد المراجعة</option><option value="تم الحل" ${status==='تم الحل'?'selected':''}>تم الحل</option><option value="مرفوضة" ${status==='مرفوضة'?'selected':''}>مرفوضة</option></select><textarea id="complaint-note-${escHtml(id)}" rows="2" placeholder="ملاحظة داخلية" class="field">${escHtml(c.adminNote||'')}</textarea><textarea id="complaint-response-${escHtml(id)}" rows="2" placeholder="رد رسمي للعم
+يل" class="field">${escHtml(c.adminResponse||'')}</textarea><button onclick="saveComplaint('${escHtml(id)}')" class="w-full h-11 rounded-full bg-blue-600 text-white font-black text-[11px]">💾 حفظ التحديث</button></div></article>`;
   });
   return html+'</section>';
 }
@@ -809,23 +813,137 @@ async function blockClient(phone){if(!confirm('حظر العميل '+phone+'؟')
 async function noteClient(phone){const note=prompt('ملاحظة داخلية للعميل '+phone); if(!note)return; try{await tryApi([`/api/admin/clients/${encodeURIComponent(phone)}/note`],{method:'POST',body:JSON.stringify({note})}); showToast('تم حفظ الملاحظة');}catch(e){showToast(e.message);}}
 
 
+
 function renderLogin(){
   const app=document.getElementById('app');
-  app.innerHTML=`<div class="min-h-screen flex items-center justify-center p-4"><div class="premium-panel p-8 w-full max-w-sm"><h2 class="font-black text-[16px] text-center mb-6">🔐 تسجيل دخول الإدارة</h2><input id="login-phone" placeholder="رقم الهاتف أو الإيميل" class="field mb-3"><input id="login-pass" type="password" placeholder="كلمة المرور" class="field mb-4"><button onclick="doLogin()" class="w-full h-12 rounded-full bg-slate-900 text-white font-black">دخول</button><p class="text-[10px] text-center text-slate-400 mt-4">لو التوكن منتهي سجل دخول تاني</p></div></div>`;
-}
-async function doLogin(){
-  const phone=document.getElementById('login-phone')?.value;
-  const password=document.getElementById('login-pass')?.value;
-  if(!phone||!password){showToast('اكتب البيانات','error');return;}
-  try{
-    const res=await api('/api/admin/login',{method:'POST',body:JSON.stringify({phone, email:phone, password})});
-    if(res.ok && res.data?.token){ setToken(res.data.token); showToast('تم تسجيل الدخول'); loadAll(); }
-    else { showToast(res.data?.message||'فشل تسجيل الدخول','error'); }
-  }catch(e){ showToast(e.message,'error'); }
+  app.innerHTML=`
+  <div class="min-h-screen flex items-center justify-center p-4" style="background: radial-gradient(1200px 600px at 20% -10%, #1e3a8a18, transparent), radial-gradient(800px 400px at 80% 0%, #f59e0b12, transparent), #f1f5fb;">
+    <div class="w-full max-w-[380px]">
+      <div class="text-center mb-6">
+        <div class="h-16 w-16 rounded-[20px] bg-gradient-to-br from-slate-900 to-blue-800 mx-auto flex items-center justify-center text-white text-[28px] shadow-xl">🛡️</div>
+        <h1 class="font-black text-[20px] mt-4 text-[#0b1b3a]">صناع - لوحة الإدارة</h1>
+        <p class="text-[11px] font-bold text-slate-400 mt-1">الإصدار الفخم النهائي - 22 قسم</p>
+      </div>
+      <div class="premium-card p-7">
+        <h2 class="font-black text-[14px] mb-5 text-center">🔐 تسجيل دخول الإدارة</h2>
+        <label class="text-[11px] font-black text-slate-600 mb-1.5 block">الإيميل أو رقم الهاتف</label>
+        <input id="login-phone" placeholder="admin@sonaa.com أو 01xxxxxxxxx" class="field mb-3" dir="ltr" autocomplete="username">
+        <label class="text-[11px] font-black text-slate-600 mb-1.5 block">كلمة المرور</label>
+        <input id="login-pass" type="password" placeholder="••••••••" class="field mb-5" dir="ltr" autocomplete="current-password" onkeydown="if(event.key==='Enter') doLogin()">
+        <button onclick="doLogin()" id="login-btn" class="w-full h-[48px] rounded-full bg-gradient-to-r from-slate-900 to-blue-800 text-white font-black text-[12px] shadow-lg shadow-blue-900/20">دخول للوحة التحكم →</button>
+        <div class="mt-4 flex gap-2">
+          <button onclick="localStorage.clear(); location.reload();" class="flex-1 h-10 rounded-full bg-slate-50 border text-[10px] font-black text-slate-500">مسح الجلسة</button>
+          <button onclick="document.getElementById('login-phone').value=''; document.getElementById('login-pass').value=''; " class="flex-1 h-10 rounded-full bg-slate-50 border text-[10px] font-black text-slate-500">مسح الحقول</button>
+        </div>
+        <p id="login-error" class="text-[11px] font-bold text-red-600 mt-4 text-center hidden bg-red-50 border border-red-200 rounded-[12px] p-3"></p>
+        <p class="text-[9px] text-center text-slate-400 mt-4 leading-4">بيانات الدخول من إعدادات Vercel<br>ADMIN_EMAIL / ADMIN_PHONE + ADMIN_PASSWORD</p>
+      </div>
+    </div>
+  </div>`;
+  setTimeout(()=>document.getElementById('login-phone')?.focus(), 150);
 }
 
-render();
-if(getToken()){loadAll();}else{renderLogin();}
+async function doLogin(){
+  const phoneEl=document.getElementById('login-phone');
+  const passEl=document.getElementById('login-pass');
+  const btn=document.getElementById('login-btn');
+  const errEl=document.getElementById('login-error');
+  const phoneRaw=(phoneEl?.value||'').trim();
+  const passRaw=(passEl?.value||'').trim();
+  if(errEl){ errEl.classList.add('hidden'); }
+  if(!phoneRaw){
+    if(errEl){ errEl.textContent='اكتب الإيميل أو رقم الهاتف'; errEl.classList.remove('hidden'); }
+    showToast('اكتب الإيميل أو رقم الهاتف','error'); return;
+  }
+  if(!passRaw){
+    if(errEl){ errEl.textContent='اكتب كلمة المرور'; errEl.classList.remove('hidden'); }
+    showToast('اكتب كلمة المرور','error'); return;
+  }
+  if(btn){ btn.textContent='جاري التحقق...'; btn.disabled=true; }
+  try{
+    let normalized = phoneRaw;
+    try{ const n=normalizePhoneInput(phoneRaw); if(n) normalized=n; }catch{}
+    const payload={ password: passRaw };
+    if(phoneRaw.includes('@')){ payload.email=phoneRaw; payload.phone=phoneRaw; }
+    else { payload.phone=normalized; payload.email=phoneRaw; }
+    const res=await api('/api/admin/login',{method:'POST',body:JSON.stringify(payload)});
+    if(res.ok && (res.data?.token || res.data?.data?.token)){
+      const token=res.data.token||res.data.data.token;
+      setToken(token);
+      showToast('تم تسجيل الدخول بنجاح ✅');
+      render();
+      loadAll();
+    }else{
+      const msg=res.data?.message||'فشل تسجيل الدخول - تأكد من إعدادات Vercel';
+      if(errEl){ errEl.textContent=msg; errEl.classList.remove('hidden'); }
+      showToast(msg,'error');
+      if(btn){ btn.textContent='دخول للوحة التحكم →'; btn.disabled=false; }
+    }
+  }catch(e){
+    const msg=e.message||'تعذر الاتصال';
+    if(errEl){ errEl.textContent=msg; errEl.classList.remove('hidden'); }
+    showToast(msg,'error');
+    if(btn){ btn.textContent='دخول للوحة التحكم →'; btn.disabled=false; }
+  }
+}
+
+// إصلاح تحميل البيانات مع تشخيص سبب الصفر
+async function loadAllFixed(){
+  if(!getToken()){ renderLogin(); return; }
+  state.loading=true;
+  state.errors.fannis=''; state.errors.orders=''; state.errors.topups=''; state.errors.complaints='';
+  render();
+  const results=await Promise.allSettled([
+    api('/api/admin/fannis',{method:'GET'}),
+    api('/api/admin/topup-requests',{method:'GET'}),
+    api('/api/admin/orders',{method:'GET'}),
+    api('/api/admin/complaints',{method:'GET'})
+  ]);
+  let debug=[];
+  // fannis
+  if(results[0].value?.ok){
+    state.fannis=extractList(results[0].value.data,['fannis','users','items','data']);
+    debug.push('فنيين:'+state.fannis.length);
+  }else{
+    state.fannis=[]; state.errors.fannis=results[0].value?.data?.message||results[0].reason?.message||'فشل تحميل الفنيين';
+    debug.push('فنيين فشل:'+state.errors.fannis);
+    if(results[0].value?.status===401){ clearToken(); renderLogin(); showToast('انتهت الجلسة - سجل دخول','error'); return; }
+  }
+  if(results[1].value?.ok){
+    state.topups=extractList(results[1].value.data,['requests','topups','items','data']);
+    debug.push('شحن:'+state.topups.length);
+  }else{ state.topups=[]; debug.push('شحن فشل'); }
+  if(results[2].value?.ok){
+    state.orders=extractList(results[2].value.data,['orders','items','requests','data']);
+    debug.push('طلبات:'+state.orders.length);
+  }else{
+    state.orders=[]; state.errors.orders=results[2].value?.data?.message||'فشل تحميل الطلبات - الباك إند لم يرفع بعد';
+    debug.push('طلبات فشل:'+state.errors.orders);
+  }
+  if(results[3].value?.ok){
+    state.complaints=extractList(results[3].value.data,['complaints','items','data']);
+    debug.push('شكاوى:'+state.complaints.length);
+  }else{ state.complaints=[]; debug.push('شكاوى فشل'); }
+  
+  console.log('Load debug:', debug.join(' | '));
+  // لو كله صفر وفيه أخطاء، اعرضها في الداشبورد
+  if(state.fannis.length===0 && state.orders.length===0){
+    const errMsg = state.errors.fannis || state.errors.orders || 'لا توجد بيانات - تأكد أن الباك إند على Vercel تم عمل Deploy لآخر نسخة من admin.js';
+    showToast(errMsg,'error');
+    state.debugInfo = debug.join(' | ') + ' | ' + (state.errors.fannis||'') + ' ' + (state.errors.orders||'');
+  }else{
+    state.debugInfo='';
+  }
+  
+  state.loading=false;
+  applyFilter(); applyTopupFilter(); applyOrderFilter(); applyComplaintFilter(); applyClientFilter(); applyServicesFilter();
+}
+
+async function loadAll(){ return loadAllFixed(); }
+
+try{ render(); }catch(e){ console.error('render error', e); }
+if(getToken()){ loadAll(); }else{ renderLogin(); }
+
 
 </script>
 </body>
