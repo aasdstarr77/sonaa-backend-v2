@@ -370,13 +370,13 @@ async function acceptAccountOffer(sn,id){if(!confirm('تأكيد قبول هذا
 
 async function loadNotifications(){
  if(!state.accountToken||!state.account)return;
- try{const data=await API.getNotifications();state.notifications=Array.isArray(data.notifications)?data.notifications:[];state.notificationsUnread=Number(data.unreadCount||0);if(state.notificationsOpen)render();}
+ try{const data=await API.getNotifications();state.notifications=Array.isArray(data.notifications)?data.notifications:[];state.notificationsUnread=Number(data.unreadCount||0);var badge=document.getElementById('notificationBadge');if(badge)badge.textContent=state.notificationsUnread?(state.notificationsUnread>99?'99+':String(state.notificationsUnread)):'';if(state.notificationsOpen)render();}
  catch(error){log('تعذر تحميل الإشعارات:',error.message);}
 }
 async function toggleNotifications(){state.notificationsOpen=!state.notificationsOpen;if(state.notificationsOpen)await loadNotifications();render();}
 async function openNotification(id){try{await API.readNotification(id);}catch(error){}state.notifications=state.notifications.map(function(n){return n.id===id?Object.assign({},n,{read:true}):n;});state.notificationsUnread=Math.max(0,state.notificationsUnread-1);state.notificationsOpen=false;if(state.notifications.find(function(n){return n.id===id&&n.link&&n.link.indexOf('tab=orders')>=0;}))state.tab='orders';render();}
 async function markAllNotificationsRead(){try{await API.readAllNotifications();state.notifications=state.notifications.map(function(n){return Object.assign({},n,{read:true});});state.notificationsUnread=0;render();}catch(error){showToast(error.message||'تعذر تحديث الإشعارات.');}}
-function notificationBadge(){return state.notificationsUnread?'<span class="absolute -right-1 -top-1 min-w-[17px] rounded-full bg-red-600 px-1 text-[9px] font-black text-white">'+(state.notificationsUnread>99?'99+':state.notificationsUnread)+'</span>':'';}
+function notificationBadge(){return '<span id="notificationBadge" class="absolute -right-1 -top-1 min-w-[17px] rounded-full bg-red-600 px-1 text-[9px] font-black text-white">'+(state.notificationsUnread?(state.notificationsUnread>99?'99+':state.notificationsUnread):'')+'</span>';}
 function notificationPanel(){
  if(!state.notificationsOpen)return '';
  var html='<div class="fixed inset-0 z-[99]" onclick="state.notificationsOpen=false;render()"></div><div class="fixed left-3 right-3 top-[70px] z-[100] mx-auto max-w-[420px] overflow-hidden rounded-2xl border border-amber-200 bg-white text-slate-800 shadow-2xl"><div class="flex items-center justify-between gap-2 border-b p-3"><b class="text-[13px]">الإشعارات</b><button onclick="markAllNotificationsRead()" class="text-[10px] font-extrabold text-blue-700">تعليم الكل كمقروء</button></div><div class="max-h-[60vh] overflow-y-auto">';
