@@ -466,6 +466,37 @@ function money(value) {
   return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 }
 
+// ترقية آلية عند اكتمال المهام أو تحديث تقييم العميل.
+// لا تخفّض المستوى الحالي تلقائيًا إذا انخفض التقييم لاحقًا.
+const PROFESSIONAL_LEVEL_RANK = {
+  'مبتدئ': 0, 'ممارس': 1, 'محترف': 2, 'خبير مبتدئ': 3,
+  'خبير': 4, 'خبير أول': 5, 'استشاري فني': 6, 'نخبة': 7, 'أسطوري': 8
+};
+
+async function autoPromoteFanni(fanniId, reason) {
+  if (!fanniId) return null;
+  const fanni = await Fanni.findOne({ _id: fanniId, role: 'fanni' });
+  if (!fanni || typeof fanni.calculateLevel !== 'function') return null;
+  const currentLevel = fanni.level || 'مبتدئ';
+  const calculatedLevel = fanni.calculateLevel();
+  const currentRank = PROFESSIONAL_LEVEL_RANK[currentLevel] ?? 0;
+  const calculatedRank = PROFESSIONAL_LEVEL_RANK[calculatedLevel] ?? 0;
+  if (calculatedRank <= currentRank) return fanni;
+  fanni.level = calculatedLevel;
+  fanni.levelHistory.push({
+    from: currentLevel, to: calculatedLevel, date: new Date(), by: 'النظام',
+    reason: String(reason || 'ترقية آلية حسب الإنجاز').slice(0, 500)
+  });
+  fanni.decisions.push({
+    action: 'ترقية مستوى',
+    reason: 'ترقية آلية من ' + currentLevel + ' إلى ' + calculatedLevel + '. ' + String(reason || '').slice(0, 350),
+    date: new Date(), by: 'النظام',
+    meta: { from: currentLevel, to: calculatedLevel, automatic: true }
+  });
+  await fanni.save();
+  return fanni;
+}
+
 function getAcceptedOffer(order, offerId) {
   return order.offers.id(offerId);
 }
@@ -1322,6 +1353,13 @@ router.post('/:sn/complete', auth(), async (req, res, next) => {
       });
     }
 
+    // لا يتم احتساب المهمة إلا بعد انتقال الطلب بنجاح إلى حالة مكتملة.
+    await Fanni.updateOne(
+      { _id: req.userId, role: 'fanni' },
+      { $inc: { 'stats.completedJobs': 1 } }
+    );
+    await autoPromoteFanni(req.userId, 'إكمال المهمة ' + order.sn);
+
     return res.json({
       message: 'تم إكمال المهمة بنجاح',
       order: {
@@ -1468,6 +1506,7 @@ router.post('/:sn/rating', async (req, res, next) => {
         { _id: order.assignedFanni },
         { $set: { 'rating.average': Math.round(stats.average * 100) / 100, 'rating.count': stats.count } }
       );
+      await autoPromoteFanni(order.assignedFanni, 'تحديث تقييمات العملاء');
     }
 
     return res.status(201).json({
