@@ -374,8 +374,9 @@ async function loadNotifications(){
  catch(error){log('تعذر تحميل الإشعارات:',error.message);}
 }
 async function toggleNotifications(){state.notificationsOpen=!state.notificationsOpen;if(state.notificationsOpen)await loadNotifications();render();}
-async function openNotification(id){try{await API.readNotification(id);}catch(error){}state.notifications=state.notifications.map(function(n){return n.id===id?Object.assign({},n,{read:true}):n;});state.notificationsUnread=Math.max(0,state.notificationsUnread-1);state.notificationsOpen=false;render();}
+async function openNotification(id){try{await API.readNotification(id);}catch(error){}state.notifications=state.notifications.map(function(n){return n.id===id?Object.assign({},n,{read:true}):n;});state.notificationsUnread=Math.max(0,state.notificationsUnread-1);state.notificationsOpen=false;if(state.notifications.find(function(n){return n.id===id&&n.link&&n.link.indexOf('tab=orders')>=0;}))state.tab='orders';render();}
 async function markAllNotificationsRead(){try{await API.readAllNotifications();state.notifications=state.notifications.map(function(n){return Object.assign({},n,{read:true});});state.notificationsUnread=0;render();}catch(error){showToast(error.message||'تعذر تحديث الإشعارات.');}}
+function notificationBadge(){return state.notificationsUnread?'<span class="absolute -right-1 -top-1 min-w-[17px] rounded-full bg-red-600 px-1 text-[9px] font-black text-white">'+(state.notificationsUnread>99?'99+':state.notificationsUnread)+'</span>':'';}
 function notificationPanel(){
  if(!state.notificationsOpen)return '';
  var html='<div class="fixed inset-0 z-[99]" onclick="state.notificationsOpen=false;render()"></div><div class="fixed left-3 right-3 top-[70px] z-[100] mx-auto max-w-[420px] overflow-hidden rounded-2xl border border-amber-200 bg-white text-slate-800 shadow-2xl"><div class="flex items-center justify-between gap-2 border-b p-3"><b class="text-[13px]">الإشعارات</b><button onclick="markAllNotificationsRead()" class="text-[10px] font-extrabold text-blue-700">تعليم الكل كمقروء</button></div><div class="max-h-[60vh] overflow-y-auto">';
@@ -402,7 +403,7 @@ function render(){
           <p class="text-[11px] text-slate-500 font-bold mt-1">خدماتك في مكان واحد</p>
         </div>
       </div>
-      <div class="flex items-center gap-1.5 shrink-0"><button type="button" onclick="toggleNotifications()" aria-label="الإشعارات" class="relative h-9 w-9 rounded-xl border border-amber-200 bg-amber-50 text-[18px] text-amber-600">🔔<span id="notificationBadge" class="absolute -right-1 -top-1 min-w-[17px] rounded-full bg-red-600 px-1 text-[9px] font-black text-white"></span></button>
+      <div class="flex items-center gap-1.5 shrink-0"><button type="button" onclick="toggleNotifications()" aria-label="الإشعارات" class="relative h-9 w-9 rounded-xl border border-amber-200 bg-amber-50 text-[18px] text-amber-600">🔔${notificationBadge()}</button>
         <a href="./fanni.html" class="h-9 px-3 rounded-xl blue-btn text-[11px] font-extrabold flex items-center">🧑‍🔧 الفني</a>
         <button type="button" onclick="setTab('new')" class="h-9 px-3 rounded-xl primary-btn text-[11px] font-extrabold">طلب جديد +</button>
         <button type="button" onclick="logoutClient()" class="h-9 px-3 rounded-xl bg-slate-100 text-slate-700 text-[11px] font-extrabold">خروج</button>
@@ -1012,7 +1013,7 @@ async function sendComplaint(){
 }
 document.addEventListener('DOMContentLoaded',()=>{
   loadServices();loadAreas();initializeClientAccount();render();
-  document.addEventListener('click',handleOutsideServiceClick);
+  document.addEventListener('click',handleOutsideServiceClick);setInterval(function(){if(state.accountToken&&state.account)loadNotifications();},30000);
 });
 render();
 </script>
