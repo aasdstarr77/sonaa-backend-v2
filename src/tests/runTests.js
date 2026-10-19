@@ -22,6 +22,13 @@ async function run() {
     assert.equal(response.headers['x-powered-by'], undefined);
   });
 
+  await test('security headers include a CSP and disable object embedding', async () => {
+    const response = await request(app).get('/');
+    const csp = response.headers['content-security-policy'] || '';
+    assert.ok(csp.includes("object-src 'none'"));
+    assert.ok(csp.includes("frame-ancestors 'none'"));
+  });
+
   await test('CORS allows the configured production origin', async () => {
     const response = await request(app)
       .options('/api/test')
