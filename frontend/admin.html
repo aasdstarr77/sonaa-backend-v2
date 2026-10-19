@@ -131,7 +131,7 @@ function confirmPending(key){
      else if(p.action==='cancel') cancelOrder(id);
      else if(p.action==='archive') archiveOrder(id);
      else if(p.action==='delete') deleteOrder(id);
-     else if(p.action==='assign') showToast('تعيين الفني لم يُنفّذ بعد؛ لم يتم تغيير الطلب','error');
+     else if(p.action==='assign') assignOrder(id);
      else showToast('هذا الإجراء غير مربوط بعد؛ لم يتم تغيير الطلب','error');
   } else if(type==='topup'){
     if(p.action==='approve') approveTopup(id);
@@ -731,6 +731,27 @@ async function loadServices(){if(!getToken())return; state.servicesLoading=true;
 async function loadAll(){if(!getToken()){state.loading=false; if(typeof renderLogin==='function'){renderLogin();} else {render();} return;} state.loading=true; state.errors.fannis=''; state.errors.topups=''; state.errors.orders=''; state.errors.complaints=''; render(); try{const results=await Promise.allSettled([tryApi(['/api/admin/me'],{method:'GET'}),tryApi(['/api/admin/fannis'],{method:'GET'}),tryApi(['/api/admin/topup-requests'],{method:'GET'}),tryApi(['/api/admin/orders'],{method:'GET'}),tryApi(['/api/admin/complaints'],{method:'GET'})]); if(results[0].status==='fulfilled'){state.currentAdminRoleLabel=String(results[0].value.adminRoleLabel||'');} if(results[1].status==='fulfilled'){state.fannis=extractList(results[1].value,['fannis','items']); state.errors.fannis='';}else{state.fannis=[]; state.errors.fannis=results[0].reason?.message||'تعذر تحميل الفنيين';} if(results[2].status==='fulfilled'){state.topups=extractList(results[2].value,['requests','topups','items']);}else{state.topups=[]; state.errors.topups=results[2].reason?.message||'تعذر تحميل الشحن';} if(results[3].status==='fulfilled'){state.orders=extractList(results[3].value,['orders','items','requests']);}else{state.orders=[]; state.errors.orders=results[3].reason?.message||'تعذر تحميل الطلبات';} if(results[4].status==='fulfilled'){state.complaints=extractList(results[4].value,['complaints','items']);}else{state.complaints=[]; state.errors.complaints=results[4].reason?.message||'تعذر تحميل الشكاوى';} applyFilter(); applyTopupFilter(); applyOrderFilter(); applyComplaintFilter(); applyClientFilter(); applyServicesFilter();}catch(e){console.error(e);}finally{state.loading=false; try{render();}catch(e){console.error(e);}}}
 async function loadOrders(){if(!getToken())return; state.loadingOrders=true; state.errors.orders=''; render(); try{const data=await tryApi(['/api/admin/orders'],{method:'GET'}); state.orders=extractList(data,['orders','items','requests']); state.errors.orders=''; applyOrderFilter();}catch(e){state.orders=[]; state.filteredOrders=[]; state.errors.orders=e.message||'تعذر تحميل الطلبات'; render();}finally{state.loadingOrders=false; if(state.tab==='orders')render();}}
 async function refreshCurrentTab(){if(state.tab==='orders')await loadOrders(); else if(state.tab==='complaints')await loadComplaints(); else if(state.tab==='services')await loadServices(); else await loadAll();}
+async function assignOrder(sn){
+  const order=state.orders.find(o=>String(o.sn||'').toUpperCase()===String(sn||'').toUpperCase());
+  const offers=Array.isArray(order?.offers)?order.offers:[];
+  if(!order||!offers.length)return showToast('لا توجد عروض فنيين على الطلب لتعيين أحدهم','error');
+  const choices=offers.map((o,i)=>(i+1)+') '+String(o.fanniName||'فني')+' — '+String(o.price||'')+' جنيه').join('\n');
+  const raw=prompt('اختار رقم العرض لتعيين الفني. سيتم خصم عمولة المنصة من محفظته بعد التأكيد:\n'+choices,'1');
+  if(raw===null)return;
+  const choice=Number(raw);
+  if(!Number.isInteger(choice)||choice<1||choice>offers.length)return showToast('رقم العرض غير صحيح','error');
+  const offer=offers[choice-1];
+  if(!offer._id)return showToast('معرّف العرض غير متاح؛ حدّث الطلب وحاول مرة أخرى','error');
+  const reason=prompt('سبب التعيين الإداري (مطلوب):','تعيين إداري بعد مراجعة العروض');
+  if(reason===null)return;
+  if(reason.trim().length<3)return showToast('اكتب سببًا واضحًا للتعيين','error');
+  if(!confirm('تأكيد تعيين '+String(offer.fanniName||'الفني')+' على الطلب '+sn+'؟ سيتم تسجيل عمولة المنصة من محفظة الفني.'))return;
+  try{
+    const data=await tryApi(['/api/admin/orders/'+encodeURIComponent(sn)+'/assign'],{method:'POST',body:JSON.stringify({offerId:String(offer._id),reason:reason.trim()})});
+    showToast(data.message||'تم تعيين الفني');
+    await loadOrders();await loadAll();
+  }catch(e){showToast(e.message||'تعذر تعيين الفني','error');}
+}
 async function saveOrderCorrection(sn){
   sn=String(sn||'').trim().toUpperCase();
   const getValue=(field)=>{const el=document.getElementById('edit-order-'+field+'-'+sn);return el?String(el.value||'').trim():'';};
