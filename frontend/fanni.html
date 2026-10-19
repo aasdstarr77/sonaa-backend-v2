@@ -52,6 +52,8 @@ const log=(...a)=>{if(IS_DEV)console.log(...a)};
 // === تم التوحيد مع /api/services - المصدر الرسمي الوحيد ===
 let CATEGORIES=[];
 let ALL_SERVICES=[];
+let AREA_OPTIONS=[];
+const ALL_AREAS_LABEL='جميع المناطق';
 let SERVICES_LOADING=true;
 let SERVICES_ERROR='';
 
@@ -144,6 +146,34 @@ async function copyWalletNumber(){
  }
 }
 
+
+function toggleRegArea(area){
+ const value=clean(area,60);if(!value)return;
+ if(value===ALL_AREAS_LABEL){state.regAreas=state.regAreas.includes(ALL_AREAS_LABEL)?[]:[ALL_AREAS_LABEL];state.error='';render();return;}
+ if(state.regAreas.includes(ALL_AREAS_LABEL))state.regAreas=[];
+ if(state.regAreas.includes(value))state.regAreas=state.regAreas.filter(item=>item!==value);
+ else if(state.regAreas.length>=30){state.error='تقدر تختار لحد 30 منطقة فقط.';render();return;}
+ else state.regAreas=[...state.regAreas,value];
+ state.error='';render();
+}
+function addCustomRegArea(){
+ const area=clean(state.regAreaCustom,60).replace(/\s+/g,' ');
+ if(area.length<2){state.error='اكتب اسم منطقة صحيح من حرفين على الأقل.';render();return;}
+ if(/01[0-9]{9}/.test(area.replace(/\D/g,''))){state.error='ممنوع كتابة رقم تليفون في اسم المنطقة.';render();return;}
+ const key=area.normalize('NFC').trim().toLowerCase();
+ const existing=AREA_OPTIONS.find(item=>item.normalize('NFC').trim().toLowerCase()===key)||area;
+ if(state.regAreas.includes(existing)){state.error='المنطقة دي مختارة بالفعل.';render();return;}
+ if(state.regAreas.includes(ALL_AREAS_LABEL))state.regAreas=[];
+ if(state.regAreas.length>=30){state.error='تقدر تختار لحد 30 منطقة فقط.';render();return;}
+ if(!AREA_OPTIONS.includes(existing))AREA_OPTIONS=[...AREA_OPTIONS,existing].sort((a,b)=>a.localeCompare(b,'ar'));
+ state.regAreas=[...state.regAreas,existing];state.regAreaCustom='';state.regAreaSearch='';state.error='';render();
+}
+async function loadAreas(){
+ try{const data=await API.areas();AREA_OPTIONS=Array.isArray(data?.areas)?data.areas:[];}
+ catch(e){log('تعذر تحميل المناطق',e);AREA_OPTIONS=[];}
+ render();
+}
+
 function parseAreas(value){
  return [...new Set(String(value||'').split(/[,،;\n\r]+/).map(x=>clean(x,60)).filter(x=>x.length>=2))].slice(0,30);
 }
@@ -199,7 +229,8 @@ const API={
  rateOrder:(sn,p)=>apiPost('/api/orders/'+encodeURIComponent(sn)+'/rating',p),
  offer:(sn,p)=>apiPost('/api/fanni/orders/'+encodeURIComponent(sn)+'/offer',p),
  topup:p=>apiPost('/api/fanni/wallet/topup',p),
- walletHistory:()=>apiGet('/api/fanni/wallet/history')
+ walletHistory:()=>apiGet('/api/fanni/wallet/history'),
+ areas:()=>apiGet('/api/areas')
 };
 
 async function loadServices(){
@@ -234,7 +265,7 @@ let state={
  tab:getToken()?'available':'login',
  loginPhone:'',loginPass:'',
  regName:'',regPhone:'',regPass:'',regPassConfirm:'',
- regSpecialties:[],regAreasText:'',openSpecialtyCategory:'',
+ regSpecialties:[],regAreas:[],regAreaSearch:'',regAreaCustom:'',openSpecialtyCategory:'',
  loading:false,checkingSession:false,
  orders:[],filteredOrders:[],search:'',filterSkill:'الكل',
  myOffers:[],completedOffers:[],offerModal:null,offerPrice:'',offerMessage:'',
@@ -505,7 +536,17 @@ function render(){
      }).join('')}
     </div>
 
-    <div><label class="field-label">مناطق العمل والأحياء *</label><textarea class="field min-h-[100px]" oninput="state.regAreasText=this.value.slice(0,1000)" placeholder="مثال: المعادي، زهراء المعادي، دار السلام">${esc(state.regAreasText)}</textarea><p class="text-[10px] text-slate-500 mt-1">افصل بين المناطق بفاصلة أو سطر جديد.</p></div>
+    <div>
+      <div class="flex items-center justify-between gap-2"><label class="field-label">مناطق العمل والأحياء *</label><span class="rounded-full bg-blue-50 px-2 py-1 text-[10px] font-extrabold text-blue-700">${state.regAreas.includes(ALL_AREAS_LABEL)?'كل المناطق':state.regAreas.length+'/30'}</span></div>
+      <p class="mb-2 text-[10px] text-slate-500">اختار المناطق اللي بتشتغل فيها، وتقدر تختار لحد 30 منطقة أو تضيف منطقة جديدة.</p>
+      <label class="mb-2 flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 p-3 text-[12px] font-extrabold text-blue-900"><input type="checkbox" ${state.regAreas.includes(ALL_AREAS_LABEL)?'checked':''} onchange="toggleRegArea(ALL_AREAS_LABEL)"> جميع المناطق</label>
+      <input class="field mb-2" value="${esc(state.regAreaSearch)}" oninput="state.regAreaSearch=this.value.slice(0,60);render()" placeholder="ابحث عن منطقة...">
+      <div class="max-h-52 overflow-y-auto rounded-xl border border-slate-200 p-2">
+       ${AREA_OPTIONS.filter(area=>!state.regAreaSearch||area.includes(state.regAreaSearch.trim())).map(area=>`<label class="mb-1 flex items-center gap-2 rounded-lg px-2 py-2 text-[11px] font-bold hover:bg-slate-50"><input type="checkbox" ${state.regAreas.includes(area)?'checked':''} ${state.regAreas.includes(ALL_AREAS_LABEL)?'disabled':''} onchange="toggleRegArea(this.dataset.area)" data-area="${esc(area)}"><span>${esc(area)}</span></label>`).join('')||'<p class="p-2 text-[11px] text-slate-500">مفيش مناطق مطابقة للبحث.</p>'}
+      </div>
+      <div class="mt-2 flex gap-2"><input class="field min-w-0 flex-1" value="${esc(state.regAreaCustom)}" oninput="state.regAreaCustom=this.value.slice(0,60)" placeholder="إضافة منطقة جديدة"><button type="button" onclick="addCustomRegArea()" class="shrink-0 rounded-xl bg-slate-800 px-3 text-[11px] font-extrabold text-white">إضافة</button></div>
+      ${state.regAreas.length&&!state.regAreas.includes(ALL_AREAS_LABEL)?`<div class="mt-2 flex flex-wrap gap-1">${state.regAreas.map(area=>`<button type="button" onclick="toggleRegArea(this.dataset.area)" data-area="${esc(area)}" class="rounded-full bg-blue-100 px-2 py-1 text-[10px] font-bold text-blue-800">${esc(area)} ×</button>`).join('')}</div>`:''}
+     </div>
     <div><label class="field-label">كلمة السر *</label><input type="password" class="field" autocomplete="new-password" value="${esc(state.regPass)}" oninput="state.regPass=this.value.slice(0,100)" placeholder="6 أحرف على الأقل"></div>
     <div><label class="field-label">تأكيد كلمة السر *</label><input type="password" class="field" autocomplete="new-password" value="${esc(state.regPassConfirm)}" oninput="state.regPassConfirm=this.value.slice(0,100)" placeholder="اكتب كلمة السر مرة تانية"><p class="text-[10px] text-slate-500 mt-1">لازم تكون مطابقة لكلمة السر الأولى.</p></div>
 
@@ -784,7 +825,7 @@ async function doRegister(){
  if(!CATEGORIES.length){state.error='قائمة التخصصات غير متاحة حاليًا.';render();return}
  if(!state.regSpecialties.length){state.error='اختار تخصصًا واحدًا على الأقل';render();return}
 
- const areas=parseAreas(state.regAreasText);
+ const areas=[...new Set(state.regAreas)].slice(0,30);
 
  if(!areas.length){state.error='اكتب منطقة عمل واحدة على الأقل';render();return}
  if(!V.text(state.regPass,6,100)){state.error='كلمة السر لازم تكون 6 أحرف على الأقل';render();return}
@@ -810,7 +851,9 @@ async function doRegister(){
   state.regPass='';
   state.regPassConfirm='';
   state.regSpecialties=[];
-  state.regAreasText='';
+  state.regAreas=[];
+  state.regAreaSearch='';
+  state.regAreaCustom='';
   state.tab='login';
   state.pendingMsg='تم إنشاء حساب بنجاح. حسابك قيد مراجعة الإدارة.';
   state.error='';
@@ -1090,7 +1133,7 @@ async function submitOffer(){
 }
 
 async function start(){
- await loadServices();
+ await Promise.allSettled([loadServices(),loadAreas()]);
  render();
 
  if(!getToken())return;
