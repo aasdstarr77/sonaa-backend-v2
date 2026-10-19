@@ -130,6 +130,49 @@ router.get('/me', clientAuth, (req, res) => {
   });
 });
 
+router.post('/orders/claim', clientAuth, async (req, res, next) => {
+  try {
+    const sn = String(req.body?.sn || '').trim().toUpperCase();
+    const oldToken = String(req.body?.clientToken || '').trim();
+    if (!/^SN\\d{6}$/.test(sn) || !oldToken) {
+      return res.status(400).json({ message: 'اكتب رقم الطلب القديم بشكل صحيح من الجهاز الذي أنشأته منه' });
+    }
+
+    let payload;
+    try {
+      payload = jwt.verify(oldToken, process.env.JWT_SECRET);
+    } catch {
+      return res.status(403).json({ message: 'تعذر إثبات ملكية الطلب القديم من هذا الجهاز' });
+    }
+    if (payload.purpose !== 'client-order' || String(payload.sn || '').toUpperCase() !== sn) {
+      return res.status(403).json({ message: 'بيانات ملكية الطلب القديم غير صحيحة' });
+    }
+
+    const order = await Order.findOne({ _id: payload.orderId, sn });
+    if (!order) return res.status(404).json({ message: 'الطلب القديم غير موجود أو بياناته غير مطابقة' });
+    if (normalizePhone(order.clientPhone) !== req.client.phone) {
+      return res.status(403).json({ message: 'رقم الموبايل في الطلب القديم لا يطابق حسابك. تواصل مع الإدارة لربطه بأمان.' });
+    }
+    if (order.clientAccount && String(order.clientAccount) !== String(req.clientId)) {
+      return res.status(409).json({ message: 'الطلب مرتبط بالفعل بحساب عميل آخر' });
+    }
+    if (String(order.clientAccount || '') === String(req.clientId)) {
+      return res.json({ message: 'الطلب مرتبط بحسابك بالفعل', order: safeOrder(order) });
+    }
+
+    const linked = await Order.findOneAndUpdate(
+      { _id: order._id, $or: [{ clientAccount: null }, { clientAccount: { $exists: false } }] },
+      { $set: { clientAccount: req.clientId } },
+      { new: true, runValidators: true }
+    );
+    if (!linked) return res.status(409).json({ message: 'تعذر ربط الطلب؛ قد يكون مرتبطًا بحساب آخر بالفعل' });
+
+    return res.json({ message: 'تم ربط الطلب القديم بحسابك بنجاح', order: safeOrder(linked) });
+  } catch (error) {
+    return next(error);
+  }
+});
+
 router.get('/orders', clientAuth, async (req, res, next) => {
   try {
     const orders = await Order.find({ clientAccount: req.clientId })
