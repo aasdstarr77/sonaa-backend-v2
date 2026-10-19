@@ -470,8 +470,7 @@ router.get('/my-offers', auth(), async (req, res, next) => {
             acceptedOfferPrice: order.acceptedOfferPrice,
             commissionAmount: order.commissionAmount,
             commissionCharged: Boolean(order.commissionCharged)
-          };
-        }
+          }
 
         }
         offers.push(safeOffer);
