@@ -18,6 +18,7 @@ const adminRouter = require('./routes/admin');
 const publicRouter = require('./routes/public');
 const clientRouter = require('./routes/client');
 const complaintRouter = require('./routes/Complaint');
+const notificationsRouter = require('./routes/notifications');
 const { auth } = require('./middleware/auth');
 const errorHandler = require('./middleware/error');
 
@@ -154,6 +155,7 @@ app.use('/api', ensureDatabase);
 
 app.use('/api', publicRouter);
 app.use('/api/client', clientRouter);
+app.use('/api/notifications', notificationsRouter);
 app.use('/api/complaints', complaintRouter);
 app.use('/api/orders', orderRouter);
 

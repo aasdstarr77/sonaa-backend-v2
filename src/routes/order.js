@@ -6,6 +6,7 @@ const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 
 const Order = require('../models/Order');
+const { createNotification } = require('../utils/notifications');
 const Fanni = require('../models/Fanni');
 const Rating = require('../models/Rating');
 const WalletTransaction = require('../models/WalletTransaction');
@@ -418,6 +419,12 @@ router.post('/', clientAuth, async (req, res, next) => {
       });
     }
 
+    await createNotification({
+      recipientRole: 'client', recipientId: order.clientAccount, type: 'order_created',
+      title: 'تم استلام طلبك', message: 'استلمنا طلبك ' + order.sn + ' وسيتم مراجعته من الإدارة.',
+      link: '/?tab=orders', dedupeKey: 'order-created:' + String(order._id)
+    });
+
     const clientToken = jwt.sign(
       {
         purpose: 'client-order',
@@ -487,6 +494,21 @@ router.post('/admin/:sn/publish', auth('admin'), async (req, res, next) => {
         message: 'الطلب ليس قيد المراجعة، لذلك لم يتم نشره',
         status: existing.status
       });
+    }
+
+    // Notify only approved technicians whose specialties and service areas match.
+    const eligibleFannis = await Fanni.find({ role: 'fanni', status: 'معتمد' }).select('_id specialties areas').lean();
+    for (const fanni of eligibleFannis) {
+      const coversAllAreas = (fanni.areas || []).some(area => normalizeArea(area) === normalizeArea(ALL_AREAS_LABEL));
+      const areas = new Set((fanni.areas || []).map(normalizeArea));
+      if (fanniCanHandleService(fanni.specialties, order.service) &&
+          (coversAllAreas || areas.has(normalizeArea(order.area)))) {
+        await createNotification({
+          recipientRole: 'fanni', recipientId: fanni._id, type: 'new_opportunity',
+          title: 'فرصة عمل جديدة', message: 'طلب جديد يناسب تخصصك في ' + order.area + ' (' + order.service + ').',
+          link: '/fanni', dedupeKey: 'new-opportunity:' + String(order._id) + ':' + String(fanni._id)
+        });
+      }
     }
 
     const safeOrder = publicOrder(order);
@@ -850,6 +872,12 @@ router.post('/:sn/offer', auth(), async (req, res, next) => {
     order.status = 'وصلتك عروض';
     await order.save();
 
+    await createNotification({
+      recipientRole: 'client', recipientId: order.clientAccount, type: 'new_offer',
+      title: 'وصلك عرض جديد', message: 'فني أرسل عرضًا على طلبك ' + order.sn + '. افتح طلباتي لمراجعته.',
+      link: '/?tab=orders', dedupeKey: 'new-offer:' + String(order._id) + ':' + String(req.userId)
+    });
+
     return res.status(201).json({
       message: 'تم إرسال العرض بنجاح. لم يتم خصم أي مبلغ من محفظتك.',
       orderSn: order.sn,
@@ -880,6 +908,9 @@ router.post('/:sn/accept', async (req, res, next) => {
   let session;
   let responsePayload = null;
   let responseStatus = 200;
+  let notificationFanniId = null;
+  let notificationClientId = null;
+  let notificationOrderId = null;
 
   try {
     session = await mongoose.startSession();
@@ -1080,6 +1111,10 @@ router.post('/:sn/accept', async (req, res, next) => {
       throw new Error('ORDER_NOT_FOUND_AFTER_UPDATE');
     }
 
+    notificationFanniId = fanniId;
+    notificationClientId = updatedOrder.clientAccount || null;
+    notificationOrderId = updatedOrder._id;
+
     responsePayload = {
       message: 'تم قبول العرض وخصم عمولة المنصة بنجاح',
       commission: {
@@ -1110,6 +1145,23 @@ router.post('/:sn/accept', async (req, res, next) => {
     }
   } finally {
     if (session) await session.endSession();
+  }
+
+  if (responsePayload && responseStatus === 200 && responsePayload.order) {
+    const acceptedOrder = responsePayload.order;
+    await createNotification({
+      recipientRole: 'fanni', recipientId: notificationFanniId, type: 'offer_accepted',
+      title: 'تم قبول عرضك', message: 'العميل قبل عرضك على الطلب ' + acceptedOrder.sn + '.',
+      link: '/fanni', dedupeKey: 'offer-accepted:' + String(notificationOrderId || acceptedOrder.sn)
+    });
+    const clientAccountId = notificationClientId;
+    if (clientAccountId) {
+      await createNotification({
+        recipientRole: 'client', recipientId: clientAccountId, type: 'offer_accepted',
+        title: 'تم اختيار الفني', message: 'تم قبول العرض على طلبك ' + acceptedOrder.sn + '.',
+        link: '/?tab=orders', dedupeKey: 'client-offer-accepted:' + String(notificationOrderId || acceptedOrder.sn)
+      });
+    }
   }
 
   if (responsePayload) {
