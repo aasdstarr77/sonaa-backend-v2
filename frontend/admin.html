@@ -261,11 +261,13 @@ function renderCurrentTab(){
 }
 
 function renderDashboard(){
-  if(state.debugInfo){
-    // will be injected in html
+  let debugBanner='';
+  if(state.debugInfo || state.errors.fannis || state.errors.orders){
+    debugBanner = `<div class="premium-panel p-4 bg-amber-50 border-amber-200"><p class="text-[11px] font-black text-amber-800">🔍 تشخيص: ${escHtml(state.debugInfo||'')}</p>${state.errors.fannis?`<p class="text-[10px] font-bold text-red-600 mt-1">فنيين: ${escHtml(state.errors.fannis)}</p>`:''}${state.errors.orders?`<p class="text-[10px] font-bold text-red-600 mt-1">طلبات: ${escHtml(state.errors.orders)}</p>`:''}<p class="text-[9px] text-slate-500 mt-2">تأكد أنك رفعت ملف src/routes/admin.js الجديد على Vercel وعملت Deploy. افتح Console (F12) لمعلومات أكثر.</p><button onclick="loadAll()" class="mt-2 h-9 px-4 rounded-full bg-slate-900 text-white text-[10px] font-black">إعادة المحاولة</button></div>`;
   }
-
   return `
+  ${debugBanner}
+
   <section class="mt-4 space-y-4">
     <div class="rounded-[20px] bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-900 p-5 text-white shadow-xl">
       <p class="text-[13px] font-black">مركز التحكم الرئيسي</p>
@@ -520,8 +522,789 @@ function renderComplaints(){
   if(state.filteredComplaints.length===0&&!state.loadingComplaints) html+=`<div class="premium-panel p-10 text-center text-[12px] font-bold text-slate-400">لا توجد شكاوى</div>`;
   state.filteredComplaints.forEach(c=>{
     const id=String(c._id||c.id||''); const sn=String(c.sn||''); const status=String(c.status||'جديدة');
-    html+=`<article class="premium-card p-4"><div class="flex justify-between gap-2"><div class="min-w-0"><p class="font-black text-[13px]">${escHtml(c.clientName||'عميل')}</p><p class="text-[11px] font-bold text-slate-500 mt-1">كود: <span class="bg-blue-50 px-2 py-0.5 rounded-full text-blue-800">${escHtml(sn)}</span> • ${escHtml(new Date(c.createdAt||Date.now()).toLocaleString('ar-EG'))}</p></div><span class="text-[10px] px-3 py-1.5 rounded-full border font-black ${status==='تم الحل'?'bg-emerald-50 border-emerald-200 text-emerald-700':status==='مرفوضة'?'bg-red-50 border-red-200 text-red-700':'bg-amber-50 border-amber-200 text-amber-800'}">${escHtml(status)}</span></div><div class="mt-3 rounded-[14px] bg-slate-50 border p-3"><p class="text-[11px] font-bold leading-6 whitespace-pre-wrap">${escHtml(c.text||'')}</p></div><div class="mt-3 space-y-2"><select id="complaint-status-${escHtml(id)}" class="field"><option value="جديدة" ${status==='جديدة'?'selected':''}>جديدة</option><option value="قيد المراجعة" ${status==='قيد المراجعة'?'selected':''}>قيد المراجعة</option><option value="تم الحل" ${status==='تم الحل'?'selected':''}>تم الحل</option><option value="مرفوضة" ${status==='مرفوضة'?'selected':''}>مرفوضة</option></select><textarea id="complaint-note-${escHtml(id)}" rows="2" placeholder="ملاحظة داخلية" class="field">${escHtml(c.adminNote||'')}</textarea><textarea id="complaint-response-${escHtml(id)}" rows="2" placeholder="رد رسمي للعم
-يل" class="field">${escHtml(c.adminResponse||'')}</textarea><button onclick="saveComplaint('${escHtml(id)}')" class="w-full h-11 rounded-full bg-blue-600 text-white font-black text-[11px]">💾 حفظ التحديث</button></div></article>`;
+    html+=`<article class="premium-card p-4"><div class="flex justify-between gap-2"><div class="min-w-0"><p class="font-black text-[13px]">${escHtml(c.clientName||'عميل')}</p><p class="text-[11px] font-bold text-slate-500 mt-1">كود: <span class="bg-blue-50 px-2 py-0.5 rounded-full text-blue-800">${escHtml(sn)}</span> • ${escHtml(new Date(c.createdAt||Date.now()).toLocaleString('ar-EG'))}</p></div><span class="text-[10px] px-3 py-1.5 rounded-full border font-black ${status==='تم الحل'?'bg-emerald-50 border-emerald-200 text-emerald-700':status==='مرفوضة'?'bg-red-50 border-red-200 text-red-700':'bg-amber-50 border-amber-200 text-amber-800'}">${escHtml(status)}</span></div><div class="mt-3 rounded-[14px] bg-slate-50 border p-3"><p class="text-[11px] font-bold leading-6 whitespace-pre-wrap">${escHtml(c.text||'')}</p></div><div class="mt-3 space-y-2"><select id="complaint-status-${escHtml(id)}" class="field"><option value="جديدة" ${status==='جديدة'?'selected':''}>جديدة</option><option value="قيد المراجعة" ${status==='قيد المراجعة'?'selected':''}>قيد المراجعة</option><option value="تم الحل" ${status==='تم الحل'?'selected':''}>تم الحل</option><option value="مرفوضة" ${status==='مرفوضة'?'selected':''}>مرفوضة</option></select><textarea id="complaint-note-${escHtml(id)}" rows="2" placeholder="ملاحظة داخلية" class="field">${escHtml(c.adminNote||'')}</textarea><textarea id="complaint-response-${escHtml(id)}" rows="2" placeholder="رد رسمي للعميل" class="field">${escHtml(c.adminResponse||'')}</textarea><button onclick="saveComplaint('${escHtml(id)}')" class="w-full h-11 rounded-full bg-blue-600 text-white font-black text-[11px]">💾 حفظ التحديث</button></div></article>`;
+  });
+  return html+'</section>';
+}
+
+function renderServices(){
+  let html='<section class="mt-4 space-y-4"><div class="rounded-[18px] bg-gradient-to-r from-indigo-600 to-blue-600 p-4 text-white"><p class="text-[12px] font-black">إدارة الخدمات والمهن والتخصصات</p><p class="text-[10px] text-blue-100 mt-1">إضافة • تعديل • إخفاء • ترتيب • مصدر موحد</p></div>';
+  html+='<div class="premium-panel p-4"><div class="flex gap-2"><input id="new-service-name" placeholder="اسم خدمة جديدة" class="field flex-1"><input id="new-service-emoji" placeholder="🔧" class="field !w-[60px]"><button onclick="addService()" class="pill-btn primary-pill">إضافة</button></div></div>';
+  if(state.servicesLoading) html+='<div class="premium-panel p-10 text-center"><div class="h-8 w-8 rounded-full border-[3px] border-slate-200 border-t-blue-600 animate-spin mx-auto"></div></div>';
+  if(state.filteredServices.length===0&&!state.servicesLoading) html+='<div class="premium-panel p-10 text-center text-[12px] font-bold text-slate-400">لا توجد خدمات</div>';
+  state.filteredServices.forEach((cat, idx)=>{
+    const label=String(cat.label||cat.name||'قسم'); const emoji=String(cat.emoji||'🔧'); const displayServices=Array.isArray(cat._displayServices)?cat._displayServices:cat.services||[]; const isOpen=state.openServices[idx]!==false;
+    html+=`<article class="premium-card overflow-hidden"><button onclick="toggleServiceCat(${idx})" class="w-full flex items-center justify-between p-4 bg-white text-right"><div class="flex items-center gap-3"><span class="h-9 w-9 rounded-full bg-slate-100 flex items-center justify-center">${escHtml(emoji)}</span><div class="text-right"><p class="font-black text-[13px]">${escHtml(label)}</p><p class="text-[10px] text-slate-500">${displayServices.length} خدمة</p></div></div><span class="h-8 w-8 rounded-full bg-slate-50 flex items-center justify-center text-[12px] ${isOpen?'rotate-180':''}">▼</span></button>`;
+    if(isOpen){
+      html+='<div class="border-t divide-y bg-slate-50/50">';
+      displayServices.forEach(srv=>{
+        const s=String(srv||'');
+        html+=`<div class="p-3.5 flex items-center justify-between bg-white"><div class="flex items-center gap-2.5"><span class="h-2 w-2 rounded-full bg-blue-600"></span><span class="text-[12px] font-bold">${escHtml(s)}</span></div><div class="flex gap-1"><button onclick="editService('${escHtml(label)}','${escHtml(s)}')" class="h-7 px-3 rounded-full bg-slate-50 border text-[10px] font-black">تعديل</button><button onclick="hideService('${escHtml(s)}')" class="h-7 px-3 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-black">إخفاء</button></div></div>`;
+      });
+      html+='</div>';
+    }
+    html+='</article>';
+  });
+  return html+'</section>';
+}
+
+function renderRegions(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-teal-600 to-cyan-600 p-4 text-white"><p class="text-[12px] font-black">المناطق والتغطية الجغرافية</p><p class="text-[10px] text-teal-100 mt-1">محافظات • مدن • أحياء • خدمات متاحة</p></div>
+    <div class="premium-panel p-4">
+      <div class="flex gap-2"><input id="new-region" placeholder="محافظة جديدة" class="field flex-1"><button onclick="addRegion()" class="pill-btn primary-pill">إضافة</button></div>
+      <div class="mt-4 space-y-2">
+        ${['القاهرة - 120 فني','الجيزة - 85 فني','الإسكندرية - 60 فني','الدقهلية - 12 فني (نقص)'].map(r=>`<div class="flex justify-between items-center p-3 rounded-[12px] bg-slate-50 border"><span class="text-[11px] font-black">${r}</span><div class="flex gap-1"><button class="h-7 px-3 rounded-full bg-white border text-[10px] font-black">تعديل</button><button class="h-7 px-3 rounded-full bg-red-50 border border-red-200 text-red-700 text-[10px] font-black">إيقاف استقبال</button></div></div>`).join('')}
+      </div>
+    </div>
+  </section>`;
+}
+
+function renderNotifications(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-violet-600 to-purple-600 p-4 text-white"><p class="text-[12px] font-black">الإشعارات والرسائل</p><p class="text-[10px] text-violet-100 mt-1">تطبيق • SMS • إعلان عام</p></div>
+    <div class="premium-panel p-4 space-y-3">
+      <select class="field"><option>إرسال للعميل عند تغير حالة طلبه</option><option>إشعار الفني بطلب جديد</option><option>إشعار وصول عرض جديد</option><option>إعلان عام لفئة</option></select>
+      <textarea rows="3" placeholder="نص الإشعار..." class="field"></textarea>
+      <div class="flex gap-2"><select class="field flex-1"><option>كل الفنيين</option><option>فنيو القاهرة</option><option>العملاء</option></select><button onclick="sendNotification()" class="pill-btn primary-pill">إرسال 🔔</button></div>
+      <div class="rounded-[12px] bg-slate-50 border p-3 text-[10px] font-bold text-slate-500">سيتم تسجيل حالة الإرسال وفشل الإرسال إن وجد</div>
+    </div>
+  </section>`;
+}
+
+function renderSettings(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-slate-800 to-slate-600 p-4 text-white"><p class="text-[12px] font-black">إعدادات النظام العامة</p><p class="text-[10px] text-slate-300 mt-1">اسم • شعار • صيانة • حدود • سياسات</p></div>
+    <div class="premium-panel p-4 space-y-4">
+      <label class="block"><span class="text-[11px] font-black">اسم المنصة</span><input value="صُنّاع" class="field mt-2"></label>
+      <label class="block"><span class="text-[11px] font-black">رسالة وضع الصيانة</span><textarea rows="2" placeholder="نقوم بالصيانة..." class="field mt-2"></textarea></label>
+      <div class="flex items-center justify-between p-3 rounded-[12px] bg-amber-50 border border-amber-200"><span class="text-[11px] font-black">وضع الصيانة</span><label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" class="sr-only peer"><div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-blue-600"></div></label></div>
+      <label class="block"><span class="text-[11px] font-black">الحد الأقصى لمحاولات تسجيل الفني</span><input type="number" value="5" class="field mt-2"></label>
+      <button onclick="saveSettings()" class="w-full h-11 rounded-full bg-slate-900 text-white font-black text-[11px]">حفظ الإعدادات</button>
+    </div>
+  </section>`;
+}
+
+function renderSecurity(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-red-600 to-orange-600 p-4 text-white"><p class="text-[12px] font-black">الأمان وسجل التدقيق</p><p class="text-[10px] text-red-100 mt-1">سجل غير قابل للتعديل • محاولات دخول • تأكيد إضافي</p></div>
+    <div class="premium-panel p-4">
+      <div class="flex gap-2"><input type="date" class="field flex-1"><button class="pill-btn soft-btn">تصفية</button></div>
+      <div class="mt-4 space-y-2 text-[11px] font-bold">
+        <div class="p-3 rounded-[12px] bg-slate-50 border"><p>admin@sonaa.com قام بقبول فني 01012345678</p><p class="text-[10px] text-slate-400 mt-1">منذ 10 دقائق • IP: 197.36.1.2 • نجاح</p></div>
+        <div class="p-3 rounded-[12px] bg-red-50 border border-red-100"><p>محاولة دخول فاشلة - finance@sonaa.com</p><p class="text-[10px] text-red-400 mt-1">منذ ساعة • IP: 41.34.22.10 • فشل</p></div>
+        <div class="p-3 rounded-[12px] bg-slate-50 border"><p>تعديل رصيد فني +200 ج بواسطة admin</p><p class="text-[10px] text-slate-400 mt-1">أمس • سبب: شحن محفظة</p></div>
+      </div>
+    </div>
+  </section>`;
+}
+
+function renderReports(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-indigo-600 to-blue-600 p-4 text-white"><p class="text-[12px] font-black">التقارير والتحليلات</p><p class="text-[10px] text-indigo-100 mt-1">طلبات • فنيون • عملاء • مالي • تصدير</p></div>
+    <div class="premium-panel p-4">
+      <div class="grid grid-cols-2 gap-2"><input type="date" class="field"><input type="date" class="field"><select class="field"><option>كل الخدمات</option><option>سباكة</option><option>كهرباء</option></select><select class="field"><option>كل المناطق</option><option>القاهرة</option></select></div>
+      <button onclick="generateReport()" class="mt-3 w-full h-11 rounded-full bg-slate-900 text-white font-black text-[11px]">إنشاء التقرير 📊</button>
+      <button onclick="exportReport()" class="mt-2 w-full h-11 rounded-full bg-white border font-black text-[11px]">تصدير Excel</button>
+    </div>
+    <div class="grid grid-cols-2 gap-3"><div class="stat-card"><p class="text-[18px] font-black">320</p><p class="text-[10px] font-bold text-slate-500">طلبات هذا الشهر</p></div><div class="stat-card"><p class="text-[18px] font-black">89%</p><p class="text-[10px] font-bold text-slate-500">معدل إنجاز الفنيين</p></div></div>
+  </section>`;
+}
+
+function renderSupport(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-cyan-600 to-blue-600 p-4 text-white"><p class="text-[12px] font-black">أدوات الدعم ومكافحة إساءة الاستخدام</p><p class="text-[10px] text-cyan-100 mt-1">بحث موحد • علامة مراجعة • إجراءات مقترحة</p></div>
+    <div class="premium-panel p-4"><div class="flex gap-2"><input placeholder="رقم طلب / كود تتبع / هاتف" class="field flex-1"><button class="pill-btn primary-pill">بحث</button></div><div class="mt-3 flex gap-2"><button class="pill-btn soft-btn flex-1">وضع علامة مراجعة 🚩</button><button class="pill-btn soft-btn flex-1">سجل المخالفات</button></div></div>
+  </section>`;
+}
+
+function renderContent(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-pink-600 to-rose-600 p-4 text-white"><p class="text-[12px] font-black">إدارة المحتوى وتجربة المستخدم</p><p class="text-[10px] text-pink-100 mt-1">إعلانات • أسئلة شائعة • رسائل صيانة</p></div>
+    <div class="premium-panel p-4 space-y-3">
+      <label class="block"><span class="text-[11px] font-black">رسالة إعلانية في واجهة العميل</span><textarea rows="2" placeholder="عرض خاص..." class="field mt-2"></textarea><button class="mt-2 pill-btn soft-btn w-full">معاينة ونشر</button></label>
+      <div class="border-t pt-3"><h3 class="text-[11px] font-black mb-2">الأسئلة الشائعة</h3><div class="flex gap-2"><input placeholder="سؤال جديد" class="field flex-1"><button class="pill-btn primary-pill">إضافة</button></div></div>
+    </div>
+  </section>`;
+}
+
+function renderClients(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-slate-900 to-slate-700 p-4 text-white"><p class="text-[12px] font-black">إدارة العملاء</p><p class="text-[10px] text-slate-300 mt-1">بحث • ملف عميل • حظر • ملاحظات • شكاوى</p></div>
+    <div class="premium-panel p-4"><div class="flex gap-2"><input id="client-search" placeholder="اسم / هاتف / كود" class="field flex-1"><button onclick="searchClients()" class="pill-btn primary-pill">بحث</button></div></div>
+    <div class="space-y-3">
+      ${state.orders.slice(0,5).map(o=>`<article class="premium-card p-4"><div class="flex justify-between"><div><p class="font-black text-[13px]">${escHtml(o.clientName||'عميل')}</p><p class="text-[11px] text-slate-500 mt-1" dir="ltr">${escHtml(o.clientPhone||'')}</p><p class="text-[10px] text-slate-400 mt-1">طلبات: ${state.orders.filter(x=>x.clientPhone===o.clientPhone).length} • آخر طلب: ${escHtml(o.sn||'')}</p></div><button onclick="openClient('${escHtml(o.clientPhone||'') }')" class="pill-btn soft-btn">ملف العميل</button></div><div class="mt-3 flex gap-2"><button onclick="blockClient('${escHtml(o.clientPhone||'') }')" class="pill-btn soft-btn flex-1">حظر</button><button onclick="noteClient('${escHtml(o.clientPhone||'') }')" class="pill-btn soft-btn flex-1">ملاحظة داخلية</button></div></article>`).join('')||'<div class="premium-panel p-10 text-center text-[12px] font-bold text-slate-400">لا يوجد عملاء - سيظهر العملاء من الطلبات</div>'}
+    </div>
+  </section>`;
+}
+
+function renderTopups(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-blue-600 to-indigo-600 p-4 text-white flex gap-3"><div class="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">💳</div><div><p class="text-[12px] font-black">طلبات شحن المحافظ</p><p class="text-[11px] text-blue-100">مراجعة التحويل على ${WALLET}</p></div></div>
+    ${state.errors.topups?`<div class="bg-red-50 border border-red-200 rounded-[16px] p-4 text-[12px] font-bold text-red-700">${escHtml(state.errors.topups)}</div>`:''}
+    <div class="space-y-3">
+      ${state.filteredTopups.length===0?`<div class="premium-panel p-10 text-center text-[12px] font-bold text-slate-400">لا توجد طلبات شحن</div>`:''}
+      ${state.filteredTopups.map(t=>{
+        const id=String(t._id||''); const menuKey='topup:'+id; const pending=state.pendingActions[menuKey]; const isOpen=!!state.dropdowns[menuKey];
+        return `<article class="premium-card p-4"><div class="flex justify-between"><div><p class="font-black text-[18px]">${escHtml(String(t.amount||''))} <span class="text-[12px] text-slate-500">ج</span></p><p class="text-[11px] font-bold mt-1" dir="ltr">📱 ${escHtml(t.fromPhone||t.phone||'')}</p><p class="text-[10px] text-slate-400 mt-1">${escHtml(t.createdAt?new Date(t.createdAt).toLocaleString('ar-EG'):'')}</p></div><div class="flex flex-col items-end gap-2"><span class="text-[10px] px-3 py-1.5 rounded-full border font-black ${statusClass(t.status)}">${escHtml(statusLabel(t.status))}</span><div class="action-wrap"><button onclick="event.stopPropagation();toggleMenu('${menuKey}')" class="pill-btn soft-btn">إجراء ▾</button>${isOpen?`<div class="dropdown-menu"><button onclick="event.stopPropagation();setPendingAction('${menuKey}','approve','قبول الشحن')" class="dropdown-item">✓ قبول وإضافة رصيد</button><button onclick="event.stopPropagation();setPendingAction('${menuKey}','reject','رفض الشحن')" class="dropdown-item text-red-600">✕ رفض</button></div>`:''}</div></div></div>${pending?`<div class="confirm-bar"><span>تأكيد ${pending.label}؟</span><div class="flex gap-2"><button onclick="clearPending('${menuKey}')" class="h-7 px-3 rounded-full bg-white/20 text-[10px]">إلغاء</button><button onclick="confirmPending('${menuKey}')" class="h-7 px-4 rounded-full bg-white text-slate-900 text-[10px] font-black">تأكيد</button></div></div>`:''}</article>`;
+      }).join('')}
+    </div>
+  </section>`;
+}
+
+function renderStats(){
+  return `
+  <section class="mt-4 space-y-3">
+    <div class="grid grid-cols-2 gap-3">
+      <div class="stat-card"><p class="text-[28px] font-black">${state.fannis.length}</p><p class="text-[11px] font-bold text-slate-500">إجمالي الفنيين</p></div>
+      <div class="stat-card"><p class="text-[28px] font-black text-emerald-600">${state.fannis.filter(f=>f.isApproved).length}</p><p class="text-[11px] font-bold text-slate-500">معتمدون</p></div>
+      <div class="stat-card"><p class="text-[28px] font-black text-blue-700">${state.orders.length}</p><p class="text-[11px] font-bold text-slate-500">طلبات</p></div>
+      <div class="stat-card"><p class="text-[28px] font-black">${state.topups.length}</p><p class="text-[11px] font-bold text-slate-500">شحن</p></div>
+      <div class="stat-card col-span-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-0"><p class="text-[26px] font-black">${state.topups.filter(t=>t.status==='approved').reduce((s,t)=>s+Number(t.amount||0),0)} جنيه</p><p class="text-[11px] font-bold text-emerald-100">إجمالي الشحن المقبول</p></div>
+    </div>
+    <div class="premium-panel p-4 flex items-center gap-3"><div class="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center">💼</div><div><p class="text-[11px] font-black">محفظة التحويل</p><p class="text-[12px] font-black" dir="ltr">${WALLET}</p></div></div>
+  </section>`;
+}
+
+// --- Existing logic preserved ---
+function setTab(t){
+  state.tab=t; 
+  state.dropdowns={}; 
+  state.pendingActions={}; 
+  render(); 
+  if(t==='orders')loadOrders(); 
+  else if(t==='complaints')loadComplaints(); 
+  else if(t==='services')loadServices(); 
+  else if(t==='topups')applyTopupFilter(); 
+  else if(t==='clients')applyClientFilter(); 
+  else applyFilter();
+}
+function onSearch(v){state.search=v; if(state.tab==='orders')applyOrderFilter(); else if(state.tab==='complaints')applyComplaintFilter(); else if(state.tab==='services')applyServicesFilter(); else if(state.tab==='topups')applyTopupFilter(); else if(state.tab==='clients')applyClientFilter(); else applyFilter();}
+function onFilter(v){state.filter=v;applyFilter()} function onFilterTopup(v){state.filterTopup=v;applyTopupFilter()} function onFilterOrder(v){state.filterOrder=v;applyOrderFilter()} function onFilterComplaint(v){state.filterComplaint=v;applyComplaintFilter()}
+function applyFilter(){let list=[...state.fannis]; if(state.tab==='pending'){list=list.filter(f=>!f.isApproved&&!f.isDisabled&&f.status!=='rejected');} if(state.tab==='disabled')list=list.filter(f=>f.isDisabled); if(state.filter!=='الكل'){list=list.filter(f=>{const st=f.isDisabled?'disabled':f.isApproved?'approved':f.status||'pending'; return String(st).toLowerCase()===state.filter.toLowerCase();});} if(state.search){const s=state.search.toLowerCase(); list=list.filter(f=>String(f.name||'').toLowerCase().includes(s)||String(f.phone||'').toLowerCase().includes(s));} state.filtered=list; if(!['topups','stats','orders','complaints','services','clients','dashboard','levels','roles','offers','pricing','wallets','regions','notifications','settings','security','reports','support','content'].includes(state.tab))render(); else if(['fannis','pending','disabled','levels'].includes(state.tab))render();}
+function applyTopupFilter(){let list=[...state.topups]; if(state.filterTopup!=='الكل'){list=list.filter(t=>String(t.status||'pending').toLowerCase()===state.filterTopup.toLowerCase());} if(state.search){const s=state.search.toLowerCase(); list=list.filter(t=>String(t.fromPhone||t.phone||'').toLowerCase().includes(s)||String(t.amount||'').includes(s));} state.filteredTopups=list; if(state.tab==='topups')render();}
+function applyOrderFilter(){let list=[...state.orders]; if(state.filterOrder!=='الكل'){list=list.filter(o=>String(o.status||'قيد المراجعة')===state.filterOrder);} if(state.search)list=list.filter(o=>orderSearchMatch(o,state.search)); state.filteredOrders=list; if(state.tab==='orders')render();}
+function applyComplaintFilter(){let list=[...state.complaints]; if(state.filterComplaint!=='الكل')list=list.filter(c=>String(c.status||'جديدة')===state.filterComplaint); if(state.search){const q=state.search.toLowerCase(); list=list.filter(c=>[c.sn,c.clientName,c.text,c.status,c.adminNote,c.adminResponse].some(v=>String(v||'').toLowerCase().includes(q)));} state.filteredComplaints=list; if(state.tab==='complaints')render();}
+function applyClientFilter(){let list=[...state.orders]; if(state.search){const s=state.search.toLowerCase(); list=list.filter(o=>String(o.clientName||'').toLowerCase().includes(s)||String(o.clientPhone||'').toLowerCase().includes(s)||String(o.sn||'').toLowerCase().includes(s));} const unique={}; list.forEach(o=>{const ph=String(o.clientPhone||'').trim(); if(ph&&!unique[ph])unique[ph]=o;}); state.filteredClients=Object.values(unique); state.clients=state.filteredClients; if(state.tab==='clients')render();}
+function applyServicesFilter(){const q=String(state.search||'').trim().toLowerCase(); if(!q){state.filteredServices=state.services.map(cat=>({label:cat.label,name:cat.name,emoji:cat.emoji,services:cat.services,_displayServices:Array.isArray(cat.services)?cat.services:[],_isCategoryMatch:true}));}else{const result=[]; state.services.forEach(cat=>{const label=String(cat.label||cat.name||'').toLowerCase(); const allServices=Array.isArray(cat.services)?cat.services:[]; const labelMatch=label.includes(q); const matchedServices=allServices.filter(s=>String(s||'').toLowerCase().includes(q)); if(labelMatch){result.push({label:cat.label,name:cat.name,emoji:cat.emoji,services:cat.services,_displayServices:allServices,_isCategoryMatch:true});}else if(matchedServices.length>0){result.push({label:cat.label,name:cat.name,emoji:cat.emoji,services:cat.services,_displayServices:matchedServices,_isCategoryMatch:false});}}); state.filteredServices=result; state.filteredServices.forEach((_,i)=>{state.openServices[i]=true;});} if(state.tab==='services')render();}
+function toggleServiceCat(idx){idx=Number(idx); if(state.openServices[idx]===undefined)state.openServices[idx]=true; state.openServices[idx]=!state.openServices[idx]; render();}
+async function loadServices(){if(!getToken())return; state.servicesLoading=true; state.servicesError=''; state.errors.services=''; if(state.tab==='services')render(); try{const res=await api('/api/services',{method:'GET'}); if(!res.ok)throw new Error(res.data?.message||'تعذر تحميل الخدمات'); const data=res.data; const categories=data.categories||data.data?.categories||[]; if(!Array.isArray(categories))throw new Error('بنية الخدمات غير متوقعة'); state.services=categories; state.openServices={}; categories.forEach((_,i)=>{state.openServices[i]=true;}); applyServicesFilter();}catch(e){state.services=[]; state.filteredServices=[]; state.servicesError=e.message||'تعذر تحميل الخدمات'; state.errors.services=state.servicesError; if(state.tab==='services')render();}finally{state.servicesLoading=false; if(state.tab==='services')render();}}
+async function doLogin(){if(state.loading)return; state.loading=true; state.error=''; render(); try{const data=await tryApi(['/api/admin/login','/api/admins/login'],{method:'POST',body:JSON.stringify({email:state.adminEmail.trim(),password:state.adminPass})}); const token=data.token||data.accessToken||data.data?.token; if(!token)throw new Error(data.message||'لم يتم استلام رمز الدخول'); setToken(token); state.adminPass=''; showToast('تم تسجيل الدخول بنجاح'); await loadAll();}catch(e){state.loading=false; state.error=e.message; render();}}
+
+async function loadAll(){
+  if(!getToken()){
+    state.loading=false;
+    if(typeof renderLogin==='function'){ renderLogin(); } else { render(); }
+    return;
+  }
+  state.loading=true;
+  state.errors.fannis=''; state.errors.orders=''; state.errors.topups=''; state.errors.complaints='';
+  state.debugInfo='';
+  try{ render(); }catch{}
+  
+  // Helper with timeout
+  const withTimeout = (p, ms=8000) => Promise.race([
+    p,
+    new Promise((_,rej)=>setTimeout(()=>rej(new Error('انتهت مهلة الاتصال - الباك إند لا يرد')), ms))
+  ]);
+  
+  try{
+    const results = await Promise.allSettled([
+      withTimeout(api('/api/admin/fannis',{method:'GET'})),
+      withTimeout(api('/api/admin/topup-requests',{method:'GET'})),
+      withTimeout(api('/api/admin/orders',{method:'GET'})),
+      withTimeout(api('/api/admin/complaints',{method:'GET'}))
+    ]);
+    
+    // fannis
+    const r0 = results[0];
+    if(r0.status==='fulfilled' && r0.value?.ok){
+      state.fannis=extractList(r0.value.data,['fannis','users','items','data']);
+    }else{
+      state.fannis=[];
+      const msg = r0.status==='fulfilled' ? (r0.value?.data?.message||'فشل تحميل الفنيين') : (r0.reason?.message||'فشل الاتصال');
+      state.errors.fannis=msg;
+      if(r0.value?.status===401 || r0.reason?.status===401){ clearToken(); renderLogin(); showToast('انتهت الجلسة - سجل دخول','error'); state.loading=false; return; }
+    }
+    
+    // topups
+    const r1 = results[1];
+    if(r1.status==='fulfilled' && r1.value?.ok){
+      state.topups=extractList(r1.value.data,['requests','topups','items','data']);
+    }else{ state.topups=[]; }
+    
+    // orders
+    const r2 = results[2];
+    if(r2.status==='fulfilled' && r2.value?.ok){
+      state.orders=extractList(r2.value.data,['orders','items','requests','data']);
+    }else{
+      state.orders=[];
+      const msg = r2.status==='fulfilled' ? (r2.value?.data?.message||'فشل تحميل الطلبات') : (r2.reason?.message||'فشل الاتصال');
+      state.errors.orders=msg;
+    }
+    
+    // complaints
+    const r3 = results[3];
+    if(r3.status==='fulfilled' && r3.value?.ok){
+      state.complaints=extractList(r3.value.data,['complaints','items','data']);
+    }else{ state.complaints=[]; }
+    
+    // Check zero case
+    if(state.fannis.length===0 && state.orders.length===0){
+      const debug = `فنيين: ${state.fannis.length} | طلبات: ${state.orders.length} | خطأ فنيين: ${state.errors.fannis||'لا يوجد'} | خطأ طلبات: ${state.errors.orders||'لا يوجد'}`;
+      state.debugInfo = debug;
+      console.error('Dashboard zero data debug:', debug, results);
+      if(state.errors.fannis || state.errors.orders){
+        showToast((state.errors.fannis||state.errors.orders).slice(0,80),'error');
+      }
+    }
+    
+  }catch(e){
+    console.error('loadAll exception', e);
+    state.errors.fannis = e.message;
+    state.debugInfo = 'استثناء: ' + e.message;
+    showToast('خطأ: '+e.message,'error');
+  }finally{
+    state.loading=false;
+    try{
+      applyFilter(); applyTopupFilter(); applyOrderFilter(); applyComplaintFilter(); applyClientFilter(); applyServicesFilter();
+    }catch(e){ console.error('filter error', e); try{ render(); }catch{} }
+  }
+}
+lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1b3a">
+<title>صناع - لوحة الإدارة النهائية</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root{
+  --navy:#0b1b3a;--blue:#2563eb;--blue2:#1d4ed8;--gold:#f59e0b;--page:#f1f5fb;--card:#fff;
+}
+*{font-family:'Cairo',system-ui,sans-serif;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background: radial-gradient(1200px 600px at 20% -10%, #1e3a8a18, transparent), radial-gradient(800px 400px at 80% 0%, #f59e0b12, transparent), var(--page);
+  color:var(--navy);overflow-x:hidden;-webkit-tap-highlight-color:transparent
+}
+button{cursor:pointer;transition:all .22s cubic-bezier(.4,0,.2,1)}
+button:active{transform:scale(.97)} button:disabled{opacity:.55;cursor:not-allowed}
+input,textarea,select{outline:none;max-width:100%;transition:all .2s}
+input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-shadow:0 0 0 4px #2563eb18}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.animate-fade{animation:fadeUp .32s ease both}
+.premium-panel{background:linear-gradient(180deg,#fff 0%,#fbfdff 100%);border:1px solid #e6eefc;border-radius:20px;box-shadow:0 8px 24px #0f234b0a, 0 2px 8px #0f234b08}
+.premium-card{background:#fff;border:1px solid #e6eefc;border-radius:20px;box-shadow:0 10px 28px #0f234b0d;position:relative;overflow:hidden;transition:.22s}
+.premium-card::before{content:'';position:absolute;top:0;right:0;left:0;height:3px;background:linear-gradient(90deg,var(--blue),#3b82f6,var(--gold));opacity:.9}
+.premium-card:hover{transform:translateY(-1px);box-shadow:0 14px 32px #0f234b12;border-color:#d6e4ff}
+.field{width:100%;min-height:46px;border:1.5px solid #dbe3ef;border-radius:14px;background:#fff;padding:11px 14px;color:var(--navy);font-size:12.5px;font-weight:600}
+.tab-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media(min-width:520px){.tab-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.tab-btn{min-height:66px;border-radius:16px;border:1.5px solid #e6eefc;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 6px;position:relative}
+.tab-btn .ic{width:30px;height:30px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;background:#f1f5f9}
+.tab-btn.active{background:linear-gradient(135deg,#0b1b3a 0%,#1e3a8a 100%);color:#fff;border-color:#0b1b3a;box-shadow:0 8px 20px #0b1b3a30}
+.tab-btn.active .ic{background:rgba(255,255,255,.14)}
+.tab-btn .co{font-size:10px;font-weight:800;opacity:.7}
+.pill-btn{border-radius:999px;min-height:42px;padding:0 16px;font-weight:800;font-size:11px}
+.primary-pill{background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;box-shadow:0 6px 16px #2563eb35}
+.success-pill{background:linear-gradient(135deg,#10b981,#059669);color:#fff}
+.danger-pill{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff}
+.soft-btn{background:#f8fafc;border:1px solid #e2e8f0;color:#334155}
+.glass-header{background:linear-gradient(135deg,rgba(11,27,58,.97) 0%,rgba(19,42,90,.95) 100%);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.08)}
+.dropdown-menu{position:absolute;top:calc(100% + 8px);right:0;min-width:190px;background:#fff;border:1px solid #e6eefc;border-radius:16px;box-shadow:0 16px 32px #0f234b18;z-index:50;padding:6px;animation:fadeUp .18s ease}
+.dropdown-item{width:100%;text-align:right;padding:10px 12px;border-radius:10px;font-size:11px;font-weight:800;display:flex;align-items:center;gap:8px}
+.dropdown-item:hover{background:#f1f5f9}
+.action-wrap{position:relative}
+.confirm-bar{margin-top:10px;background:#0b1b3a;color:#fff;border-radius:999px;padding:6px 6px 6px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;font-weight:800}
+.stat-card{background:linear-gradient(180deg,#fff 0%,#f8fbff 100%);border:1px solid #e6eefc;border-radius:18px;padding:14px;text-align:center}
+::-webkit-scrollbar{width:5px;height:5px} ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:99px}
+</style>
+</head>
+<body class="min-h-screen antialiased">
+<div id="app"></div>
+<div id="toast" class="fixed bottom-4 left-3 right-3 z-[200] pointer-events-none"></div>
+<script>
+'use strict';
+const BASE_URL='https://sonaa-backend-v2.vercel.app';
+const TOKEN_KEY='admin_token_v3';
+const WALLET='01152822263';
+function escHtml(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function getToken(){try{return localStorage.getItem(TOKEN_KEY)||''}catch{return ''}}
+function setToken(t){try{localStorage.setItem(TOKEN_KEY,t)}catch{throw new Error('تعذر حفظ جلسة الدخول')}}
+function clearToken(){try{localStorage.removeItem(TOKEN_KEY)}catch{}}
+function buildUrl(p){const path=p.startsWith('/api')?p:'/api/'+p.replace(/^\/+/,''); if(location.hostname.includes('sonaa-backend-v2')&&location.hostname.endsWith('vercel.app')){return path;} return BASE_URL+path;}
+async function api(path,opts={}){const token=getToken(); const headers={...(opts.headers||{})}; if(opts.body&&!headers['Content-Type']){headers['Content-Type']='application/json';} if(token)headers['Authorization']='Bearer '+token; try{const r=await fetch(buildUrl(path),{...opts,headers,mode:'cors',credentials:'omit'}); const txt=await r.text(); if(txt.trim().startsWith('<!DOCTYPE')||txt.includes('Cannot ')){return {ok:false,status:404,data:{message:'المسار غير موجود: '+path}};} let data; try{data=txt?JSON.parse(txt):{}}catch{data={raw:txt.slice(0,500),message:txt.slice(0,200)||'استجابة غير مفهومة'};} if(!r.ok&&!data.message)data.message='فشل الطلب (HTTP '+r.status+')'; return {ok:r.ok,status:r.status,data};}catch(e){return {ok:false,status:0,data:{message:e.message||'تعذر الاتصال'}};}}
+async function tryApi(paths,opts={}){let last={status:404,data:{message:'فشل الاتصال'}}; for(const p of paths){const res=await api(p,opts); if(res.ok)return res.data; last=res; if([400,401,403].includes(res.status))break;} const error=new Error(last.data?.message||'حدث خطأ'); error.status=last.status; throw error;}
+function extractList(data,keys=[]){if(Array.isArray(data))return data; for(const key of keys){if(Array.isArray(data?.[key]))return data[key];} if(Array.isArray(data?.data))return data.data; return [];}
+function normalizePhoneInput(value){return String(value??'').replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[\s\-().]/g,'').replace(/^(\+?20)/,'0');}
+
+let state={
+  tab:'dashboard',
+  adminEmail:'',adminPass:'',loading:false,loadingOrders:false,publishingOrders:[],deletingItems:[],
+  dropdowns:{}, pendingActions:{},
+  fannis:[],filtered:[],topups:[],filteredTopups:[],orders:[],filteredOrders:[],complaints:[],filteredComplaints:[],loadingComplaints:false,
+  services:[],filteredServices:[],servicesLoading:false,servicesError:'',openServices:{},
+  clients:[],filteredClients:[],clientsLoading:false,
+  auditLogs:[],regions:[],notifications:[],settings:{siteName:'صُنّاع',maintenance:false},
+  reports:{},
+  search:'',filter:'الكل',filterTopup:'الكل',filterOrder:'الكل',filterComplaint:'الكل',filterClient:'الكل',
+  errors:{fannis:'',topups:'',orders:'',complaints:'',services:'',clients:''}, error:''
+};
+
+function showToast(msg,type='success'){
+  const el=document.getElementById('toast'); if(!el)return;
+  const bg=type==='success'?'background:linear-gradient(135deg,#10b981,#059669)':type==='error'?'background:linear-gradient(135deg,#ef4444,#dc2626)':'background:linear-gradient(135deg,#f59e0b,#d97706)';
+  el.innerHTML=`<div style="${bg}" class="pointer-events-auto mx-auto max-w-[640px] rounded-[16px] text-white text-[12px] font-bold px-4 py-3.5 shadow-2xl animate-fade flex items-center justify-between gap-3"><span>${escHtml(msg)}</span><button onclick="this.parentElement.remove()" class="shrink-0 h-8 px-3 bg-white/20 rounded-full text-[11px]">إغلاق</button></div>`;
+  setTimeout(()=>{if(el.firstElementChild)el.innerHTML=''},4200);
+}
+function statusLabel(s){const m={'قيد المراجعة':'قيد المراجعة','تم النشر':'تم النشر','وصلتك عروض':'وصلت عروض','تم اختيار فني':'تم اختيار فني','تم الانتهاء':'تم الانتهاء',pending:'قيد المراجعة',approved:'مقبول',rejected:'مرفوض',disabled:'معطل'};return m[String(s||'')]||String(s||'غير محدد');}
+function statusClass(s){const t=String(s||''); if(['تم الانتهاء','منتهي','تم اختيار فني','approved','مقبول'].includes(t))return 'bg-emerald-50 border-emerald-200 text-emerald-700'; if(['مرفوض','rejected','اعتذار','معطل','disabled'].includes(t))return 'bg-red-50 border-red-200 text-red-700'; if(['تم النشر','وصلتك عروض'].includes(t))return 'bg-blue-50 border-blue-200 text-blue-700'; return 'bg-amber-50 border-amber-200 text-amber-800';}
+function orderSearchMatch(o,s){const haystack=[o.sn,o.clientName,o.clientPhone,o.service,o.area,o.city,o.description].map(v=>String(v||'').toLowerCase()).join(' '); return haystack.includes(s.toLowerCase());}
+
+// --- Smart Dropdown System ---
+function toggleMenu(key){
+  const isOpen = !!state.dropdowns[key];
+  state.dropdowns = {};
+  if(!isOpen) state.dropdowns[key]=true;
+  render();
+}
+function closeAllMenus(){ state.dropdowns={}; render(); }
+function setPendingAction(key, action, label){
+  state.pendingActions[key]={action,label};
+  state.dropdowns={};
+  render();
+}
+function clearPending(key){ delete state.pendingActions[key]; render(); }
+function confirmPe
+nding(key){
+  const p = state.pendingActions[key];
+  if(!p) return;
+  const [type,id] = key.split(':');
+  // route to actual function
+  if(type==='fanni'){
+    if(p.action==='approve') approveFanni(id);
+    else if(p.action==='reject') rejectFanni(id);
+    else if(p.action==='disable') disableFanni(id);
+    else if(p.action==='enable') enableFanni(id);
+    else if(p.action==='delete') deleteFanni(id,'');
+    else if(p.action==='level_up') updateFanniLevel(id,'خبير');
+    else if(p.action==='badge_trust') toggleTrustBadge(id);
+    else showToast('تم اختيار: '+p.label);
+  } else if(type==='order'){
+    if(p.action==='publish') publishOrder(id);
+    else if(p.action==='delete') deleteOrder(id);
+    else showToast('تم اختيار: '+p.label);
+  } else if(type==='topup'){
+    if(p.action==='approve') approveTopup(id);
+    else if(p.action==='reject') rejectTopup(id);
+  } else if(type==='complaint'){
+    showToast('تم اختيار: '+p.label);
+  }
+  delete state.pendingActions[key];
+  render();
+}
+
+function render(){
+  const isAuth=!!getToken();
+  const pendingCount=state.fannis.filter(f=>!f.isApproved&&!f.isDisabled&&f.status!=='rejected').length;
+  const disabledCount=state.fannis.filter(f=>f.isDisabled).length;
+
+  document.getElementById('app').innerHTML=`
+  <header class="sticky top-0 z-40 glass-header text-white shadow-[0_8px_24px_rgba(11,27,58,.25)]">
+    <div class="mx-auto max-w-[800px] px-4 py-3.5 flex justify-between items-center gap-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="h-11 w-11 shrink-0 rounded-[14px] bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center font-black text-[20px] shadow-lg">S</div>
+        <div class="min-w-0">
+          <h1 class="font-black text-[15px]">صُنّاع - لوحة الإدارة النهائية</h1>
+          <div class="text-[10px] text-blue-200/80 mt-0.5 font-bold">Premium • Mobile First • جميع الأقسام</div>
+        </div>
+      </div>
+      <div class="flex gap-2 shrink-0">
+        <button onclick="goFanni()" class="h-10 px-4 rounded-full bg-white/10 hover:bg-white/15 text-[11px] font-black border border-white/10">لوحة الفني</button>
+        ${isAuth?'<button onclick="logout()" class="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center">⎋</button>':''}
+      </div>
+    </div>
+  </header>
+  
+  <main class="mx-auto max-w-[800px] px-3 pb-28">
+    ${!isAuth?`
+      <section class="mt-8 max-w-[420px] mx-auto premium-panel p-6 sm:p-7 animate-fade">
+        <div class="flex items-center gap-3.5">
+          <div class="h-12 w-12 rounded-[14px] bg-gradient-to-br from-blue-600 to-indigo-700 text-white flex items-center justify-center font-black">🔐</div>
+          <div><h2 class="font-black text-[18px]">دخول الأدمن</h2><p class="text-[11px] text-slate-500 font-bold">إدارة مشروع صُنّاع</p></div>
+        </div>
+        <div class="mt-5 rounded-[14px] bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 p-3.5 flex items-center gap-2.5">
+          <div class="h-8 w-8 rounded-full bg-white flex items-center justify-center text-blue-600">💳</div>
+          <div><p class="text-[10px] font-black text-blue-900">محفظة التحويل</p><p class="text-[12px] font-black" dir="ltr">${WALLET}</p></div>
+        </div>
+        <form onsubmit="event.preventDefault();doLogin();" class="mt-5 space-y-4">
+          <label class="block"><span class="block text-[11px] font-black text-slate-700 mb-2">البريد الإلكتروني</span><input type="email" value="${escHtml(state.adminEmail)}" oninput="state.adminEmail=this.value" required placeholder="admin@sonaa.com" class="field"></label>
+          <label class="block"><span class="block text-[11px] font-black text-slate-700 mb-2">كلمة المرور</span><input type="password" value="${escHtml(state.adminPass)}" oninput="state.adminPass=this.value" required placeholder="••••••••" class="field"></label>
+          <button type="submit" ${state.loading?'disabled':''} class="w-full h-[48px] rounded-full bg-gradient-to-r from-[#0b1b3a] to-[#1e3a8a] text-white text-[13px] font-black shadow-lg">${state.loading?'جاري...':'تسجيل الدخول ✨'}</button>
+          ${state.error?`<p class="text-[12px] text-red-700 bg-red-50 border border-red-200 rounded-[14px] p-3.5 font-bold">${escHtml(state.error)}</p>`:''}
+        </form>
+      </section>
+    `:`
+      <section id="tabs-panel" class="mt-4 premium-panel p-3">
+        <div class="flex items-center justify-between mb-3 px-1">
+          <h2 class="text-[12px] font-black text-slate-700">مركز التحكم - جميع الأقسام</h2>
+          <button onclick="refreshCurrentTab()" class="h-8 px-3 rounded-full bg-slate-50 border text-[10px] font-black">↻ تحديث</button>
+        </div>
+        <div class="tab-grid">
+          ${[
+            {id:'dashboard',label:'الرئيسية',icon:'🏠',c:''},
+            {id:'fannis',label:'الفنيون',icon:'👷',c:state.fannis.length},
+            {id:'pending',label:'انتظار',icon:'⏳',c:pendingCount},
+            {id:'levels',label:'المستويات',icon:'⭐',c:''},
+            {id:'roles',label:'المناصب',icon:'👑',c:''},
+            {id:'orders',label:'الطلبات',icon:'📦',c:state.orders.length},
+            {id:'offers',label:'العروض',icon:'💬',c:''},
+            {id:'pricing',label:'الأسعار',icon:'💰',c:''},
+            {id:'wallets',label:'المحافظ',icon:'👛',c:''},
+            {id:'topups',label:'الشحن',icon:'💳',c:state.topups.length},
+            {id:'complaints',label:'الشكاوى',icon:'⚠️',c:state.complaints.length},
+            {id:'services',label:'الخدمات',icon:'🛠️',c:state.services.length},
+            {id:'regions',label:'المناطق',icon:'📍',c:''},
+            {id:'notifications',label:'الإشعارات',icon:'🔔',c:''},
+            {id:'settings',label:'الإعدادات',icon:'⚙️',c:''},
+            {id:'security',label:'الأمان',icon:'🛡️',c:''},
+            {id:'reports',label:'التقارير',icon:'📊',c:''},
+            {id:'support',label:'الدعم',icon:'🎧',c:''},
+            {id:'content',label:'المحتوى',icon:'📝',c:''},
+            {id:'stats',label:'الإحصائيات',icon:'📈',c:''},
+            {id:'clients',label:'العملاء',icon:'👥',c:state.clients.length},
+            {id:'disabled',label:'المعطلون',icon:'⛔',c:disabledCount},
+          ].map(t=>`
+            <button onclick="setTab('${t.id}')" class="tab-btn ${state.tab===t.id?'active':''}">
+              <span class="ic">${t.icon}</span>
+              <span class="font-black text-[11px]">${escHtml(t.label)}</span>
+              <span class="co">${t.c!==''?escHtml(String(t.c)):''}</span>
+            </button>
+          `).join('')}
+        </div>
+      </section>
+
+      <div id="content-anchor" class="mt-3 premium-panel p-3 flex flex-col gap-2.5">
+        <div class="relative">
+          <span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+          <input value="${escHtml(state.search)}" oninput="onSearch(this.value)" placeholder="بحث شامل..." class="field !pr-10">
+        </div>
+        ${state.tab==='orders'?`
+          <select onchange="onFilterOrder(this.value)" class="field"><option value="الكل">كل الحالات</option><option value="قيد المراجعة">قيد المراجعة</option><option value="تم النشر">تم النشر</option><option value="وصلتك عروض">وصلت عروض</option><option value="تم اختيار فني">تم اختيار فني</option><option value="تم الانتهاء">تم الانتهاء</option></select>
+        `:state.tab==='fannis'||state.tab==='pending'||state.tab==='disabled'||state.tab==='levels'?`
+          <select onchange="onFilter(this.value)" class="field"><option value="الكل">كل الحالات</option><option value="pending">قيد المراجعة</option><option value="approved">معتمد</option><option value="rejected">مرفوض</option><option value="disabled">معطل</option></select>
+        `:''}
+      </div>
+
+      ${state.loading?`<div class="mt-4 premium-panel p-10 text-center"><div class="h-10 w-10 rounded-full border-[3px] border-slate-200 border-t-blue-600 animate-spin mx-auto"></div><p class="mt-3 text-[12px] font-black text-slate-500">جاري التحميل...</p></div>`:''}
+
+      ${renderCurrentTab()}
+    `}
+  </main>
+  <div onclick="closeAllMenus()" id="menu-backdrop" class="${Object.keys(state.dropdowns).length?'fixed inset-0 z-30 bg-black/5':''}"></div>
+  `;
+}
+
+function renderCurrentTab(){
+  switch(state.tab){
+    case 'dashboard': return renderDashboard();
+    case 'fannis': case 'pending': case 'disabled': return renderFannis();
+    case 'levels': return renderLevels();
+    case 'roles': return renderRoles();
+    case 'orders': return renderOrders();
+    case 'offers': return renderOffers();
+    case 'pricing': return renderPricing();
+    case 'wallets': return renderWallets();
+    case 'topups': return renderTopups();
+    case 'complaints': return renderComplaints();
+    case 'services': return renderServices();
+    case 'regions': return renderRegions();
+    case 'notifications': return renderNotifications();
+    case 'settings': return renderSettings();
+    case 'security': return renderSecurity();
+    case 'reports': return renderReports();
+    case 'support': return renderSupport();
+    case 'content': return renderContent();
+    case 'clients': return renderClients();
+    case 'stats': return renderStats();
+    default: return renderFannis();
+  }
+}
+
+function renderDashboard(){
+  let debugBanner='';
+  if(state.debugInfo || state.errors.fannis || state.errors.orders){
+    debugBanner = `<div class="premium-panel p-4 bg-amber-50 border-amber-200"><p class="text-[11px] font-black text-amber-800">🔍 تشخيص: ${escHtml(state.debugInfo||'')}</p>${state.errors.fannis?`<p class="text-[10px] font-bold text-red-600 mt-1">فنيين: ${escHtml(state.errors.fannis)}</p>`:''}${state.errors.orders?`<p class="text-[10px] font-bold text-red-600 mt-1">طلبات: ${escHtml(state.errors.orders)}</p>`:''}<p class="text-[9px] text-slate-500 mt-2">تأكد أنك رفعت ملف src/routes/admin.js الجديد على Vercel وعملت Deploy. افتح Console (F12) لمعلومات أكثر.</p><button onclick="loadAll()" class="mt-2 h-9 px-4 rounded-full bg-slate-900 text-white text-[10px] font-black">إعادة المحاولة</button></div>`;
+  }
+  return `
+  ${debugBanner}
+
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[20px] bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-900 p-5 text-white shadow-xl">
+      <p class="text-[13px] font-black">مركز التحكم الرئيسي</p>
+      <p class="text-[11px] text-slate-300 mt-1 font-bold">ملخص الطلبات والفنيين والإيرادات والتنبيهات</p>
+      <div class="grid grid-cols-2 gap-3 mt-4">
+        <div class="bg-white/10 rounded-[14px] p-3"><p class="text-[22px] font-black">${state.orders.length}</p><p class="text-[10px] font-bold text-slate-300">طلبات اليوم</p></div>
+        <div class="bg-white/10 rounded-[14px] p-3"><p class="text-[22px] font-black">${state.fannis.length}</p><p class="text-[10px] font-bold text-slate-300">فني نشط</p></div>
+        <div class="bg-white/10 rounded-[14px] p-3"><p class="text-[18px] font-black">${state.topups.filter(t=>t.status==='approved').reduce((s,t)=>s+Number(t.amount||0),0)} ج</p><p class="text-[10px] font-bold text-slate-300">إيرادات الشحن</p></div>
+        <div class="bg-white/10 rounded-[14px] p-3"><p class="text-[22px] font-black">${state.complaints.filter(c=>c.status==='جديدة').length}</p><p class="text-[10px] font-bold text-slate-300">شكاوى جديدة</p></div>
+      </div>
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      <div class="premium-panel p-4"><p class="text-[11px] font-black">الطلبات المتأخرة</p><p class="text-[20px] font-black text-amber-600 mt-2">${state.orders.filter(o=>o.status==='قيد المراجعة').length}</p><p class="text-[10px] text-slate-400 font-bold mt-1">تحتاج نشر</p></div>
+      <div class="premium-panel p-4"><p class="text-[11px] font-black">المعاملات المعلقة</p><p class="text-[20px] font-black text-blue-600 mt-2">${state.topups.filter(t=>t.status==='pending').length}</p><p class="text-[10px] text-slate-400 font-bold mt-1">شحن بانتظار</p></div>
+    </div>
+    <div class="premium-panel p-4">
+      <h3 class="text-[12px] font-black">آخر العمليات</h3>
+      <div class="mt-3 space-y-2">
+        ${[...state.orders].slice(0,3).map(o=>`<div class="flex justify-between items-center text-[11px] font-bold border-b border-slate-50 pb-2"><span>${escHtml(o.sn||'SN')} - ${escHtml(o.clientName||'عميل')}</span><span class="text-[10px] text-slate-400">${escHtml(statusLabel(o.status))}</span></div>`).join('')||'<p class="text-[11px] text-slate-400">لا توجد عمليات حديثة</p>'}
+      </div>
+    </div>
+    <div class="premium-panel p-4">
+      <h3 class="text-[12px] font-black mb-3">رسوم بيانية (أسبوعي)</h3>
+      <div class="h-[90px] flex items-end gap-1.5">
+        ${[40,65,35,80,55,70,45].map(h=>`<div style="height:${h}%" class="flex-1 bg-gradient-to-t from-blue-600 to-blue-300 rounded-t-[6px]"></div>`).join('')}
+      </div>
+      <div class="flex justify-between text-[9px] font-bold text-slate-400 mt-2"><span>السبت</span><span>الجمعة</span></div>
+    </div>
+  </section>`;
+}
+
+function renderFannis(){
+  return `
+  <div class="mt-4 space-y-4">
+    ${state.errors.fannis?`<div class="bg-red-50 border border-red-200 rounded-[16px] p-4 text-[12px] font-bold text-red-700">${escHtml(state.errors.fannis)}</div>`:''}
+    ${state.filtered.length===0&&!state.loading&&!state.errors.fannis?`<div class="premium-panel p-10 text-center text-[13px] font-bold text-slate-400">لا يوجد فنيون</div>`:''}
+    ${state.filtered.map(f=>{
+      const id=String(f._id||'');
+      const menuKey='fanni:'+id;
+      const pending = state.pendingActions[menuKey];
+      const isMenuOpen = !!state.dropdowns[menuKey];
+      const level = f.level||f.experience||'مبتدئ';
+      const badge = f.isTrusted?'موثوق':''; 
+      return `
+        <article class="premium-card p-4 animate-fade">
+          <div class="flex justify-between items-start gap-3">
+            <div class="flex items-center gap-3 min-w-0 flex-1">
+              <div class="h-10 w-10 rounded-full bg-gradient-to-br from-slate-800 to-slate-600 text-white flex items-center justify-center font-black">${escHtml((f.name||'؟').slice(0,1))}</div>
+              <div class="min-w-0 flex-1">
+                <p class="font-black text-[13.5px] truncate">${escHtml(f.name||'بدون اسم')} ${badge?`<span class="text-[9px] bg-blue-600 text-white px-2 py-0.5 rounded-full mr-1">✓ ${badge}</span>`:''}</p>
+                <div class="flex items-center gap-2 mt-1 flex-wrap">
+                  <span dir="ltr" class="text-[11px] bg-slate-900 text-white px-2.5 py-1 rounded-full font-bold">📞 ${escHtml(f.phone||'')}</span>
+                  <span class="text-[10px] px-2.5 py-1 rounded-full border font-black ${statusClass(f.isDisabled?'disabled':f.isApproved?'approved':f.status||'pending')}">${f.isDisabled?'معطل':f.isApproved?'معتمد':statusLabel(f.status)}</span>
+                  <span class="text-[10px] bg-amber-50 border border-amber-200 text-amber-800 px-2 py-1 rounded-full font-black">${escHtml(level)}</span>
+                </div>
+              </div>
+            </div>
+            <div class="action-wrap">
+              <button onclick="event.stopPropagation();toggleMenu('${menuKey}')" class="pill-btn soft-btn flex items-center gap-1.5">
+                <span>${f.isApproved?'معتمد':f.isDisabled?'معطل':'إجراء'}</span>
+                <span class="text-[12px]">${isMenuOpen?'▲':'▼'}</span>
+              </button>
+              ${isMenuOpen?`
+                <div class="dropdown-menu">
+                  ${!f.isApproved&&!f.isDisabled?`<button onclick="event.stopPropagation();setPendingAction('${menuKey}','approve','قبول الفني')" class="dropdown-item">✓ قبول الفني</button><button onclick="event.stopPropagation();setPendingAction('${menuKey}','reject','رفض الفني')" class="dropdown-item">✕ رفض الفني</button>`:''}
+                  ${!f.isDisabled?`<button onclick="event.stopPropagation();setPendingAction('${menuKey}','disable','تعطيل الفني')" class="dropdown-item">⛔ تعطيل</button>`: `<button onclick="event.stopPropagation();setPendingAction('${menuKey}','enable','استعادة الفني')" class="dropdown-item">♻️ استعادة</button>`}
+                  <div class="h-px bg-slate-100 my-1"></div>
+                  <button onclick="event.stopPropagation();setPendingAction('${menuKey}','level_up','ترقية لمستوى خبير')" class="dropdown-item">⭐ ترقية لخبير</button>
+                  <button onclick="event.stopPropagation();setPendingAction('${menuKey}','badge_trust','منح شارة موثوق')" class="dropdown-item">🛡️ منح موثوق</button>
+                  <div class="h-px bg-slate-100 my-1"></div>
+                  <button onclick="event.stopPropagation();setPendingAction('${menuKey}','delete','حذف نهائي')" class="dropdown-item text-red-600">🗑️ حذف نهائي</button>
+                </div>
+              `:''}
+            </div>
+          </div>
+          ${pending?`
+            <div class="confirm-bar">
+              <span>تأكيد ${escHtml(pending.label)}؟</span>
+              <div class="flex gap-2">
+                <button onclick="clearPending('${menuKey}')" class="h-7 px-3 rounded-full bg-white/20 text-[10px] font-black">إلغاء</button>
+                <button onclick="confirmPending('${menuKey}')" class="h-7 px-4 rounded-full bg-white text-slate-900 text-[10px] font-black">تأكيد ✓</button>
+              </div>
+            </div>
+          `:''}
+          <div class="mt-4 grid grid-cols-2 gap-2">
+            <div class="rounded-[14px] bg-slate-50 border p-3"><p class="text-[10px] font-black text-slate-400">التخصص</p><p class="text-[11.5px] font-black mt-1 truncate">${escHtml(f.skill||f.service||'غير محدد')}</p></div>
+            <div class="rounded-[14px] bg-emerald-50 border border-emerald-100 p-3"><p class="text-[10px] font-black text-emerald-700">الرصيد</p><p class="text-[13px] font-black text-emerald-700 mt-1">${escHtml(String(f.balance??f.walletBalance??0))} ج</p></div>
+          </div>
+          <details class="mt-4 rounded-[16px] border overflow-hidden">
+            <summary class="cursor-pointer bg-slate-50 hover:bg-blue-50 px-4 py-3 text-[11px] font-black">💰 تسوية الرصيد • سجل النشاط • ملاحظات</summary>
+            <div class="p-4 bg-white space-y-3">
+              <div class="flex gap-2"><input id="bal-${escHtml(id)}" type="number" placeholder="المبلغ" class="field flex-1"><button onclick="setBalance('${escHtml(id)}')" class="h-[46px] px-4 rounded-full bg-slate-900 text-white text-[11px] font-black">تعيين</button><button onclick="addBalance('${escHtml(id)}')" class="h-[46px] px-4 rounded-full bg-emerald-600 text-white text-[11px] font-black">إضافة</button></div>
+              <div class="rounded-[12px] bg-slate-50 border p-3"><p class="text-[10px] font-black text-slate-500">ملاحظات داخلية</p><textarea id="note-${escHtml(id)}" rows="2" placeholder="ملاحظة لا يراها الفني" class="field mt-2">${escHtml(f.adminNote||'')}</textarea><button onclick="saveFanniNote('${escHtml(id)}')" class="mt-2 pill-btn soft-btn w-full">حفظ الملاحظة</button></div>
+              <div class="rounded-[12px] bg-slate-50 border p-3"><p class="text-[10px] font-black text-slate-500">حدود الاستقبال</p><div class="flex gap-2 mt-2"><input id="limit-${escHtml(id)}" type="number" placeholder="عدد العروض المسموح" class="field flex-1"><button onclick="saveFanniLimit('${escHtml(id)}')" class="pill-btn soft-btn">حفظ</button></div></div>
+            </div>
+          </details>
+        </article>
+      `;
+    }).join('')}
+  </div>`;
+}
+
+function renderLevels(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-amber-500 to-orange-600 p-4 text-white"><p class="text-[12px] font-black">مستويات الخبرة والثقة</p><p class="text-[10px] font-bold text-amber-100 mt-1">مبتدئ • محترف • خبير • موثوق</p></div>
+    <div class="premium-panel p-4">
+      <h3 class="text-[12px] font-black mb-3">تعريف المستويات</h3>
+      <div class="space-y-2">
+        <div class="flex justify-between items-center p-3 rounded-[12px] bg-slate-50 border"><span class="text-[11px] font-black">🌱 مبتدئ</span><span class="text-[10px] text-slate-500">0-10 طلبات</span></div>
+        <div class="flex justify-between items-center p-3 rounded-[12px] bg-blue-50 border border-blue-100"><span class="text-[11px] font-black">🔧 محترف</span><span class="text-[10px] text-blue-700">10-50 طلب</span></div>
+        <div class="flex justify-between items-center p-3 rounded-[12px] bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200"><span class="text-[11px] font-black">⭐ خبير معتمد</span><span class="text-[10px] text-amber-700">+50 طلب</span></div>
+      </div>
+    </div>
+    ${renderFannis()}
+  </section>`;
+}
+
+function renderRoles(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-indigo-600 to-purple-600 p-4 text-white"><p class="text-[12px] font-black">المناصب الإدارية وصلاحيات المشرفين</p><p class="text-[10px] text-indigo-100 mt-1">مدير • مشرف أول • مشرف • قراءة فقط</p></div>
+    <div class="premium-panel p-4">
+      <div class="flex gap-2"><input id="new-admin-email" type="email" placeholder="بريد المشرف الجديد" class="field flex-1"><select id="new-admin-role" class="field !w-[130px]"><option>مشرف</option><option>مشرف أول</option><option>مدير</option><option>قراءة فقط</option></select><button onclick="createAdminUser()" class="pill-btn primary-pill">إضافة</button></div>
+      <div class="mt-4 space-y-2">
+        <div class="p-3 rounded-[12px] bg-slate-900 text-white flex justify-between items-center"><div><p class="text-[11px] font-black">المدير العام</p><p class="text-[10px] text-slate-300">admin@sonaa.com • كل الصلاحيات</p></div><span class="text-[10px] bg-white/20 px-2 py-1 rounded-full">مدير</span></div>
+        <div class="p-3 rounded-[12px] bg-slate-50 border flex justify-between items-center"><div><p class="text-[11px] font-black">مشرف مالي</p><p class="text-[10px] text-slate-500">finance@sonaa.com • محافظ فقط</p></div><button class="pill-btn soft-btn text-[10px]">سحب الصلاحية</button></div>
+      </div>
+    </div>
+    <div class="premium-panel p-4">
+      <h3 class="text-[11px] font-black mb-2">سجل جلسات الدخول</h3>
+      <div class="text-[11px] font-bold space-y-2"><div class="flex justify-between border-b pb-2"><span>admin@sonaa.com - 192.168.1.1</span><span class="text-slate-400">منذ ساعتين</span></div><div class="flex justify-between"><span>finance@sonaa.com</span><span class="text-slate-400">أمس</span></div></div>
+    </div>
+  </section>`;
+}
+
+function renderOrders(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-slate-900 to-slate-800 p-4 text-white flex gap-3"><div class="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center">📦</div><div><p class="text-[12px] font-black">إدارة الطلبات والشغلانات</p><p class="text-[10px] text-slate-300 mt-1 font-bold">نشر • تعيين فني • إلغاء • أرشفة</p></div></div>
+    <div class="premium-panel p-4"><div class="flex gap-2"><input id="delete-client-phone" type="tel" placeholder="01xxxxxxxxx" class="field flex-1" dir="ltr"><button onclick="deleteClient()" class="pill-btn danger-pill">حذف طلبات العميل</button></div></div>
+    ${state.errors.orders?`<div class="bg-red-50 border border-red-200 rounded-[16px] p-4 text-[12px] font-bold text-red-700">${escHtml(state.errors.orders)}</div>`:''}
+    ${state.loadingOrders?`<div class="premium-panel p-10 text-center"><div class="h-8 w-8 rounded-full border-[3px] border-slate-200 border-t-blue-600 animate-spin mx-auto"></div></div>`:''}
+    ${state.filteredOrders.length===0&&!state.loadingOrders?`<div class="premium-panel p-10 text-center text-[12px] font-bold text-slate-400">لا توجد طلبات</div>`:''}
+    ${state.filteredOrders.map(o=>{
+      const sn=String(o.sn||''); const menuKey='order:'+sn; const pending=state.pendingActions[menuKey]; const isMenuOpen=!!state.dropdowns[menuKey];
+      const offers=Array.isArray(o.offers)?o.offers:[];
+      return `
+        <article class="premium-card p-4">
+          <div class="flex justify-between items-start gap-3">
+            <div class="min-w-0 flex-1"><p class="font-black text-[14px]">${escHtml(o.service||'طلب')}</p><p class="text-[11px] font-bold text-slate-500 mt-1">كود: <span class="font-mono bg-blue-50 px-2 py-0.5 rounded-full text-blue-800">${escHtml(sn)}</span></p></div>
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] px-3 py-1.5 rounded-full border font-black ${statusClass(o.status)}">${escHtml(statusLabel(o.status))}</span>
+              <div class="action-wrap">
+                <button onclick="event.stopPropagation();toggleMenu('${menuKey}')" class="pill-btn soft-btn">إجراء ▾</button>
+                ${isMenuOpen?`<div class="dropdown-menu">
+                  ${o.status==='قيد المراجعة'?`<button onclick="event.stopPropagation();setPendingAction('${menuKey}','publish','نشر الطلب')" class="dropdown-item">🚀 نشر للفنيين</button>`:''}
+                  <button onclick="event.stopPropagation();setPendingAction('${menuKey}','assign','تعيين فني')" class="dropdown-item">👷 تعيين فني</button>
+                  <button onclick="event.stopPropagation();setPendingAction('${menuKey}','edit','تصحيح البيانات')" class="dropdown-item">✏️ تصحيح</button>
+                  <button onclick="event.stopPropagation();setPendingAction('${menuKey}','cancel','إلغاء الطلب')" class="dropdown-item">❌ إلغاء</button>
+                  <button onclick="event.stopPropagation();setPendingAction('${menuKey}','archive','أرشفة')" class="dropdown-item">📦 أرشفة</button>
+                  <div class="h-px bg-slate-100 my-1"></div>
+                  <button onclick="event.stopPropagation();setPendingAction('${menuKey}','delete','حذف نهائي')" class="dropdown-item text-red-600">🗑️ حذف</button>
+                </div>`:''}
+              </div>
+            </div>
+          </div>
+          ${pending?`<div class="confirm-bar"><span>تأكيد ${escHtml(pending.label)}؟</span><div class="flex gap-2"><button onclick="clearPending('${menuKey}')" class="h-7 px-3 rounded-full bg-white/20 text-[10px]">إلغاء</button><button onclick="confirmPending('${menuKey}')" class="h-7 px-4 rounded-full bg-white text-slate-900 text-[10px] font-black">تأكيد</button></div></div>`:''}
+          <div class="grid grid-cols-2 gap-2.5 mt-4"><div class="rounded-[14px] bg-slate-50 border p-3"><p class="text-[10px] font-black text-slate-400">العميل</p><p class="text-[11px] font-black mt-1">${escHtml(o.clientName||'غير مسجل')}</p></div><div class="rounded-[14px] bg-slate-50 border p-3"><p class="text-[10px] font-black text-slate-400">الهاتف</p><p class="text-[11px] font-black mt-1" dir="ltr">${escHtml(o.clientPhone||'')}</p></div><div class="rounded-[14px] bg-slate-50 border p-3"><p class="text-[10px] font-black text-slate-400">المنطقة</p><p class="text-[11px] font-black mt-1">${escHtml(o.area||o.city||'')}</p></div><div class="rounded-[14px] bg-blue-50 border border-blue-100 p-3"><p class="text-[10px] font-black text-blue-600">الميزانية</p><p class="text-[11px] font-black mt-1">${escHtml(o.budget?String(o.budget)+' ج':'لم تحدد')}</p></div></div>
+          <div class="mt-3 rounded-[14px] bg-slate-50 border p-3"><p class="text-[10px] font-black text-slate-400">وصف الطلب</p><p class="text-[11px] font-bold mt-2 leading-6 whitespace-pre-wrap">${escHtml(o.description||'لا يوجد وصف')}</p></div>
+          <details class="mt-3 rounded-[16px] border overflow-hidden"><summary class="bg-slate-50 px-4 py-3 text-[11px] font-black">عروض الفنيين (${offers.length})</summary><div class="p-3 space-y-2 bg-white">${offers.map((off,i)=>`<div class="rounded-[12px] bg-slate-50 border p-3 text-[11px]"><p class="font-black">العرض ${i+1}: ${escHtml(off.fanniName||'فني')} - ${escHtml(off.price||'')} ج</p><p class="text-[10px] mt-1">${escHtml(off.message||'')}</p><div class="mt-2 flex gap-2"><button onclick="removeOffer('${escHtml(sn)}','${i}')" class="pill-btn soft-btn text-[10px]">إزالة العرض</button></div></div>`).join('')||'<p class="text-[10px] text-slate-400">لا توجد عروض</p>'}</div></details>
+        </article>`;
+    }).join('')}
+  </section>`;
+}
+
+function renderOffers(){
+  const allOffers = state.orders.flatMap(o=>(o.offers||[]).map((off,idx)=>({orderSn:o.sn,orderService:o.service,offer:off,idx})));
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-blue-600 to-indigo-600 p-4 text-white"><p class="text-[12px] font-black">عروض الفنيين على الطلبات</p><p class="text-[10px] text-blue-100 mt-1">عرض • رفض • إزالة • سجل التغييرات</p></div>
+    <div class="premium-panel p-4">
+      <div class="flex gap-2"><select class="field flex-1"><option>كل العروض</option><option>مقبول</option><option>مرفوض</option><option>منتهي</option></select><button class="pill-btn soft-btn">تصفية</button></div>
+    </div>
+    ${allOffers.length===0?`<div class="premium-panel p-10 text-center text-[12px] font-bold text-slate-400">لا توجد عروض حالياً - ستظهر هنا عند تقديم الفنيين عروضهم</div>`:''}
+    ${allOffers.slice(0,10).map(item=>`
+      <article class="premium-card p-4">
+        <div class="flex justify-between"><p class="font-black text-[12px]">طلب ${escHtml(item.orderSn)} - ${escHtml(item.orderService||'')}</p><span class="text-[10px] bg-blue-50 border border-blue-100 px-2 py-1 rounded-full font-black">عرض ${item.idx+1}</span></div>
+        <p class="text-[11px] font-bold mt-3">الفني: ${escHtml(item.offer.fanniName||'')} • ${escHtml(item.offer.price||'')} ج</p>
+        <p class="text-[10px] text-slate-500 mt-1 leading-5">${escHtml(item.offer.message||'')}</p>
+        <div class="mt-3 flex gap-2"><button onclick="rejectOffer('${escHtml(item.orderSn)}','${item.idx}')" class="pill-btn soft-btn flex-1">رفض العرض</button><button onclick="removeOffer('${escHtml(item.orderSn)}','${item.idx}')" class="pill-btn danger-pill flex-1">إزالة</button></div>
+      </article>
+    `).join('')}
+  </section>`;
+}
+
+function renderPricing(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-emerald-600 to-teal-600 p-4 text-white"><p class="text-[12px] font-black">الأسعار والعمولات ورسوم الفرص</p><p class="text-[10px] text-emerald-100 mt-1">نطاقات سعرية • رسوم الفرصة • عمولة المنصة</p></div>
+    <div class="premium-panel p-4 space-y-4">
+      <label class="block"><span class="text-[11px] font-black">رسوم الفرصة (check) - يتحملها الفني</span><input id="price-check" type="number" placeholder="مثال: 20" class="field mt-2"></label>
+      <label class="block"><span class="text-[11px] font-black">عمولة المنصة %</span><input id="price-commission" type="number" placeholder="مثال: 10" class="field mt-2"></label>
+      <label class="block"><span class="text-[11px] font-black">الحد الأدنى لسعر العرض</span><input id="price-min" type="number" placeholder="50" class="field mt-2"></label>
+      <label class="block"><span class="text-[11px] font-black">الحد الأقصى</span><input id="price-max" type="number" placeholder="10000" class="field mt-2"></label>
+      <div class="rounded-[12px] bg-amber-50 border border-amber-200 p-3 text-[10px] font-bold text-amber-800">الأسعار تحسب في الباك إند فقط، ولا تعيد حساب المعاملات القديمة. سيتم حفظ سجل التغييرات.</div>
+      <button onclick="savePricing()" class="w-full h-11 rounded-full bg-slate-900 text-white font-black text-[11px]">حفظ الأسعار ومعاينة الأثر</button>
+    </div>
+    <div class="premium-panel p-4">
+      <h3 class="text-[11px] font-black mb-3">سجل تغييرات الأسعار</h3>
+      <div class="text-[10px] font-bold text-slate-500">لا يوجد تغييرات بعد - سيظهر هنا تاريخ كل تعديل ومن نفذه</div>
+    </div>
+  </section>`;
+}
+
+function renderWallets(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-slate-900 to-slate-700 p-4 text-white"><p class="text-[12px] font-black">المحافظ والأرصدة والمعاملات المالية</p><p class="text-[10px] text-slate-300 mt-1">كشف حساب • تجميد • مقارنة الأرصدة</p></div>
+    <div class="grid grid-cols-2 gap-3">
+      <div class="stat-card"><p class="text-[20px] font-black text-emerald-600">${state.fannis.reduce((s,f)=>s+Number(f.balance||0),0)} ج</p><p class="text-[10px] font-bold text-slate-500">إجمالي أرصدة الفنيين</p></div>
+      <div class="stat-card"><p class="text-[20px] font-black text-amber-600">${state.topups.filter(t=>t.status==='pending').length}</p><p class="text-[10px] font-bold text-slate-500">معاملات معلقة</p></div>
+    </div>
+    <div class="premium-panel p-4">
+      <h3 class="text-[11px] font-black mb-3">محفظة فني - كشف مفصل</h3>
+      <div class="flex gap-2"><select id="wallet-fanni" class="field flex-1"><option>اختر الفني</option>${state.fannis.slice(0,10).map(f=>`<option value="${escHtml(f._id)}">${escHtml(f.name)} - ${escHtml(f.phone)}</option>`).join('')}</select><button onclick="loadWalletTransactions()" class="pill-btn primary-pill">عرض</button></div>
+      <div class="mt-4 space-y-2 text-[11px] font-bold"><div class="flex justify-between p-2 bg-emerald-50 rounded-[10px]"><span>+ 200 ج شحن</span><span class="text-slate-400">اليوم</span></div><div class="flex justify-between p-2 bg-red-50 rounded-[10px]"><span>- 20 ج رسوم فرصة SN123456</span><span class="text-slate-400">أمس</span></div></div>
+      <div class="mt-4 flex gap-2"><button onclick="freezeWallet()" class="pill-btn soft-btn flex-1">تجميد مؤقت</button><button onclick="adjustWallet()" class="pill-btn danger-pill flex-1">تعديل يدوي بصلاحية خاصة</button></div>
+    </div>
+  </section>`;
+}
+
+function renderTopups(){
+  return `
+  <section class="mt-4 space-y-4">
+    <div class="rounded-[18px] bg-gradient-to-r from-blue-600 to-indigo-600 p-4 text-white flex gap-3"><div class="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">💳</div><div><p class="text-[12px] font-black">طلبات شحن المحافظ</p><p class="text-[11px] text-blue-100">مراجعة التحويل على ${WALLET}</p></div></div>
+    ${state.errors.topups?`<div class="bg-red-50 border border-red-200 rounded-[16px] p-4 text-[12px] font-bold text-red-700">${escHtml(state.errors.topups)}</div>`:''}
+    <div class="space-y-3">
+      ${state.filteredTopups.length===0?`<div class="premium-panel p-10 text-center text-[12px] font-bold text-slate-400">لا توجد طلبات شحن</div>`:''}
+      ${state.filteredTopups.map(t=>{
+        const id=String(t._id||''); const menuKey='topup:'+id; const pending=state.pendingActions[menuKey]; const isOpen=!!state.dropdowns[menuKey];
+        return `<article class="premium-card p-4"><div class="flex justify-between"><div><p class="font-black text-[18px]">${escHtml(String(t.amount||''))} <span class="text-[12px] text-slate-500">ج</span></p><p class="text-[11px] font-bold mt-1" dir="ltr">📱 ${escHtml(t.fromPhone||t.phone||'')}</p><p class="text-[10px] text-slate-400 mt-1">${escHtml(t.createdAt?new Date(t.createdAt).toLocaleString('ar-EG'):'')}</p></div><div class="flex flex-col items-end gap-2"><span class="text-[10px] px-3 py-1.5 rounded-full border font-black ${statusClass(t.status)}">${escHtml(statusLabel(t.status))}</span><div class="action-wrap"><button onclick="event.stopPropagation();toggleMenu('${menuKey}')" class="pill-btn soft-btn">إجراء ▾</button>${isOpen?`<div class="dropdown-menu"><button onclick="event.stopPropagation();setPendingAction('${menuKey}','approve','قبول الشحن')" class="dropdown-item">✓ قبول وإضافة رصيد</button><button onclick="event.stopPropagation();setPendingAction('${menuKey}','reject','رفض الشحن')" class="dropdown-item text-red-600">✕ رفض</button></div>`:''}</div></div></div>${pending?`<div class="confirm-bar"><span>تأكيد ${pending.label}؟</span><div class="flex gap-2"><button onclick="clearPending('${menuKey}')" class="h-7 px-3 rounded-full bg-white/20 text-[10px]">إلغاء</button><button onclick="confirmPending('${menuKey}')" class="h-7 px-4 rounded-full bg-white text-slate-900 text-[10px] font-black">تأكيد</button></div></div>`:''}</article>`;
+      }).join('')}
+    </div>
+  </section>`;
+}
+
+function renderComplaints(){
+  let html='<section class="mt-4 space-y-4"><div class="rounded-[18px] bg-gradient-to-r from-slate-900 to-slate-800 p-4 text-white flex gap-3"><div class="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center">⚠️</div><div><p class="text-[12px] font-black">شكاوى العملاء والفنيين والنزاعات</p><p class="text-[10px] text-slate-300">رد رسمي • ملاحظة داخلية • ربط باسترداد</p></div></div>';
+  if(state.errors.complaints) html+=`<div class="bg-red-50 border border-red-200 rounded-[16px] p-4 text-[12px] font-bold text-red-700">${escHtml(state.errors.complaints)}</div>`;
+  if(state.loadingComplaints) html+=`<div class="premium-panel p-10 text-center"><div class="h-8 w-8 rounded-full border-[3px] border-slate-200 border-t-blue-600 animate-spin mx-auto"></div></div>`;
+  if(state.filteredComplaints.length===0&&!state.loadingComplaints) html+=`<div class="premium-panel p-10 text-center text-[12px] font-bold text-slate-400">لا توجد شكاوى</div>`;
+  state.filteredComplaints.forEach(c=>{
+    const id=String(c._id||c.id||''); const sn=String(c.sn||''); const status=String(c.status||'جديدة');
+    html+=`<article class="premium-card p-4"><div class="flex justify-between gap-2"><div class="min-w-0"><p class="font-black text-[13px]">${escHtml(c.clientName||'عميل')}</p><p class="text-[11px] font-bold text-slate-500 mt-1">كود: <span class="bg-blue-50 px-2 py-0.5 rounded-full text-blue-800">${escHtml(sn)}</span> • ${escHtml(new Date(c.createdAt||Date.now()).toLocaleString('ar-EG'))}</p></div><span class="text-[10px] px-3 py-1.5 rounded-full border font-black ${status==='تم الحل'?'bg-emerald-50 border-emerald-200 text-emerald-700':status==='مرفوضة'?'bg-red-50 border-red-200 text-red-700':'bg-amber-50 border-amber-200 text-amber-800'}">${escHtml(status)}</span></div><div class="mt-3 rounded-[14px] bg-slate-50 border p-3"><p class="text-[11px] font-bold leading-6 whitespace-pre-wrap">${escHtml(c.text||'')}</p></div><div class="mt-3 space-y-2"><select id="complaint-status-${escHtml(id)}" class="field"><option value="جديدة" ${status==='جديدة'?'selected':''}>جديدة</option><option value="قيد المراجعة" ${status==='قيد المراجعة'?'selected':''}>قيد المراجعة</option><option value="تم الحل" ${status==='تم الحل'?'selected':''}>تم الحل</option><option value="مرفوضة" ${status==='مرفوضة'?'selected':''}>مرفوضة</option></select><textarea id="complaint-note-${escHtml(id)}" rows="2" placeholder="ملاحظة داخلية" class="field">${escHtml(c.adminNote||'')}</textarea><textarea id="complaint-response-${escHtml(id)}" rows="2" placeholder="رد رسمي للعميل" class="field">${escHtml(c.adminResponse||'')}</textarea><button onclick="saveComplaint('${escHtml(id)}')" class="w-full h-11 rounded-full bg-blue-600 text-white font-black text-[11px]">💾 حفظ التحديث</button></div></article>`;
   });
   return html+'</section>';
 }
@@ -836,13 +1619,11 @@ function renderLogin(){
           <button onclick="document.getElementById('login-phone').value=''; document.getElementById('login-pass').value=''; " class="flex-1 h-10 rounded-full bg-slate-50 border text-[10px] font-black text-slate-500">مسح الحقول</button>
         </div>
         <p id="login-error" class="text-[11px] font-bold text-red-600 mt-4 text-center hidden bg-red-50 border border-red-200 rounded-[12px] p-3"></p>
-        <p class="text-[9px] text-center text-slate-400 mt-4 leading-4">بيانات الدخول من إعدادات Vercel<br>ADMIN_EMAIL / ADMIN_PHONE + ADMIN_PASSWORD</p>
       </div>
     </div>
   </div>`;
   setTimeout(()=>document.getElementById('login-phone')?.focus(), 150);
 }
-
 async function doLogin(){
   const phoneEl=document.getElementById('login-phone');
   const passEl=document.getElementById('login-pass');
@@ -851,14 +1632,8 @@ async function doLogin(){
   const phoneRaw=(phoneEl?.value||'').trim();
   const passRaw=(passEl?.value||'').trim();
   if(errEl){ errEl.classList.add('hidden'); }
-  if(!phoneRaw){
-    if(errEl){ errEl.textContent='اكتب الإيميل أو رقم الهاتف'; errEl.classList.remove('hidden'); }
-    showToast('اكتب الإيميل أو رقم الهاتف','error'); return;
-  }
-  if(!passRaw){
-    if(errEl){ errEl.textContent='اكتب كلمة المرور'; errEl.classList.remove('hidden'); }
-    showToast('اكتب كلمة المرور','error'); return;
-  }
+  if(!phoneRaw){ if(errEl){ errEl.textContent='اكتب الإيميل أو رقم الهاتف'; errEl.classList.remove('hidden'); } showToast('اكتب الإيميل أو رقم الهاتف','error'); return; }
+  if(!passRaw){ if(errEl){ errEl.textContent='اكتب كلمة المرور'; errEl.classList.remove('hidden'); } showToast('اكتب كلمة المرور','error'); return; }
   if(btn){ btn.textContent='جاري التحقق...'; btn.disabled=true; }
   try{
     let normalized = phoneRaw;
@@ -870,11 +1645,10 @@ async function doLogin(){
     if(res.ok && (res.data?.token || res.data?.data?.token)){
       const token=res.data.token||res.data.data.token;
       setToken(token);
-      showToast('تم تسجيل الدخول بنجاح ✅');
-      render();
-      loadAll();
+      showToast('تم تسجيل الدخول ✅');
+      render(); loadAll();
     }else{
-      const msg=res.data?.message||'فشل تسجيل الدخول - تأكد من إعدادات Vercel';
+      const msg=res.data?.message||'فشل تسجيل الدخول';
       if(errEl){ errEl.textContent=msg; errEl.classList.remove('hidden'); }
       showToast(msg,'error');
       if(btn){ btn.textContent='دخول للوحة التحكم →'; btn.disabled=false; }
@@ -887,63 +1661,8 @@ async function doLogin(){
   }
 }
 
-// إصلاح تحميل البيانات مع تشخيص سبب الصفر
-async function loadAllFixed(){
-  if(!getToken()){ renderLogin(); return; }
-  state.loading=true;
-  state.errors.fannis=''; state.errors.orders=''; state.errors.topups=''; state.errors.complaints='';
-  render();
-  const results=await Promise.allSettled([
-    api('/api/admin/fannis',{method:'GET'}),
-    api('/api/admin/topup-requests',{method:'GET'}),
-    api('/api/admin/orders',{method:'GET'}),
-    api('/api/admin/complaints',{method:'GET'})
-  ]);
-  let debug=[];
-  // fannis
-  if(results[0].value?.ok){
-    state.fannis=extractList(results[0].value.data,['fannis','users','items','data']);
-    debug.push('فنيين:'+state.fannis.length);
-  }else{
-    state.fannis=[]; state.errors.fannis=results[0].value?.data?.message||results[0].reason?.message||'فشل تحميل الفنيين';
-    debug.push('فنيين فشل:'+state.errors.fannis);
-    if(results[0].value?.status===401){ clearToken(); renderLogin(); showToast('انتهت الجلسة - سجل دخول','error'); return; }
-  }
-  if(results[1].value?.ok){
-    state.topups=extractList(results[1].value.data,['requests','topups','items','data']);
-    debug.push('شحن:'+state.topups.length);
-  }else{ state.topups=[]; debug.push('شحن فشل'); }
-  if(results[2].value?.ok){
-    state.orders=extractList(results[2].value.data,['orders','items','requests','data']);
-    debug.push('طلبات:'+state.orders.length);
-  }else{
-    state.orders=[]; state.errors.orders=results[2].value?.data?.message||'فشل تحميل الطلبات - الباك إند لم يرفع بعد';
-    debug.push('طلبات فشل:'+state.errors.orders);
-  }
-  if(results[3].value?.ok){
-    state.complaints=extractList(results[3].value.data,['complaints','items','data']);
-    debug.push('شكاوى:'+state.complaints.length);
-  }else{ state.complaints=[]; debug.push('شكاوى فشل'); }
-  
-  console.log('Load debug:', debug.join(' | '));
-  // لو كله صفر وفيه أخطاء، اعرضها في الداشبورد
-  if(state.fannis.length===0 && state.orders.length===0){
-    const errMsg = state.errors.fannis || state.errors.orders || 'لا توجد بيانات - تأكد أن الباك إند على Vercel تم عمل Deploy لآخر نسخة من admin.js';
-    showToast(errMsg,'error');
-    state.debugInfo = debug.join(' | ') + ' | ' + (state.errors.fannis||'') + ' ' + (state.errors.orders||'');
-  }else{
-    state.debugInfo='';
-  }
-  
-  state.loading=false;
-  applyFilter(); applyTopupFilter(); applyOrderFilter(); applyComplaintFilter(); applyClientFilter(); applyServicesFilter();
-}
-
-async function loadAll(){ return loadAllFixed(); }
-
 try{ render(); }catch(e){ console.error('render error', e); }
 if(getToken()){ loadAll(); }else{ renderLogin(); }
-
 
 </script>
 </body>
