@@ -503,8 +503,8 @@ function renderTopups(){
       ${state.filteredTopups.length===0?`<div class="premium-panel p-10 text-center text-[12px] font-bold text-slate-400">لا توجد طلبات شحن</div>`:''}
       ${state.filteredTopups.map(t=>{
         const id=String(t._id||''); const menuKey='topup:'+id; const pending=state.pendingActions[menuKey]; const isOpen=!!state.dropdowns[menuKey];
-
         return `<article class="premium-card p-4"><div class="flex justify-between"><div><p class="font-black text-[18px]">${escHtml(String(t.amount||''))} <span class="text-[12px] text-slate-500">ج</span></p><p class="text-[11px] font-bold mt-1" dir="ltr">📱 ${escHtml(t.fromPhone||t.phone||'')}</p><p class="text-[10px] text-slate-400 mt-1">${escHtml(t.createdAt?new Date(t.createdAt).toLocaleString('ar-EG'):'')}</p></div><div class="flex flex-col items-end gap-2"><span class="text-[10px] px-3 py-1.5 rounded-full border font-black ${statusClass(t.status)}">${escHtml(statusLabel(t.status))}</span><div class="action-wrap"><button onclick="event.stopPropagation();toggleMenu('${menuKey}')" class="pill-btn soft-btn">إجراء ▾</button>${isOpen?`<div class="dropdown-menu"><button onclick="event.stopPropagation();setPendingAction('${menuKey}','approve','قبول الشحن')" class="dropdown-item">✓ قبول وإضافة رصيد</button><button onclick="event.stopPropagation();setPendingAction('${menuKey}','reject','رفض الشحن')" class="dropdown-item text-red-600">✕ رفض</button></div>`:''}</div></div></div>${pending?`<div class="confirm-bar"><span>تأكيد ${pending.label}؟</span><div class="flex gap-2"><button onclick="clearPending('${menuKey}')" class="h-7 px-3 rounded-full bg-white/20 text-[10px]">إلغاء</button><button onclick="confirmPending('${menuKey}')" class="h-7 px-4 rounded-full bg-white text-slate-900 text-[10px] font-black">تأكيد</button></div></div>`:''}</article>`;
+
       }).join('')}
     </div>
   </section>`;
@@ -694,7 +694,76 @@ function applyServicesFilter(){const q=String(state.search||'').trim().toLowerCa
 function toggleServiceCat(idx){idx=Number(idx); if(state.openServices[idx]===undefined)state.openServices[idx]=true; state.openServices[idx]=!state.openServices[idx]; render();}
 async function loadServices(){if(!getToken())return; state.servicesLoading=true; state.servicesError=''; state.errors.services=''; if(state.tab==='services')render(); try{const res=await api('/api/services',{method:'GET'}); if(!res.ok)throw new Error(res.data?.message||'تعذر تحميل الخدمات'); const data=res.data; const categories=data.categories||data.data?.categories||[]; if(!Array.isArray(categories))throw new Error('بنية الخدمات غير متوقعة'); state.services=categories; state.openServices={}; categories.forEach((_,i)=>{state.openServices[i]=true;}); applyServicesFilter();}catch(e){state.services=[]; state.filteredServices=[]; state.servicesError=e.message||'تعذر تحميل الخدمات'; state.errors.services=state.servicesError; if(state.tab==='services')render();}finally{state.servicesLoading=false; if(state.tab==='services')render();}}
 async function doLogin(){if(state.loading)return; state.loading=true; state.error=''; render(); try{const data=await tryApi(['/api/admin/login','/api/admins/login'],{method:'POST',body:JSON.stringify({email:state.adminEmail.trim(),password:state.adminPass})}); const token=data.token||data.accessToken||data.data?.token; if(!token)throw new Error(data.message||'لم يتم استلام رمز الدخول'); setToken(token); state.adminPass=''; showToast('تم تسجيل الدخول بنجاح'); await loadAll();}catch(e){state.loading=false; state.error=e.message; render();}}
-async function loadAll(){if(!getToken())return; state.loading=true; state.errors.fannis=''; state.errors.topups=''; state.errors.orders=''; state.errors.complaints=''; render(); const results=await Promise.allSettled([tryApi(['/api/admin/fannis'],{method:'GET'}),tryApi(['/api/admin/topup-requests'],{method:'GET'}),tryApi(['/api/admin/orders'],{method:'GET'}),tryApi(['/api/admin/complaints'],{method:'GET'})]); if(results[0].status==='fulfilled'){state.fannis=extractList(results[0].value,['fannis','items']); state.errors.fannis='';}else{state.fannis=[]; state.errors.fannis=results[0].reason?.message||'تعذر تحميل الفنيين';} if(results[1].status==='fulfilled'){state.topups=extractList(results[1].value,['requests','topups','items']);}else{state.topups=[]; state.errors.topups=results[1].reason?.message||'تعذر تحميل الشحن';} if(results[2].status==='fulfilled'){state.orders=extractList(results[2].value,['orders','items','requests']);}else{state.orders=[]; state.errors.orders=results[2].reason?.message||'تعذر تحميل الطلبات';} if(results[3].status==='fulfilled'){state.complaints=extractList(results[3].value,['complaints','items']);}else{state.complaints=[]; state.errors.complaints=results[3].reason?.message||'تعذر تحميل الشكاوى';} state.loading=false; applyFilter(); applyTopupFilter(); applyOrderFilter(); applyComplaintFilter(); applyClientFilter(); applyServicesFilter();}
+async function loadAll(){
+  if(!getToken()){
+    state.loading=false;
+    renderLogin();
+    showToast('انتهت الجلسة - سجل دخول مرة أخرى','error');
+    return;
+  }
+  state.loading=true; 
+  state.errors.fannis=''; state.errors.topups=''; state.errors.orders=''; state.errors.complaints=''; 
+  render(); 
+  try{
+    const results=await Promise.allSettled([
+      tryApi(['/api/admin/fannis','/api/admin/fanni','/api/admin/users'],{method:'GET'}),
+      tryApi(['/api/admin/topup-requests','/api/admin/topups'],{method:'GET'}),
+      tryApi(['/api/admin/orders','/api/orders'],{method:'GET'}),
+      tryApi(['/api/admin/complaints'],{method:'GET'})
+    ]);
+    
+    // Fannis
+    if(results[0].status==='fulfilled'){
+      state.fannis=extractList(results[0].value,['fannis','users','items','data']);
+      state.errors.fannis='';
+      console.log('Fannis loaded:', state.fannis.length);
+    }else{
+      state.fannis=[]; 
+      state.errors.fannis=results[0].reason?.message||'تعذر تحميل الفنيين';
+      console.error('Fannis error:', state.errors.fannis);
+      if(results[0].reason?.status===401){ clearToken(); renderLogin(); showToast('انتهت الجلسة - سجل دخول','error'); return; }
+    }
+    
+    // Topups
+    if(results[1].status==='fulfilled'){
+      state.topups=extractList(results[1].value,['requests','topups','items','data']);
+    }else{
+      state.topups=[]; state.errors.topups=results[1].reason?.message||'تعذر تحميل الشحن';
+      // لا نعتبر الشحن خطأ قاتل لو المسار غير موجود
+      if(state.errors.topups.includes('غير موجود')) state.errors.topups='';
+    }
+    
+    // Orders
+    if(results[2].status==='fulfilled'){
+      state.orders=extractList(results[2].value,['orders','items','requests','data']);
+      console.log('Orders loaded:', state.orders.length);
+    }else{
+      state.orders=[]; state.errors.orders=results[2].reason?.message||'تعذر تحميل الطلبات';
+      if(state.errors.orders.includes('غير موجود')) state.errors.orders='لا يوجد مسار الطلبات في الباك إند - راجع admin.js';
+    }
+    
+    // Complaints
+    if(results[3].status==='fulfilled'){
+      state.complaints=extractList(results[3].value,['complaints','items','data']);
+    }else{
+      state.complaints=[]; state.errors.complaints=results[3].reason?.message||'تعذر تحميل الشكاوى';
+      if(state.errors.complaints.includes('غير موجود')) state.errors.complaints='';
+    }
+    
+    // إظهار الأخطاء لو فيه
+    const allErrors = [state.errors.fannis, state.errors.orders, state.errors.topups, state.errors.complaints].filter(Boolean);
+    if(allErrors.length>0){
+      showToast('تحذير: ' + allErrors[0], 'error');
+    }
+    
+  }catch(e){
+    console.error('loadAll fatal:', e);
+    showToast('خطأ في التحميل: '+e.message,'error');
+  }finally{
+    state.loading=false; 
+    applyFilter(); applyTopupFilter(); applyOrderFilter(); applyComplaintFilter(); applyClientFilter(); applyServicesFilter();
+  }
+}
 async function loadOrders(){if(!getToken())return; state.loadingOrders=true; state.errors.orders=''; render(); try{const data=await tryApi(['/api/admin/orders'],{method:'GET'}); state.orders=extractList(data,['orders','items','requests']); state.errors.orders=''; applyOrderFilter();}catch(e){state.orders=[]; state.filteredOrders=[]; state.errors.orders=e.message||'تعذر تحميل الطلبات'; render();}finally{state.loadingOrders=false; if(state.tab==='orders')render();}}
 async function refreshCurrentTab(){if(state.tab==='orders')await loadOrders(); else if(state.tab==='complaints')await loadComplaints(); else if(state.tab==='services')await loadServices(); else await loadAll();}
 async function publishOrder(sn){sn=String(sn||'').trim().toUpperCase(); if(!/^SN\d{6}$/.test(sn)){showToast('كود الطلب غير صحيح','error');return;} if(state.publishingOrders.includes(sn))return; const order=state.orders.find(o=>String(o.sn||'').toUpperCase()===sn); if(!order){showToast('لم يتم العثور على الطلب','error');return;} if(order.status!=='قيد المراجعة'){showToast('الطلب ليس قيد المراجعة','warning');return;} if(!confirm(`هل تريد نشر الطلب ${sn} للفنيين؟`))return; state.publishingOrders.push(sn); render(); try{const result=await tryApi([`/api/orders/admin/${encodeURIComponent(sn)}/publish`],{method:'POST',body:JSON.stringify({})}); showToast(result.message||'تم نشر الطلب'); await loadOrders();}catch(e){showToast(e.message||'تعذر نشر الطلب','error');}finally{state.publishingOrders=state.publishingOrders.filter(item=>item!==sn); if(state.tab==='orders')render();}}
@@ -739,8 +808,25 @@ async function openClient(phone){setTab('orders'); state.search=phone; applyOrde
 async function blockClient(phone){if(!confirm('حظر العميل '+phone+'؟'))return; try{await tryApi([`/api/admin/clients/${encodeURIComponent(phone)}/block`],{method:'POST',body:JSON.stringify({reason:'إساءة'})}); showToast('تم حظر العميل');}catch(e){showToast(e.message);}}
 async function noteClient(phone){const note=prompt('ملاحظة داخلية للعميل '+phone); if(!note)return; try{await tryApi([`/api/admin/clients/${encodeURIComponent(phone)}/note`],{method:'POST',body:JSON.stringify({note})}); showToast('تم حفظ الملاحظة');}catch(e){showToast(e.message);}}
 
+
+function renderLogin(){
+  const app=document.getElementById('app');
+  app.innerHTML=`<div class="min-h-screen flex items-center justify-center p-4"><div class="premium-panel p-8 w-full max-w-sm"><h2 class="font-black text-[16px] text-center mb-6">🔐 تسجيل دخول الإدارة</h2><input id="login-phone" placeholder="رقم الهاتف أو الإيميل" class="field mb-3"><input id="login-pass" type="password" placeholder="كلمة المرور" class="field mb-4"><button onclick="doLogin()" class="w-full h-12 rounded-full bg-slate-900 text-white font-black">دخول</button><p class="text-[10px] text-center text-slate-400 mt-4">لو التوكن منتهي سجل دخول تاني</p></div></div>`;
+}
+async function doLogin(){
+  const phone=document.getElementById('login-phone')?.value;
+  const password=document.getElementById('login-pass')?.value;
+  if(!phone||!password){showToast('اكتب البيانات','error');return;}
+  try{
+    const res=await api('/api/admin/login',{method:'POST',body:JSON.stringify({phone, email:phone, password})});
+    if(res.ok && res.data?.token){ setToken(res.data.token); showToast('تم تسجيل الدخول'); loadAll(); }
+    else { showToast(res.data?.message||'فشل تسجيل الدخول','error'); }
+  }catch(e){ showToast(e.message,'error'); }
+}
+
 render();
-if(getToken()){loadAll();}
+if(getToken()){loadAll();}else{renderLogin();}
+
 </script>
 </body>
 </html>
