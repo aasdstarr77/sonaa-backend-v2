@@ -985,6 +985,7 @@ router.post('/:sn/offer', auth(), async (req, res, next) => {
       fanni: req.userId,
       fanniId: String(req.userId),
       fanniName: req.user.name,
+      fanniLevel: fanni.level || 'مبتدئ',
       fanniPhone: req.user.phone,
       price: String(price),
       priceNum: price,
