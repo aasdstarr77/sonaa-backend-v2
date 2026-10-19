@@ -337,7 +337,13 @@ function renderFannis(){
                   ${!f.isApproved&&!f.isDisabled?`<button onclick="event.stopPropagation();setPendingAction('${menuKey}','approve','قبول الفني')" class="dropdown-item">✓ قبول الفني</button><button onclick="event.stopPropagation();setPendingAction('${menuKey}','reject','رفض الفني')" class="dropdown-item">✕ رفض الفني</button>`:''}
                   ${!f.isDisabled?`<button onclick="event.stopPropagation();setPendingAction('${menuKey}','disable','تعطيل الفني')" class="dropdown-item">⛔ تعطيل</button>`: `<button onclick="event.stopPropagation();setPendingAction('${menuKey}','enable','استعادة الفني')" class="dropdown-item">♻️ استعادة</button>`}
                   <div class="h-px bg-slate-100 my-1"></div>
-                  <button onclick="event.stopPropagation();setPendingAction('${menuKey}','level_up','ترقية لمستوى خبير')" class="dropdown-item">⭐ ترقية لخبير</button>
+                  <div class="p-2 space-y-2 border-y border-slate-100 my-1">
+                    <label class="block text-[10px] font-black text-slate-500">المستوى المهني</label>
+                    <select id="level-${id}" onclick="event.stopPropagation()" class="field w-full text-[11px]">
+                      ${['مبتدئ','ممارس','محترف','خبير مبتدئ','خبير','خبير أول','استشاري فني','نخبة','أسطوري'].map(l=>`<option value="${escHtml(l)}" ${level===l?'selected':''}>${escHtml(l)}</option>`).join('')}
+                    </select>
+                    <button onclick="event.stopPropagation();updateFanniLevel('${id}',document.getElementById('level-${id}').value)" class="dropdown-item">حفظ المستوى المهني</button>
+                  </div>
                   <button onclick="event.stopPropagation();setPendingAction('${menuKey}','badge_trust','منح شارة موثوق')" class="dropdown-item">🛡️ منح موثوق</button>
                   <div class="h-px bg-slate-100 my-1"></div>
                   <button onclick="event.stopPropagation();setPendingAction('${menuKey}','delete','حذف نهائي')" class="dropdown-item text-red-600">🗑️ حذف نهائي</button>
@@ -379,9 +385,16 @@ function renderLevels(){
     <div class="premium-panel p-4">
       <h3 class="text-[12px] font-black mb-3">تعريف المستويات</h3>
       <div class="space-y-2">
-        <div class="flex justify-between items-center p-3 rounded-[12px] bg-slate-50 border"><span class="text-[11px] font-black">🌱 مبتدئ</span><span class="text-[10px] text-slate-500">0-10 طلبات</span></div>
-        <div class="flex justify-between items-center p-3 rounded-[12px] bg-blue-50 border border-blue-100"><span class="text-[11px] font-black">🔧 محترف</span><span class="text-[10px] text-blue-700">10-50 طلب</span></div>
-        <div class="flex justify-between items-center p-3 rounded-[12px] bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200"><span class="text-[11px] font-black">⭐ خبير معتمد</span><span class="text-[10px] text-amber-700">+50 طلب</span></div>
+        <div class="flex justify-between items-center p-2.5 rounded-[12px] bg-slate-50 border"><span class="text-[11px] font-black">🌱 فني مبتدئ</span><span class="text-[10px] text-slate-500">0-4 أعمال</span></div>
+        <div class="flex justify-between items-center p-2.5 rounded-[12px] bg-slate-50 border"><span class="text-[11px] font-black">🧰 فني ممارس</span><span class="text-[10px] text-slate-500">5-9 أعمال</span></div>
+        <div class="flex justify-between items-center p-2.5 rounded-[12px] bg-blue-50 border border-blue-100"><span class="text-[11px] font-black">🔧 فني محترف</span><span class="text-[10px] text-blue-700">10-19 عملًا</span></div>
+        <div class="flex justify-between items-center p-2.5 rounded-[12px] bg-indigo-50 border border-indigo-100"><span class="text-[11px] font-black">⭐ خبير مبتدئ</span><span class="text-[10px] text-indigo-700">20-29 عملًا</span></div>
+        <div class="flex justify-between items-center p-2.5 rounded-[12px] bg-amber-50 border border-amber-100"><span class="text-[11px] font-black">🏅 خبير</span><span class="text-[10px] text-amber-700">30-44 عملًا</span></div>
+        <div class="flex justify-between items-center p-2.5 rounded-[12px] bg-amber-50 border border-amber-200"><span class="text-[11px] font-black">🥇 خبير أول</span><span class="text-[10px] text-amber-700">45-59 عملًا</span></div>
+        <div class="flex justify-between items-center p-2.5 rounded-[12px] bg-purple-50 border border-purple-100"><span class="text-[11px] font-black">🎓 استشاري فني</span><span class="text-[10px] text-purple-700">60-74 عملًا</span></div>
+        <div class="flex justify-between items-center p-2.5 rounded-[12px] bg-emerald-50 border border-emerald-100"><span class="text-[11px] font-black">💎 نخبة</span><span class="text-[10px] text-emerald-700">75-99 عملًا</span></div>
+        <div class="flex justify-between items-center p-2.5 rounded-[12px] bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200"><span class="text-[11px] font-black">👑 أسطوري</span><span class="text-[10px] text-amber-700">100+ عمل</span></div>
+        <p class="text-[10px] text-slate-500">عدد الأعمال إرشادي؛ التقييم والثقة واعتماد الإدارة عوامل مؤثرة في الترقية.</p>
       </div>
     </div>
     ${renderFannis()}
