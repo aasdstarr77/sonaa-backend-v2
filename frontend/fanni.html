@@ -816,7 +816,7 @@ async function doLogin(){
 
   toast('تم تسجيل الدخول بنجاح');
   await loadProfile();
-  await Promise.allSettled([loadOrders(),loadMyOffers(),loadWalletHistory()]);
+  await Promise.allSettled([loadOrders(),loadMyOffers(),loadWalletHistory(),loadNotifications()]);
  }catch(e){
   state.loading=false;
 
@@ -1159,7 +1159,7 @@ async function start(){
 
   if(!getToken())return;
 
-  await Promise.allSettled([loadOrders(),loadMyOffers(),loadWalletHistory()]);
+  await Promise.allSettled([loadOrders(),loadMyOffers(),loadWalletHistory(),loadNotifications()]);
  }finally{
   state.checkingSession=false;
  }
