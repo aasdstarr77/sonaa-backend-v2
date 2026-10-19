@@ -315,31 +315,75 @@ function toggleSpecialty(s){
  render();
 }
 
-function applyFilter(){
- const acceptedSn=new Set(
+function fanniCanHandleServiceFrontend(specialties, serviceName) {
+ if (!Array.isArray(specialties) || !serviceName) return false;
+
+ const normalize = value => String(value || '')
+  .trim()
+  .replace(/\s+/g, ' ');
+
+ const service = normalize(serviceName);
+ const selected = specialties.map(normalize).filter(Boolean);
+
+ if (selected.includes(service)) return true;
+
+ const category = CATEGORIES.find(cat =>
+  Array.isArray(cat.services) &&
+  cat.services.some(item => normalize(item) === service)
+ );
+
+ if (!category) return false;
+
+ return selected.includes(normalize(category.label));
+}
+
+function applyFilter() {
+ const specialties = Array.isArray(currentUser?.specialties)
+  ? currentUser.specialties
+  : [];
+
+ const acceptedSn = new Set(
   state.myOffers
-   .filter(o=>o?.accepted===true)
-   .map(o=>String(o.orderSn||o.sn||o.order?.sn||'').trim().toUpperCase())
+   .filter(o => o?.accepted === true)
+   .map(o => String(o.orderSn || o.sn || o.order?.sn || '').trim().toUpperCase())
    .filter(Boolean)
  );
 
- let list=[...state.orders].filter(o=>{
-  const sn=String(o.sn||o.orderSn||o.order?.sn||'').trim().toUpperCase();
-  return !sn||!acceptedSn.has(sn);
+ let list = [...state.orders].filter(o => {
+  const sn = String(o.sn || o.orderSn || o.order?.sn || '')
+   .trim()
+   .toUpperCase();
+
+  return !sn || !acceptedSn.has(sn);
  });
 
- if(state.filterSkill!=='الكل'){
-  list=list.filter(o=>String(o.service||o.specialty||'')===state.filterSkill);
+ if (specialties.length) {
+  list = list.filter(o => {
+   const service = o.service || o.specialty || o.order?.service || '';
+   return fanniCanHandleServiceFrontend(specialties, service);
+  });
+ } else {
+  list = [];
  }
 
- if(state.search){
-  const q=state.search.toLowerCase();
-  list=list.filter(o=>[o.sn,o.area,o.service,o.specialty].some(x=>String(x||'').toLowerCase().includes(q)));
+ if (state.filterSkill !== 'الكل') {
+  list = list.filter(o =>
+   String(o.service || o.specialty || o.order?.service || '') === state.filterSkill
+  );
  }
 
- state.filteredOrders=list;
+ if (state.search) {
+  const q = state.search.toLowerCase();
+
+  list = list.filter(o =>
+   [o.sn, o.area, o.service, o.specialty, o.order?.service]
+    .some(x => String(x || '').toLowerCase().includes(q))
+  );
+ }
+
+ state.filteredOrders = list;
 }
-
+ 
 function onSearch(v){
  state.search=clean(v,50);
  applyFilter();
