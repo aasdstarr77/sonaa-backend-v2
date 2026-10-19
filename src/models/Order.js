@@ -75,6 +75,14 @@ uppercase: true,
 match: /^SN\d{6}$/
 },
 
+// حساب العميل صاحب الطلب؛ يظل اختياريًا لتوافق الطلبات القديمة.
+clientAccount: {
+type: mongoose.Schema.Types.ObjectId,
+ref: 'Client',
+default: null,
+index: true
+},
+
 service: {
 type: String,
 required: true,
@@ -245,5 +253,7 @@ orderSchema.index({
 assignedFanni: 1,
 status: 1
 });
+
+orderSchema.index({ clientAccount: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Order', orderSchema);
