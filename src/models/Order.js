@@ -20,6 +20,13 @@ trim: true,
 maxlength: 50
 },
 
+fanniLevel: {
+type: String,
+trim: true,
+maxlength: 30,
+default: 'مبتدئ'
+},
+
 fanniPhone: {
 type: String,
 trim: true
