@@ -28,18 +28,37 @@ app.disable('x-powered-by');
 app.set('trust proxy', 1);
 
 app.use(helmet({
-  contentSecurityPolicy: false,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.tailwindcss.com'],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      connectSrc: ["'self'", 'https://sonaa-backend-v2.vercel.app'],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      frameAncestors: ["'none'"]
+    }
+  },
   crossOriginEmbedderPolicy: false
 }));
 
 // Restrict browser access to explicitly configured origins. Requests without
 // an Origin header (for example native apps/server-to-server calls) remain valid.
-const allowedOrigins = new Set(
-  String(process.env.ALLOWED_ORIGINS || 'https://sonaa-backend-v2.vercel.app,http://localhost:3000,http://localhost:5173')
-    .split(',')
-    .map(origin => origin.trim())
-    .filter(Boolean)
-);
+const configuredOrigins = String(process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map(origin => origin.trim())
+  .filter(Boolean);
+
+const allowedOrigins = new Set([
+  ...configuredOrigins,
+  'https://sonaa-backend-v2.vercel.app',
+  ...(process.env.NODE_ENV === 'production'
+    ? []
+    : ['http://localhost:3000', 'http://localhost:5173'])
+]);
 
 app.use(cors({
   origin(origin, callback) {
