@@ -115,7 +115,7 @@ function validateNoPhoneInCustomerFields(payload){
   }
   return true;
 }
-const AREA_OPTIONS=[
+let AREA_OPTIONS=[
   'القاهرة - وسط البلد','القاهرة - العباسية','القاهرة - مدينة نصر','القاهرة - مصر الجديدة','القاهرة - عين شمس','القاهرة - المطرية','القاهرة - المرج','القاهرة - شبرا','القاهرة - الساحل','القاهرة - روض الفرج','القاهرة - الزيتون','القاهرة - حدائق القبة','القاهرة - الوايلي','القاهرة - منشية ناصر','القاهرة - المعادي','القاهرة - زهراء المعادي','القاهرة - طرة','القاهرة - حلوان','القاهرة - التبين','القاهرة - دار السلام','القاهرة - البساتين','القاهرة - المقطم','القاهرة - الخليفة','القاهرة - السيدة زينب','القاهرة - مصر القديمة','القاهرة - التجمع الأول','القاهرة - التجمع الثالث','القاهرة - التجمع الخامس','القاهرة - الرحاب','القاهرة - مدينتي','القاهرة - الشروق','القاهرة - بدر','القاهرة - العاصمة الإدارية','الجيزة - الدقي','الجيزة - المهندسين','الجيزة - العجوزة','الجيزة - إمبابة','الجيزة - الوراق','الجيزة - بولاق الدكرور','الجيزة - فيصل','الجيزة - الهرم','الجيزة - الطالبية','الجيزة - العمرانية','الجيزة - الجيزة','الجيزة - المنيل','الجيزة - حدائق الأهرام','الجيزة - حدائق أكتوبر','الجيزة - 6 أكتوبر','الجيزة - الشيخ زايد','الجيزة - الحوامدية','الجيزة - أبو النمرس','الجيزة - كرداسة','الجيزة - أوسيم','الجيزة - منشأة القناطر','الجيزة - الصف','الجيزة - أطفيح','القليوبية - شبرا الخيمة','القليوبية - الخصوص','القليوبية - قليوب','القليوبية - القناطر الخيرية','القليوبية - العبور','القليوبية - الخانكة','القليوبية - بنها','منطقة أخرى داخل القاهرة الكبرى'
 ];
 const VALIDATORS={
@@ -156,6 +156,10 @@ const API={
       throw error;
     }
     return data;
+  },
+  async getAreas(){
+    const data=await this.request('/api/areas',{method:'GET'});
+    return Array.isArray(data?.areas)?data.areas:[];
   },
   async getServices(){
     const data=await this.request('/api/services',{method:'GET'});
@@ -724,6 +728,10 @@ function onClientNameInput(value){
   if(rejectPhoneInField(clean,'اسم العميل')){state.clientName='';const input=document.getElementById('clientNameInput');if(input)input.value='';return;}
   state.clientName=clean;
 }
+async function loadAreas(){
+  try{const areas=await API.getAreas();if(areas.length){AREA_OPTIONS=[...new Set([...AREA_OPTIONS,...areas])];render();}}
+  catch(error){log('تعذر تحديث قائمة المناطق:',error);}
+}
 function onAreaInput(value){
   if(!AREA_OPTIONS.includes(value)&&value!==''){state.area='';return;}
   if(rejectPhoneInField(value,'المنطقة')){state.area='';const input=document.getElementById('areaInput');if(input)input.value='';return;}
@@ -896,7 +904,7 @@ async function sendComplaint(){
   }catch(error){showToast(error.message||'تعذر إرسال الشكوى حاليًا.');}finally{state.complaintLoading=false;render();}
 }
 document.addEventListener('DOMContentLoaded',()=>{
-  loadServices();render();
+  loadServices();loadAreas();render();
   document.addEventListener('click',handleOutsideServiceClick);
 });
 render();
