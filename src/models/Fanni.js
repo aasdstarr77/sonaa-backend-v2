@@ -19,7 +19,10 @@ const decisionSchema = new mongoose.Schema({
       'تعديل حد',
       'تجميد محفظة',
       'إلغاء تجميد',
-      'تعديل ثقة'
+      'تعديل ثقة',
+      'ترقية إداري',
+      'تغيير منصب إداري',
+      'سحب صلاحية إدارية'
     ],
     required: true
   },
@@ -93,6 +96,13 @@ const fanniSchema = new mongoose.Schema({
     type: String,
     enum: ['fanni', 'admin'],
     default: 'fanni'
+  },
+  // صلاحية إدارية إضافية للفني دون تغيير حسابه أو تعطيل عمله كفني
+  adminRole: {
+    type: String,
+    enum: ['مشرف', 'مشرف أول', 'مدير', 'قراءة فقط'],
+    default: null,
+    index: true
   },
 
   // ========== الحقول الجديدة للوحة الإدارة الفخمة - 22 قسم ==========
