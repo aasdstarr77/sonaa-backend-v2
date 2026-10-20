@@ -318,6 +318,7 @@ function goClient(){
  location.href=location.origin+'/';
 }
 
+function goBack(){try{const ref=document.referrer;if(ref){const u=new URL(ref,location.href);if(u.origin===location.origin&&u.href!==location.href){history.back();return;}}}catch(e){}location.href='/';}
 function logout(){
  clearAuth();
  currentUser=null;
@@ -502,16 +503,17 @@ function render(){
  <header class="sticky top-0 z-40 bg-[#0b1b3a] text-white shadow-lg">
   <div class="mx-auto max-w-[680px] px-3 py-3 flex items-center justify-between gap-3">
    <div class="flex items-center gap-3 min-w-0">
-    <div class="h-11 w-11 rounded-2xl bg-blue-600 flex items-center justify-center font-black text-[21px] shrink-0">S</div>
+    <div class="h-11 w-11 rounded-2xl bg-[#F8FAFC] border-2 border-[#14B8A6] flex items-center justify-center shrink-0"><svg class="sonaa-logo-svg" width="30" height="30" viewBox="0 0 64 64" fill="none" role="img" aria-label="شعار صُنّاع"><circle cx="32" cy="32" r="27" stroke="#14B8A6" stroke-width="3.5"/><text x="32" y="43" text-anchor="middle" font-family="Cairo, sans-serif" font-size="34" font-weight="900" fill="#0F172A">ص</text></svg></div>
     <div class="min-w-0"><h1 class="font-extrabold text-[16px]">صناع</h1><div class="text-[10px] text-blue-100/75 mt-0.5 truncate">${authenticated?esc(user?.name||'فني')+' · الرصيد '+esc(balance)+' جنيه':'لوحة الفني والخدمات'}</div>${authenticated?`<div class="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-amber-200/30 bg-amber-400/15 px-2.5 py-1 text-[10px] font-extrabold text-amber-100"><span>مستواك المهني:</span><span>${esc(user?.level||'مبتدئ')}</span></div>`:''}</div>
    </div>
    <div class="flex items-center gap-2 shrink-0"><button onclick="toggleNotifications()" aria-label="الإشعارات" class="relative h-9 w-9 rounded-xl border border-amber-200 bg-amber-50 text-[18px] text-amber-600">🔔${notificationBadge()}</button>
-    <a href="/" aria-label="الصفحة الرئيسية" title="الصفحة الرئيسية" class="h-9 w-9 rounded-xl bg-blue-600 hover:bg-blue-500 flex items-center justify-center shrink-0"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7"/><path d="M5 9v12h14V9"/><path d="M9 21v-7h6v7"/></svg></a>
+    
     ${authenticated?'<button onclick="logout()" class="h-9 px-3 rounded-xl bg-white/10 text-[11px] font-bold">خروج</button>':''}
    </div>
   </div>
- ${notificationPanel()}
- </header>
+  <div class="mx-auto max-w-[680px] px-3 pb-2 flex gap-2"><button type="button" onclick="goBack()" class="h-9 px-3 rounded-xl border border-white/20 bg-white/10 text-white text-[11px] font-extrabold">← رجوع</button><a href="/" aria-label="القائمة الرئيسية" title="القائمة الرئيسية" class="h-9 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 flex items-center justify-center text-white text-[11px] font-extrabold">⌂ القائمة الرئيسية</a></div>
+  ${notificationPanel()}
+  </header>
 
  <main class="mx-auto max-w-[680px] px-3 pb-[112px]">
  ${!authenticated?`
@@ -557,7 +559,7 @@ function render(){
     <div>
       <label class="field-label">منطقة العمل أو الحي اللي حابب تشتغل فيه *</label>
       <input class="field" autocomplete="address-level2" maxlength="60" value="${esc(state.regAreaCustom)}" oninput="state.regAreaCustom=this.value.slice(0,60)" placeholder="مثال: شبرا، المعادي، فيصل...">
-      <p class="mt-1 text-[10px] text-slate-500">اكتب المنطقة أو الحي بنفسك. مش لازم تختار من قائمة.</p>
+      <p class="mt-1 text-[10px] text-slate-500">اكتب اسم المنطقة أو الحي. مش لازم تختار من قائمة.</p>
      </div>
     <div><label class="field-label">كلمة السر *</label><input type="password" class="field" autocomplete="new-password" value="${esc(state.regPass)}" oninput="state.regPass=this.value.slice(0,100)" placeholder="6 أحرف على الأقل"></div>
     <div><label class="field-label">تأكيد كلمة السر *</label><input type="password" class="field" autocomplete="new-password" value="${esc(state.regPassConfirm)}" oninput="state.regPassConfirm=this.value.slice(0,100)" placeholder="اكتب كلمة السر مرة تانية"><p class="text-[10px] text-slate-500 mt-1">لازم تكون مطابقة لكلمة السر الأولى.</p></div>
