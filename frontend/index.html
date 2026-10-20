@@ -18,8 +18,8 @@
     .shell{width:min(1120px,calc(100% - 36px));margin:auto}
     .topbar{height:82px;display:flex;align-items:center;justify-content:space-between;gap:16px}
     .brand{display:flex;align-items:center;gap:11px;font-weight:900;color:var(--navy);font-size:25px;letter-spacing:-.5px}
-    .brand-mark{width:45px;height:45px;border-radius:15px;background:linear-gradient(145deg,#ffcf4c,#f1aa12);display:grid;place-items:center;box-shadow:0 8px 18px #f5b92838;color:var(--navy)}
-    .brand-mark svg{width:27px;height:27px}
+    .brand-mark{width:45px;height:45px;border-radius:15px;background:#F8FAFC;border:2px solid #14B8A6;display:grid;place-items:center;box-shadow:0 8px 18px #0f172a18;color:var(--navy)}
+    .brand-mark svg{width:34px;height:34px}
     .top-note{font-size:13px;font-weight:700;color:#64748b;background:#fff;border:1px solid var(--line);border-radius:999px;padding:9px 15px}
     .hero{position:relative;isolation:isolate;overflow:hidden;border-radius:30px;background:radial-gradient(circle at 10% 10%,#28528a 0,transparent 35%),linear-gradient(125deg,#0b1b3a,#123568 68%,#19477d);color:#fff;padding:clamp(28px,5vw,60px);box-shadow:0 24px 55px #0b1b3a20}
     .hero:before,.hero:after{content:"";position:absolute;border:1px solid #ffffff14;border-radius:50%;z-index:-1}
@@ -36,7 +36,8 @@
     .section-head{text-align:center;margin:0 auto 24px}
     .section-head h2{margin:0;color:var(--navy);font-size:clamp(23px,3vw,31px);font-weight:900}
     .section-head p{margin:7px 0 0;color:var(--muted);font-size:14px}
-    .cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+    .cards{display:grid;grid-template-columns:1fr;gap:14px;max-width:760px;margin:0 auto}
+    .entry.customer{order:1}.entry.technician{order:2}
     .entry{position:relative;display:flex;flex-direction:column;min-height:295px;padding:27px;border-radius:25px;background:#fff;border:1px solid var(--line);box-shadow:0 10px 30px #15254408;transition:transform .2s,box-shadow .2s,border-color .2s;overflow:hidden}
     .entry:hover{transform:translateY(-4px);box-shadow:0 20px 38px #15254412;border-color:#cbd9ee}
     .entry:focus-visible{outline:3px solid #f5b928;outline-offset:4px}
@@ -57,6 +58,7 @@
     .trust-row span{display:inline-flex;align-items:center;gap:7px}
     .trust-row svg{width:17px;height:17px;color:#2c7b61}
     footer{border-top:1px solid var(--line);padding:17px 0 25px;text-align:center;color:#8995a7;font-size:12px}
+    .home-nav{display:flex;align-items:center;gap:8px;padding:0 0 10px}.home-nav a,.home-nav button{border:1px solid var(--line);background:#fff;border-radius:12px;padding:8px 12px;color:var(--navy);font-size:12px;font-weight:800}
     @media(max-width:650px){.shell{width:min(100% - 24px,520px)}.topbar{height:70px}.brand{font-size:22px}.brand-mark{width:40px;height:40px;border-radius:13px}.top-note{font-size:11px;padding:7px 10px}.hero{border-radius:24px;padding:29px 22px}.hero-copy{line-height:1.9}.cards{grid-template-columns:1fr;gap:14px}.entry{min-height:260px;padding:23px;border-radius:21px}.entry-icon{width:72px;height:72px;border-radius:22px}.entry h3{font-size:22px}.action-hint{font-size:11px}.choose{padding-top:31px}.trust-row{gap:10px 16px}}
     @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important}}
   </style>
@@ -64,11 +66,12 @@
 <body>
   <header class="shell topbar">
     <a class="brand" href="/" aria-label="صُنّاع - الصفحة الرئيسية">
-      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6.5a5 5 0 0 0-6.9 6.9L3 18l3 3 4.6-4.6a5 5 0 0 0 6.9-6.9L14 13l-3-3 3.5-3.5Z"/><path d="m16 4 4 4"/></svg></span>
+      <span class="brand-mark" aria-hidden="true"><svg class="sonaa-logo-svg" width="30" height="30" viewBox="0 0 64 64" fill="none" role="img" aria-label="شعار صُنّاع"><circle cx="32" cy="32" r="27" stroke="#14B8A6" stroke-width="3.5"/><text x="32" y="43" text-anchor="middle" font-family="Cairo, sans-serif" font-size="34" font-weight="900" fill="#0F172A">ص</text></svg></span>
       <span>صُنّاع</span>
     </a>
     <span class="top-note">خدمات أقرب.. وفرص أكبر</span>
   </header>
+  <nav class="shell home-nav" aria-label="التنقل"><button type="button" onclick="if(history.length>1)history.back()">← رجوع</button><a href="/" aria-label="القائمة الرئيسية">⌂ القائمة الرئيسية</a></nav>
 
   <main class="shell">
     <section class="hero">
