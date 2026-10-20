@@ -670,7 +670,7 @@ router.get('/my-offers', auth(), async (req, res, next) => {
           ...sanitizeOffer(offer),
           orderSn: order.sn,
           orderStatus: order.status,
-          chatMessages: (order.chatMessages || []).filter(m => isAcceptedByThisFanni ? (!m.targetOfferId || String(m.targetOfferId) === String(order.acceptedOfferId || '')) : String(m.targetOfferId || '') === String(offer._id)).map(m => ({ senderRole: m.senderRole, text: m.text, targetOfferId: m.targetOfferId || '', createdAt: m.createdAt })),
+          chatMessages: (order.chatMessages || []).filter(m => isAcceptedByThisFanni ? String(m.targetOfferId || '') === String(order.acceptedOfferId || '') : String(m.targetOfferId || '') === String(offer._id)).map(m => ({ senderRole: m.senderRole, text: m.text, targetOfferId: m.targetOfferId || '', createdAt: m.createdAt })),
           service: order.service,
           accepted: isAcceptedByThisFanni,
           completed: isCompletedByThisFanni
@@ -1441,7 +1441,7 @@ router.get('/:sn/chat', async (req, res, next) => {
     const accepted = ['تم اختيار فني', 'تم الانتهاء'].includes(order.status);
     if (!isClient && accepted && String(order.assignedFanni || '') !== String(fanniId)) return res.status(403).json({ message: 'المحادثة بعد القبول متاحة للفني المعيّن فقط.' });
     const visibleMessages = (order.chatMessages || []).filter(m => {
-      if (accepted) return !m.targetOfferId || String(m.targetOfferId) === String(order.acceptedOfferId || '');
+      if (accepted) return isClient ? (!m.targetOfferId || String(m.targetOfferId) === String(order.acceptedOfferId || '')) : String(m.targetOfferId || '') === String(order.acceptedOfferId || '');
       if (isClient) return Boolean(m.targetOfferId);
       return String(m.targetOfferId || '') === String(technicianOffer._id);
     }).map(m => ({ senderRole: m.senderRole, text: m.text, targetOfferId: m.targetOfferId || '', createdAt: m.createdAt }));
