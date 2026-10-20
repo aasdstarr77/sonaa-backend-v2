@@ -217,7 +217,7 @@ const API={
   async getOrder(sn){
     const cleanSN=sanitizeInput(sn,20).toUpperCase();
     if(!VALIDATORS.sn(cleanSN))throw new Error('كود التتبع غير صحيح. راجع الكود وحاول مرة أخرى.');
-    const token=state.accountToken||this.getClientToken(cleanSN);
+    const token=this.getClientToken(cleanSN)||state.accountToken;
     const headers={};
     if(token)headers.Authorization='Bearer '+token;
     const data=await this.request('/api/orders/'+encodeURIComponent(cleanSN),{method:'GET',headers});
@@ -227,7 +227,7 @@ const API={
     const cleanSN=sanitizeInput(sn,20).toUpperCase();
     if(!VALIDATORS.sn(cleanSN))throw new Error('كود الطلب غير صحيح.');
     if(!offerId)throw new Error('تعذر تحديد العرض المطلوب.');
-    const token=state.accountToken||this.getClientToken(cleanSN);
+    const token=this.getClientToken(cleanSN)||state.accountToken;
     if(!token)throw new Error('لم نتمكن من تأكيد ملكية الطلب على هذا الجهاز. استخدم الجهاز الذي أنشأت الطلب منه، أو الجهاز الذي حُفظت عليه بيانات المتابعة.');
     return this.request('/api/orders/'+encodeURIComponent(cleanSN)+'/accept',{
       method:'POST',
@@ -235,13 +235,13 @@ const API={
       body:JSON.stringify({offerId,clientToken:token})
     });
   },
-  async chat(sn){const token=state.accountToken||this.getClientToken(sn);if(!token)throw new Error('سجّل الدخول لمتابعة المحادثة.');return this.request('/api/orders/'+encodeURIComponent(sn)+'/chat',{method:'GET',headers:{Authorization:'Bearer '+token}});},
-  async sendChat(sn,text){const token=state.accountToken||this.getClientToken(sn);if(!token)throw new Error('سجّل الدخول لمتابعة المحادثة.');return this.request('/api/orders/'+encodeURIComponent(sn)+'/chat',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({text})});},
-  async decidePrice(sn,id,approved){const token=state.accountToken||this.getClientToken(sn);if(!token)throw new Error('سجّل الدخول لمتابعة الطلب.');return this.request('/api/orders/'+encodeURIComponent(sn)+'/price-change/'+encodeURIComponent(id)+'/decision',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({approved})});},
+  async chat(sn){const token=this.getClientToken(sn)||state.accountToken;if(!token)throw new Error('سجّل الدخول لمتابعة المحادثة.');return this.request('/api/orders/'+encodeURIComponent(sn)+'/chat',{method:'GET',headers:{Authorization:'Bearer '+token}});},
+  async sendChat(sn,text){const token=this.getClientToken(sn)||state.accountToken;if(!token)throw new Error('سجّل الدخول لمتابعة المحادثة.');return this.request('/api/orders/'+encodeURIComponent(sn)+'/chat',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({text})});},
+  async decidePrice(sn,id,approved){const token=this.getClientToken(sn)||state.accountToken;if(!token)throw new Error('سجّل الدخول لمتابعة الطلب.');return this.request('/api/orders/'+encodeURIComponent(sn)+'/price-change/'+encodeURIComponent(id)+'/decision',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({approved})});},
   async rateOrder(sn,payload){
     const cleanSN=sanitizeInput(sn,20).toUpperCase();
     if(!VALIDATORS.sn(cleanSN))throw new Error('كود الطلب غير صحيح.');
-    const token=state.accountToken||this.getClientToken(cleanSN);
+    const token=this.getClientToken(cleanSN)||state.accountToken;
     if(!token)throw new Error('لازم تسجّل الدخول بحسابك لمتابعة الطلب حتى نتحقق من ملكيتك.');
     return this.request('/api/orders/'+encodeURIComponent(cleanSN)+'/rating',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({...payload,clientToken:token})});
   },
@@ -636,17 +636,18 @@ onclick="selectServiceByIndex(${ALL_SERVICES.indexOf(s)})"
           <div class="mt-3 rounded-xl bg-emerald-50 border border-emerald-200 p-4">
             <p class="font-extrabold text-[13px] text-emerald-800">${state.tracked.status==='تم الانتهاء'?'تم إنهاء المهمة':'تم قبول العرض وتعيين الفني لطلبك'}</p>
             ${state.tracked.acceptedOfferPrice!=null?`<p class="mt-2 text-[12px] text-emerald-800">سعر التنفيذ المتفق عليه: <strong>${escHtml(String(state.tracked.acceptedOfferPrice))} جنيه</strong></p>`:''}
-            ${state.tracked.assignedFanniName?`<p class="mt-2 text-[12px] text-emerald-800">اسم الفني: <strong>${escHtml(state.tracked.assignedFanniName)}</strong></p>`:''}
-            ${state.tracked.assignedFanniPhone?`
+            ${state.tracked.status==='تم اختيار فني' && state.tracked.assignedFanniName?`<p class="mt-2 text-[12px] text-emerald-800">اسم الفني: <strong>${escHtml(state.tracked.assignedFanniName)}</strong></p>`:''}
+            ${state.tracked.status==='تم اختيار فني' && state.tracked.assignedFanniPhone?`
               <p class="mt-2 text-[12px] text-emerald-800">رقم تليفون الفني:</p>
               <a href="tel:${escAttr(String(state.tracked.assignedFanniPhone).replace(/[^0-9+]/g,''))}" class="mt-2 flex items-center justify-center gap-2 rounded-xl bg-emerald-600 text-white font-extrabold p-3" dir="ltr">
                 📞 ${escHtml(state.tracked.assignedFanniPhone)}
               </a>
             `:`
-              <p class="mt-2 text-[12px] leading-6 text-emerald-800">تم اختيار الفني، لكن رقم تليفونه غير متاح في الاستجابة الحالية. لو استمرت المشكلة، راجع الإدارة.</p>
+              ${state.tracked.status==='تم اختيار فني'?'<p class="mt-2 text-[12px] leading-6 text-emerald-800">تم اختيار الفني، لكن رقم تليفونه غير متاح في الاستجابة الحالية. لو استمرت المشكلة، راجع الإدارة.</p>':''}
             `}
           </div>
         `:''}
+        ${state.tracked.status!=='تم الانتهاء'?`
         <div class="mt-5">
           <h4 class="font-extrabold text-[14px]">عروض الفنيين (${Array.isArray(state.tracked.offers)?state.tracked.offers.length:0})</h4>
           ${(state.tracked.offers||[]).length===0
@@ -672,6 +673,7 @@ ${state.tracked.acceptedOfferId && String(state.tracked.acceptedOfferId)===offer
               </div>`;
             }).join('')}
         </div>
+        `:''}
         <div class="mt-4 rounded-xl border border-slate-200 p-4"><h4 class="font-extrabold text-[13px]">محادثة الطلب</h4><p class="mt-1 text-[10px] text-slate-500">المحادثة محفوظة على الطلب. أي تعديل للسعر يحتاج موافقتك الصريحة داخل المنصة.</p>${Array.isArray(state.tracked.chatMessages)?state.tracked.chatMessages.map(m=>'<div class="mt-2 rounded-lg p-2 '+(m.senderRole==='client'?'bg-blue-50':'bg-emerald-50')+'"><p class="text-[10px] font-bold">'+(m.senderRole==='client'?'أنت':'الفني')+'</p><p class="text-[12px] whitespace-pre-wrap break-words">'+escHtml(m.text||'')+'</p></div>').join(''):''}${(state.tracked.priceChangeRequests||[]).filter(r=>r.status==='قيد الموافقة').map(r=>'<div class="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3"><p class="text-[12px] font-extrabold">طلب تعديل السعر إلى '+escHtml(String(r.newPrice))+' جنيه</p><p class="mt-1 text-[11px]">'+escHtml(r.reason||'')+'</p><div class="mt-2 flex gap-2"><button type="button" onclick="decideClientPrice(\''+escAttr(state.tracked.sn)+'\',\''+escAttr(r._id)+'\',true)" class="flex-1 rounded-lg bg-emerald-600 p-2 text-white text-xs font-bold">موافقة</button><button type="button" onclick="decideClientPrice(\''+escAttr(state.tracked.sn)+'\',\''+escAttr(r._id)+'\',false)" class="flex-1 rounded-lg bg-red-600 p-2 text-white text-xs font-bold">رفض</button></div></div>').join('')}<textarea id="clientChatText" maxlength="1000" class="field mt-3 min-h-[72px]" placeholder="اكتب استفسارك أو رسالتك..."></textarea><button type="button" onclick="sendClientChat(\''+escAttr(state.tracked.sn)+'\')" class="mt-2 w-full h-10 rounded-xl blue-btn font-extrabold text-[12px]">إرسال الرسالة</button></div>
         ${state.tracked.status==='تم الانتهاء' && state.tracked.canRate ? '<div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4"><h4 class="font-extrabold text-[14px] text-amber-900">قيّم الفني بعد انتهاء المهمة</h4><p class="mt-1 text-[11px] text-amber-800">تقييمك يظهر لك وللفني، والتعليق اختياري.</p><label class="block mt-3 text-[12px] font-extrabold">عدد النجوم</label><select class="field mt-1" onchange="state.ratingStars=Number(this.value);render()">'+[5,4,3,2,1].map(n=>'<option value="'+n+'" '+(state.ratingStars===n?'selected':'')+'>'+('★'.repeat(n))+' — '+n+' نجوم</option>').join('')+'</select><label class="block mt-3 text-[12px] font-extrabold">تعليق (اختياري)</label><textarea id="clientRatingComment" class="field mt-1 min-h-[80px]" maxlength="500" placeholder="اكتب ملاحظتك عن التعامل..." oninput="state.ratingComment=this.value">'+escHtml(state.ratingComment)+'</textarea>'+(state.ratingStars===1?'<label class="mt-3 flex items-start gap-2 text-[12px] font-bold text-red-800"><input id="clientRatingBlock" type="checkbox" class="mt-1"> عدم عرض طلباتي المستقبلية على هذا الفني</label>':'')+'<button type="button" onclick="submitClientRating(\''+escAttr(state.tracked.sn)+'\')" '+(state.ratingSubmitting?'disabled':'')+' class="mt-3 w-full h-11 rounded-xl bg-amber-500 text-white font-extrabold text-[12px]">'+(state.ratingSubmitting?'جاري حفظ التقييم...':'إرسال التقييم')+'</button></div>' : ''}
         ${Array.isArray(state.tracked.ratings)&&state.tracked.ratings.length ? '<div class="mt-4 rounded-xl border border-slate-200 p-4"><h4 class="font-extrabold text-[13px]">التقييمات المتبادلة</h4>'+state.tracked.ratings.map(r=>'<div class="mt-3 border-t border-slate-100 pt-3"><p class="text-[12px] font-extrabold">'+(r.reviewerRole==='client'?'تقييم العميل للفني':'تقييم الفني للعميل')+' — '+('★'.repeat(Math.max(0,Math.min(5,Number(r.stars)||0))))+' '+(Number(r.stars)||0)+'/5</p>'+(r.comment?'<p class="mt-1 text-[12px] leading-5 text-slate-600">'+escHtml(r.comment)+'</p>':'')+'</div>').join('')+'</div>' : ''}
