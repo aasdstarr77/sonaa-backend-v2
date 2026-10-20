@@ -506,7 +506,7 @@ function render(){
     <div class="min-w-0"><h1 class="font-extrabold text-[16px]">صناع</h1><div class="text-[10px] text-blue-100/75 mt-0.5 truncate">${authenticated?esc(user?.name||'فني')+' · الرصيد '+esc(balance)+' جنيه':'لوحة الفني والخدمات'}</div>${authenticated?`<div class="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-amber-200/30 bg-amber-400/15 px-2.5 py-1 text-[10px] font-extrabold text-amber-100"><span>مستواك المهني:</span><span>${esc(user?.level||'مبتدئ')}</span></div>`:''}</div>
    </div>
    <div class="flex items-center gap-2 shrink-0"><button onclick="toggleNotifications()" aria-label="الإشعارات" class="relative h-9 w-9 rounded-xl border border-amber-200 bg-amber-50 text-[18px] text-amber-600">🔔${notificationBadge()}</button>
-    <button onclick="goClient()" class="h-9 px-3 rounded-xl bg-blue-600 text-[11px] font-extrabold">لوحة العميل</button>
+    <a href="/" aria-label="الصفحة الرئيسية" title="الصفحة الرئيسية" class="h-9 w-9 rounded-xl bg-blue-600 hover:bg-blue-500 flex items-center justify-center shrink-0"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7"/><path d="M5 9v12h14V9"/><path d="M9 21v-7h6v7"/></svg></a>
     ${authenticated?'<button onclick="logout()" class="h-9 px-3 rounded-xl bg-white/10 text-[11px] font-bold">خروج</button>':''}
    </div>
   </div>
