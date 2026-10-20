@@ -495,6 +495,40 @@ router.post('/orders/:sn/archive', auth('admin'), validate(Joi.object({
   } catch (err) { next(err); }
 });
 
+router.post('/orders/bulk-delete', auth('admin'), validate(Joi.object({
+  sns: Joi.array().items(Joi.string().trim().uppercase().pattern(/^SN\d{6}$/)).min(1).max(100).unique().required()
+}).required()), async (req, res, next) => {
+  try {
+    const sns = req.body.sns;
+    const found = await Order.find({ sn: { $in: sns } }).select('_id sn status offers assignedFanni commissionCharged').lean();
+    const foundBySn = new Map(found.map(order => [String(order.sn).toUpperCase(), order]));
+    const deletedSns = [];
+    const skipped = [];
+    for (const sn of sns) {
+      const order = foundBySn.get(sn);
+      if (!order) { skipped.push({ sn, reason: 'الطلب غير موجود أو تم حذفه مسبقًا' }); continue; }
+      const protectedStatuses = ['تم النشر', 'وصلتك عروض', 'تم اختيار فني', 'تم الانتهاء', 'منتهي'];
+      if (protectedStatuses.includes(order.status) || order.assignedFanni || order.commissionCharged === true || (Array.isArray(order.offers) && order.offers.length > 0)) {
+        skipped.push({ sn, reason: 'طلب نشط أو مرتبط بعرض أو فني؛ لم يُحذف حفاظًا على السجل' }); continue;
+      }
+      const hasCommissionTransaction = await WalletTransaction.exists({ order: order._id, type: 'commission' });
+      if (hasCommissionTransaction) { skipped.push({ sn, reason: 'مرتبط بحركة مالية؛ لم يُحذف' }); continue; }
+      const deleted = await Order.deleteOne({
+        _id: order._id, status: 'قيد المراجعة', commissionCharged: { $ne: true },
+        assignedFanni: { $in: [null] },
+        $or: [{ offers: { $exists: false } }, { offers: { $size: 0 } }]
+      });
+      if (deleted.deletedCount === 1) deletedSns.push(sn);
+      else skipped.push({ sn, reason: 'تغيرت حالة الطلب أثناء العملية؛ لم يُحذف' });
+    }
+    const message = deletedSns.length
+      ? 'تم حذف ' + deletedSns.length + ' طلبًا. ' + (skipped.length ? 'تم تجاوز ' + skipped.length + ' طلب/طلبات محمية أو غير متاحة.' : '')
+      : 'لم يتم حذف أي طلب؛ كل العناصر المحددة محمية أو غير موجودة.';
+    await writeAdminAudit(req, 'حذف جماعي لطلبات', 'orders', deletedSns.join(','), 'المحذوف: ' + deletedSns.join(',') + '؛ المتجاوز: ' + skipped.map(x => x.sn + ' (' + x.reason + ')').join('; '));
+    return res.json({ message, deleted: deletedSns.length, deletedSns, skipped });
+  } catch (err) { next(err); }
+});
+
 router.delete('/orders/:sn', auth('admin'), async (req, res, next) => {
   try {
     const sn = String(req.params.sn || '').trim();
