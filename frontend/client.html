@@ -985,7 +985,7 @@ async function createOrder(){
     state.sn=data.sn;state.loading=false;showToast('تم إنشاء الطلب: '+state.sn,'success');render();
   }catch(error){state.loading=false;showToast(error.message||'تعذر إنشاء الطلب حاليًا.');render();}
 }
-async async function sendClientChat(sn){const el=document.getElementById('clientChatText');const text=String(el?.value||'').trim();if(!text)return showToast('اكتب الرسالة أولًا.');try{await API.sendChat(sn,text);state.trackInput=sn;await doTrack();showToast('تم إرسال الرسالة.','success');}catch(e){showToast(e.message||'تعذر إرسال الرسالة.');}}
+async function sendClientChat(sn){const el=document.getElementById('clientChatText');const text=String(el?.value||'').trim();if(!text)return showToast('اكتب الرسالة أولًا.');try{await API.sendChat(sn,text);state.trackInput=sn;await doTrack();showToast('تم إرسال الرسالة.','success');}catch(e){showToast(e.message||'تعذر إرسال الرسالة.');}}
 async function decideClientPrice(sn,id,approved){try{await API.decidePrice(sn,id,approved);state.trackInput=sn;await doTrack();showToast(approved?'تمت الموافقة على السعر الجديد.':'تم رفض تعديل السعر.','success');}catch(e){showToast(e.message||'تعذر تسجيل القرار.');}}
 function submitClientRating(sn){
   if(state.ratingSubmitting)return;
