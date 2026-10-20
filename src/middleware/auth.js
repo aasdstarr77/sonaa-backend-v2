@@ -34,8 +34,9 @@ function canAccessAdmin(user, req) {
     const isFanniManagement = method === 'PATCH' && /^\/fannis\/[^/]+\/(level|badge|note|limit)$/.test(path);
     const isOfferRemoval = method === 'DELETE' && /^\/offers\/[^/]+\/[^/]+$/.test(path);
     const isOrderRemoval = method === 'DELETE' && /^\/orders\/[^/]+$/.test(path);
+    const isBulkOrderRemoval = method === 'POST' && path === '/orders/bulk-delete';
     const isServiceWrite = ['POST', 'PATCH'].includes(method) && path.startsWith('/services');
-    return isComplaintDecision || isSupportReview || isFanniDecision || isOfferDecision || isFanniManagement || isOfferRemoval || isOrderRemoval || isServiceWrite;
+    return isComplaintDecision || isSupportReview || isFanniDecision || isOfferDecision || isFanniManagement || isOfferRemoval || isOrderRemoval || isBulkOrderRemoval || isServiceWrite;
   }
   // المشرف: قرارات الشكاوى الأساسية واعتماد/رفض/تعليق الفنيين ورفض العرض.
   return isComplaintDecision || isSupportReview || isFanniDecision || isOfferDecision;
