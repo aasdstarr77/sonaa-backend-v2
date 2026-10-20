@@ -58,6 +58,7 @@
     .trust-row span{display:inline-flex;align-items:center;gap:7px}
     .trust-row svg{width:17px;height:17px;color:#2c7b61}
     footer{border-top:1px solid var(--line);padding:17px 0 25px;text-align:center;color:#8995a7;font-size:12px}
+    .home-nav{display:flex;align-items:center;gap:8px;padding:0 0 10px}.home-nav a,.home-nav button{border:1px solid var(--line);background:#fff;border-radius:12px;padding:8px 12px;color:var(--navy);font-size:12px;font-weight:800}
     @media(max-width:650px){.shell{width:min(100% - 24px,520px)}.topbar{height:70px}.brand{font-size:22px}.brand-mark{width:40px;height:40px;border-radius:13px}.top-note{font-size:11px;padding:7px 10px}.hero{border-radius:24px;padding:29px 22px}.hero-copy{line-height:1.9}.cards{grid-template-columns:1fr;gap:14px}.entry{min-height:260px;padding:23px;border-radius:21px}.entry-icon{width:72px;height:72px;border-radius:22px}.entry h3{font-size:22px}.action-hint{font-size:11px}.choose{padding-top:31px}.trust-row{gap:10px 16px}}
     @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important}}
   </style>
@@ -70,6 +71,7 @@
     </a>
     <span class="top-note">خدمات أقرب.. وفرص أكبر</span>
   </header>
+  <nav class="shell home-nav" aria-label="التنقل"><button type="button" onclick="if(history.length>1)history.back()">← رجوع</button><a href="/" aria-label="القائمة الرئيسية">⌂ القائمة الرئيسية</a></nav>
 
   <main class="shell">
     <section class="hero">
