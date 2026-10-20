@@ -670,7 +670,7 @@ router.get('/my-offers', auth(), async (req, res, next) => {
           ...sanitizeOffer(offer),
           orderSn: order.sn,
           orderStatus: order.status,
-          chatMessages: (order.chatMessages || []).map(m => ({ senderRole: m.senderRole, text: m.text, createdAt: m.createdAt })),
+          chatMessages: (order.chatMessages || []).filter(m => isAcceptedByThisFanni ? (!m.targetOfferId || String(m.targetOfferId) === String(order.acceptedOfferId || '')) : String(m.targetOfferId || '') === String(offer._id)).map(m => ({ senderRole: m.senderRole, text: m.text, targetOfferId: m.targetOfferId || '', createdAt: m.createdAt })),
           service: order.service,
           accepted: isAcceptedByThisFanni,
           completed: isCompletedByThisFanni
@@ -1427,33 +1427,62 @@ router.post('/:sn/rating', async (req, res, next) => {
 
 router.get('/:sn/chat', async (req, res, next) => {
   try {
-    const sn = String(req.params.sn || '').toUpperCase(); if (!validSN(sn)) return res.status(400).json({ message: 'كود الطلب غير صحيح' });
-    const order = await Order.findOne({ sn }); if (!order) return res.status(404).json({ message: 'الطلب غير موجود' });
-    const isClient = verifyClientToken(req, order); const token = String(req.headers.authorization || '').startsWith('Bearer ') ? req.headers.authorization.slice(7).trim() : ''; let fanniId = null;
+    const sn = String(req.params.sn || '').toUpperCase();
+    if (!validSN(sn)) return res.status(400).json({ message: 'كود الطلب غير صحيح' });
+    const order = await Order.findOne({ sn });
+    if (!order) return res.status(404).json({ message: 'الطلب غير موجود' });
+    const isClient = verifyClientToken(req, order);
+    const token = String(req.headers.authorization || '').startsWith('Bearer ') ? req.headers.authorization.slice(7).trim() : '';
+    let fanniId = null;
     if (token && process.env.JWT_SECRET) { try { const payload = jwt.verify(token, process.env.JWT_SECRET); if (payload.id) fanniId = payload.id; } catch (_) {} }
-    const ownsOffer = fanniId && (order.offers || []).some(o => String(o.fanni) === String(fanniId));
-    if (!isClient && !ownsOffer) return res.status(403).json({ message: 'غير مسموح بعرض محادثة هذا الطلب.' });
+    const technicianOffer = fanniId && (order.offers || []).find(o => String(o.fanni) === String(fanniId));
+    if (!isClient && !technicianOffer) return res.status(403).json({ message: 'غير مسموح بعرض محادثة هذا الطلب.' });
     if (!isClient && !(await hasAcceptedGuidelines(fanniId))) return res.status(428).json({ code: 'TECHNICIAN_GUIDELINES_REQUIRED', message: 'يجب الموافقة على ميثاق التعامل المهني أولًا.' });
-    if (!isClient && ['تم اختيار فني', 'تم الانتهاء'].includes(order.status) && String(order.assignedFanni || '') !== String(fanniId)) return res.status(403).json({ message: 'المحادثة بعد القبول متاحة للفني المعيّن فقط.' });
-    return res.json({ messages: order.chatMessages || [], priceChangeRequests: order.priceChangeRequests || [] });
+    const accepted = ['تم اختيار فني', 'تم الانتهاء'].includes(order.status);
+    if (!isClient && accepted && String(order.assignedFanni || '') !== String(fanniId)) return res.status(403).json({ message: 'المحادثة بعد القبول متاحة للفني المعيّن فقط.' });
+    const visibleMessages = (order.chatMessages || []).filter(m => {
+      if (accepted) return !m.targetOfferId || String(m.targetOfferId) === String(order.acceptedOfferId || '');
+      if (isClient) return Boolean(m.targetOfferId);
+      return String(m.targetOfferId || '') === String(technicianOffer._id);
+    }).map(m => ({ senderRole: m.senderRole, text: m.text, targetOfferId: m.targetOfferId || '', createdAt: m.createdAt }));
+    return res.json({ messages: visibleMessages, priceChangeRequests: accepted ? (order.priceChangeRequests || []) : [] });
   } catch (err) { next(err); }
 });
 router.post('/:sn/chat', async (req, res, next) => {
   try {
-    const sn = String(req.params.sn || '').toUpperCase(); if (!validSN(sn)) return res.status(400).json({ message: 'كود الطلب غير صحيح' });
-    const text = String(req.body?.text || req.body?.reply || '').trim().slice(0, 1000); if (!text) return res.status(400).json({ message: 'اكتب الرسالة أولًا.' });
+    const sn = String(req.params.sn || '').toUpperCase();
+    if (!validSN(sn)) return res.status(400).json({ message: 'كود الطلب غير صحيح' });
+    const text = String(req.body?.text || req.body?.reply || '').trim().slice(0, 1000);
+    if (!text) return res.status(400).json({ message: 'اكتب الرسالة أولًا.' });
     if (hasContactDetails(text)) return res.status(400).json({ message: 'ممنوع تبادل أرقام الهاتف أو الروابط داخل المحادثة.' });
-    const order = await Order.findOne({ sn }); if (!order) return res.status(404).json({ message: 'الطلب غير موجود' });
-    const isClient = verifyClientToken(req, order); const token = String(req.headers.authorization || '').startsWith('Bearer ') ? req.headers.authorization.slice(7).trim() : ''; let payload = null;
+    const order = await Order.findOne({ sn });
+    if (!order) return res.status(404).json({ message: 'الطلب غير موجود' });
+    const isClient = verifyClientToken(req, order);
+    const token = String(req.headers.authorization || '').startsWith('Bearer ') ? req.headers.authorization.slice(7).trim() : '';
+    let payload = null;
     if (token && process.env.JWT_SECRET) { try { payload = jwt.verify(token, process.env.JWT_SECRET); } catch (_) {} }
-    const fanniId = payload?.id; const ownsOffer = fanniId && (order.offers || []).some(o => String(o.fanni) === String(fanniId));
-    if (!isClient && !ownsOffer) return res.status(403).json({ message: 'غير مسموح بإرسال رسالة لهذا الطلب.' });
+    const fanniId = payload?.id;
+    const ownOffer = fanniId && (order.offers || []).find(o => String(o.fanni) === String(fanniId));
+    if (!isClient && !ownOffer) return res.status(403).json({ message: 'غير مسموح بإرسال رسالة لهذا الطلب.' });
     if (!isClient && !(await hasAcceptedGuidelines(fanniId))) return res.status(428).json({ code: 'TECHNICIAN_GUIDELINES_REQUIRED', message: 'يجب الموافقة على ميثاق التعامل المهني أولًا.' });
-    const activeAssigned = ['تم اختيار فني', 'تم الانتهاء'].includes(order.status) && String(order.assignedFanni || '') === String(fanniId || '');
-    if (!isClient && ['تم اختيار فني', 'تم الانتهاء'].includes(order.status) && !activeAssigned) return res.status(403).json({ message: 'المحادثة بعد القبول متاحة للفني المعيّن فقط.' });
-    if (!isClient && !['تم اختيار فني', 'تم الانتهاء'].includes(order.status) && !['نعم', 'لا', 'حسب الاتفاق'].includes(text)) return res.status(400).json({ message: 'قبل قبول العرض، ردود الفني المسموحة فقط: نعم، لا، حسب الاتفاق.' });
-    order.chatMessages.push({ senderRole: isClient ? 'client' : 'fanni', senderId: isClient ? String(order.clientAccount || order._id) : String(fanniId), text, createdAt: new Date() }); await order.save();
-    return res.status(201).json({ message: 'تم إرسال الرسالة.', messages: order.chatMessages });
+    if (order.status === 'تم الانتهاء') return res.status(409).json({ message: 'المهمة مكتملة؛ المحادثة للقراءة فقط.' });
+    const accepted = order.status === 'تم اختيار فني';
+    const targetOfferId = String(req.body?.offerId || (accepted ? order.acceptedOfferId || '' : '')).trim();
+    if (accepted) {
+      if (!order.acceptedOfferId || targetOfferId !== String(order.acceptedOfferId)) return res.status(409).json({ message: 'المحادثة متاحة للعرض المقبول فقط.' });
+      if (!isClient && String(order.assignedFanni || '') !== String(fanniId || '')) return res.status(403).json({ message: 'المحادثة بعد القبول متاحة للفني المعيّن فقط.' });
+    } else {
+      if (!ACTIVE_STATUSES.includes(order.status)) return res.status(409).json({ message: 'المحادثة غير متاحة في حالة الطلب الحالية.' });
+      if (!mongoose.isValidObjectId(targetOfferId)) return res.status(400).json({ message: 'حدد العرض الذي تخصه المحادثة.' });
+      const targetOffer = (order.offers || []).find(o => String(o._id) === targetOfferId);
+      if (!targetOffer) return res.status(404).json({ message: 'العرض غير موجود في هذا الطلب.' });
+      if (!isClient && String(targetOffer.fanni) !== String(fanniId)) return res.status(403).json({ message: 'لا يمكنك الرد إلا على استفسارات العرض الخاص بك.' });
+      if (isClient && !['هل السعر شامل؟', 'متى تقدر تيجي؟', 'هل في تكلفة إضافية؟'].includes(text)) return res.status(400).json({ message: 'قبل قبول العرض، استخدم أحد أزرار الاستفسارات السريعة.' });
+      if (!isClient && !['نعم', 'لا', 'حسب الاتفاق'].includes(text)) return res.status(400).json({ message: 'قبل قبول العرض، ردود الفني المسموحة فقط: نعم، لا، حسب الاتفاق.' });
+    }
+    order.chatMessages.push({ senderRole: isClient ? 'client' : 'fanni', senderId: isClient ? String(order.clientAccount || order._id) : String(fanniId), targetOfferId, text, createdAt: new Date() });
+    await order.save();
+    return res.status(201).json({ message: 'تم إرسال الرسالة.', messages: order.chatMessages.filter(m => accepted ? (!m.targetOfferId || String(m.targetOfferId) === targetOfferId) : String(m.targetOfferId || '') === targetOfferId) });
   } catch (err) { next(err); }
 });
 router.post('/:sn/price-change', auth(), async (req, res, next) => {
@@ -1479,6 +1508,7 @@ router.post('/:sn/price-change/:requestId/decision', async (req, res, next) => {
     const order = await Order.findOne({ sn }).session(session);
     if (!order) { await session.abortTransaction(); return res.status(404).json({ message: 'الطلب غير موجود.' }); }
     if (!verifyClientToken(req, order)) { await session.abortTransaction(); return res.status(403).json({ message: 'غير مسموح بتعديل سعر هذا الطلب.' }); }
+    if (order.status === 'تم الانتهاء') { await session.abortTransaction(); return res.status(409).json({ message: 'المهمة مكتملة؛ لا يمكن اتخاذ قرار جديد بشأن تعديل السعر.' }); }
     const request = order.priceChangeRequests.id(req.params.requestId);
     if (!request || request.status !== 'قيد الموافقة') { await session.abortTransaction(); return res.status(409).json({ message: 'طلب تعديل السعر غير متاح أو تم اتخاذ قرار بشأنه.' }); }
     const approved = req.body?.approved === true;
