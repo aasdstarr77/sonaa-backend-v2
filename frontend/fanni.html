@@ -34,6 +34,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
 .service-chip input{accent-color:#2563eb}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:99px}
+  .global-refresh.is-refreshing svg{animation:global-refresh-spin .8s linear infinite}@keyframes global-refresh-spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body class="min-h-screen antialiased">
@@ -322,7 +323,7 @@ function goClient(){
  location.href=location.origin+'/';
 }
 
-function goBack(){try{const ref=document.referrer;if(ref){const u=new URL(ref,location.href);if(u.origin===location.origin&&u.href!==location.href){history.back();return;}}}catch(e){}location.href='/';}
+function goBack(){if(window.history.length>1){window.history.back();return;}window.location.href='/';}
 function logout(){
  clearAuth();
  currentUser=null;
@@ -495,8 +496,8 @@ function notificationBadge(){return '<span id="notificationBadge" class="absolut
 function notificationPanel(){if(!state.notificationsOpen)return '';var html='<div class="fixed inset-0 z-[99]" onclick="state.notificationsOpen=false;render()"></div><div class="fixed left-3 right-3 top-[70px] z-[100] mx-auto max-w-[420px] overflow-hidden rounded-2xl border border-amber-200 bg-white text-slate-800 shadow-2xl"><div class="flex items-center justify-between gap-2 border-b p-3"><b class="text-[13px]">الإشعارات</b><button onclick="markAllNotificationsRead()" class="text-[10px] font-extrabold text-blue-700">تعليم الكل كمقروء</button></div><div class="max-h-[60vh] overflow-y-auto">';if(!state.notifications.length)html+='<p class="p-6 text-center text-[12px] text-slate-500">مفيش إشعارات لحد دلوقتي.</p>';state.notifications.forEach(n=>{html+='<button type="button" data-fanni-notification-id="'+esc(n.id)+'" class="block w-full border-b p-3 text-right '+(n.read?'bg-white':'bg-amber-50')+'"><b class="block text-[12px]">'+esc(n.title)+'</b><span class="mt-1 block text-[11px] leading-5 text-slate-600">'+esc(n.message)+'</span><small class="mt-1 block text-[9px] text-slate-400">'+(n.createdAt?new Date(n.createdAt).toLocaleString('ar-EG'):'')+'</small></button>';});return html+'</div></div>';}
 document.addEventListener('click',e=>{const item=e.target.closest('[data-fanni-notification-id]');if(item)openNotification(item.getAttribute('data-fanni-notification-id'));});
 async function acceptTechnicianGuidelines(){try{const result=await API.acceptGuidelines();if(currentUser){currentUser.technicianGuidelinesAcceptedAt=result.acceptedAt||new Date().toISOString();currentUser.technicianGuidelinesVersion=result.version||'2026-10-20-v1';}toast(result.message||'تم تسجيل الموافقة.');render();}catch(e){toast(e.message||'تعذر تسجيل الموافقة.','error');}}
-async function sendFanniQuickReply(sn,offerId,reply){try{await API.sendChat(sn,reply,offerId);await loadMyOffers();toast('تم إرسال الرد.');}catch(e){toast(e.message||'تعذر إرسال الرد.','error');}}
-async function sendFanniChat(sn,offerId){const el=document.getElementById('fanni-chat-'+sn);const text=String(el?.value||'').trim();if(!text)return toast('اكتب الرسالة أولًا.','error');try{await API.sendChat(sn,text,offerId);await loadMyOffers();toast('تم إرسال الرسالة.');}catch(e){toast(e.message||'تعذر إرسال الرسالة.','error');}}
+async function sendFanniQuickReply(sn,offerId,reply){try{await API.sendChat(sn,reply,offerId);await refreshFanniChatsSilently();toast('تم إرسال الرد.');}catch(e){toast(e.message||'تعذر إرسال الرد.','error');}}
+async function sendFanniChat(sn,offerId){const el=document.getElementById('fanni-chat-'+sn);const text=String(el?.value||'').trim();if(!text)return toast('اكتب الرسالة أولًا.','error');try{await API.sendChat(sn,text,offerId);if(el)el.value='';await refreshFanniChatsSilently();toast('تم إرسال الرسالة.');}catch(e){toast(e.message||'تعذر إرسال الرسالة.','error');}}
 async function requestFanniPriceChange(sn){const price=Number(document.getElementById('price-change-'+sn)?.value);const reason=String(document.getElementById('price-reason-'+sn)?.value||'').trim();if(!Number.isFinite(price)||price<=0||reason.length<5)return toast('اكتب السعر الجديد وسببًا واضحًا.','error');try{const r=await API.requestPriceChange(sn,price,reason);toast(r.message||'تم إرسال طلب تعديل السعر.');await loadMyOffers();}catch(e){toast(e.message||'تعذر طلب تعديل السعر.','error');}}
 function render(){
  const user=currentUser||getUser();
@@ -603,7 +604,7 @@ function render(){
 
   ${state.tab==='available'?`
    <section class="mt-4 space-y-3">
-    <div class="flex justify-between items-center px-1"><h3 class="section-title">الطلبات المتاحة</h3><button onclick="loadOrders()" class="secondary-btn px-3 py-2 text-[11px]">↻ تحديث</button></div>
+    <div class="flex justify-between items-center px-1"><h3 class="section-title">الطلبات المتاحة</h3></div>
 
     <div class="panel p-3 space-y-2">
       <input class="field" value="${esc(state.search)}" oninput="onSearch(this.value)" placeholder="ابحث بكود الطلب أو المنطقة">
@@ -649,7 +650,7 @@ function render(){
 
   ${state.tab==='myOffers'?`
    <section class="mt-4 space-y-3">
-    <div class="flex justify-between items-center"><h3 class="section-title">عروضي</h3><button onclick="loadMyOffers()" class="secondary-btn px-3 py-2 text-[11px]">تحديث</button></div>
+    <div class="flex justify-between items-center"><h3 class="section-title">عروضي</h3></div>
 
     ${!state.myOffers.length?'<div class="panel p-8 text-center"><div class="text-2xl">💼</div><p class="text-[13px] font-extrabold mt-3">لا توجد عروض لعرضها</p><p class="text-[11px] text-slate-500 mt-1">العروض التي ترسلها ستظهر هنا، وبيانات العميل تظهر فقط بعد قبوله لعرضك.</p></div>':state.myOffers.map(o=>`<article class="panel p-4 space-y-3">
      <div class="flex justify-between gap-3">
@@ -666,7 +667,7 @@ function render(){
      ${o.message?`<div class="rounded-xl border border-slate-100 bg-slate-50 p-3"><div class="text-[10px] text-slate-500 font-extrabold mb-1">رسالة العرض</div><p class="text-[12px] leading-6 break-words">${esc(o.message)}</p></div>`:''}
 
      ${renderAcceptedClient(o)}
-     ${o?.accepted===true ? '<div class="rounded-xl border border-slate-200 p-3 space-y-2"><p class="text-[12px] font-extrabold">محادثة الطلب</p>'+(Array.isArray(o.chatMessages)?o.chatMessages.map(m=>'<div class="rounded-lg p-2 '+(m.senderRole==='fanni'?'bg-blue-50':'bg-emerald-50')+'"><p class="text-[10px] font-bold">'+(m.senderRole==='fanni'?'أنت':'العميل')+'</p><p class="text-[12px] whitespace-pre-wrap break-words">'+esc(m.text||'')+'</p></div>').join(''):'')+'<textarea id="fanni-chat-'+esc(o.orderSn)+'" maxlength="1000" class="field min-h-[70px]" placeholder="اكتب ردك للعميل"></textarea><button type="button" onclick="sendFanniChat(\''+esc(o.orderSn)+'\',\''+esc(o._id||'')+'\')" class="primary-btn w-full h-10 text-[12px]">إرسال الرسالة</button><p class="text-[10px] text-slate-500">أي زيادة في السعر تحتاج موافقة العميل داخل المنصة.</p><input id="price-change-'+esc(o.orderSn)+'" type="number" min="1" step="1" class="field" placeholder="السعر الجديد عند وجود شغل إضافي"><input id="price-reason-'+esc(o.orderSn)+'" maxlength="500" class="field" placeholder="سبب تعديل السعر"><button type="button" onclick="requestFanniPriceChange(\''+esc(o.orderSn)+'\')" class="secondary-btn w-full h-10 text-[12px]">طلب موافقة على تعديل السعر</button></div>' : '<div class="rounded-xl border border-slate-200 p-3 space-y-2"><p class="text-[12px] font-extrabold">استفسارات العميل قبل قبول العرض</p>'+(Array.isArray(o.chatMessages)?o.chatMessages.map(m=>'<div class="rounded-lg p-2 '+(m.senderRole==='fanni'?'bg-blue-50':'bg-emerald-50')+'"><p class="text-[10px] font-bold">'+(m.senderRole==='fanni'?'أنت':'العميل')+'</p><p class="text-[12px]">'+esc(m.text||'')+'</p></div>').join(''):'')+'<div class="grid grid-cols-3 gap-2"><button type="button" onclick="sendFanniQuickReply(\''+esc(o.orderSn)+'\',\''+esc(o._id||'')+'\',\'نعم\')" class="secondary-btn text-xs">نعم</button><button type="button" onclick="sendFanniQuickReply(\''+esc(o.orderSn)+'\',\''+esc(o._id||'')+'\',\'لا\')" class="secondary-btn text-xs">لا</button><button type="button" onclick="sendFanniQuickReply(\''+esc(o.orderSn)+'\',\''+esc(o._id||'')+'\',\'حسب الاتفاق\')" class="secondary-btn text-xs">حسب الاتفاق</button></div></div>'}
+     ${o?.accepted===true ? '<div class="rounded-xl border border-slate-200 p-3 space-y-2"><p class="text-[12px] font-extrabold">محادثة الطلب</p>'+'<div id="fanni-accepted-chat-'+esc(o.orderSn||o.sn||o.order?.sn||'')+'">'+(Array.isArray(o.chatMessages)?o.chatMessages.map(m=>'<div class="rounded-lg p-2 '+(m.senderRole==='fanni'?'bg-blue-50':'bg-emerald-50')+'"><p class="text-[10px] font-bold">'+(m.senderRole==='fanni'?'أنت':'العميل')+'</p><p class="text-[12px] whitespace-pre-wrap break-words">'+esc(m.text||'')+'</p></div>').join(''):'')+'</div>'+'<textarea id="fanni-chat-'+esc(o.orderSn)+'" maxlength="1000" class="field min-h-[70px]" placeholder="اكتب ردك للعميل"></textarea><button type="button" onclick="sendFanniChat(\''+esc(o.orderSn)+'\',\''+esc(o._id||'')+'\')" class="primary-btn w-full h-10 text-[12px]">إرسال الرسالة</button><p class="text-[10px] text-slate-500">أي زيادة في السعر تحتاج موافقة العميل داخل المنصة.</p><input id="price-change-'+esc(o.orderSn)+'" type="number" min="1" step="1" class="field" placeholder="السعر الجديد عند وجود شغل إضافي"><input id="price-reason-'+esc(o.orderSn)+'" maxlength="500" class="field" placeholder="سبب تعديل السعر"><button type="button" onclick="requestFanniPriceChange(\''+esc(o.orderSn)+'\')" class="secondary-btn w-full h-10 text-[12px]">طلب موافقة على تعديل السعر</button></div>' : '<div class="rounded-xl border border-slate-200 p-3 space-y-2"><p class="text-[12px] font-extrabold">استفسارات العميل قبل قبول العرض</p>'+'<div id="fanni-prechat-chat-'+esc(o.orderSn||o.sn||o.order?.sn||'')+'-'+esc(o._id||'')+'">'+(Array.isArray(o.chatMessages)?o.chatMessages.map(m=>'<div class="rounded-lg p-2 '+(m.senderRole==='fanni'?'bg-blue-50':'bg-emerald-50')+'"><p class="text-[10px] font-bold">'+(m.senderRole==='fanni'?'أنت':'العميل')+'</p><p class="text-[12px]">'+esc(m.text||'')+'</p></div>').join(''):'')+'</div>'+'<div class="grid grid-cols-3 gap-2"><button type="button" onclick="sendFanniQuickReply(\''+esc(o.orderSn)+'\',\''+esc(o._id||'')+'\',\'نعم\')" class="secondary-btn text-xs">نعم</button><button type="button" onclick="sendFanniQuickReply(\''+esc(o.orderSn)+'\',\''+esc(o._id||'')+'\',\'لا\')" class="secondary-btn text-xs">لا</button><button type="button" onclick="sendFanniQuickReply(\''+esc(o.orderSn)+'\',\''+esc(o._id||'')+'\',\'حسب الاتفاق\')" class="secondary-btn text-xs">حسب الاتفاق</button></div></div>'}
      ${o?.accepted===true && o.orderStatus==='تم اختيار فني' ? `<button data-sn="${esc(o.orderSn||o.sn||o.order?.sn||'')}" onclick="completeOrder(this.dataset.sn)" class="primary-btn w-full h-11 text-[12px]">إنهاء المهمة</button>` : ''}
     </article>`).join('')}
    </section>`:''}
@@ -674,7 +675,7 @@ function render(){
    <section class="mt-4 space-y-3">
     <div class="flex justify-between items-center">
      <h3 class="section-title">المهام المكتملة</h3>
-     <button onclick="loadMyOffers()" class="secondary-btn px-3 py-2 text-[11px]">تحديث</button>
+     
     </div>
 
     ${!state.completedOffers.length?'<div class="panel p-8 text-center"><div class="text-2xl">🏁</div><p class="text-[13px] font-extrabold mt-3">لا توجد مهام مكتملة</p><p class="text-[11px] text-slate-500 mt-1">المهام التي تنهيها ستظهر هنا.</p></div>':state.completedOffers.map(o=>`<article class="panel p-4 space-y-3">
@@ -733,7 +734,7 @@ function render(){
     </div>
 
     <div class="panel p-4">
-     <div class="flex justify-between items-center"><div><h4 class="text-[13px] font-extrabold">سجل الشحن</h4><p class="text-[10px] text-slate-500 mt-1">حالة طلبات الشحن السابقة</p></div><button onclick="loadWalletHistory()" class="secondary-btn px-3 py-2 text-[10px]">تحديث</button></div>
+     <div class="flex justify-between items-center"><div><h4 class="text-[13px] font-extrabold">سجل الشحن</h4><p class="text-[10px] text-slate-500 mt-1">حالة طلبات الشحن السابقة</p></div></div>
 
      <div class="mt-3 space-y-2">
       ${!state.walletHistory.length?'<div class="rounded-xl bg-slate-50 p-5 text-center text-[11px] text-slate-500">لا توجد طلبات شحن سابقة.</div>':state.walletHistory.map(h=>`<div class="rounded-xl border bg-slate-50 p-3">
@@ -748,7 +749,7 @@ function render(){
 
   ${state.tab==='profile'?`
    <section class="mt-4 panel p-4">
-    <div class="flex items-center gap-3 pb-4 border-b"><div class="text-2xl">👤</div><div><h3 class="section-title">بيانات حسابي</h3><p class="text-[10px] text-slate-500 mt-1">بيانات الحساب من السيرفر</p></div><button onclick="loadProfile()" class="secondary-btn mr-auto px-3 py-2 text-[10px]">تحديث</button></div>
+    <div class="flex items-center gap-3 pb-4 border-b"><div class="text-2xl">👤</div><div><h3 class="section-title">بيانات حسابي</h3><p class="text-[10px] text-slate-500 mt-1">بيانات الحساب من السيرفر</p></div></div>
 
     <div class="mt-4 space-y-3 text-[12px]">${[['الاسم',user?.name],['رقم الهاتف',user?.phone],['حالة الحساب',user?.status],['التخصصات',specialties.join('، ')],['مناطق العمل',areas.join('، ')],['رصيد المحفظة',balance+' جنيه']].map(x=>`<div class="rounded-xl bg-slate-50 border p-3"><div class="text-[10px] text-slate-500 mb-1">${x[0]}</div><b>${esc(x[1]||'غير متاح')}</b></div>`).join('')}</div>
     <div class="mt-4 rounded-xl border border-emerald-100 bg-emerald-50/60 p-3">
@@ -1158,7 +1159,7 @@ async function submitOffer(){
  }
 }
 
-async function refreshTechnicianPage(){const button=document.getElementById('technician-refresh');if(button)button.disabled=true;try{await Promise.allSettled([loadServices(),loadAreas()]);if(getToken())await Promise.allSettled([loadProfile(),loadOrders(),loadMyOffers(),loadWalletHistory(),loadNotifications()]);toast('تم تحديث بيانات الفني');}finally{if(button)button.disabled=false;}}
+async function refreshTechnicianPage(){await Promise.allSettled([loadServices(),loadAreas()]);if(getToken())await Promise.allSettled([loadProfile(),loadOrders(),loadMyOffers(),loadWalletHistory(),loadNotifications()]);toast('تم تحديث بيانات الفني');}
 async function start(){
  await Promise.allSettled([loadServices(),loadAreas()]);
  render();
@@ -1178,9 +1179,14 @@ async function start(){
  }
 }
 
+let fanniChatPollInFlight=false;
+function renderFanniChatMessages(messages,accepted){return (Array.isArray(messages)?messages:[]).map(function(m){return '<div class="rounded-lg p-2 '+(m.senderRole==='fanni'?'bg-blue-50':'bg-emerald-50')+'"><p class="text-[10px] font-bold">'+(m.senderRole==='fanni'?'أنت':'العميل')+'</p><p class="text-[12px] '+(accepted?'whitespace-pre-wrap break-words':'')+'">'+esc(m.text||'')+'</p></div>';}).join('');}
+async function refreshFanniChatsSilently(){if(!getToken()||state.tab!=='myOffers'||fanniChatPollInFlight)return;fanniChatPollInFlight=true;try{const offers=Array.isArray(state.myOffers)?state.myOffers:[];await Promise.allSettled(offers.map(async function(offer){const sn=String(offer.orderSn||offer.sn||offer.order?.sn||'').toUpperCase();if(!/^SN\d{6}$/.test(sn))return;const offerId=String(offer._id||'');const targetId=offer.accepted===true?'fanni-accepted-chat-'+sn:'fanni-prechat-chat-'+sn+'-'+offerId;if(!document.getElementById(targetId))return;const data=await API.chat(sn);const messages=Array.isArray(data.messages)?data.messages:[];offer.chatMessages=messages;const box=document.getElementById(targetId);if(box)box.innerHTML=renderFanniChatMessages(messages,offer.accepted===true);}));}catch(_){/* Keep the last successful conversation visible during temporary network failures. */}finally{fanniChatPollInFlight=false;}}
 setInterval(function(){if(getToken())loadNotifications();},30000);
+setInterval(refreshFanniChatsSilently,5000);
 start();
 </script>
-<a href="https://wa.me/201152822263" target="_blank" rel="noopener noreferrer" class="fixed bottom-4 right-4 z-50 rounded-full bg-green-600 text-white px-4 py-3 shadow-lg font-black text-[12px]">واتساب الدعم</a><button id="technician-refresh" type="button" onclick="refreshTechnicianPage()" class="fixed bottom-4 left-4 z-50 rounded-full bg-slate-900 text-white px-4 py-3 shadow-lg font-black text-[12px]">↻ تحديث</button>
+<a href="https://wa.me/201152822263" target="_blank" rel="noopener noreferrer" aria-label="دعم واتساب" title="دعم واتساب" class="fixed bottom-[calc(88px+env(safe-area-inset-bottom))] right-4 z-[80] flex h-12 w-12 items-center justify-center rounded-full border border-white/70 bg-gradient-to-br from-emerald-500 to-green-700 text-white shadow-[0_8px_24px_rgba(5,150,105,.28)] ring-1 ring-emerald-200/70 transition hover:scale-105 active:scale-95 focus:outline-none focus:ring-4 focus:ring-emerald-300/60"><svg viewBox="0 0 24 24" width="23" height="23" fill="currentColor" aria-hidden="true"><path d="M20.52 3.48A11.8 11.8 0 0 0 2.1 17.6L.5 23.5l6.05-1.59a11.8 11.8 0 0 0 5.64 1.44h.01A11.82 11.82 0 0 0 20.52 3.48ZM12.2 21.35a9.8 9.8 0 0 1-5-1.37l-.36-.21-3.59.94.96-3.5-.23-.36a9.78 9.78 0 1 1 8.22 4.5Z"/><path d="M17.56 14.7c-.29-.15-1.7-.84-1.96-.94-.26-.1-.45-.15-.64.15-.19.29-.74.94-.9 1.13-.16.19-.33.22-.62.07-.29-.15-1.22-.45-2.33-1.44-.86-.76-1.44-1.7-1.61-1.99-.17-.29-.02-.45.13-.6.13-.13.29-.33.44-.49.15-.16.19-.29.29-.48.1-.19.05-.36-.02-.5-.07-.15-.64-1.55-.88-2.12-.23-.56-.47-.49-.64-.5h-.55c-.19 0-.5.07-.76.36-.26.29-1 .98-1 2.39s1.02 2.77 1.16 2.96c.15.19 2.01 3.07 4.87 4.3.68.29 1.21.47 1.62.6.68.21 1.3.18 1.79.11.55-.08 1.7-.69 1.94-1.36.24-.67.24-1.24.17-1.36-.07-.12-.26-.19-.55-.34Z"/></svg></a><button id="global-refresh" type="button" onclick="handleGlobalRefresh()" aria-label="تحديث البيانات" title="تحديث البيانات" class="fixed bottom-[calc(88px+env(safe-area-inset-bottom))] left-4 z-[80] flex h-12 w-12 items-center justify-center rounded-full border border-white/70 bg-gradient-to-br from-[#0b1b3a] to-[#2563eb] text-white shadow-[0_8px_24px_rgba(11,27,58,.28)] ring-1 ring-blue-200/70 backdrop-blur transition hover:scale-105 active:scale-95 focus:outline-none focus:ring-4 focus:ring-blue-300/60"><svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.9-3L3 11"/><path d="M3 4v7h7"/><path d="M4 13a8 8 0 0 0 14.9 3L21 13"/><path d="M21 20v-7h-7"/></svg></button>
+<script>async function handleGlobalRefresh(){const button=document.getElementById('global-refresh');if(button?.disabled)return;if(button){button.disabled=true;button.classList.add('is-refreshing');}try{await refreshTechnicianPage();}finally{if(button){button.disabled=false;button.classList.remove('is-refreshing');}}}</script>
 </body>
 </html>
