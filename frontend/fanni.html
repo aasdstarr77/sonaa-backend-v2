@@ -529,7 +529,7 @@ function render(){
   <section class="mt-4 panel p-5 animate-fade">
   ${state.tab==='register'?`
    <h2 class="font-extrabold text-[17px]">إنشاء حساب فني</h2>
-   <p class="text-[11px] text-slate-500 mt-1 mb-5">اكتب بياناتك وحدد التخصصات والمناطق اللي بتخدم فيها.</p>
+   <p class="text-[11px] text-slate-500 mt-1 mb-5">اكتب بياناتك وحدد تخصصاتك ومنطقة العمل اللي تناسبك.</p>
    <div class="space-y-4">
     <div><label class="field-label">الاسم بالكامل *</label><input class="field" autocomplete="name" value="${esc(state.regName)}" oninput="state.regName=this.value.slice(0,50)" placeholder="الاسم بالكامل"></div>
     <div><label class="field-label">رقم التليفون *</label><input class="field" inputmode="numeric" autocomplete="tel" value="${esc(state.regPhone)}" oninput="state.regPhone=this.value.replace(/\\D/g,'').slice(0,11)" placeholder="01xxxxxxxxx"></div>
@@ -555,15 +555,9 @@ function render(){
     </div>
 
     <div>
-      <div class="flex items-center justify-between gap-2"><label class="field-label">مناطق العمل والأحياء *</label><span class="rounded-full bg-blue-50 px-2 py-1 text-[10px] font-extrabold text-blue-700">${state.regAreas.includes(ALL_AREAS_LABEL)?'كل المناطق':state.regAreas.length+'/30'}</span></div>
-      <p class="mb-2 text-[10px] text-slate-500">اختار المناطق اللي بتشتغل فيها، وتقدر تختار لحد 30 منطقة أو تضيف منطقة جديدة.</p>
-      <label class="mb-2 flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 p-3 text-[12px] font-extrabold text-blue-900"><input type="checkbox" ${state.regAreas.includes(ALL_AREAS_LABEL)?'checked':''} onchange="toggleRegArea(ALL_AREAS_LABEL)"> جميع المناطق</label>
-      <input id="regAreaSearchInput" class="field mb-2" value="${esc(state.regAreaSearch)}" oninput="onRegAreaSearch(this.value)" placeholder="ابحث عن منطقة...">
-      <div class="max-h-52 overflow-y-auto rounded-xl border border-slate-200 p-2">
-       ${AREA_OPTIONS.filter(area=>!state.regAreaSearch||area.includes(state.regAreaSearch.trim())).map(area=>`<label class="mb-1 flex items-center gap-2 rounded-lg px-2 py-2 text-[11px] font-bold hover:bg-slate-50"><input type="checkbox" ${state.regAreas.includes(area)?'checked':''} ${state.regAreas.includes(ALL_AREAS_LABEL)?'disabled':''} onchange="toggleRegArea(this.dataset.area)" data-area="${esc(area)}"><span>${esc(area)}</span></label>`).join('')||'<p class="p-2 text-[11px] text-slate-500">مفيش مناطق مطابقة للبحث.</p>'}
-      </div>
-      <div class="mt-2 flex gap-2"><input class="field min-w-0 flex-1" value="${esc(state.regAreaCustom)}" oninput="state.regAreaCustom=this.value.slice(0,60)" placeholder="إضافة منطقة جديدة"><button type="button" onclick="addCustomRegArea()" class="shrink-0 rounded-xl bg-slate-800 px-3 text-[11px] font-extrabold text-white">إضافة</button></div>
-      ${state.regAreas.length&&!state.regAreas.includes(ALL_AREAS_LABEL)?`<div class="mt-2 flex flex-wrap gap-1">${state.regAreas.map(area=>`<button type="button" onclick="toggleRegArea(this.dataset.area)" data-area="${esc(area)}" class="rounded-full bg-blue-100 px-2 py-1 text-[10px] font-bold text-blue-800">${esc(area)} ×</button>`).join('')}</div>`:''}
+      <label class="field-label">منطقة العمل أو الحي اللي حابب تشتغل فيه *</label>
+      <input class="field" autocomplete="address-level2" maxlength="60" value="${esc(state.regAreaCustom)}" oninput="state.regAreaCustom=this.value.slice(0,60)" placeholder="مثال: شبرا، المعادي، فيصل...">
+      <p class="mt-1 text-[10px] text-slate-500">اكتب المنطقة أو الحي بنفسك. مش لازم تختار من قائمة.</p>
      </div>
     <div><label class="field-label">كلمة السر *</label><input type="password" class="field" autocomplete="new-password" value="${esc(state.regPass)}" oninput="state.regPass=this.value.slice(0,100)" placeholder="6 أحرف على الأقل"></div>
     <div><label class="field-label">تأكيد كلمة السر *</label><input type="password" class="field" autocomplete="new-password" value="${esc(state.regPassConfirm)}" oninput="state.regPassConfirm=this.value.slice(0,100)" placeholder="اكتب كلمة السر مرة تانية"><p class="text-[10px] text-slate-500 mt-1">لازم تكون مطابقة لكلمة السر الأولى.</p></div>
@@ -843,9 +837,10 @@ async function doRegister(){
  if(!CATEGORIES.length){state.error='قائمة التخصصات غير متاحة حاليًا.';render();return}
  if(!state.regSpecialties.length){state.error='اختار تخصصًا واحدًا على الأقل';render();return}
 
- const areas=[...new Set(state.regAreas)].slice(0,30);
-
- if(!areas.length){state.error='اكتب منطقة عمل واحدة على الأقل';render();return}
+ const area=clean(state.regAreaCustom,60).replace(/\s+/g,' ');
+ if(area.length<2){state.error='اكتب اسم المنطقة أو الحي من حرفين على الأقل';render();return}
+ if(/01[0-9]{9}/.test(area.replace(/\D/g,''))){state.error='ممنوع كتابة رقم تليفون في المنطقة';render();return}
+ const areas=[area];
  if(!V.text(state.regPass,6,100)){state.error='كلمة السر لازم تكون 6 أحرف على الأقل';render();return}
  if(state.regPass!==state.regPassConfirm){state.error='تأكيد كلمة السر غير مطابق. اكتب نفس كلمة السر في الخانتين.';render();return}
 
