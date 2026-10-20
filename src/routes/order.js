@@ -458,9 +458,9 @@ router.post('/', clientAuth, async (req, res, next) => {
 
 router.post('/admin/:sn/publish', auth('admin'), async (req, res, next) => {
   try {
-    if (req.user.role !== 'admin') {
+    if (req.user.role !== 'admin' && req.user.adminRole !== 'مدير') {
       return res.status(403).json({
-        message: 'هذه العملية متاحة للإدارة فقط'
+        message: 'نشر طلبات العملاء متاح للمدير العام أو المدير التشغيلي فقط'
       });
     }
 
