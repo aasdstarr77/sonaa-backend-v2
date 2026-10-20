@@ -988,8 +988,8 @@ async function createOrder(){
     state.sn=data.sn;state.loading=false;showToast('تم إنشاء الطلب: '+state.sn,'success');render();
   }catch(error){state.loading=false;showToast(error.message||'تعذر إنشاء الطلب حاليًا.');render();}
 }
-async function sendClientChat(sn){const el=document.getElementById('clientChatText');const text=String(el?.value||'').trim();if(!text)return showToast('اكتب الرسالة أولًا.');if(state.tracked?.status==='تم الانتهاء')return showToast('المهمة مكتملة؛ المحادثة للقراءة فقط.');try{await API.sendChat(sn,text,state.tracked?.acceptedOfferId||undefined);state.trackInput=sn;await doTrack();showToast('تم إرسال الرسالة.','success');}catch(e){showToast(e.message||'تعذر إرسال الرسالة.');}}
-async function sendClientOfferQuestion(sn,offerId,question){if(state.tracked?.status==='تم الانتهاء')return showToast('المهمة مكتملة؛ لا يمكن إرسال رسائل جديدة.');try{await API.sendChat(sn,question,offerId);state.trackInput=sn;await doTrack();showToast('تم إرسال استفسارك للفني.','success');}catch(e){showToast(e.message||'تعذر إرسال الاستفسار.');}}
+async function sendClientChat(sn){const el=document.getElementById('clientChatText');const text=String(el?.value||'').trim();if(!text)return showToast('اكتب الرسالة أولًا.');if(state.tracked?.status==='تم الانتهاء')return showToast('المهمة مكتملة؛ المحادثة للقراءة فقط.');try{await API.sendChat(sn,text,state.tracked?.acceptedOfferId||undefined);state.trackInput=sn;await refreshTrackedSilently();showToast('تم إرسال الرسالة.','success');}catch(e){showToast(e.message||'تعذر إرسال الرسالة.');}}
+async function sendClientOfferQuestion(sn,offerId,question){if(state.tracked?.status==='تم الانتهاء')return showToast('المهمة مكتملة؛ لا يمكن إرسال رسائل جديدة.');try{await API.sendChat(sn,question,offerId);state.trackInput=sn;await refreshTrackedSilently();showToast('تم إرسال استفسارك للفني.','success');}catch(e){showToast(e.message||'تعذر إرسال الاستفسار.');}}
 async function decideClientPrice(sn,id,approved){try{await API.decidePrice(sn,id,approved);state.trackInput=sn;await doTrack();showToast(approved?'تمت الموافقة على السعر الجديد.':'تم رفض تعديل السعر.','success');}catch(e){showToast(e.message||'تعذر تسجيل القرار.');}}
 async function submitClientRating(sn){
   if(state.ratingSubmitting)return;
@@ -1004,6 +1004,8 @@ async function submitClientRating(sn){
   }catch(error){showToast(error.message||'تعذر حفظ التقييم.');}
   finally{state.ratingSubmitting=false;render();}
 }
+async function refreshClientPage(){const button=document.getElementById('client-refresh');if(button)button.disabled=true;try{if(state.trackInput)await refreshTrackedSilently();if(state.accountToken&&state.account)await Promise.allSettled([loadMyOrders(),loadNotifications()]);showToast('تم تحديث بيانات العميل.','success');}finally{if(button)button.disabled=false;}}
+async function refreshTrackedSilently(){const input=String(state.trackInput||'').trim().toUpperCase();if(!VALIDATORS.sn(input))return;const box=document.getElementById('clientChatText');const draft=box?box.value:'';try{const order=await API.getOrder(input);state.tracked=order;render();const refreshed=document.getElementById('clientChatText');if(refreshed&&draft)refreshed.value=draft;}catch(_){/* Keep last successful order visible during temporary network failures. */}}
 async function doTrack(){
   if(state.trackLoading)return;
   const input=state.trackInput.trim().toUpperCase();
@@ -1032,9 +1034,10 @@ async function sendComplaint(){
 }
 document.addEventListener('DOMContentLoaded',()=>{
   loadServices();loadPublicContent();initializeClientAccount();render();
-  document.addEventListener('click',handleOutsideServiceClick);setInterval(function(){if(state.accountToken&&state.account)loadNotifications();},30000);
+  document.addEventListener('click',handleOutsideServiceClick);setInterval(function(){if(state.accountToken&&state.account)loadNotifications();},30000);setInterval(function(){if(state.tracked&&['تم اختيار فني','تم الانتهاء'].includes(state.tracked.status))refreshTrackedSilently();},5000);
 });
 render();
 </script>
+<a href="https://wa.me/201152822263" target="_blank" rel="noopener noreferrer" class="fixed bottom-4 right-4 z-50 rounded-full bg-green-600 text-white px-4 py-3 shadow-lg font-black text-[12px]">واتساب الدعم</a><button id="client-refresh" type="button" onclick="refreshClientPage()" class="fixed bottom-4 left-4 z-50 rounded-full bg-slate-900 text-white px-4 py-3 shadow-lg font-black text-[12px]">↻ تحديث</button>
 </body>
 </html>

@@ -548,6 +548,19 @@ router.delete('/orders/:sn', auth('admin'), async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.delete('/clients/:phone/account', auth('admin'), async (req, res, next) => {
+  try {
+    const phone = normalizePhone(String(req.params.phone || '').trim());
+    if (!phone || !/^01[0-9]{9}$/.test(phone)) return res.status(400).json({ message: 'رقم هاتف العميل غير صالح.' });
+    const client = await Client.findOne({ phone });
+    if (!client) return res.status(404).json({ message: 'حساب العميل المسجل غير موجود.' });
+    const activeOrder = await Order.exists({ clientPhone: phone, status: { $in: ['تم النشر', 'وصلتك عروض', 'تم اختيار فني'] } });
+    if (activeOrder) return res.status(409).json({ message: 'لا يمكن حذف الحساب أثناء وجود طلب نشط. تم الحفاظ على الحساب وسجل الطلبات.' });
+    await Client.deleteOne({ _id: client._id, phone });
+    return res.json({ message: 'تم حذف حساب العميل المسجل مع الحفاظ على سجل الطلبات التاريخي.' });
+  } catch (err) { next(err); }
+});
+
 router.delete('/clients/:phone', auth('admin'), async (req, res, next) => {
   try {
     const rawPhone = String(req.params.phone || '').trim();

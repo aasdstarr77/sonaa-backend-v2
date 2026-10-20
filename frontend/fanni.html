@@ -284,7 +284,7 @@ let state={
  orders:[],filteredOrders:[],search:'',filterSkill:'الكل',
  myOffers:[],completedOffers:[],offerModal:null,offerPrice:'',offerMessage:'',
  offerError:'',offerSubmitting:false,
- walletFromPhone:'',walletAmount:'',walletRef:'',
+ walletFromPhone:'',walletAmount:'',walletRef:'',walletMethod:'vodafone_cash',
  walletLoading:false,walletHistory:[],walletBalance:0,
  error:'',success:'',pendingMsg:''
 };
@@ -721,7 +721,7 @@ function render(){
 
       <div><label class="field-label">المبلغ بالجنيه *</label><input class="field" type="number" min="10" max="10000" step="1" value="${esc(state.walletAmount)}" oninput="state.walletAmount=this.value.slice(0,5)" placeholder="100"></div>
 
-      <div><label class="field-label">طريقة التحويل</label><input class="field" value="فودافون كاش" readonly></div>
+      <div><label class="field-label">نوع المحفظة المحوَّل منها</label><select class="field" onchange="state.walletMethod=this.value"><option value="vodafone_cash" ${state.walletMethod==='vodafone_cash'?'selected':''}>فودافون كاش</option><option value="orange_cash" ${state.walletMethod==='orange_cash'?'selected':''}>أورنج كاش</option><option value="etisalat_cash" ${state.walletMethod==='etisalat_cash'?'selected':''}>اتصالات كاش</option><option value="we_cash" ${state.walletMethod==='we_cash'?'selected':''}>WE Pay</option></select><p class="text-[11px] font-bold text-red-600 mt-2">⚠️ الشحن للمحفظة فقط. لا نقبل التحويلات عبر إنستاباي (InstaPay).</p></div>
 
       <div><label class="field-label">الكود المرجعي للتحويل (اختياري)</label><input class="field" value="${esc(state.walletRef)}" oninput="state.walletRef=this.value.slice(0,50)" maxlength="50" placeholder="اكتب الكود إن وجد"></div>
 
@@ -1067,7 +1067,7 @@ async function submitWallet(){
    amount:Number(state.walletAmount),
    reference,
    referenceCode:reference,
-   method:'vodafone_cash',
+   method:state.walletMethod,
    note:`تحويل من ${phone} بقيمة ${Number(state.walletAmount)} - كود: ${reference||'بدون'}`.slice(0,200)
   });
 
@@ -1158,6 +1158,7 @@ async function submitOffer(){
  }
 }
 
+async function refreshTechnicianPage(){const button=document.getElementById('technician-refresh');if(button)button.disabled=true;try{await Promise.allSettled([loadServices(),loadAreas()]);if(getToken())await Promise.allSettled([loadProfile(),loadOrders(),loadMyOffers(),loadWalletHistory(),loadNotifications()]);toast('تم تحديث بيانات الفني');}finally{if(button)button.disabled=false;}}
 async function start(){
  await Promise.allSettled([loadServices(),loadAreas()]);
  render();
@@ -1180,5 +1181,6 @@ async function start(){
 setInterval(function(){if(getToken())loadNotifications();},30000);
 start();
 </script>
+<a href="https://wa.me/201152822263" target="_blank" rel="noopener noreferrer" class="fixed bottom-4 right-4 z-50 rounded-full bg-green-600 text-white px-4 py-3 shadow-lg font-black text-[12px]">واتساب الدعم</a><button id="technician-refresh" type="button" onclick="refreshTechnicianPage()" class="fixed bottom-4 left-4 z-50 rounded-full bg-slate-900 text-white px-4 py-3 shadow-lg font-black text-[12px]">↻ تحديث</button>
 </body>
 </html>

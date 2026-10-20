@@ -4,6 +4,7 @@ const topupSchema = new mongoose.Schema({
   fanniName: String, fanniPhone: String,
   amount: { type: Number, required: true, min: 10, max: 10000 },
   senderNumber: { type: String, required: true },
+  method: { type: String, enum: ['vodafone_cash','orange_cash','etisalat_cash','we_cash'], default: 'vodafone_cash', index: true },
   referenceNumber: { type: String, maxlength: 50, trim: true },
   proofUrl: String,
   status: { type: String, enum: ['قيد المراجعة','مقبول','مرفوض'], default: 'قيد المراجعة', index: true },

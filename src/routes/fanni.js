@@ -42,7 +42,7 @@ const topupSchema = Joi.object({
   amount: Joi.number().strict().integer().min(10).max(10000).required(),
   reference: Joi.string().trim().max(50).allow('').optional(),
   referenceCode: Joi.string().trim().max(50).allow('').optional(),
-  method: Joi.string().valid('vodafone_cash').default('vodafone_cash'),
+  method: Joi.string().valid('vodafone_cash','orange_cash','etisalat_cash','we_cash').default('vodafone_cash'),
   note: Joi.string().max(200).allow('').optional()
 });
 
@@ -248,6 +248,7 @@ router.post(
         fanniPhone: req.user.phone,
         amount,
         senderNumber,
+        method: req.body.method || 'vodafone_cash',
         referenceNumber,
         status: 'قيد المراجعة',
         isCredited: false,
@@ -260,6 +261,7 @@ router.post(
           id: String(request._id),
           amount: request.amount,
           senderNumber: request.senderNumber,
+          method: request.method || 'vodafone_cash',
           referenceNumber: request.referenceNumber || '',
           status: request.status,
           createdAt: request.createdAt
@@ -294,7 +296,7 @@ router.get(
         fanni: req.user._id
       })
         .select(
-          'amount senderNumber referenceNumber status isCredited reviewReason reviewedAt createdAt updatedAt'
+          'amount senderNumber method referenceNumber status isCredited reviewReason reviewedAt createdAt updatedAt'
         )
         .sort({ createdAt: -1 })
         .limit(100)
@@ -304,6 +306,7 @@ router.get(
         id: String(request._id),
         amount: request.amount,
         senderNumber: request.senderNumber,
+        method: request.method || 'vodafone_cash',
         referenceNumber: request.referenceNumber || '',
         status: request.status,
         isCredited: Boolean(request.isCredited),
