@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b1b3a">
-<title>صناع - لوحة الإدارة النهائية</title>
+<title>صُنّاع | لوحة الإدارة</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -154,22 +154,20 @@ function render(){
   const disabledCount=state.fannis.filter(f=>f.isDisabled).length;
 
   document.getElementById('app').innerHTML=`
-  <header class="sticky top-0 z-40 glass-header text-white shadow-[0_8px_24px_rgba(11,27,58,.25)]"><div class="mx-auto max-w-[800px] px-4 pb-2 flex flex-wrap gap-2 text-[10px] font-black"><span class="rounded-full bg-white/10 px-3 py-1">الفنيون: اعتماد وتعليق ومستويات</span><span class="rounded-full bg-white/10 px-3 py-1">العملاء والطلبات</span><span class="rounded-full bg-white/10 px-3 py-1">المحافظ والماليات</span><span class="rounded-full bg-white/10 px-3 py-1">الإعدادات والمحتوى</span></div>
-    <div class="mx-auto max-w-[800px] px-4 py-3.5 flex justify-between items-center gap-3">
-      <div class="flex items-center gap-3 min-w-0">
-        <div class="h-11 w-11 shrink-0 rounded-[14px] bg-[#F8FAFC] border-2 border-[#14B8A6] flex items-center justify-center shadow-lg"><svg class="sonaa-logo-svg" width="30" height="30" viewBox="0 0 64 64" fill="none" role="img" aria-label="شعار صُنّاع"><circle cx="32" cy="32" r="27" stroke="#14B8A6" stroke-width="3.5"/><text x="32" y="43" text-anchor="middle" font-family="Cairo, sans-serif" font-size="34" font-weight="900" fill="#0F172A">ص</text></svg></div>
+  <header class="sticky top-0 z-40 glass-header text-white shadow-[0_6px_18px_rgba(11,27,58,.20)]"><div class="mx-auto max-w-[800px] px-3 py-2 flex justify-between items-center gap-2">
+      <div class="flex items-center gap-2 min-w-0">
+        <div class="h-9 w-9 shrink-0 rounded-xl bg-[#F8FAFC] border-2 border-[#14B8A6] flex items-center justify-center shadow-lg"><svg class="sonaa-logo-svg" width="25" height="25" viewBox="0 0 64 64" fill="none" role="img" aria-label="شعار صُنّاع"><circle cx="32" cy="32" r="27" stroke="#14B8A6" stroke-width="3.5"/><text x="32" y="43" text-anchor="middle" font-family="Cairo, sans-serif" font-size="34" font-weight="900" fill="#0F172A">ص</text></svg></div>
         <div class="min-w-0">
-          <h1 class="font-black text-[15px]">صُنّاع - لوحة الإدارة النهائية</h1>
-          <div class="text-[10px] text-blue-200/80 mt-0.5 font-bold">Premium • Mobile First • جميع الأقسام</div>
-          ${isAuth&&currentAdminRoleLabel()?`<div class="mt-2 inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-black"><span>المنصب الإداري:</span><span>${escHtml(currentAdminRoleLabel())}</span></div>`:''}
+          <h1 class="font-black text-[14px] leading-5">صُنّاع | لوحة الإدارة</h1>
+          ${isAuth&&currentAdminRoleLabel()?`<div class="mt-0.5 text-[10px] text-blue-100 font-bold"><span>المنصب الإداري:</span><span>${escHtml(currentAdminRoleLabel())}</span></div>`:''}
         </div>
       </div>
-      <div class="flex gap-2 shrink-0">
-        <button onclick="refreshCurrentTab()" class="h-10 px-3 rounded-full bg-white/10 text-white font-black">↻ تحديث</button><button onclick="goFanni()" class="h-10 px-4 rounded-full bg-white/10 hover:bg-white/15 text-[11px] font-black border border-white/10">لوحة الفني</button>
-        ${isAuth?'<button onclick="logout()" class="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center">⎋</button>':''}
+      <div class="flex gap-1.5 shrink-0 items-center">
+        <button onclick="refreshCurrentTab()" class="h-9 px-2.5 rounded-xl bg-white/10 text-white text-[11px] font-black">↻ تحديث</button><button onclick="goFanni()" class="h-8 px-3 rounded-lg bg-white/10 hover:bg-white/15 text-[11px] font-black border border-white/10">لوحة الفني</button>
+        ${isAuth?'<button onclick="logout()" class="h-9 w-9 rounded-xl bg-white/10 flex items-center justify-center">⎋</button>':''}
       </div>
     </div>
-    <div class="mx-auto max-w-[800px] px-4 pb-2 flex gap-2"><button type="button" onclick="goBack()" class="h-9 px-3 rounded-xl border border-white/20 bg-white/10 text-white text-[11px] font-extrabold">← رجوع</button><a href="/" aria-label="القائمة الرئيسية" title="القائمة الرئيسية" class="h-9 px-3 rounded-xl bg-white/10 hover:bg-white/15 text-white text-[11px] font-extrabold">⌂ القائمة الرئيسية</a></div>
+    <div class="mx-auto max-w-[800px] px-3 pb-2 flex gap-2"><button type="button" onclick="goBack()" class="h-8 px-3 rounded-lg border border-white/20 bg-white/10 text-white text-[11px] font-extrabold">← رجوع</button><a href="/" aria-label="القائمة الرئيسية" title="القائمة الرئيسية" class="h-9 px-3 rounded-xl bg-white/10 hover:bg-white/15 text-white text-[11px] font-extrabold">⌂ القائمة الرئيسية</a></div>
   </header>
   
   <main class="mx-auto max-w-[800px] px-3 pb-28">
