@@ -439,8 +439,8 @@ function renderOrders(){
     <div class="premium-panel p-4 space-y-3">
       <div class="flex gap-2"><input id="delete-client-phone" type="tel" placeholder="01xxxxxxxxx" class="field flex-1" dir="ltr"><button onclick="deleteClient()" class="pill-btn danger-pill">حذف طلبات العميل</button></div>
       <div class="border-t pt-3 flex flex-wrap items-center justify-between gap-3">
-        <label class="flex items-center gap-2 text-[11px] font-black"><input type="checkbox" onchange="toggleAllVisibleOrders(this.checked)" \${(state.filteredOrders||[]).length>0&&(state.filteredOrders||[]).every(o=>(state.selectedOrderSNs||[]).includes(String(o.sn||'').toUpperCase()))?'checked':''}> تحديد كل الطلبات المعروضة</label>
-        <div class="flex items-center gap-2"><span class="text-[10px] font-bold text-slate-500">المحدد: \${(state.selectedOrderSNs||[]).length}</span><button onclick="bulkDeleteOrders()" \${(state.selectedOrderSNs||[]).length?'':'disabled'} class="pill-btn danger-pill">🗑️ حذف المحدد</button></div>
+        <label class="flex items-center gap-2 text-[11px] font-black"><input type="checkbox" onchange="toggleAllVisibleOrders(this.checked)" ${(state.filteredOrders||[]).length>0&&(state.filteredOrders||[]).every(o=>(state.selectedOrderSNs||[]).includes(String(o.sn||'').toUpperCase()))?'checked':''}> تحديد كل الطلبات المعروضة</label>
+        <div class="flex items-center gap-2"><span class="text-[10px] font-bold text-slate-500">المحدد: ${(state.selectedOrderSNs||[]).length}</span><button onclick="bulkDeleteOrders()" ${(state.selectedOrderSNs||[]).length?'':'disabled'} class="pill-btn danger-pill">🗑️ حذف المحدد</button></div>
       </div>
       <p class="text-[10px] text-slate-500">الحذف الجماعي يقبل الطلبات غير المنشورة فقط. الطلبات النشطة أو المرتبطة بعروض أو فنيين أو حركات مالية تُتجاوز تلقائيًا.</p>
     </div>
