@@ -1493,6 +1493,8 @@ router.post('/:sn/price-change', auth(), async (req, res, next) => {
     if (!validSN(sn) || !Number.isFinite(newPrice) || newPrice <= 0 || reason.length < 5) return res.status(400).json({ message: 'اكتب سعرًا جديدًا صحيحًا وسببًا واضحًا للتعديل.' });
     const order = await Order.findOne({ sn }); if (!order) return res.status(404).json({ message: 'الطلب غير موجود.' });
     if (order.status !== 'تم اختيار فني' || String(order.assignedFanni) !== String(req.userId) || !order.acceptedOfferPrice) return res.status(409).json({ message: 'لا يمكن طلب تعديل السعر إلا للطلب المسند إليك قبل إنهائه.' });
+    const currentPrice = money(order.acceptedOfferPrice);
+    if (newPrice <= currentPrice) return res.status(400).json({ message: 'السعر الجديد لازم يكون أعلى من السعر الحالي (' + currentPrice + ' جنيه). لا يمكن تخفيض السعر بعد قبول العرض.' });
     if ((order.priceChangeRequests || []).some(r => r.status === 'قيد الموافقة')) return res.status(409).json({ message: 'يوجد طلب تعديل سعر ينتظر موافقة العميل بالفعل.' });
     order.priceChangeRequests.push({ fanniId: req.userId, oldPrice: order.acceptedOfferPrice, newPrice, reason, status: 'قيد الموافقة', requestedAt: new Date() }); await order.save();
     return res.status(201).json({ message: 'تم إرسال طلب تعديل السعر للعميل؛ لا تنفذ الزيادة قبل موافقته.', request: order.priceChangeRequests[order.priceChangeRequests.length - 1] });
