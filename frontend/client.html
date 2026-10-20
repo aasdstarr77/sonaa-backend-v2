@@ -190,7 +190,7 @@ const API={
     if(!ALL_SERVICES.length){throw new Error('قائمة الخدمات غير متاحة حاليًا. حدّث الصفحة وحاول مرة أخرى.');}
     if(!VALIDATORS.name(payload.clientName))throw new Error('اكتب اسمك بشكل صحيح، من حرفين إلى 50 حرفًا.');
     if(!payload.service||!ALL_SERVICES.includes(payload.service))throw new Error('اختار الخدمة المطلوبة من القائمة الرسمية.');
-    if(!AREA_OPTIONS.includes(payload.area))throw new Error('اختار المنطقة أو الحي من القائمة.');
+    if(!VALIDATORS.text(payload.area,2,100))throw new Error('اكتب المنطقة أو الحي من حرفين على الأقل.');
     if(!VALIDATORS.text(payload.address,5,250))throw new Error('اكتب العنوان التفصيلي بشكل صحيح.');
     if(!VALIDATORS.phone(payload.phone))throw new Error('رقم التليفون غير صحيح؛ لازم يكون 11 رقم ويبدأ بـ 01.');
     if(!VALIDATORS.text(payload.description,10,1000))throw new Error('اكتب تفاصيل المشكلة في 10 حروف على الأقل.');
@@ -535,12 +535,9 @@ onclick="selectServiceByIndex(${ALL_SERVICES.indexOf(s)})"
             </div>
 
             <div>
-              <label for="areaInput" class="text-[12px] font-extrabold mb-1.5 block">📍 المنطقة أو الحي</label>
-              <select id="areaInput" onchange="onAreaInput(this.value)" class="field h-[50px] px-3 text-[13px] font-bold" autocomplete="address-level2">
-                <option value="">اختار المنطقة أو الحي</option>
-                ${AREA_OPTIONS.map(area=>`<option value="${escAttr(area)}" ${state.area===area?'selected':''}>${escHtml(area)}</option>`).join('')}
-              </select>
-              <p class="mt-1 text-[10px] text-slate-500">اختار المنطقة من القائمة، واكتب الشارع ورقم العمارة في العنوان التفصيلي. ممنوع كتابة رقم تليفون هنا.</p>
+              <label for="areaInput" class="text-[12px] font-extrabold mb-1.5 block">المنطقة أو الحي *</label>
+              <input id="areaInput" type="text" value="${escAttr(state.area)}" oninput="onAreaInput(this.value)" maxlength="100" class="field h-[50px] px-4 text-[13px] font-bold" autocomplete="address-level2" placeholder="اكتب المنطقة أو الحي بنفسك">
+              <p class="mt-1 text-[10px] text-slate-500">اكتب اسم المنطقة أو الحي، واكتب الشارع ورقم العمارة في العنوان التفصيلي.</p>
             </div>
             <div>
               <label for="addrInput" class="text-[12px] font-extrabold mb-1.5 flex justify-between gap-2">
@@ -854,9 +851,9 @@ async function loadAreas(){
   catch(error){log('تعذر تحديث قائمة المناطق:',error);}
 }
 function onAreaInput(value){
-  if(!AREA_OPTIONS.includes(value)&&value!==''){state.area='';return;}
-  if(rejectPhoneInField(value,'المنطقة')){state.area='';const input=document.getElementById('areaInput');if(input)input.value='';return;}
-  state.area=value;
+  const area=sanitizeInput(value,100);
+  if(rejectPhoneInField(area,'المنطقة')){state.area='';const input=document.getElementById('areaInput');if(input)input.value='';return;}
+  state.area=area;
 }
 function onAddressInput(value){
   const clean=sanitizeInput(value,250);
