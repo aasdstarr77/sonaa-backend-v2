@@ -31,7 +31,7 @@ const DEFAULT_COMMISSION_RATE = 10;
  * أسماء المناطق التي تستخدمها واجهة العميل،
  * مع الاحتفاظ بالأسماء القديمة المقبولة سابقًا.
  */
-const { AREA_OPTIONS, ALL_AREAS_LABEL, normalizeArea } = require('../config/areas');
+
 
 const ARABIC_DIGITS = '٠١٢٣٤٥٦٧٨٩';
 const PERSIAN_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
@@ -370,9 +370,9 @@ router.post('/', clientAuth, async (req, res, next) => {
     const area = String(value.area || '').trim();
     const address = String(value.address || '').trim();
 
-    if (!AREA_OPTIONS.includes(area)) {
+    if (area.length < 2 || area.length > 100) {
       return res.status(400).json({
-        message: 'اختار المنطقة من القائمة المتاحة'
+        message: 'اكتب المنطقة أو الحي بشكل صحيح'
       });
     }
 
@@ -502,13 +502,10 @@ router.post('/admin/:sn/publish', auth('admin'), async (req, res, next) => {
       });
     }
 
-    // Notify only approved technicians whose specialties and service areas match.
-    const eligibleFannis = await Fanni.find({ role: 'fanni', status: 'معتمد' }).select('_id specialties areas').lean();
+    // Notify every approved technician whose specialties match; work area is informational only.
+    const eligibleFannis = await Fanni.find({ role: 'fanni', status: 'معتمد' }).select('_id specialties').lean();
     for (const fanni of eligibleFannis) {
-      const coversAllAreas = (fanni.areas || []).some(area => normalizeArea(area) === normalizeArea(ALL_AREAS_LABEL));
-      const areas = new Set((fanni.areas || []).map(normalizeArea));
-      if (fanniCanHandleService(fanni.specialties, order.service) &&
-          (coversAllAreas || areas.has(normalizeArea(order.area)))) {
+      if (fanniCanHandleService(fanni.specialties, order.service)) {
         await createNotification({
           recipientRole: 'fanni', recipientId: fanni._id, type: 'new_opportunity',
           title: 'فرصة عمل جديدة', message: 'طلب جديد يناسب تخصصك في ' + order.area + ' (' + order.service + ').',
@@ -581,15 +578,8 @@ router.get('/available', auth(), async (req, res, next) => {
     let matchingOrders = orders;
 
     if (req.user.role !== 'admin') {
-      const fanni = await Fanni.findById(req.userId).select('specialties areas').lean();
-      const specialties = Array.isArray(fanni?.specialties) ? fanni.specialties : [];
-      const areas = Array.isArray(fanni?.areas) ? fanni.areas : [];
-      const coversAllAreas = areas.some(area => normalizeArea(area) === normalizeArea(ALL_AREAS_LABEL));
-      const normalizedAreas = new Set(areas.map(normalizeArea));
-
       matchingOrders = orders.filter(order =>
-        fanniCanHandleService(specialties, order.service) &&
-        (coversAllAreas || normalizedAreas.has(normalizeArea(order.area)))
+        fanniCanHandleService(specialties, order.service)
       );
     }
 
