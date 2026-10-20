@@ -235,6 +235,9 @@ const API={
       body:JSON.stringify({offerId,clientToken:token})
     });
   },
+  async chat(sn){const token=state.accountToken||this.getClientToken(sn);if(!token)throw new Error('سجّل الدخول لمتابعة المحادثة.');return this.request('/api/orders/'+encodeURIComponent(sn)+'/chat',{method:'GET',headers:{Authorization:'Bearer '+token}});},
+  async sendChat(sn,text){const token=state.accountToken||this.getClientToken(sn);if(!token)throw new Error('سجّل الدخول لمتابعة المحادثة.');return this.request('/api/orders/'+encodeURIComponent(sn)+'/chat',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({text})});},
+  async decidePrice(sn,id,approved){const token=state.accountToken||this.getClientToken(sn);if(!token)throw new Error('سجّل الدخول لمتابعة الطلب.');return this.request('/api/orders/'+encodeURIComponent(sn)+'/price-change/'+encodeURIComponent(id)+'/decision',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({approved})});},
   async rateOrder(sn,payload){
     const cleanSN=sanitizeInput(sn,20).toUpperCase();
     if(!VALIDATORS.sn(cleanSN))throw new Error('كود الطلب غير صحيح.');
@@ -629,9 +632,10 @@ onclick="selectServiceByIndex(${ALL_SERVICES.indexOf(s)})"
           <p class="text-[10px] text-slate-500 font-bold">تفاصيل الشغل</p>
           <p class="mt-1 text-[13px] font-semibold leading-6 whitespace-pre-wrap break-words">${escHtml(maskPhoneNumbers(state.tracked.description||state.tracked.details||'لا توجد تفاصيل مسجلة.'))}</p>
         </div>
-        ${state.tracked.status==='تم اختيار فني'?`
+        ${['تم اختيار فني','تم الانتهاء'].includes(state.tracked.status)?`
           <div class="mt-3 rounded-xl bg-emerald-50 border border-emerald-200 p-4">
-            <p class="font-extrabold text-[13px] text-emerald-800">تم قبول العرض وتعيين الفني لطلبك</p>
+            <p class="font-extrabold text-[13px] text-emerald-800">${state.tracked.status==='تم الانتهاء'?'تم إنهاء المهمة':'تم قبول العرض وتعيين الفني لطلبك'}</p>
+            ${state.tracked.acceptedOfferPrice!=null?`<p class="mt-2 text-[12px] text-emerald-800">سعر التنفيذ المتفق عليه: <strong>${escHtml(String(state.tracked.acceptedOfferPrice))} جنيه</strong></p>`:''}
             ${state.tracked.assignedFanniName?`<p class="mt-2 text-[12px] text-emerald-800">اسم الفني: <strong>${escHtml(state.tracked.assignedFanniName)}</strong></p>`:''}
             ${state.tracked.assignedFanniPhone?`
               <p class="mt-2 text-[12px] text-emerald-800">رقم تليفون الفني:</p>
@@ -659,15 +663,16 @@ onclick="selectServiceByIndex(${ALL_SERVICES.indexOf(s)})"
                 ${(Array.isArray(offer.fanniBadges)?offer.fanniBadges:[]).length?'<div class="mt-2 flex flex-wrap gap-1.5">'+(offer.fanniBadges||[]).map(b=>({trusted:'✓ فني موثوق',top_rated:'★ الأعلى تقييمًا',verified:'✓ تم التحقق',fast_response:'⚡ سريع الاستجابة',premium:'◆ فني مميز',gold:'★ الشارة الذهبية'}[b]||'')).filter(Boolean).map(label=>'<span class="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-extrabold text-emerald-800">'+escHtml(label)+'</span>').join('')+'</div>':''}
                 <p class="mt-2 text-[12px] bg-slate-50 border border-slate-100 rounded-xl p-2.5 leading-6 break-words whitespace-pre-wrap">${escHtml(maskPhoneNumbers(offer.message||'بدون رسالة'))}</p>
                 
-${state.tracked.status==='تم اختيار فني'
-  ?'<div class="mt-3 rounded-xl bg-emerald-50 text-emerald-700 p-3 text-[12px] font-extrabold text-center">تم اختيار فني لهذا الطلب</div>'
-  :['تم الانتهاء','منتهي'].includes(state.tracked.status)
-    ?'<div class="mt-3 rounded-xl bg-slate-50 text-slate-700 p-3 text-[12px] font-extrabold text-center">اكتملت المهمة</div>'
+${state.tracked.acceptedOfferId && String(state.tracked.acceptedOfferId)===offerId
+  ?'<div class="mt-3 rounded-xl bg-emerald-50 text-emerald-800 p-3 text-[12px] font-extrabold text-center">تم قبول العرض</div>'
+  :state.tracked.acceptedOfferId || ['تم اختيار فني','تم الانتهاء','منتهي','ملغي','مؤرشف'].includes(state.tracked.status)
+    ?'<div class="mt-3 rounded-xl bg-slate-50 text-slate-700 p-3 text-[12px] font-extrabold text-center">'+escHtml(offer.offerStatus||'تم رفض العرض')+'</div>'
     :`<button type="button" onclick="acceptOffer('${escAttr(orderSN)}','${escAttr(offerId)}')" ${state.acceptingOffer===offerId?'disabled':''} class="mt-3 w-full h-11 rounded-xl blue-btn font-extrabold text-[12px]">${state.acceptingOffer===offerId?'جاري قبول العرض...':'قبول العرض'}</button>`}
 
               </div>`;
             }).join('')}
         </div>
+        <div class="mt-4 rounded-xl border border-slate-200 p-4"><h4 class="font-extrabold text-[13px]">محادثة الطلب</h4><p class="mt-1 text-[10px] text-slate-500">المحادثة محفوظة على الطلب. أي تعديل للسعر يحتاج موافقتك الصريحة داخل المنصة.</p>${Array.isArray(state.tracked.chatMessages)?state.tracked.chatMessages.map(m=>'<div class="mt-2 rounded-lg p-2 '+(m.senderRole==='client'?'bg-blue-50':'bg-emerald-50')+'"><p class="text-[10px] font-bold">'+(m.senderRole==='client'?'أنت':'الفني')+'</p><p class="text-[12px] whitespace-pre-wrap break-words">'+escHtml(m.text||'')+'</p></div>').join(''):''}${(state.tracked.priceChangeRequests||[]).filter(r=>r.status==='قيد الموافقة').map(r=>'<div class="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3"><p class="text-[12px] font-extrabold">طلب تعديل السعر إلى '+escHtml(String(r.newPrice))+' جنيه</p><p class="mt-1 text-[11px]">'+escHtml(r.reason||'')+'</p><div class="mt-2 flex gap-2"><button type="button" onclick="decideClientPrice(\''+escAttr(state.tracked.sn)+'\',\''+escAttr(r._id)+'\',true)" class="flex-1 rounded-lg bg-emerald-600 p-2 text-white text-xs font-bold">موافقة</button><button type="button" onclick="decideClientPrice(\''+escAttr(state.tracked.sn)+'\',\''+escAttr(r._id)+'\',false)" class="flex-1 rounded-lg bg-red-600 p-2 text-white text-xs font-bold">رفض</button></div></div>').join('')}<textarea id="clientChatText" maxlength="1000" class="field mt-3 min-h-[72px]" placeholder="اكتب استفسارك أو رسالتك..."></textarea><button type="button" onclick="sendClientChat(\''+escAttr(state.tracked.sn)+'\')" class="mt-2 w-full h-10 rounded-xl blue-btn font-extrabold text-[12px]">إرسال الرسالة</button></div>
         ${state.tracked.status==='تم الانتهاء' && state.tracked.canRate ? '<div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4"><h4 class="font-extrabold text-[14px] text-amber-900">قيّم الفني بعد انتهاء المهمة</h4><p class="mt-1 text-[11px] text-amber-800">تقييمك يظهر لك وللفني، والتعليق اختياري.</p><label class="block mt-3 text-[12px] font-extrabold">عدد النجوم</label><select class="field mt-1" onchange="state.ratingStars=Number(this.value);render()">'+[5,4,3,2,1].map(n=>'<option value="'+n+'" '+(state.ratingStars===n?'selected':'')+'>'+('★'.repeat(n))+' — '+n+' نجوم</option>').join('')+'</select><label class="block mt-3 text-[12px] font-extrabold">تعليق (اختياري)</label><textarea id="clientRatingComment" class="field mt-1 min-h-[80px]" maxlength="500" placeholder="اكتب ملاحظتك عن التعامل..." oninput="state.ratingComment=this.value">'+escHtml(state.ratingComment)+'</textarea>'+(state.ratingStars===1?'<label class="mt-3 flex items-start gap-2 text-[12px] font-bold text-red-800"><input id="clientRatingBlock" type="checkbox" class="mt-1"> عدم عرض طلباتي المستقبلية على هذا الفني</label>':'')+'<button type="button" onclick="submitClientRating(\''+escAttr(state.tracked.sn)+'\')" '+(state.ratingSubmitting?'disabled':'')+' class="mt-3 w-full h-11 rounded-xl bg-amber-500 text-white font-extrabold text-[12px]">'+(state.ratingSubmitting?'جاري حفظ التقييم...':'إرسال التقييم')+'</button></div>' : ''}
         ${Array.isArray(state.tracked.ratings)&&state.tracked.ratings.length ? '<div class="mt-4 rounded-xl border border-slate-200 p-4"><h4 class="font-extrabold text-[13px]">التقييمات المتبادلة</h4>'+state.tracked.ratings.map(r=>'<div class="mt-3 border-t border-slate-100 pt-3"><p class="text-[12px] font-extrabold">'+(r.reviewerRole==='client'?'تقييم العميل للفني':'تقييم الفني للعميل')+' — '+('★'.repeat(Math.max(0,Math.min(5,Number(r.stars)||0))))+' '+(Number(r.stars)||0)+'/5</p>'+(r.comment?'<p class="mt-1 text-[12px] leading-5 text-slate-600">'+escHtml(r.comment)+'</p>':'')+'</div>').join('')+'</div>' : ''}
       </div>`:''}
@@ -980,7 +985,9 @@ async function createOrder(){
     state.sn=data.sn;state.loading=false;showToast('تم إنشاء الطلب: '+state.sn,'success');render();
   }catch(error){state.loading=false;showToast(error.message||'تعذر إنشاء الطلب حاليًا.');render();}
 }
-async function submitClientRating(sn){
+async async function sendClientChat(sn){const el=document.getElementById('clientChatText');const text=String(el?.value||'').trim();if(!text)return showToast('اكتب الرسالة أولًا.');try{await API.sendChat(sn,text);state.trackInput=sn;await doTrack();showToast('تم إرسال الرسالة.','success');}catch(e){showToast(e.message||'تعذر إرسال الرسالة.');}}
+async function decideClientPrice(sn,id,approved){try{await API.decidePrice(sn,id,approved);state.trackInput=sn;await doTrack();showToast(approved?'تمت الموافقة على السعر الجديد.':'تم رفض تعديل السعر.','success');}catch(e){showToast(e.message||'تعذر تسجيل القرار.');}}
+function submitClientRating(sn){
   if(state.ratingSubmitting)return;
   const stars=Number(state.ratingStars);
   if(!Number.isInteger(stars)||stars<1||stars>5){showToast('اختار عدد النجوم.');return;}

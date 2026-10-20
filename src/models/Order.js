@@ -163,6 +163,10 @@ adminActionNote: { type: String, trim: true, maxlength: 500, default: '' },
 adminActionAt: { type: Date, default: null },
 adminActionBy: { type: String, trim: true, maxlength: 120, default: '' },
 
+// محادثة الطلب وسجل تعديلات السعر الموافق عليها.
+chatMessages: [{ senderRole: { type: String, enum: ['client', 'fanni'], required: true }, senderId: { type: String, default: '' }, text: { type: String, required: true, maxlength: 1000 }, createdAt: { type: Date, default: Date.now } }],
+priceChangeRequests: [{ fanniId: { type: mongoose.Schema.Types.ObjectId, ref: 'Fanni', required: true }, oldPrice: { type: Number, required: true, min: 0 }, newPrice: { type: Number, required: true, min: 0 }, reason: { type: String, required: true, trim: true, maxlength: 500 }, status: { type: String, enum: ['قيد الموافقة', 'مقبول', 'مرفوض'], default: 'قيد الموافقة' }, requestedAt: { type: Date, default: Date.now }, decidedAt: { type: Date, default: null }, decidedByRole: { type: String, default: '' } }],
+
 // عروض الفنيين على الطلب.
 offers: {
 type: [offerSchema],

@@ -532,6 +532,12 @@ router.post('/admin/:sn/publish', auth('admin'), async (req, res, next) => {
  * - الفني المعتمد يرى الطلبات التي تطابق تخصصاته فقط.
  * - بيانات العميل الشخصية لا تُرسل في هذه المرحلة.
  */
+async function hasAcceptedGuidelines(fanniId) {
+  const fanni = await Fanni.findOne({ _id: fanniId, role: 'fanni', status: 'معتمد' }).select('technicianGuidelinesAcceptedAt technicianGuidelinesVersion').lean();
+  return Boolean(fanni?.technicianGuidelinesAcceptedAt && fanni?.technicianGuidelinesVersion);
+}
+function hasContactDetails(text) { return containsEgyptianMobile(String(text || '')) || /(?:https?:\/\/|www\.|t\.me\/|wa\.me\/|bit\.ly\/)/i.test(String(text || '')); }
+
 router.get('/available', auth(), async (req, res, next) => {
   try {
     let specialties = [];
@@ -550,7 +556,8 @@ router.get('/available', auth(), async (req, res, next) => {
         _id: req.userId,
         role: 'fanni',
         status: 'معتمد'
-      }).select('specialties').lean();
+      }).select('specialties technicianGuidelinesAcceptedAt technicianGuidelinesVersion').lean();
+      if (!fanni?.technicianGuidelinesAcceptedAt || !fanni?.technicianGuidelinesVersion) return res.status(428).json({ code: 'TECHNICIAN_GUIDELINES_REQUIRED', message: 'يجب الموافقة على ميثاق التعامل المهني أولًا.' });
 
       if (!fanni) {
         return res.status(403).json({
@@ -631,12 +638,13 @@ router.get('/my-offers', auth(), async (req, res, next) => {
         message: 'هذه الخدمة متاحة لحسابات الفنيين فقط'
       });
     }
+    if (!(await hasAcceptedGuidelines(req.userId))) return res.status(428).json({ code: 'TECHNICIAN_GUIDELINES_REQUIRED', message: 'يجب الموافقة على ميثاق التعامل المهني أولًا.' });
 
     const orders = await Order.find({
       'offers.fanni': req.userId
     })
       .select(
-        'sn service area address clientName clientPhone description budget status offers assignedFanni acceptedOfferId acceptedOfferPrice commissionAmount commissionCharged'
+        'sn service area address clientName clientPhone description budget status offers assignedFanni acceptedOfferId acceptedOfferPrice commissionRate commissionAmount commissionCharged chatMessages priceChangeRequests'
       )
       .lean();
 
@@ -662,6 +670,7 @@ router.get('/my-offers', auth(), async (req, res, next) => {
           ...sanitizeOffer(offer),
           orderSn: order.sn,
           orderStatus: order.status,
+          chatMessages: (order.chatMessages || []).map(m => ({ senderRole: m.senderRole, text: m.text, createdAt: m.createdAt })),
           service: order.service,
           accepted: isAcceptedByThisFanni,
           completed: isCompletedByThisFanni
@@ -718,6 +727,7 @@ router.post('/:sn/offer', auth(), async (req, res, next) => {
         message: 'حساب الفني لم يتم اعتماده بعد'
       });
     }
+    if (!(await hasAcceptedGuidelines(req.userId))) return res.status(428).json({ code: 'TECHNICIAN_GUIDELINES_REQUIRED', message: 'يجب الموافقة على ميثاق التعامل المهني أولًا.' });
 
     const sn = String(req.params.sn || '').toUpperCase();
 
@@ -1191,6 +1201,7 @@ router.post('/:sn/complete', auth(), async (req, res, next) => {
         message: 'إكمال المهمة متاح للفني المعيّن فقط'
       });
     }
+    if (!(await hasAcceptedGuidelines(req.userId))) return res.status(428).json({ code: 'TECHNICIAN_GUIDELINES_REQUIRED', message: 'يجب الموافقة على ميثاق التعامل المهني أولًا.' });
 
     const sn = String(req.params.sn || '').toUpperCase();
 
@@ -1414,6 +1425,109 @@ router.post('/:sn/rating', async (req, res, next) => {
   }
 });
 
+router.get('/:sn/chat', async (req, res, next) => {
+  try {
+    const sn = String(req.params.sn || '').toUpperCase(); if (!validSN(sn)) return res.status(400).json({ message: 'كود الطلب غير صحيح' });
+    const order = await Order.findOne({ sn }); if (!order) return res.status(404).json({ message: 'الطلب غير موجود' });
+    const isClient = verifyClientToken(req, order); const token = String(req.headers.authorization || '').startsWith('Bearer ') ? req.headers.authorization.slice(7).trim() : ''; let fanniId = null;
+    if (token && process.env.JWT_SECRET) { try { const payload = jwt.verify(token, process.env.JWT_SECRET); if (payload.id) fanniId = payload.id; } catch (_) {} }
+    const ownsOffer = fanniId && (order.offers || []).some(o => String(o.fanni) === String(fanniId));
+    if (!isClient && !ownsOffer) return res.status(403).json({ message: 'غير مسموح بعرض محادثة هذا الطلب.' });
+    if (!isClient && !(await hasAcceptedGuidelines(fanniId))) return res.status(428).json({ code: 'TECHNICIAN_GUIDELINES_REQUIRED', message: 'يجب الموافقة على ميثاق التعامل المهني أولًا.' });
+    if (!isClient && ['تم اختيار فني', 'تم الانتهاء'].includes(order.status) && String(order.assignedFanni || '') !== String(fanniId)) return res.status(403).json({ message: 'المحادثة بعد القبول متاحة للفني المعيّن فقط.' });
+    return res.json({ messages: order.chatMessages || [], priceChangeRequests: order.priceChangeRequests || [] });
+  } catch (err) { next(err); }
+});
+router.post('/:sn/chat', async (req, res, next) => {
+  try {
+    const sn = String(req.params.sn || '').toUpperCase(); if (!validSN(sn)) return res.status(400).json({ message: 'كود الطلب غير صحيح' });
+    const text = String(req.body?.text || req.body?.reply || '').trim().slice(0, 1000); if (!text) return res.status(400).json({ message: 'اكتب الرسالة أولًا.' });
+    if (hasContactDetails(text)) return res.status(400).json({ message: 'ممنوع تبادل أرقام الهاتف أو الروابط داخل المحادثة.' });
+    const order = await Order.findOne({ sn }); if (!order) return res.status(404).json({ message: 'الطلب غير موجود' });
+    const isClient = verifyClientToken(req, order); const token = String(req.headers.authorization || '').startsWith('Bearer ') ? req.headers.authorization.slice(7).trim() : ''; let payload = null;
+    if (token && process.env.JWT_SECRET) { try { payload = jwt.verify(token, process.env.JWT_SECRET); } catch (_) {} }
+    const fanniId = payload?.id; const ownsOffer = fanniId && (order.offers || []).some(o => String(o.fanni) === String(fanniId));
+    if (!isClient && !ownsOffer) return res.status(403).json({ message: 'غير مسموح بإرسال رسالة لهذا الطلب.' });
+    if (!isClient && !(await hasAcceptedGuidelines(fanniId))) return res.status(428).json({ code: 'TECHNICIAN_GUIDELINES_REQUIRED', message: 'يجب الموافقة على ميثاق التعامل المهني أولًا.' });
+    const activeAssigned = ['تم اختيار فني', 'تم الانتهاء'].includes(order.status) && String(order.assignedFanni || '') === String(fanniId || '');
+    if (!isClient && ['تم اختيار فني', 'تم الانتهاء'].includes(order.status) && !activeAssigned) return res.status(403).json({ message: 'المحادثة بعد القبول متاحة للفني المعيّن فقط.' });
+    if (!isClient && !['تم اختيار فني', 'تم الانتهاء'].includes(order.status) && !['نعم', 'لا', 'حسب الاتفاق'].includes(text)) return res.status(400).json({ message: 'قبل قبول العرض، ردود الفني المسموحة فقط: نعم، لا، حسب الاتفاق.' });
+    order.chatMessages.push({ senderRole: isClient ? 'client' : 'fanni', senderId: isClient ? String(order.clientAccount || order._id) : String(fanniId), text, createdAt: new Date() }); await order.save();
+    return res.status(201).json({ message: 'تم إرسال الرسالة.', messages: order.chatMessages });
+  } catch (err) { next(err); }
+});
+router.post('/:sn/price-change', auth(), async (req, res, next) => {
+  try {
+    if (req.user.role !== 'fanni') return res.status(403).json({ message: 'طلب تعديل السعر متاح للفني المعيّن فقط.' });
+    if (!(await hasAcceptedGuidelines(req.userId))) return res.status(428).json({ code: 'TECHNICIAN_GUIDELINES_REQUIRED', message: 'يجب الموافقة على ميثاق التعامل المهني أولًا.' });
+    const sn = String(req.params.sn || '').toUpperCase(), newPrice = money(req.body?.newPrice), reason = String(req.body?.reason || '').trim().slice(0, 500);
+    if (!validSN(sn) || !Number.isFinite(newPrice) || newPrice <= 0 || reason.length < 5) return res.status(400).json({ message: 'اكتب سعرًا جديدًا صحيحًا وسببًا واضحًا للتعديل.' });
+    const order = await Order.findOne({ sn }); if (!order) return res.status(404).json({ message: 'الطلب غير موجود.' });
+    if (order.status !== 'تم اختيار فني' || String(order.assignedFanni) !== String(req.userId) || !order.acceptedOfferPrice) return res.status(409).json({ message: 'لا يمكن طلب تعديل السعر إلا للطلب المسند إليك قبل إنهائه.' });
+    if ((order.priceChangeRequests || []).some(r => r.status === 'قيد الموافقة')) return res.status(409).json({ message: 'يوجد طلب تعديل سعر ينتظر موافقة العميل بالفعل.' });
+    order.priceChangeRequests.push({ fanniId: req.userId, oldPrice: order.acceptedOfferPrice, newPrice, reason, status: 'قيد الموافقة', requestedAt: new Date() }); await order.save();
+    return res.status(201).json({ message: 'تم إرسال طلب تعديل السعر للعميل؛ لا تنفذ الزيادة قبل موافقته.', request: order.priceChangeRequests[order.priceChangeRequests.length - 1] });
+  } catch (err) { next(err); }
+});
+router.post('/:sn/price-change/:requestId/decision', async (req, res, next) => {
+  let session;
+  try {
+    const sn = String(req.params.sn || '').toUpperCase();
+    if (!validSN(sn)) return res.status(400).json({ message: 'كود الطلب غير صحيح.' });
+    session = await mongoose.startSession();
+    await session.startTransaction();
+    const order = await Order.findOne({ sn }).session(session);
+    if (!order) { await session.abortTransaction(); return res.status(404).json({ message: 'الطلب غير موجود.' }); }
+    if (!verifyClientToken(req, order)) { await session.abortTransaction(); return res.status(403).json({ message: 'غير مسموح بتعديل سعر هذا الطلب.' }); }
+    const request = order.priceChangeRequests.id(req.params.requestId);
+    if (!request || request.status !== 'قيد الموافقة') { await session.abortTransaction(); return res.status(409).json({ message: 'طلب تعديل السعر غير متاح أو تم اتخاذ قرار بشأنه.' }); }
+    const approved = req.body?.approved === true;
+    if (approved) {
+      if (!order.commissionCharged || !order.acceptedOfferPrice || !request.fanniId) { await session.abortTransaction(); return res.status(409).json({ message: 'تعذر اعتماد تعديل السعر قبل تثبيت العرض والعمولة.' }); }
+      const rate = Number.isFinite(Number(order.commissionRate)) ? Number(order.commissionRate) : DEFAULT_COMMISSION_RATE;
+      const oldCommission = money(Number(order.commissionAmount || 0));
+      const newCommission = money(Number(request.newPrice) * rate / 100);
+      const delta = money(newCommission - oldCommission);
+      const fanni = await Fanni.findOne({ _id: request.fanniId, role: 'fanni' }).session(session);
+      if (!fanni) { await session.abortTransaction(); return res.status(409).json({ message: 'تعذر العثور على محفظة الفني لتنفيذ تسوية العمولة.' }); }
+      const balanceBefore = Number(fanni.walletBalance || 0);
+      if (!Number.isFinite(balanceBefore) || balanceBefore < 0 || (delta > 0 && balanceBefore < delta)) { await session.abortTransaction(); return res.status(409).json({ message: 'رصيد الفني لا يكفي لتسوية عمولة السعر الجديد؛ لم يتم اعتماد التعديل.' }); }
+      let balanceAfter = balanceBefore;
+      if (delta !== 0) {
+        const updatedFanni = await Fanni.findOneAndUpdate(
+          { _id: fanni._id, role: 'fanni', ...(delta > 0 ? { walletBalance: { $gte: delta } } : {}) },
+          { $inc: { walletBalance: -delta } },
+          { new: true, session, runValidators: true }
+        );
+        if (!updatedFanni) { await session.abortTransaction(); return res.status(409).json({ message: 'تغير رصيد الفني؛ لم يتم اعتماد تعديل السعر.' }); }
+        balanceAfter = Number(updatedFanni.walletBalance);
+        const transaction = new WalletTransaction({
+          fanni: fanni._id, order: order._id, orderSN: order.sn, type: 'commission',
+          amount: -delta, balanceBefore, balanceAfter,
+          description: 'تسوية عمولة بعد موافقة العميل على تعديل سعر الطلب ' + order.sn,
+          idempotencyKey: 'commission-adjustment:' + String(order._id) + ':' + String(request._id)
+        });
+        await transaction.save({ session });
+      }
+      order.acceptedOfferPrice = Number(request.newPrice);
+      order.commissionAmount = newCommission;
+      order.commissionRate = rate;
+    }
+    request.status = approved ? 'مقبول' : 'مرفوض';
+    request.decidedAt = new Date();
+    request.decidedByRole = 'client';
+    await order.save({ session });
+    await session.commitTransaction();
+    return res.json({ message: approved ? 'تمت الموافقة على السعر الجديد وتسجيل تسوية العمولة.' : 'تم رفض تعديل السعر؛ يظل السعر السابق ساريًا.', acceptedOfferPrice: order.acceptedOfferPrice, commissionAmount: order.commissionAmount, commissionRate: order.commissionRate, request });
+  } catch (err) {
+    if (session && session.inTransaction()) { try { await session.abortTransaction(); } catch (_) {} }
+    if (err && err.code === 11000) return res.status(409).json({ message: 'تمت معالجة تسوية العمولة بالفعل.' });
+    next(err);
+  } finally {
+    if (session) await session.endSession();
+  }
+});
+
 async function trackOrder(req, res, next) {
   try {
     const sn = String(req.params.sn || '').toUpperCase();
@@ -1453,12 +1567,21 @@ async function trackOrder(req, res, next) {
       includeAddress: isOrderOwner,
       includeAssignedFanniPhone: isOrderOwner
     });
+    safe.acceptedOfferId = order.acceptedOfferId ? String(order.acceptedOfferId) : null;
+    safe.acceptedOfferPrice = order.acceptedOfferPrice ?? null;
+    safe.commissionRate = order.commissionRate ?? null;
+    safe.commissionAmount = order.commissionAmount ?? null;
+    if (Array.isArray(safe.offers) && order.acceptedOfferId && ['تم اختيار فني', 'تم الانتهاء'].includes(order.status)) safe.offers = safe.offers.map(offer => ({ ...offer, offerStatus: String(offer._id) === String(order.acceptedOfferId) ? 'تم قبول العرض' : 'تم رفض العرض' }));
+    safe.chatMessages = (order.chatMessages || []).map(m => ({ senderRole: m.senderRole, text: m.text, createdAt: m.createdAt }));
+    safe.priceChangeRequests = (order.priceChangeRequests || []).map(r => ({ _id: String(r._id), oldPrice: r.oldPrice, newPrice: r.newPrice, reason: r.reason, status: r.status, requestedAt: r.requestedAt, decidedAt: r.decidedAt }));
 
     if (isOrderOwner && order.status === 'تم الانتهاء') {
       const ratings = await Rating.find({ orderId: order._id }).sort({ createdAt: 1 }).lean();
       safe.ratings = publicRatings(ratings);
       safe.myRating = publicRatings(ratings.filter(rating => rating.reviewerRole === 'client'))[0] || null;
       safe.canRate = !safe.myRating;
+      safe.acceptedOfferPrice = order.acceptedOfferPrice ?? null;
+      safe.assignedFanniName = order.assignedFanniName || safe.assignedFanniName || '';
     }
 
     return res.json({

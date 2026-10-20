@@ -173,6 +173,8 @@ const fanniSchema = new mongoose.Schema({
     average: { type: Number, default: 0, min: 0, max: 5 },
     count: { type: Number, default: 0, min: 0 }
   },
+  technicianGuidelinesAcceptedAt: { type: Date, default: null },
+  technicianGuidelinesVersion: { type: String, trim: true, maxlength: 40, default: '' },
   stats: {
     completedJobs: { type: Number, default: 0 },
     cancelledJobs: { type: Number, default: 0 },

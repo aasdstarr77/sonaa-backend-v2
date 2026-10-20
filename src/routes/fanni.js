@@ -194,6 +194,16 @@ router.post(
 /*
  * GET /api/fanni/me
  */
+const TECHNICIAN_GUIDELINES_VERSION = '2026-10-20-v1';
+router.post('/guidelines/accept', auth(), requireFanni, requireApprovedFanni, async (req, res, next) => {
+  try {
+    if (req.body?.accepted !== true || req.body?.version !== TECHNICIAN_GUIDELINES_VERSION) return res.status(400).json({ message: 'اقرأ التعليمات وحدد الموافقة لتأكيد الالتزام بها.' });
+    const fanni = await Fanni.findOneAndUpdate({ _id: req.userId, role: 'fanni', status: 'معتمد' }, { $set: { technicianGuidelinesAcceptedAt: new Date(), technicianGuidelinesVersion: TECHNICIAN_GUIDELINES_VERSION } }, { new: true, runValidators: true });
+    if (!fanni) return res.status(403).json({ message: 'حساب الفني غير معتمد.' });
+    return res.json({ message: 'تم تسجيل موافقتك على ميثاق صُنّاع.', acceptedAt: fanni.technicianGuidelinesAcceptedAt, version: fanni.technicianGuidelinesVersion });
+  } catch (err) { next(err); }
+});
+
 router.get('/me', auth(), requireFanni, async (req, res) => {
   return res.json(req.user.toSafeJSON());
 });
