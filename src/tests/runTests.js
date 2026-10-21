@@ -275,6 +275,21 @@ async function run() {
       assert.equal(r.body.order.sn, orderSN);
     });
 
+    await test('only the order owner can cancel a pending order', async () => {
+      const denied = await request(app).post('/api/orders/' + orderSN + '/cancel')
+        .set('Authorization', 'Bearer ' + clientToken);
+      assert.equal(denied.status, 403);
+
+      const cancelled = await request(app).post('/api/orders/' + orderSN + '/cancel')
+        .set('Authorization', 'Bearer ' + orderClientToken);
+      assert.equal(cancelled.status, 200);
+      assert.equal(cancelled.body.order.status, 'ملغي');
+
+      const repeated = await request(app).post('/api/orders/' + orderSN + '/cancel')
+        .set('Authorization', 'Bearer ' + orderClientToken);
+      assert.equal(repeated.status, 409);
+    });
+
     await test('tracking code alone does not expose order details', async () => {
       const r = await request(app).get('/api/orders/' + orderSN);
       assert.equal(r.status, 403);
