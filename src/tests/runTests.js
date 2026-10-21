@@ -184,6 +184,7 @@ async function run() {
         .send({ text: 'هذه رسالة متابعة للاختبار' });
       assert.equal(r.status, 200);
       assert.ok(r.body.supportCase.messages.some(m => m.text === 'هذه رسالة متابعة للاختبار'));
+      assert.equal(r.body.supportCase.needsHuman, true, 'owner follow-up should return the case to the human-support queue');
     });
 
     await test('admin API rejects requests without a token', async () => {
