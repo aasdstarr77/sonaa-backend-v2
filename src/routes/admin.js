@@ -1555,7 +1555,7 @@ router.patch('/services/order', auth('admin'), async (req, res, next) => {
 
 router.delete('/services/:id', auth('admin'), async (req, res, next) => {
   try {
-    const rawId = String(req.params.id || '').trim(), requestedCategory = req.query.category ? String(req.query.category).trim().replace(/\\s+/g, ' ') : '';
+    const rawId = String(req.params.id || '').trim(), requestedCategory = req.query.category ? String(req.query.category).trim().replace(/\s+/g, ' ') : '';
     let service = null;
     if (mongoose.isValidObjectId(rawId)) service = await Service.findById(rawId);
     else {
