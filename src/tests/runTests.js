@@ -277,7 +277,7 @@ async function run() {
 
     await test('only the order owner can cancel a pending order', async () => {
       const denied = await request(app).post('/api/orders/' + orderSN + '/cancel')
-        .set('Authorization', 'Bearer ' + clientToken);
+        .set('Authorization', 'Bearer ' + secondClientToken);
       assert.equal(denied.status, 403);
 
       const cancelled = await request(app).post('/api/orders/' + orderSN + '/cancel')
