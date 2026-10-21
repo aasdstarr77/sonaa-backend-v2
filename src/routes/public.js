@@ -57,12 +57,13 @@ router.get('/services', async (req, res, next) => {
     const categoriesMap = new Map();
 
     // نبدأ بالخدمات الحالية حتى لا نفقد القائمة الموجودة.
-    for (const category of CATEGORIES) {
+    for (const [categoryIndex, category] of CATEGORIES.entries()) {
       const categoryKey = normalize(category.label);
 
       categoriesMap.set(categoryKey, {
         label: category.label,
         emoji: category.emoji,
+        categorySortOrder: (categoryIndex + 1) * 10,
         services: []
       });
 
@@ -80,11 +81,13 @@ router.get('/services', async (req, res, next) => {
         categoriesMap.set(categoryKey, {
           label: saved.category,
           emoji: saved.emoji || '🔧',
+          categorySortOrder: Number.isFinite(Number(saved.categorySortOrder)) && Number(saved.categorySortOrder) > 0 ? Number(saved.categorySortOrder) : 100000,
           services: []
         });
       }
 
       const category = categoriesMap.get(categoryKey);
+      if (Number.isFinite(Number(saved.categorySortOrder)) && Number(saved.categorySortOrder) > 0) category.categorySortOrder = Number(saved.categorySortOrder);
 
       // إذا كانت الخدمة موجودة من القائمة القديمة، نستبدلها بسجل DB.
       const existingIndex = category.services.findIndex(
@@ -108,6 +111,7 @@ router.get('/services', async (req, res, next) => {
     }
 
     const categories = Array.from(categoriesMap.values())
+      .sort((a, b) => a.categorySortOrder - b.categorySortOrder || a.label.localeCompare(b.label, 'ar'))
       .map(category => {
         category.services.sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, 'ar'));
         return { label: category.label, emoji: category.emoji, services: category.services.map(item => item.name) };

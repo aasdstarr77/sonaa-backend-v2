@@ -1323,11 +1323,12 @@ function validateSortOrder(val) {
 
 function buildAdminCategoriesMap(savedServices) {
   const map = new Map();
-  for (const cat of CATEGORIES) {
+  for (const [categoryIndex, cat] of CATEGORIES.entries()) {
     const key = normalizeForCompare(cat.label);
     map.set(key, {
       label: cat.label,
       emoji: cat.emoji,
+      categorySortOrder: (categoryIndex + 1) * 10,
       services: cat.services.map((name, index) => ({
         name,
         normalizedName: normalizeForCompare(name),
@@ -1346,10 +1347,12 @@ function buildAdminCategoriesMap(savedServices) {
       map.set(catKey, {
         label: saved.category,
         emoji: saved.emoji || '🔧',
+        categorySortOrder: Number.isFinite(Number(saved.categorySortOrder)) && Number(saved.categorySortOrder) > 0 ? Number(saved.categorySortOrder) : 100000,
         services: []
       });
     }
     const category = map.get(catKey);
+    if (Number.isFinite(Number(saved.categorySortOrder)) && Number(saved.categorySortOrder) > 0) category.categorySortOrder = Number(saved.categorySortOrder);
     const serviceKey = normalizeForCompare(saved.name);
     const existingIdx = category.services.findIndex(s => normalizeForCompare(s.name) === serviceKey);
     const dbItem = {
@@ -1372,7 +1375,7 @@ function buildAdminCategoriesMap(savedServices) {
     }
   }
   for (const category of map.values()) category.services.sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, 'ar'));
-  return map;
+  return new Map(Array.from(map.entries()).sort((a, b) => a[1].categorySortOrder - b[1].categorySortOrder || a[1].label.localeCompare(b[1].label, 'ar')));
 }
 
 async function findServicesByName(rawName) {
@@ -1432,6 +1435,7 @@ router.get('/services', auth('admin'), async (req, res, next) => {
       label: cat.label,
       name: cat.label,
       emoji: cat.emoji,
+      categorySortOrder: cat.categorySortOrder,
       services: cat.services.map(s => s.name),
       _displayServices: cat.services.map(s => s.name),
       _detailed: cat.services,
@@ -1482,6 +1486,7 @@ router.post('/services', auth('admin'), async (req, res, next) => {
       category,
       emoji: emoji ? String(emoji).trim() : (findCategoryByLabel(category)?.emoji || findCategoryByService(name)?.emoji || '🔧'),
       sortOrder: sortOrder !== undefined && sortOrder !== '' ? Number(sortOrder) : 0,
+      categorySortOrder: (findCategoryByLabel(category) ? (CATEGORIES.findIndex(c => normalizeForCompare(c.label) === normalizeForCompare(category)) + 1) * 10 : 100000),
       isActive: true
     };
 
@@ -1496,6 +1501,27 @@ router.post('/services', auth('admin'), async (req, res, next) => {
   }
 });
 
+
+router.patch('/services/categories/order', auth('admin'), async (req, res, next) => {
+  try {
+    const schema = Joi.object({ categories: Joi.array().min(1).max(200).items(Joi.string().trim().min(1).max(100)).required() }).required();
+    const { error, value } = schema.validate(req.body || {}, { abortEarly: false, stripUnknown: true });
+    if (error) return res.status(400).json({ message: 'قائمة ترتيب الأقسام غير صحيحة' });
+    const seen = new Set(), labels = value.categories.map(label => label.replace(/\s+/g, ' '));
+    for (const label of labels) { const key = normalizeForCompare(label); if (seen.has(key)) return res.status(400).json({ message: 'يوجد قسم مكرر في الترتيب' }); seen.add(key); const err = validateCategoryField(label); if (err) return res.status(400).json({ message: err }); }
+    for (const [index, category] of labels.entries()) {
+      const categoryOrder = (index + 1) * 10, legacy = findCategoryByLabel(category);
+      if (legacy) for (const [serviceIndex, name] of legacy.services.entries()) {
+        let service = await Service.findOne({ normalizedName: normalizeForCompare(name), category });
+        if (!service) await Service.create({ name, category, emoji: legacy.emoji || '🔧', isActive: true, sortOrder: (serviceIndex + 1) * 10, categorySortOrder: categoryOrder });
+        else { service.categorySortOrder = categoryOrder; await service.save(); }
+      }
+      await Service.updateMany({ category }, { $set: { categorySortOrder: categoryOrder } });
+    }
+    await writeAdminAudit(req, 'تغيير ترتيب الأقسام الأساسية', 'services', 'categories', JSON.stringify({ count: labels.length }));
+    return res.json({ ok: true, message: 'تم حفظ ترتيب الأقسام', count: labels.length });
+  } catch (err) { if (err.code === 11000) return res.status(409).json({ message: 'تعذر حفظ ترتيب الأقسام بسبب خدمة مكررة' }); next(err); }
+});
 
 router.patch('/services/order', auth('admin'), async (req, res, next) => {
   try {
@@ -1529,15 +1555,21 @@ router.patch('/services/order', auth('admin'), async (req, res, next) => {
 
 router.delete('/services/:id', auth('admin'), async (req, res, next) => {
   try {
-    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: 'معرّف الخدمة غير صحيح' });
-    const service = await Service.findById(req.params.id);
-    if (!service) return res.status(404).json({ message: 'الخدمة غير موجودة' });
-    const legacyCategory = findCategoryByService(service.name);
-    if (legacyCategory && normalizeForCompare(legacyCategory.label) === normalizeForCompare(service.category)) return res.status(409).json({ message: 'هذه خدمة أساسية؛ استخدم زر الإخفاء بدل الحذف حتى لا تتأثر الطلبات القديمة' });
+    const rawId = String(req.params.id || '').trim(), requestedCategory = req.query.category ? String(req.query.category).trim().replace(/\s+/g, ' ') : '';
+    let service = null;
+    if (mongoose.isValidObjectId(rawId)) service = await Service.findById(rawId);
+    else {
+      const candidates = await findServicesByName(rawId), matches = requestedCategory ? candidates.filter(item => normalizeForCompare(item.category) === normalizeForCompare(requestedCategory)) : candidates;
+      if (matches.length > 1) return res.status(409).json({ message: 'الخدمة موجودة في أكثر من قسم؛ حدّد القسم قبل الحذف', duplicates: matches.map(item => ({ name: item.name, category: item.category })) });
+      service = matches[0] || null;
+      if (!service && requestedCategory) { const legacy = findCategoryByLabel(requestedCategory), legacyName = legacy?.services.find(name => normalizeForCompare(name) === normalizeForCompare(rawId)); if (legacyName) service = await ensureHiddenLegacy(legacyName, legacy.label); }
+    }
+    if (!service) return res.status(404).json({ message: 'الخدمة غير موجودة في القسم المحدد' });
     const name = service.name, category = service.category;
-    await Service.deleteOne({ _id: service._id });
-    await writeAdminAudit(req, 'حذف خدمة مضافة', 'services', name, JSON.stringify({ category }));
-    return res.json({ ok: true, message: 'تم حذف الخدمة المضافة' });
+    service.isActive = false;
+    await service.save();
+    await writeAdminAudit(req, 'حذف خدمة من القوائم المتاحة', 'services', name, JSON.stringify({ category, softDelete: true }));
+    return res.json({ ok: true, message: 'تم حذف الخدمة من القوائم المتاحة مع الحفاظ على الطلبات السابقة' });
   } catch (err) { next(err); }
 });
 
