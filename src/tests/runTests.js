@@ -46,6 +46,7 @@ async function run() {
       assert.equal(isRootAdmin({ role: 'admin', phone: '01012345678' }), true);
       assert.equal(isRootAdmin({ role: 'admin', phone: '01012345679' }), false);
       assert.equal(canAccessAdmin({ role: 'admin', phone: '01012345679', adminPermissions: { orders: { read: true, write: false } } }, { path: '/orders', method: 'GET' }), true);
+      assert.equal(canAccessAdmin({ role: 'fanni', adminRole: 'مشرف', adminPermissions: { orders: { read: true, write: false } } }, { path: '/api/admin/orders', method: 'GET' }), true);
       assert.equal(canAccessAdmin({ role: 'admin', phone: '01012345679' }, { path: '/settings', method: 'GET' }), false);
     });
 
