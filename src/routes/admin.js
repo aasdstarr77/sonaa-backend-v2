@@ -1082,52 +1082,48 @@ router.post('/regions', auth('admin'), async (req, res, next) => {
     return next(error);
   }
 });
+
 router.post('/notifications/direct', auth('admin'), async (req, res, next) => {
   try {
     const schema = Joi.object({
-      title: Joi.string().trim().min(2).max(100).required(),
-      message: Joi.string().trim().min(2).max(300).required(),
-      recipientRole: Joi.string().valid('fanni', 'client').required(),
-      phone: Joi.string().trim().required()
+      title: Joi.string().trim().min(2).max(100).required(), message: Joi.string().trim().min(2).max(300).required(),
+      recipientRole: Joi.string().valid('fanni', 'client').required(), recipientMode: Joi.string().valid('single', 'group').default('single'),
+      phone: Joi.string().trim().allow('').optional(),
+      audience: Joi.string().valid('all', 'approved', 'active', 'disabled').when('recipientMode', { is: 'group', then: Joi.required(), otherwise: Joi.optional() })
     }).required();
     const { error, value } = schema.validate(req.body || {}, { abortEarly: false, stripUnknown: true });
     if (error) return res.status(400).json({ message: 'بيانات الرسالة أو المستلم غير صحيحة' });
-
-    const phone = normalizePhone(value.phone);
-    if (!phone || !/^01[0-9]{9}$/.test(phone)) {
-      return res.status(400).json({ message: 'اكتب رقم هاتف مصري صحيحًا للمستلم' });
+    if (value.recipientMode === 'single') {
+      const phone = normalizePhone(value.phone);
+      if (!phone || !/^01[0-9]{9}$/.test(phone)) return res.status(400).json({ message: 'اكتب رقم هاتف مصري صحيحًا للمستلم' });
+      let recipient;
+      if (value.recipientRole === 'fanni') recipient = await Fanni.findOne({ phone, role: 'fanni' }).select('_id name phone status').lean();
+      else recipient = await Client.findOne({ phone }).select('_id name phone status').lean();
+      if (!recipient) return res.status(404).json({ message: value.recipientRole === 'fanni' ? 'لا يوجد فني بهذا الرقم' : 'لا يوجد عميل بهذا الرقم' });
+      await Notification.create({ recipientRole: value.recipientRole, recipientId: recipient._id, type: 'admin_message', title: value.title, message: value.message, link: '', readAt: null });
+      await writeAdminAudit(req, 'إرسال إشعار فردي', 'notifications', recipient.phone, JSON.stringify({ role: value.recipientRole }));
+      return res.status(201).json({ message: 'تم إرسال الإشعار إلى المستلم المحدد فقط', sent: 1, recipient: { role: value.recipientRole, name: recipient.name, phone: recipient.phone } });
     }
-
-    let recipient;
+    let filter = {};
     if (value.recipientRole === 'fanni') {
-      recipient = await Fanni.findOne({ phone, role: 'fanni', status: { $ne: 'مرفوض' } })
-        .select('_id name phone status').lean();
+      filter.role = 'fanni';
+      if (value.audience === 'approved') filter.status = 'معتمد';
+      else if (value.audience === 'disabled') filter.status = 'معلق';
+      else if (value.audience === 'active') return res.status(400).json({ message: 'اختار الفنيين المعتمدين أو المعطلين أو الجميع' });
     } else {
-      recipient = await Client.findOne({ phone, status: 'نشط' })
-        .select('_id name phone status').lean();
+      if (value.audience === 'active' || value.audience === 'approved') filter.status = 'نشط';
+      else if (value.audience === 'disabled') filter.status = 'معلق';
     }
-    if (!recipient) {
-      return res.status(404).json({
-        message: value.recipientRole === 'fanni'
-          ? 'لا يوجد فني بهذا الرقم يمكن إرسال رسالة إليه'
-          : 'لا يوجد عميل مسجل ونشط بهذا الرقم'
-      });
-    }
-
-    await Notification.create({
-      recipientRole: value.recipientRole,
-      recipientId: recipient._id,
-      type: 'admin_message',
-      title: value.title,
-      message: value.message,
-      link: '',
-      readAt: null
-    });
-    return res.status(201).json({
-      message: 'تم إرسال الرسالة داخل التطبيق إلى المستلم المحدد فقط',
-      sent: 1,
-      recipient: { role: value.recipientRole, name: recipient.name, phone: recipient.phone }
-    });
+    const Model = value.recipientRole === 'fanni' ? Fanni : Client;
+    const total = await Model.countDocuments(filter);
+    if (total > 5000) return res.status(413).json({ message: 'عدد المستلمين أكبر من الحد الآمن (5000). قسّم الإرسال إلى فئات أصغر.', count: total });
+    if (!total) return res.status(404).json({ message: 'لا توجد حسابات تطابق الفئة المحددة', sent: 0 });
+    const recipients = await Model.find(filter).select('_id').limit(5000).lean();
+    const createdAt = new Date();
+    const docs = recipients.map(person => ({ recipientRole: value.recipientRole, recipientId: person._id, type: 'admin_message', title: value.title, message: value.message, link: '', readAt: null, createdAt, updatedAt: createdAt }));
+    await Notification.insertMany(docs, { ordered: true });
+    await writeAdminAudit(req, 'إرسال إشعار جماعي', 'notifications', value.recipientRole + ':' + value.audience, JSON.stringify({ sent: docs.length }));
+    return res.status(201).json({ message: 'تم إرسال الإشعار الجماعي داخل التطبيق', sent: docs.length, recipientRole: value.recipientRole, audience: value.audience });
   } catch (error) { return next(error); }
 });
 router.get('/settings', auth('admin'), async (req, res, next) => {
@@ -1332,7 +1328,7 @@ function buildAdminCategoriesMap(savedServices) {
     map.set(key, {
       label: cat.label,
       emoji: cat.emoji,
-      services: cat.services.map(name => ({
+      services: cat.services.map((name, index) => ({
         name,
         normalizedName: normalizeForCompare(name),
         emoji: cat.emoji,
@@ -1340,7 +1336,7 @@ function buildAdminCategoriesMap(savedServices) {
         source: 'legacy',
         category: cat.label,
         dbId: null,
-        sortOrder: 0
+        sortOrder: (index + 1) * 10
       }))
     });
   }
@@ -1365,7 +1361,7 @@ function buildAdminCategoriesMap(savedServices) {
       category: saved.category,
       isCustom: !(findCategoryByService(saved.name) && normalizeForCompare(findCategoryByService(saved.name).label) === normalizeForCompare(saved.category)),
       dbId: String(saved._id),
-      sortOrder: saved.sortOrder || 0,
+      sortOrder: Number.isFinite(Number(saved.sortOrder)) ? Number(saved.sortOrder) : 0,
       createdAt: saved.createdAt,
       updatedAt: saved.updatedAt
     };
@@ -1375,6 +1371,7 @@ function buildAdminCategoriesMap(savedServices) {
       category.services.push(dbItem);
     }
   }
+  for (const category of map.values()) category.services.sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, 'ar'));
   return map;
 }
 
@@ -1497,6 +1494,51 @@ router.post('/services', auth('admin'), async (req, res, next) => {
     }
     next(err);
   }
+});
+
+
+router.patch('/services/order', auth('admin'), async (req, res, next) => {
+  try {
+    const schema = Joi.object({ category: Joi.string().trim().min(1).max(100).required(), items: Joi.array().min(1).max(500).items(Joi.object({
+      name: Joi.string().trim().min(1).max(100).required(), sortOrder: Joi.number().integer().min(0).max(100000).required(),
+      emoji: Joi.string().max(20).allow('').optional(), isActive: Joi.boolean().optional()
+    }).required()).required() }).required();
+    const { error, value } = schema.validate(req.body || {}, { abortEarly: false, stripUnknown: true });
+    if (error) return res.status(400).json({ message: 'بيانات ترتيب الخدمات غير صحيحة' });
+    const category = value.category.replace(/\\s+/g, ' ');
+    const categoryError = validateCategoryField(category);
+    if (categoryError) return res.status(400).json({ message: categoryError });
+    const seen = new Set();
+    for (const item of value.items) { const key = normalizeForCompare(item.name); if (seen.has(key)) return res.status(400).json({ message: 'يوجد تكرار في قائمة ترتيب الخدمات' }); seen.add(key); }
+    for (const item of value.items) {
+      const normalizedName = normalizeForCompare(item.name);
+      let service = await Service.findOne({ normalizedName, category });
+      if (service) {
+        service.sortOrder = item.sortOrder; if (item.emoji) service.emoji = item.emoji;
+        if (item.isActive !== undefined) service.isActive = item.isActive;
+        await service.save();
+      } else {
+        const legacyCategory = findCategoryByLabel(category), legacyService = findCategoryByService(item.name);
+        await Service.create({ name: item.name, category, emoji: item.emoji || legacyService?.emoji || legacyCategory?.emoji || '🔧', isActive: item.isActive !== false, sortOrder: item.sortOrder });
+      }
+    }
+    await writeAdminAudit(req, 'تغيير ترتيب الخدمات', 'services', category, JSON.stringify({ count: value.items.length }));
+    return res.json({ ok: true, message: 'تم حفظ ترتيب الخدمات', count: value.items.length });
+  } catch (err) { if (err.code === 11000) return res.status(409).json({ message: 'تعذر حفظ الترتيب بسبب خدمة مكررة في القسم' }); next(err); }
+});
+
+router.delete('/services/:id', auth('admin'), async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: 'معرّف الخدمة غير صحيح' });
+    const service = await Service.findById(req.params.id);
+    if (!service) return res.status(404).json({ message: 'الخدمة غير موجودة' });
+    const legacyCategory = findCategoryByService(service.name);
+    if (legacyCategory && normalizeForCompare(legacyCategory.label) === normalizeForCompare(service.category)) return res.status(409).json({ message: 'هذه خدمة أساسية؛ استخدم زر الإخفاء بدل الحذف حتى لا تتأثر الطلبات القديمة' });
+    const name = service.name, category = service.category;
+    await Service.deleteOne({ _id: service._id });
+    await writeAdminAudit(req, 'حذف خدمة مضافة', 'services', name, JSON.stringify({ category }));
+    return res.json({ ok: true, message: 'تم حذف الخدمة المضافة' });
+  } catch (err) { next(err); }
 });
 
 router.patch('/services/:name', auth('admin'), async (req, res, next) => {
