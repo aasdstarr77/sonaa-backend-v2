@@ -413,22 +413,44 @@ function renderLevels(){
   </section>`;
 }
 
+const ADMIN_PERMISSION_SECTIONS=[
+  ['dashboard','الرئيسية والتقارير'],
+  ['fannis','الفنيون'],
+  ['orders','الطلبات'],
+  ['complaints','الشكاوى'],
+  ['services','الخدمات والمهن'],
+  ['clients','العملاء'],
+  ['topups','طلبات الشحن'],
+  ['wallet','المحافظ والأرصدة'],
+  ['pricing','التسعير'],
+  ['settings','إعدادات النظام'],
+  ['content','محتوى الموقع'],
+  ['support','الدعم والمراجعة'],
+  ['regions','المناطق'],
+  ['offers','العروض'],
+  ['notifications','الإشعارات'],
+  ['clientsData','بيانات حسابات العملاء']
+];
 function renderRoles(){
   const eligible=state.fannis.filter(f=>f.role==='fanni'&&f.status==='approved'&&!f.adminRole);
   return `
   <section class="mt-4 space-y-4">
-    <div class="rounded-[18px] bg-gradient-to-r from-indigo-600 to-purple-600 p-4 text-white"><p class="text-[12px] font-black">المناصب الإدارية وصلاحيات المشرفين</p><p class="text-[10px] text-indigo-100 mt-1">ترقية الفني مع الاحتفاظ بحسابه كفني</p></div>
+    <div class="rounded-[18px] bg-gradient-to-r from-indigo-600 to-purple-600 p-4 text-white"><p class="text-[12px] font-black">المناصب الإدارية وصلاحيات المشرفين</p><p class="text-[10px] text-indigo-100 mt-1">أنت تحدد صلاحيات كل حساب بنفسك، حسب القسم والقراءة والتنفيذ</p></div>
     <div class="premium-panel p-4 space-y-3">
       <h3 class="text-[12px] font-black">ترقية فني إلى منصب إداري</h3>
       ${eligible.length?`<select id="new-admin-fanni" class="field"><option value="">اختر فنيًا معتمدًا</option>${eligible.map(f=>`<option value="${escHtml(f._id||f.id)}">${escHtml(f.name)} — ${escHtml(f.phone)}</option>`).join('')}</select>`:`<p class="text-[11px] text-slate-500">لا يوجد فني معتمد متاح للترقية. حدّث قائمة الفنيين أو تأكد من اعتماد الحساب.</p>`}
       <div class="flex gap-2"><select id="new-admin-role" class="field flex-1"><option value="مشرف">مشرف</option><option value="مشرف أول">مشرف أول</option><option value="مدير">مدير</option><option value="قراءة فقط">قراءة فقط</option></select><button onclick="createAdminUser()" ${eligible.length?'':'disabled'} class="pill-btn primary-pill">ترقية الفني</button></div>
-      <p class="text-[10px] text-slate-500">المدير العام وحده يقدر يعيّن المناصب أو يسحبها. المشرفون لا يستطيعون ترقية أنفسهم أو غيرهم.</p>
+      <p class="text-[10px] text-slate-500">المنصب اسم تنظيمي فقط؛ الصلاحيات الفعلية تضبطها أنت من جدول الصلاحيات أدناه.</p>
     </div>
     <div class="premium-panel p-4">
-      <div class="flex items-center justify-between mb-3"><h3 class="text-[12px] font-black">المناصب الإدارية الحالية</h3></div>
-      ${state.adminUsersLoading?`<p class="text-[11px] text-slate-500 py-4 text-center">جاري تحميل المناصب...</p>`:state.adminUsers.length?state.adminUsers.map(u=>`<div class="p-3 rounded-[12px] bg-slate-50 border mb-2"><div class="flex justify-between items-start gap-2"><div class="min-w-0"><p class="text-[11px] font-black">${escHtml(u.name||'بدون اسم')}</p><p class="text-[10px] text-slate-500" dir="ltr">${escHtml(u.phone||'')}</p></div><span class="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full">${escHtml(u.adminRole||'مدير عام')}</span></div>${u.role==='admin'?`<p class="text-[10px] text-slate-500 mt-2">حساب المدير العام الأساسي — لا يمكن سحب صلاحياته من هذه الشاشة.</p>`:`<div class="flex gap-2 mt-3"><select id="admin-role-${escHtml(u.id)}" class="field flex-1"><option value="مشرف" ${u.adminRole==='مشرف'?'selected':''}>مشرف</option><option value="مشرف أول" ${u.adminRole==='مشرف أول'?'selected':''}>مشرف أول</option><option value="مدير" ${u.adminRole==='مدير'?'selected':''}>مدير</option><option value="قراءة فقط" ${u.adminRole==='قراءة فقط'?'selected':''}>قراءة فقط</option></select><button onclick="changeAdminRole('${escHtml(u.id)}')" class="pill-btn soft-btn">تغيير</button><button onclick="revokeAdminRole('${escHtml(u.id)}')" class="pill-btn danger-pill">سحب</button></div>`}</div>`).join(''):`<p class="text-[11px] text-slate-500 py-4 text-center">لا توجد مناصب إدارية إضافية حتى الآن.</p>`}
+      <div class="flex items-center justify-between mb-3"><h3 class="text-[12px] font-black">المناصب الإدارية الحالية والصلاحيات المخصصة</h3></div>
+      ${state.adminUsersLoading?`<p class="text-[11px] text-slate-500 py-4 text-center">جاري تحميل المناصب...</p>`:state.adminUsers.length?state.adminUsers.map(u=>`<div class="p-3 rounded-[12px] bg-slate-50 border mb-4"><div class="flex justify-between items-start gap-2"><div class="min-w-0"><p class="text-[11px] font-black">${escHtml(u.name||'بدون اسم')}</p><p class="text-[10px] text-slate-500" dir="ltr">${escHtml(u.phone||'')}</p></div><span class="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full">${escHtml(u.adminRole||'مدير عام')}</span></div>${u.isRootAdmin?`<p class="text-[10px] text-slate-500 mt-2">حساب المدير العام الأساسي — صلاحياته كاملة ولا يمكن تعديلها من هذه الشاشة.</p>`:`<div class="flex gap-2 mt-3"><select id="admin-role-${escHtml(u.id)}" class="field flex-1"><option value="مشرف" ${u.adminRole==='مشرف'?'selected':''}>مشرف</option><option value="مشرف أول" ${u.adminRole==='مشرف أول'?'selected':''}>مشرف أول</option><option value="مدير" ${u.adminRole==='مدير'?'selected':''}>مدير</option><option value="قراءة فقط" ${u.adminRole==='قراءة فقط'?'selected':''}>قراءة فقط</option></select><button onclick="changeAdminRole('${escHtml(u.id)}')" class="pill-btn soft-btn">تغيير المنصب</button><button onclick="revokeAdminRole('${escHtml(u.id)}')" class="pill-btn danger-pill">سحب</button></div>
+      <div class="mt-3 rounded-xl border bg-white p-3"><p class="text-[11px] font-black mb-2">اختر صلاحيات هذا الحساب</p><p class="text-[10px] text-slate-500 mb-3">القراءة تسمح بالعرض فقط. التنفيذ يسمح بإجراء التعديلات داخل القسم. عند اختيار التنفيذ يتم تفعيل القراءة أيضًا.</p>
+      <div class="space-y-2">${ADMIN_PERMISSION_SECTIONS.map(([key,label])=>{const p=(u.adminPermissions||{})[key]||{};return `<div class="flex items-center justify-between gap-2 border-b last:border-0 py-2"><span class="text-[10px] font-bold">${label}</span><div class="flex gap-3 shrink-0"><label class="flex items-center gap-1 text-[10px]"><input type="checkbox" data-admin-permission="${key}" data-mode="read" data-user="${escHtml(u.id)}" ${p.read?'checked':''}> قراءة</label><label class="flex items-center gap-1 text-[10px]"><input type="checkbox" data-admin-permission="${key}" data-mode="write" data-user="${escHtml(u.id)}" ${p.write?'checked':''}> تنفيذ</label></div></div>`;}).join('')}</div>
+      <button onclick="saveAdminPermissions('${escHtml(u.id)}')" class="pill-btn primary-pill w-full mt-3">حفظ صلاحيات ${escHtml(u.name||'المشرف')}</button>
+      </div>`}</div>`).join(''):`<p class="text-[11px] text-slate-500 py-4 text-center">لا توجد مناصب إدارية إضافية حتى الآن.</p>`}
     </div>
-    <div class="premium-panel p-4"><h3 class="text-[11px] font-black mb-2">حدود الصلاحيات</h3><div class="text-[10px] text-slate-600 space-y-2"><p><b>قراءة فقط:</b> عرض البيانات دون تنفيذ تعديلات.</p><p><b>مشرف:</b> مراجعة الشكاوى واتخاذ قرارات أساسية تخص الفنيين والعروض.</p><p><b>مشرف أول:</b> صلاحيات المشرف مع إدارة مستويات الفنيين والخدمات وبعض عمليات الطلبات.</p><p><b>مدير:</b> إدارة تشغيلية أوسع، مع منع تعديل المناصب والأرصدة والتسعير وإعدادات الدخول.</p></div></div>
+    <div class="premium-panel p-3 text-[10px] text-slate-600">الأدمن الرئيسي وحده يحدد الصلاحيات. أي قسم لم تمنحه قراءة أو تنفيذ يظل محجوبًا عن الحساب الإداري الفرعي حتى لو عرف رابط الـ API.</div>
   </section>`;
 }
 
@@ -854,6 +876,7 @@ async function saveFanniNote(id){const el=document.getElementById('note-'+id); i
 async function saveFanniLimit(id){const el=document.getElementById('limit-'+id); if(!el)return; const raw=String(el.value||'').trim(); const maxOffers=Number(raw); if(raw===''||!Number.isInteger(maxOffers)||maxOffers<0||maxOffers>1000)return showToast('اكتب حدًا صحيحًا من 0 إلى 1000 عرض','error'); if(!confirm(`تعيين الحد الأقصى لعروض الفني إلى ${maxOffers}؟`))return; try{const result=await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/limit`],{method:'PATCH',body:JSON.stringify({maxOffers,reason:'تعديل من لوحة الأدمن'})}); showToast(result.message||'تم حفظ حد العروض'); await loadAll();}catch(e){showToast(e.message||'تعذر حفظ حد العروض','error');}}
 async function loadAdminUsers(){state.adminUsersLoading=true;if(state.tab==='roles')render();try{const data=await tryApi(['/api/admin/admin-users'],{method:'GET'});state.adminUsers=extractList(data,['users','items']);}catch(e){state.adminUsers=[];showToast(e.message||'تعذر تحميل المناصب','error');}finally{state.adminUsersLoading=false;if(state.tab==='roles')render();}}
 async function createAdminUser(){const fanniId=document.getElementById('new-admin-fanni')?.value;const role=document.getElementById('new-admin-role')?.value;if(!fanniId){showToast('اختار الفني الأول','error');return;}try{const data=await tryApi(['/api/admin/admin-users'],{method:'POST',body:JSON.stringify({fanniId,role})});showToast(data.message||'تمت ترقية الفني');await Promise.all([loadAdminUsers(),loadAll()]);}catch(e){showToast(e.message||'تعذرت الترقية','error');}}
+async function saveAdminPermissions(id){const permissions={};for(const [key] of ADMIN_PERMISSION_SECTIONS){const read=document.querySelector(`input[data-user="${id}"][data-admin-permission="${key}"][data-mode="read"]`)?.checked===true;const write=document.querySelector(`input[data-user="${id}"][data-admin-permission="${key}"][data-mode="write"]`)?.checked===true;permissions[key]={read:read||write,write};}try{const data=await tryApi([`/api/admin/admin-users/${encodeURIComponent(id)}/permissions`],{method:'PATCH',body:JSON.stringify({permissions})});showToast(data.message||'تم حفظ الصلاحيات');await loadAdminUsers();}catch(e){showToast(e.message||'تعذر حفظ الصلاحيات','error');}}
 async function changeAdminRole(id){const role=document.getElementById('admin-role-'+id)?.value;if(!role)return;try{const data=await tryApi([`/api/admin/admin-users/${encodeURIComponent(id)}/role`],{method:'PATCH',body:JSON.stringify({role})});showToast(data.message||'تم تغيير المنصب');await loadAdminUsers();}catch(e){showToast(e.message||'تعذر تغيير المنصب','error');}}
 async function revokeAdminRole(id){if(!confirm('سحب الصلاحية الإدارية؟ حساب الفني سيظل موجودًا ويعمل كالمعتاد.'))return;try{const data=await tryApi([`/api/admin/admin-users/${encodeURIComponent(id)}`],{method:'DELETE'});showToast(data.message||'تم سحب الصلاحية');await Promise.all([loadAdminUsers(),loadAll()]);}catch(e){showToast(e.message||'تعذر سحب الصلاحية','error');}}
 async function removeOffer(sn,idx){if(!confirm('هل تريد إزالة هذا العرض؟'))return; try{await tryApi([`/api/admin/offers/${encodeURIComponent(sn)}/${idx}`],{method:'DELETE'}); showToast('تمت إزالة العرض'); await loadOrders();}catch(e){showToast(e.message);}}

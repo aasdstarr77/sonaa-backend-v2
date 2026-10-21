@@ -22,6 +22,7 @@ const decisionSchema = new mongoose.Schema({
       'تعديل ثقة',
       'ترقية إداري',
       'تغيير منصب إداري',
+      'تغيير صلاحيات إدارية',
       'سحب صلاحية إدارية'
     ],
     required: true
@@ -102,6 +103,12 @@ const fanniSchema = new mongoose.Schema({
     enum: ['مشرف', 'مشرف أول', 'مدير', 'قراءة فقط'],
     default: null,
     index: true
+  },
+
+  // صلاحيات مفصلة يحددها المدير العام لكل حساب إداري: { section: { read, write } }
+  adminPermissions: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
   },
 
   // ========== الحقول الجديدة للوحة الإدارة الفخمة - 22 قسم ==========

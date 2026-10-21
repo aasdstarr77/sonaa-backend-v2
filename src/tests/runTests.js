@@ -4,11 +4,13 @@
 process.env.NODE_ENV = 'test';
 process.env.ALLOWED_ORIGINS = 'https://sonaa-backend-v2.vercel.app,http://localhost:3000';
 process.env.JWT_SECRET = 'sonaa-test-only-secret-change-me';
+process.env.ADMIN_PHONE = '01012345678';
 
 const assert = require('node:assert/strict');
 const request = require('supertest');
 const { MongoMemoryServer } = require('mongodb-memory-server');
 const errorHandler = require('../middleware/error');
+const { canAccessAdmin, isRootAdmin } = require('../middleware/auth');
 
 async function run() {
   let mongo;
@@ -39,6 +41,29 @@ async function run() {
     process.env.MONGO_URI = mongo.getUri('sonaa_test');
     app = require('../server');
     mongoose = require('mongoose');
+
+    await test('only the configured root administrator bypasses the permission matrix', async () => {
+      assert.equal(isRootAdmin({ role: 'admin', phone: '01012345678' }), true);
+      assert.equal(isRootAdmin({ role: 'admin', phone: '01012345679' }), false);
+      assert.equal(canAccessAdmin({ role: 'admin', phone: '01012345679', adminPermissions: { orders: { read: true, write: false } } }, { path: '/orders', method: 'GET' }), true);
+      assert.equal(canAccessAdmin({ role: 'fanni', adminRole: 'مشرف', adminPermissions: { orders: { read: true, write: false } } }, { path: '/api/admin/orders', method: 'GET' }), true);
+      assert.equal(canAccessAdmin({ role: 'admin', phone: '01012345679' }, { path: '/settings', method: 'GET' }), false);
+    });
+
+    await test('custom admin permissions separate reading from execution and protect permission management', async () => {
+      const user = { role: 'fanni', adminRole: 'مشرف', adminPermissions: { orders: { read: true, write: false }, settings: { read: false, write: false } } };
+      assert.equal(canAccessAdmin(user, { path: '/orders', method: 'GET' }), true);
+      assert.equal(canAccessAdmin(user, { path: '/orders', method: 'POST' }), false);
+      assert.equal(canAccessAdmin(user, { path: '/settings', method: 'GET' }), false);
+      assert.equal(canAccessAdmin(user, { path: '/admin-users/123/permissions', method: 'PATCH' }), false);
+    });
+
+    await test('wallet balance mutations are governed by wallet permissions, not technician-list permissions', async () => {
+      const user = { role: 'fanni', adminRole: 'مدير', adminPermissions: { fannis: { read: false, write: false }, wallet: { read: true, write: true } } };
+      assert.equal(canAccessAdmin(user, { path: '/fannis/507f1f77bcf86cd799439011/set-balance', method: 'POST' }), true);
+      user.adminPermissions.wallet.write = false;
+      assert.equal(canAccessAdmin(user, { path: '/fannis/507f1f77bcf86cd799439011/set-balance', method: 'POST' }), false);
+    });
 
     await test('homepage responds without exposing Express signature', async () => {
       const r = await request(app).get('/');
