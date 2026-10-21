@@ -1363,6 +1363,7 @@ function buildAdminCategoriesMap(savedServices) {
       isActive: saved.isActive,
       source: 'database',
       category: saved.category,
+      isCustom: !(findCategoryByService(saved.name) && normalizeForCompare(findCategoryByService(saved.name).label) === normalizeForCompare(saved.category)),
       dbId: String(saved._id),
       sortOrder: saved.sortOrder || 0,
       createdAt: saved.createdAt,
