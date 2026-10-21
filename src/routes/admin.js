@@ -788,10 +788,10 @@ function requireRootAdmin(req, res) {
   return true;
 }
 function publicAdminUser(user) {
-  return { id: String(user._id), name: user.name, phone: user.phone, role: user.role, adminRole: user.adminRole || (user.role === 'admin' ? 'مدير عام' : null), status: user.status, adminPermissions: user.adminPermissions || {} };
+  return { id: String(user._id), name: user.name, phone: user.phone, role: user.role, isRootAdmin: isRootAdmin(user), adminRole: user.adminRole || (isRootAdmin(user) ? 'مدير عام' : null), status: user.status, adminPermissions: user.adminPermissions || {} };
 }
 router.get('/me', auth('admin'), async (req, res) => {
-  const role = req.user.role === 'admin' ? 'أدمن رئيسي' : (req.user.adminRole || '');
+  const role = isRootAdmin(req.user) ? 'أدمن رئيسي' : (req.user.adminRole || '');
   return res.set('Cache-Control', 'no-store').json({
     id: String(req.user._id),
     name: req.user.name,
