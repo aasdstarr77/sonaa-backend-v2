@@ -1199,6 +1199,44 @@ router.post('/:sn/accept', async (req, res, next) => {
   });
 });
 
+router.post('/:sn/cancel', async (req, res, next) => {
+  try {
+    const sn = String(req.params.sn || '').toUpperCase();
+    if (!validSN(sn)) return res.status(400).json({ message: 'كود الطلب غير صحيح.' });
+
+    const order = await Order.findOne({ sn });
+    if (!order) return res.status(404).json({ message: 'الطلب غير موجود.' });
+    if (!verifyClientToken(req, order)) {
+      return res.status(403).json({ message: 'لا يمكن إلغاء طلب لا يخص حسابك.' });
+    }
+    if (order.assignedFanni || ['تم اختيار فني', 'تم الانتهاء'].includes(order.status)) {
+      return res.status(409).json({ message: 'لا يمكن إلغاء الطلب بعد اختيار الفني. تواصل مع الإدارة للمساعدة.' });
+    }
+    if (['ملغي', 'مؤرشف', 'منتهي', 'منتهي - اعتذار'].includes(order.status)) {
+      return res.status(409).json({ message: 'الطلب ملغي أو مغلق بالفعل.' });
+    }
+
+    order.status = 'ملغي';
+    await order.save();
+
+    if (order.clientAccount) {
+      await createNotification({
+        recipientRole: 'client',
+        recipientId: order.clientAccount,
+        type: 'order_cancelled',
+        title: 'تم إلغاء الطلب',
+        message: 'تم إلغاء طلبك ' + order.sn + ' بناءً على طلبك.',
+        link: '/?tab=orders',
+        dedupeKey: 'client-order-cancelled:' + String(order._id)
+      });
+    }
+
+    return res.json({ message: 'تم إلغاء الطلب بنجاح.', order: publicOrder(order) });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post('/:sn/complete', auth(), async (req, res, next) => {
   try {
     if (req.user.role !== 'fanni') {
