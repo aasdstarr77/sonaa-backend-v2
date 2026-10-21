@@ -1013,7 +1013,9 @@ async function completeOrder(sn){
  try{
   const result=await API.complete(code);
   toast(result?.message||'تم إكمال المهمة بنجاح');
+  state.tab='completed';
   await loadMyOffers();
+  setTimeout(()=>focusRatingPrompt(code),120);
  }catch(e){
   toast(e?.message||'تعذر إكمال المهمة','error');
  }
