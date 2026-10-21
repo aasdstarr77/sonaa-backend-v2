@@ -1122,6 +1122,8 @@ async function submitOffer(){
  const price=Number(state.offerPrice);
  const message=clean(state.offerMessage,500);
 
+ if(state.myOffers.some(o=>o?.accepted===true&&o?.orderStatus==='تم اختيار فني')){toast('لديك مهمة جارية حاليًا. برجاء إنهاء المهمة الحالية أولًا قبل التقدم لأي طلب جديد.','error');return;}
+
  if(!V.money(price,10,1000000)){
   state.offerError='السعر يجب أن يكون عددًا صحيحًا من 10 إلى مليون جنيه.';
   render();
