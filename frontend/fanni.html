@@ -459,6 +459,7 @@ function onFilterSkill(v){
  render();
 }
 
+function isRatingSkipped(role,sn){try{return localStorage.getItem('sonaa_rating_skipped_'+role+'_'+String(sn||'').toUpperCase())==='1';}catch{return false;}}
 function renderAcceptedClient(o){
  if(o?.accepted!==true){
   return '<div class="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-[11px] text-slate-600">بيانات العميل مخفية لحين قبول العميل للعرض.</div>';
