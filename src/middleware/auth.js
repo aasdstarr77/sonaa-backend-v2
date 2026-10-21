@@ -37,7 +37,9 @@ function canAccessAdmin(user, req) {
   if (!ADMIN_ROLES.includes(role)) return false;
 
   const method = String(req.method || 'GET').toUpperCase();
-  const path = String(req.path || '/');
+  // Direct app-level admin endpoints may expose the full /api/admin prefix,
+  // while router-mounted endpoints expose only their local path. Normalize both.
+  const path = (String(req.path || '/').replace(/^\/api\/(?:admin|admins|auth\/admin)(?=\/|$)/, '') || '/');
   // لا يمكن تفويض إدارة الحسابات الإدارية أو سجل التدقيق لأي منصب فرعي.
   if (path.startsWith('/admin-users') || path === '/bootstrap' || path.startsWith('/audit-logs')) return false;
 
