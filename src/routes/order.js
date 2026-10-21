@@ -1309,6 +1309,15 @@ router.post('/:sn/complete', auth(), async (req, res, next) => {
       { $inc: { 'stats.completedJobs': 1 } }
     );
     await autoPromoteFanni(req.userId, 'إكمال المهمة ' + order.sn);
+    await createNotification({
+      recipientRole: 'client',
+      recipientId: order.clientAccount,
+      type: 'order_completed',
+      title: 'الفني أنهى المهمة',
+      message: 'تم تسجيل اكتمال الطلب ' + order.sn + '. افتح الطلب لتقييم الفني.',
+      link: '/?tab=orders',
+      dedupeKey: 'order-completed:' + String(order._id)
+    });
 
     return res.json({
       message: 'تم إكمال المهمة بنجاح',
@@ -1459,6 +1468,16 @@ router.post('/:sn/rating', async (req, res, next) => {
       await autoPromoteFanni(order.assignedFanni, 'تحديث تقييمات العملاء');
     }
 
+    await createNotification({
+      recipientRole: reviewerRole === 'client' ? 'fanni' : 'client',
+      recipientId: reviewerRole === 'client' ? order.assignedFanni : order.clientAccount,
+      type: 'order_rated',
+      title: reviewerRole === 'client' ? 'وصلك تقييم جديد' : 'قيّمك الفني',
+      message: (reviewerRole === 'client' ? 'قيّمك العميل' : 'قيّمك الفني') + ' في الطلب ' + order.sn + ' (' + value.stars + '/5 نجوم).',
+      link: reviewerRole === 'client' ? '/fanni' : '/?tab=orders',
+      dedupeKey: 'order-rating:' + String(order._id) + ':' + reviewerRole
+    });
+
     return res.status(201).json({
       message: 'تم حفظ تقييمك بنجاح، وأصبح ظاهرًا للطرفين',
       rating: {
@@ -1549,6 +1568,15 @@ router.post('/:sn/price-change', auth(), async (req, res, next) => {
     if (newPrice <= currentPrice) return res.status(400).json({ message: 'السعر الجديد لازم يكون أعلى من السعر الحالي (' + currentPrice + ' جنيه). لا يمكن تخفيض السعر بعد قبول العرض.' });
     if ((order.priceChangeRequests || []).some(r => r.status === 'قيد الموافقة')) return res.status(409).json({ message: 'يوجد طلب تعديل سعر ينتظر موافقة العميل بالفعل.' });
     order.priceChangeRequests.push({ fanniId: req.userId, oldPrice: order.acceptedOfferPrice, newPrice, reason, status: 'قيد الموافقة', requestedAt: new Date() }); await order.save();
+    await createNotification({
+      recipientRole: 'client',
+      recipientId: order.clientAccount,
+      type: 'price_change_requested',
+      title: 'الفني طلب زيادة السعر',
+      message: 'طلب الفني تعديل سعر الطلب ' + order.sn + ' من ' + currentPrice + ' إلى ' + newPrice + ' جنيه. راجع السبب ووافق أو ارفض من المحادثة.',
+      link: '/?tab=orders',
+      dedupeKey: 'price-change-request:' + String(order._id) + ':' + String(order.priceChangeRequests[order.priceChangeRequests.length - 1]._id)
+    });
     return res.status(201).json({ message: 'تم إرسال طلب تعديل السعر للعميل؛ لا تنفذ الزيادة قبل موافقته.', request: order.priceChangeRequests[order.priceChangeRequests.length - 1] });
   } catch (err) { next(err); }
 });
@@ -1602,6 +1630,17 @@ router.post('/:sn/price-change/:requestId/decision', async (req, res, next) => {
     request.decidedByRole = 'client';
     await order.save({ session });
     await session.commitTransaction();
+    await createNotification({
+      recipientRole: 'fanni',
+      recipientId: request.fanniId,
+      type: approved ? 'price_change_approved' : 'price_change_rejected',
+      title: approved ? 'وافق العميل على زيادة السعر' : 'رفض العميل زيادة السعر',
+      message: approved
+        ? 'وافق العميل على تعديل سعر الطلب ' + order.sn + ' إلى ' + order.acceptedOfferPrice + ' جنيه.'
+        : 'رفض العميل تعديل سعر الطلب ' + order.sn + '. يظل السعر السابق ساريًا.',
+      link: '/fanni',
+      dedupeKey: 'price-change-decision:' + String(order._id) + ':' + String(request._id)
+    });
     return res.json({ message: approved ? 'تمت الموافقة على السعر الجديد وتسجيل تسوية العمولة.' : 'تم رفض تعديل السعر؛ يظل السعر السابق ساريًا.', acceptedOfferPrice: order.acceptedOfferPrice, commissionAmount: order.commissionAmount, commissionRate: order.commissionRate, request });
   } catch (err) {
     if (session && session.inTransaction()) { try { await session.abortTransaction(); } catch (_) {} }
