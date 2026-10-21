@@ -26,7 +26,7 @@ function mountRoleRoutes(role) {
         return res.status(403).json({ message: 'تسجيل إشعارات الفنيين يتطلب حساب فني.' });
       }
       const token = typeof req.body?.token === 'string' ? req.body.token.trim() : '';
-      if (!/^(Exponent|Expo)PushToken\\[[^\\]]+\\]$/.test(token)) {
+      if (!/^(Exponent|Expo)PushToken\[[^\]]+\]$/.test(token)) {
         return res.status(400).json({ message: 'رمز إشعارات Expo غير صالح.' });
       }
       const platform = ['android', 'ios'].includes(req.body?.platform) ? req.body.platform : 'android';
