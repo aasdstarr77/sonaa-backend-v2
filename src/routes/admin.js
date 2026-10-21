@@ -776,8 +776,12 @@ router.post('/offers/:sn/:idx/reject', auth('admin'), async (req, res, next) => 
 function notImplemented(msg){ return (req,res)=>res.status(501).json({message: msg}); }
 
 const ADMIN_ROLES = ['مشرف', 'مشرف أول', 'مدير', 'قراءة فقط'];
+function isRootAdmin(user) {
+  const configuredPhone = normalizePhone(String(process.env.ADMIN_PHONE || ''));
+  return Boolean(user && user.role === 'admin' && configuredPhone && normalizePhone(String(user.phone || '')) === configuredPhone);
+}
 function requireRootAdmin(req, res) {
-  if (req.user?.role !== 'admin') {
+  if (!isRootAdmin(req.user)) {
     res.status(403).json({ message: 'إدارة المناصب محصورة في المدير العام' });
     return false;
   }
@@ -800,7 +804,7 @@ router.get('/me', auth('admin'), async (req, res) => {
 router.get('/admin-users', auth('admin'), async (req, res, next) => {
   try {
     const users = await Fanni.find({ $or: [{ role: 'admin' }, { adminRole: { $in: ADMIN_ROLES } }] })
-      .select('name phone role adminRole status').sort({ createdAt: -1 }).limit(MAX_LIST_LIMIT).lean();
+      .select('name phone role adminRole adminPermissions status').sort({ createdAt: -1 }).limit(MAX_LIST_LIMIT).lean();
     return res.json({ users: users.map(publicAdminUser), data: users.map(publicAdminUser) });
   } catch (err) { next(err); }
 });
@@ -855,8 +859,10 @@ router.patch('/admin-users/:id/permissions', auth('admin'), async (req, res, nex
       }
       clean[key] = { read: item.read || item.write, write: item.write };
     }
-    const fanni = await Fanni.findOne({ _id: req.params.id, role: 'fanni', adminRole: { $in: ADMIN_ROLES } });
-    if (!fanni) return res.status(404).json({ message: 'حساب المشرف غير موجود' });
+    const fanni = await Fanni.findById(req.params.id);
+    if (!fanni || isRootAdmin(fanni) || (fanni.role !== 'admin' && (fanni.role !== 'fanni' || !ADMIN_ROLES.includes(fanni.adminRole)))) {
+      return res.status(404).json({ message: 'حساب المشرف غير موجود' });
+    }
     fanni.adminPermissions = clean;
     fanni.decisions.push({ action: 'تغيير صلاحيات إدارية', reason: 'تحديث صلاحيات القراءة والتنفيذ', date: new Date(), by: adminName(req), byId: req.user?._id, meta: { sections: Object.keys(clean).filter(key => clean[key].read || clean[key].write) } });
     await fanni.save();
