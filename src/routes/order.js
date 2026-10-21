@@ -737,6 +737,11 @@ router.post('/:sn/offer', auth(), async (req, res, next) => {
       });
     }
 
+    const activeTask = await Order.exists({ assignedFanni: req.userId, status: 'تم اختيار فني' });
+    if (activeTask) {
+      return res.status(409).json({ message: 'لديك مهمة جارية حاليًا. برجاء إنهاء المهمة الحالية أولًا قبل التقدم لأي طلب جديد.' });
+    }
+
     const schema = Joi.object({
       price: Joi.number().positive().max(1000000).required(),
       message: Joi.string().trim().min(5).max(500).required()
