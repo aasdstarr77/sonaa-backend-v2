@@ -2,18 +2,19 @@
 
 const jwt = require('jsonwebtoken');
 const Fanni = require('../models/Fanni');
+const { normalizePhone } = require('../utils/phone');
 
 const ADMIN_ROLES = ['مشرف', 'مشرف أول', 'مدير', 'قراءة فقط'];
 
 const PERMISSION_SECTIONS = {
   dashboard: [/^\/me$/, /^\/reports?(\/|$)/, /^\/stats?(\/|$)/],
+  wallet: [/^\/wallet(\/|$)/, /^\/fannis\/[^/]+\/(set-balance|add-balance)$/],
   fannis: [/^\/fannis(\/|$)/],
   orders: [/^\/orders(\/|$)/],
   complaints: [/^\/complaints(\/|$)/],
   services: [/^\/services(\/|$)/],
   clients: [/^\/clients(\/|$)/],
   topups: [/^\/topup-requests(\/|$)/],
-  wallet: [/^\/wallet(\/|$)/, /^\/fannis\/[^/]+\/(set-balance|add-balance)$/],
   pricing: [/^\/pricing(\/|$)/],
   settings: [/^\/settings(\/|$)/],
   content: [/^\/content(\/|$)/],
@@ -24,9 +25,15 @@ const PERMISSION_SECTIONS = {
   clientsData: [/^\/client-accounts(\/|$)/]
 };
 
+function isRootAdmin(user) {
+  const configuredPhone = normalizePhone(String(process.env.ADMIN_PHONE || ''));
+  return Boolean(user && user.role === 'admin' && configuredPhone &&
+    normalizePhone(String(user.phone || '')) === configuredPhone);
+}
+
 function canAccessAdmin(user, req) {
-  if (user.role === 'admin') return true;
-  const role = user.adminRole;
+  if (isRootAdmin(user)) return true;
+  const role = user.adminRole || (user.role === 'admin' ? 'مشرف' : null);
   if (!ADMIN_ROLES.includes(role)) return false;
 
   const method = String(req.method || 'GET').toUpperCase();
@@ -78,4 +85,4 @@ function auth(requiredRole = null) {
   };
 }
 
-module.exports = { auth };
+module.exports = { auth, canAccessAdmin, isRootAdmin, PERMISSION_SECTIONS };
