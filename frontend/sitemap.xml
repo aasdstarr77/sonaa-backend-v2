@@ -4,6 +4,9 @@
     <loc>https://sonaa-backend-v2.vercel.app/</loc>
   </url>
   <url>
+    <loc>https://sonaa-backend-v2.vercel.app/customers.html</loc>
+  </url>
+  <url>
     <loc>https://sonaa-backend-v2.vercel.app/technicians</loc>
   </url>
 </urlset>
