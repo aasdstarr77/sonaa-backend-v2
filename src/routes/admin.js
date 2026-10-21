@@ -1507,7 +1507,7 @@ router.patch('/services/categories/order', auth('admin'), async (req, res, next)
     const schema = Joi.object({ categories: Joi.array().min(1).max(200).items(Joi.string().trim().min(1).max(100)).required() }).required();
     const { error, value } = schema.validate(req.body || {}, { abortEarly: false, stripUnknown: true });
     if (error) return res.status(400).json({ message: 'قائمة ترتيب الأقسام غير صحيحة' });
-    const seen = new Set(), labels = value.categories.map(label => label.replace(/\\s+/g, ' '));
+    const seen = new Set(), labels = value.categories.map(label => label.replace(/\s+/g, ' '));
     for (const label of labels) { const key = normalizeForCompare(label); if (seen.has(key)) return res.status(400).json({ message: 'يوجد قسم مكرر في الترتيب' }); seen.add(key); const err = validateCategoryField(label); if (err) return res.status(400).json({ message: err }); }
     for (const [index, category] of labels.entries()) {
       const categoryOrder = (index + 1) * 10, legacy = findCategoryByLabel(category);
