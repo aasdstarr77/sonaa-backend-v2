@@ -996,7 +996,7 @@ async function createOrder(){
 async function sendClientChat(sn){const el=document.getElementById('clientChatText');const text=String(el?.value||'').trim();if(!text)return showToast('اكتب الرسالة أولًا.');if(state.tracked?.status==='تم الانتهاء')return showToast('المهمة مكتملة؛ المحادثة للقراءة فقط.');try{await API.sendChat(sn,text,state.tracked?.acceptedOfferId||undefined);if(el)el.value='';state.trackInput=sn;await refreshTrackedSilently();showToast('تم إرسال الرسالة.','success');}catch(e){showToast(e.message||'تعذر إرسال الرسالة.');}}
 async function sendClientOfferQuestion(sn,offerId,question){if(state.tracked?.status==='تم الانتهاء')return showToast('المهمة مكتملة؛ لا يمكن إرسال رسائل جديدة.');try{await API.sendChat(sn,question,offerId);state.trackInput=sn;await refreshTrackedSilently();showToast('تم إرسال استفسارك للفني.','success');}catch(e){showToast(e.message||'تعذر إرسال الاستفسار.');}}
 function renderClientChatMessages(messages,mode){return (Array.isArray(messages)?messages:[]).map(function(m){const isClient=m.senderRole==='client';const color=mode==='accepted'?(isClient?'bg-blue-50':'bg-emerald-50'):(isClient?'bg-white':'bg-emerald-50');return '<div class="mt-2 rounded-lg p-2 '+color+'"><p class="text-[10px] font-bold">'+(isClient?'أنت':'الفني')+'</p><p class="text-[12px] '+(mode==='accepted'?'whitespace-pre-wrap break-words':'')+'">'+escHtml(m.text||'')+'</p></div>';}).join('');}
-let clientChatPollInFlight=false;
+let clientChatPollInFlight=false,clientLiveRenderPending=false;
 function updateClientChatDom(messages){if(!state.tracked)return;const sn=String(state.tracked.sn||state.trackInput||'').toUpperCase();const all=Array.isArray(messages)?messages:[];(state.tracked.offers||[]).forEach(function(offer){const offerId=String(offer._id||'');const box=document.getElementById('client-prechat-'+sn+'-'+offerId);if(box)box.innerHTML=renderClientChatMessages(all.filter(function(m){return String(m.targetOfferId||'')===offerId;}),'pre');});const accepted=document.getElementById('client-accepted-chat-'+sn);if(accepted)accepted.innerHTML=renderClientChatMessages(all,'accepted');}
 async function decideClientPrice(sn,id,approved){try{await API.decidePrice(sn,id,approved);state.trackInput=sn;await doTrack();showToast(approved?'تمت الموافقة على السعر الجديد.':'تم رفض تعديل السعر.','success');}catch(e){showToast(e.message||'تعذر تسجيل القرار.');}}
 async function submitClientRating(sn){
@@ -1064,7 +1064,7 @@ async function sendComplaint(){
 document.addEventListener('DOMContentLoaded',()=>{
   loadServices();loadPublicContent();initializeClientAccount();render();
   document.addEventListener('click',handleOutsideServiceClick);
-  let clientLivePollInFlight=false,clientLiveRenderPending=false;
+  let clientLivePollInFlight=false;
   setInterval(async function(){
     if(document.hidden||clientLivePollInFlight)return;
     clientLivePollInFlight=true;
