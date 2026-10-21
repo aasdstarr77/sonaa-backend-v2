@@ -88,7 +88,8 @@ const serviceSchema = new mongoose.Schema(
       type: Number,
       default: 0,
       min: [0, 'ترتيب الخدمة لا يمكن أن يكون سالباً']
-    }
+    },
+    categorySortOrder: { type: Number, default: 0, min: [0, 'ترتيب القسم لا يمكن أن يكون سالباً'] }
   },
   {
     timestamps: true,
