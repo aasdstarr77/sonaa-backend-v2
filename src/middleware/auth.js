@@ -70,7 +70,7 @@ function auth(requiredRole = null) {
           return res.status(403).json({ message: 'ليس لديك صلاحية دخول لوحة الإدارة' });
         }
         if (!canAccessAdmin(user, req)) return res.status(403).json({ message: 'هذا الإجراء خارج صلاحيات منصبك الإداري' });
-      } else if (requiredRole && user.role !== requiredRole && user.role !== 'admin') {
+      } else if (requiredRole && user.role !== requiredRole && !isRootAdmin(user)) {
         return res.status(403).json({ message: 'ليس لديك صلاحية' });
       }
 
