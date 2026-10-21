@@ -1013,7 +1013,28 @@ async function submitClientRating(sn){
   finally{state.ratingSubmitting=false;render();}
 }
 async function refreshClientPage(){try{if(state.trackInput){const order=await API.getOrder(state.trackInput);state.tracked=order;render();}if(state.accountToken&&state.account)await Promise.allSettled([loadMyOrders(),loadNotifications()]);showToast('تم تحديث بيانات العميل.','success');}catch(error){showToast(error.message||'تعذر تحديث بيانات العميل.');}}
-async function refreshTrackedSilently(){const input=String(state.trackInput||'').trim().toUpperCase();if(!VALIDATORS.sn(input)||clientChatPollInFlight)return;clientChatPollInFlight=true;try{const data=await API.chat(input);if(!state.tracked||String(state.tracked.sn||'').toUpperCase()!==input)return;const messages=Array.isArray(data.messages)?data.messages:[];state.tracked.chatMessages=messages;if(Array.isArray(data.priceChangeRequests))state.tracked.priceChangeRequests=data.priceChangeRequests;updateClientChatDom(messages);}catch(_){/* Keep the last successful conversation visible during temporary network failures. */}finally{clientChatPollInFlight=false;}}
+async function refreshTrackedSilently(){
+ const input=String(state.trackInput||'').trim().toUpperCase();
+ if(!VALIDATORS.sn(input)||clientChatPollInFlight||document.hidden)return;
+ clientChatPollInFlight=true;
+ try{
+  const next=await API.getOrder(input);
+  if(!state.tracked||String(state.tracked.sn||'').toUpperCase()!==input)return;
+  const previous=state.tracked;
+  const signature=o=>JSON.stringify({status:o?.status,acceptedOfferId:String(o?.acceptedOfferId||''),offers:(o?.offers||[]).map(x=>({id:String(x._id||''),status:x.offerStatus||x.status||'',accepted:!!x.accepted,price:x.priceNum??x.price??null})),canRate:o?.canRate,myRating:o?.myRating?String(o.myRating._id||o.myRating.createdAt||''):null});
+  const orderChanged=signature(previous)!==signature(next);
+  const messages=Array.isArray(next.chatMessages)?next.chatMessages:[];
+  state.tracked=Object.assign({},next,{chatMessages:messages});
+  if(Array.isArray(next.priceChangeRequests))state.tracked.priceChangeRequests=next.priceChangeRequests;
+  updateClientChatDom(messages);
+  if(orderChanged&&state.tab==='track'){
+   if(!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)){
+    const scrollY=window.scrollY||window.pageYOffset||0;render();window.scrollTo({top:scrollY,left:0,behavior:'instant'});focusClientPostAction();clientLiveRenderPending=false;
+   }else clientLiveRenderPending=true;
+  }
+ }catch(_){/* Keep the last successful order and conversation visible during temporary network failures. */}
+ finally{clientChatPollInFlight=false;}
+}
 async function doTrack(){
   if(state.trackLoading)return;
   const input=state.trackInput.trim().toUpperCase();
@@ -1042,7 +1063,29 @@ async function sendComplaint(){
 }
 document.addEventListener('DOMContentLoaded',()=>{
   loadServices();loadPublicContent();initializeClientAccount();render();
-  document.addEventListener('click',handleOutsideServiceClick);setInterval(function(){if(state.accountToken&&state.account)loadNotifications();},30000);setInterval(function(){if(state.tracked&&state.trackInput)refreshTrackedSilently();},5000);
+  document.addEventListener('click',handleOutsideServiceClick);
+  let clientLivePollInFlight=false,clientLiveRenderPending=false;
+  setInterval(async function(){
+    if(document.hidden||clientLivePollInFlight)return;
+    clientLivePollInFlight=true;
+    try{
+      const tasks=[];
+      if(state.accountToken&&state.account){
+        tasks.push((async function(){
+          const before=JSON.stringify((state.myOrders||[]).map(o=>({id:String(o._id||''),status:o.status,acceptedOfferId:String(o.acceptedOfferId||''),updatedAt:o.updatedAt||'',offers:(o.offers||[]).map(x=>({id:String(x._id||''),price:x.priceNum??x.price??null,status:x.offerStatus||''}))})));
+          const data=await API.getMyOrders();state.myOrders=Array.isArray(data.orders)?data.orders:[];
+          const after=JSON.stringify(state.myOrders.map(o=>({id:String(o._id||''),status:o.status,acceptedOfferId:String(o.acceptedOfferId||''),updatedAt:o.updatedAt||'',offers:(o.offers||[]).map(x=>({id:String(x._id||''),price:x.priceNum??x.price??null,status:x.offerStatus||''}))})));
+          if(before!==after&&state.tab==='orders')clientLiveRenderPending=true;
+        })());
+        tasks.push(loadNotifications());
+      }
+      if(state.tracked&&state.trackInput)tasks.push(refreshTrackedSilently());
+      await Promise.allSettled(tasks);
+      if(clientLiveRenderPending&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)){
+        clientLiveRenderPending=false;const scrollY=window.scrollY||window.pageYOffset||0;render();window.scrollTo({top:scrollY,left:0,behavior:'instant'});focusClientPostAction();
+      }
+    }finally{clientLivePollInFlight=false;}
+  },5000);
 });
 render();
 </script>
