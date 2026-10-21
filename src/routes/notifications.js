@@ -3,6 +3,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const Notification = require('../models/Notification');
+const PushToken = require('../models/PushToken');
 const { auth } = require('../middleware/auth');
 const { clientAuth } = require('../middleware/clientAuth');
 
@@ -18,6 +19,36 @@ function roleAuth(role) {
 
 function mountRoleRoutes(role) {
   const guard = roleAuth(role);
+
+  router.post('/' + role + '/push-token', guard, async (req, res, next) => {
+    try {
+      if (role === 'fanni' && req.user?.role !== 'fanni') {
+        return res.status(403).json({ message: 'تسجيل إشعارات الفنيين يتطلب حساب فني.' });
+      }
+      const token = typeof req.body?.token === 'string' ? req.body.token.trim() : '';
+      if (!/^(Exponent|Expo)PushToken\\[[^\\]]+\\]$/.test(token)) {
+        return res.status(400).json({ message: 'رمز إشعارات Expo غير صالح.' });
+      }
+      const platform = ['android', 'ios'].includes(req.body?.platform) ? req.body.platform : 'android';
+      await PushToken.findOneAndUpdate(
+        { token },
+        { $set: { recipientRole: role, recipientId: owner(req, role), platform } },
+        { upsert: true, new: true, runValidators: true, setDefaultsOnInsert: true }
+      );
+      return res.status(200).json({ message: 'تم تسجيل جهاز الإشعارات.' });
+    } catch (error) { return next(error); }
+  });
+
+  router.delete('/' + role + '/push-token', guard, async (req, res, next) => {
+    try {
+      const token = typeof req.body?.token === 'string' ? req.body.token.trim() : '';
+      if (!token) return res.status(400).json({ message: 'رمز الإشعارات مطلوب.' });
+      const result = await PushToken.deleteOne({
+        token, recipientRole: role, recipientId: owner(req, role)
+      });
+      return res.json({ message: 'تم إلغاء تسجيل جهاز الإشعارات.', deleted: result.deletedCount || 0 });
+    } catch (error) { return next(error); }
+  });
 
   router.get('/' + role, guard, async (req, res, next) => {
     try {
