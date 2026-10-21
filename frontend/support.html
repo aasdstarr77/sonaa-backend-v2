@@ -177,13 +177,12 @@ async function saveStatus(){
  catch(e){showError(e.message)}finally{busy=false;$('admin-save-status').disabled=false}
 }
 async function refresh(){
- if(pollBusy||document.hidden||busy)return;pollBusy=true;
- const active=document.activeElement;const isTyping=active&&['INPUT','TEXTAREA','SELECT'].includes(active.tagName);
- const ownerDraft=$('reply-message')?$('reply-message').value:'',adminDraft=$('admin-reply')?$('admin-reply').value:'',newDraft=$('new-message')?$('new-message').value:'',subjectDraft=$('subject')?$('subject').value:'';
+ const active=document.activeElement;
+ if(pollBusy||document.hidden||busy||(active&&['INPUT','TEXTAREA','SELECT'].includes(active.tagName)))return;
+ pollBusy=true;
  try{
   await loadCases(true);
   if(selected){const data=await request('/'+role+'/'+encodeURIComponent(selected._id));selected=data.supportCase||selected;if(role==='admin')renderAdmin();else renderOwner();}
-  if(isTyping){if($('reply-message'))$('reply-message').value=ownerDraft;if($('admin-reply'))$('admin-reply').value=adminDraft;if($('new-message'))$('new-message').value=newDraft;if($('subject'))$('subject').value=subjectDraft;}
  }catch(e){if(!cases.length)showError(e.message)}finally{pollBusy=false}
 }
 function init(){
