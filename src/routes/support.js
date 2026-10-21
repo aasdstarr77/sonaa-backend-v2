@@ -61,7 +61,8 @@ async function sendOwnerMessage(req, res, role) {
   }
   item.messages.push({ senderRole: role, senderId: String((role === 'client' ? req.client : req.user)._id), text });
   item.status = 'بانتظار الدعم';
-  item.needsHuman = Boolean(req.body?.needsHuman) || item.needsHuman;
+  // Any new owner message after an admin reply needs another human review.
+  item.needsHuman = role === 'client' || role === 'fanni' || req.body?.needsHuman === true;
   await item.save();
   return res.json({ message: 'تم إرسال الرسالة.', supportCase: publicCase(item) });
 }
