@@ -33,8 +33,8 @@ async function createCase(req, res, role) {
     ...ownerFilter(role, owner._id),
     ownerName: cleanText(owner.name, 100),
     subject,
-    status: 'جديدة',
-    needsHuman: false,
+    status: 'بانتظار الدعم',
+    needsHuman: true,
     messages: [{ senderRole: role, senderId: String(owner._id), text }]
   });
   return res.status(201).json({ message: 'تم فتح محادثة الدعم.', supportCase: publicCase(item) });
