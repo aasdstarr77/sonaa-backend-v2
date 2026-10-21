@@ -460,6 +460,8 @@ function onFilterSkill(v){
 }
 
 function isRatingSkipped(role,sn){try{return localStorage.getItem('sonaa_rating_skipped_'+role+'_'+String(sn||'').toUpperCase())==='1';}catch{return false;}}
+function dismissRatingPrompt(sn){try{localStorage.setItem('sonaa_rating_skipped_fanni_'+String(sn||'').toUpperCase(),'1');}catch{}render();toast('تم تخطي تقييم العميل لهذا الطلب.','success');}
+function focusRatingPrompt(sn){const target=document.getElementById('fanni-rating-'+String(sn||'').toUpperCase());if(target)target.scrollIntoView({behavior:'smooth',block:'center'});}
 function renderAcceptedClient(o){
  if(o?.accepted!==true){
   return '<div class="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-[11px] text-slate-600">بيانات العميل مخفية لحين قبول العميل للعرض.</div>';
