@@ -5,6 +5,25 @@ const Fanni = require('../models/Fanni');
 
 const ADMIN_ROLES = ['مشرف', 'مشرف أول', 'مدير', 'قراءة فقط'];
 
+const PERMISSION_SECTIONS = {
+  dashboard: [/^\/me$/, /^\/reports?(\/|$)/, /^\/stats?(\/|$)/],
+  fannis: [/^\/fannis(\/|$)/],
+  orders: [/^\/orders(\/|$)/],
+  complaints: [/^\/complaints(\/|$)/],
+  services: [/^\/services(\/|$)/],
+  clients: [/^\/clients(\/|$)/],
+  topups: [/^\/topup-requests(\/|$)/],
+  wallet: [/^\/wallet(\/|$)/, /^\/fannis\/[^/]+\/(set-balance|add-balance)$/],
+  pricing: [/^\/pricing(\/|$)/],
+  settings: [/^\/settings(\/|$)/],
+  content: [/^\/content(\/|$)/],
+  support: [/^\/support(\/|$)/],
+  regions: [/^\/regions(\/|$)/],
+  offers: [/^\/offers(\/|$)/],
+  notifications: [/^\/notifications(\/|$)/],
+  clientsData: [/^\/client-accounts(\/|$)/]
+};
+
 function canAccessAdmin(user, req) {
   if (user.role === 'admin') return true;
   const role = user.adminRole;
@@ -12,36 +31,22 @@ function canAccessAdmin(user, req) {
 
   const method = String(req.method || 'GET').toUpperCase();
   const path = String(req.path || '/');
-
-  // إدارة حسابات المشرفين والصلاحيات وسجل التدقيق محصورة في المدير العام.
+  // لا يمكن تفويض إدارة الحسابات الإدارية أو سجل التدقيق لأي منصب فرعي.
   if (path.startsWith('/admin-users') || path === '/bootstrap' || path.startsWith('/audit-logs')) return false;
-  if (method === 'GET' || method === 'HEAD') return true;
-  if (role === 'قراءة فقط') return false;
 
-  if (role === 'مدير') {
-    // المدير التشغيلي لا يغيّر إعدادات الدخول أو التسعير أو الأرصدة/المحافظ.
-    if (path.startsWith('/pricing') || path.startsWith('/settings') ||
-        path.startsWith('/wallet') || /^\/fannis\/[^/]+\/(set-balance|add-balance)$/.test(path) ||
-        path.startsWith('/topup-requests/')) return false;
-    return true;
+  let section = null;
+  for (const [key, patterns] of Object.entries(PERMISSION_SECTIONS)) {
+    if (patterns.some(pattern => pattern.test(path))) { section = key; break; }
   }
+  // أي endpoint غير مصنّف يظل مغلقًا للمناصب الفرعية إلى أن تتم مراجعته.
+  if (!section) return false;
 
-  const isComplaintDecision = method === 'PATCH' && /^\/complaints\/[^/]+$/.test(path);
-  const isSupportReview = method === 'POST' && /^\/support\/[^/]+\/review$/.test(path);
-  const isFanniDecision = method === 'POST' && /^\/fannis\/[^/]+\/(approve|reject|disable|enable)$/.test(path);
-  const isOfferDecision = method === 'POST' && /^\/offers\/[^/]+\/[^/]+\/reject$/.test(path);
-  if (role === 'مشرف أول') {
-    const isFanniManagement = method === 'PATCH' && /^\/fannis\/[^/]+\/(level|badge|note|limit)$/.test(path);
-    const isOfferRemoval = method === 'DELETE' && /^\/offers\/[^/]+\/[^/]+$/.test(path);
-    const isOrderRemoval = method === 'DELETE' && /^\/orders\/[^/]+$/.test(path);
-    const isBulkOrderRemoval = method === 'POST' && path === '/orders/bulk-delete';
-    const isServiceWrite = ['POST', 'PATCH'].includes(method) && path.startsWith('/services');
-    return isComplaintDecision || isSupportReview || isFanniDecision || isOfferDecision || isFanniManagement || isOfferRemoval || isOrderRemoval || isBulkOrderRemoval || isServiceWrite;
-  }
-  // المشرف: قرارات الشكاوى الأساسية واعتماد/رفض/تعليق الفنيين ورفض العرض.
-  return isComplaintDecision || isSupportReview || isFanniDecision || isOfferDecision;
+  const permissions = user.adminPermissions && typeof user.adminPermissions === 'object'
+    ? user.adminPermissions : {};
+  const grant = permissions[section] || {};
+  const isRead = method === 'GET' || method === 'HEAD';
+  return isRead ? grant.read === true : grant.write === true;
 }
-
 function auth(requiredRole = null) {
   return async (req, res, next) => {
     try {
