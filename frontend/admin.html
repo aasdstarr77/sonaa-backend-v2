@@ -40,6 +40,15 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
 .tab-btn.active{background:linear-gradient(135deg,#0b1b3a 0%,#1e3a8a 100%);color:#fff;border-color:#0b1b3a;box-shadow:0 8px 20px #0b1b3a30}
 .tab-btn.active .ic{background:rgba(255,255,255,.14)}
 .tab-btn .co{font-size:10px;font-weight:800;opacity:.7}
+.section-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.section-nav-btn{min-height:46px;border:1px solid #e2e8f0;border-radius:13px;background:#fff;display:flex;align-items:center;justify-content:flex-start;gap:8px;padding:9px 11px;font-size:11px;font-weight:900;color:#334155}
+.section-nav-btn.active{background:linear-gradient(135deg,#0b1b3a,#1e3a8a);border-color:#0b1b3a;color:#fff;box-shadow:0 5px 14px #0b1b3a20}
+.section-nav-icon{font-size:17px;line-height:1}
+.subnav-wrap{display:flex;flex-wrap:wrap;gap:7px;padding-top:10px;border-top:1px solid #e2e8f0}
+.subnav-btn{min-height:34px;border:1px solid #e2e8f0;border-radius:999px;background:#f8fafc;padding:7px 12px;font-size:10px;font-weight:800;color:#475569}
+.subnav-btn.active{background:#dbeafe;border-color:#93c5fd;color:#1e40af}
+.subnav-count{display:inline-flex;min-width:17px;justify-content:center;margin-right:3px;font-size:9px;opacity:.8}
+@media(min-width:640px){.section-nav{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .pill-btn{border-radius:999px;min-height:42px;padding:0 16px;font-weight:800;font-size:11px}
 .primary-pill{background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;box-shadow:0 6px 16px #2563eb35}
 .success-pill{background:linear-gradient(135deg,#10b981,#059669);color:#fff}
@@ -81,8 +90,20 @@ async function tryApi(paths,opts={}){let last={status:404,data:{message:'فشل 
 function extractList(data,keys=[]){if(Array.isArray(data))return data; for(const key of keys){if(Array.isArray(data?.[key]))return data[key];} if(Array.isArray(data?.data))return data.data; return [];}
 function normalizePhoneInput(value){return String(value??'').replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[\s\-().]/g,'').replace(/^(\+?20)/,'0');}
 
+const ADMIN_SECTIONS = [
+ {id:'dashboard',label:'الرئيسية',icon:'🏠',tabs:[{id:'dashboard',label:'ملخص الإدارة'},{id:'stats',label:'الإحصائيات'}]},
+ {id:'clients',label:'إدارة العملاء',icon:'👥',tabs:[{id:'clients',label:'كل العملاء',count:()=>state.clients.length}]},
+ {id:'technicians',label:'إدارة الفنيين',icon:'👷',tabs:[{id:'fannis',label:'كل الفنيين',count:()=>state.fannis.length},{id:'pending',label:'انتظار الاعتماد',count:()=>state.fannis.filter(f=>!f.isApproved&&!f.isDisabled&&!['rejected','مرفوض'].includes(String(f.status||''))).length},{id:'disabled',label:'الفنيون الموقوفون',count:()=>state.fannis.filter(f=>f.isDisabled||f.actualStatus==='معلق').length},{id:'levels',label:'المستويات والشارات'}]},
+ {id:'orders',label:'الطلبات والعروض',icon:'📦',tabs:[{id:'orders',label:'الطلبات',count:()=>state.orders.length},{id:'offers',label:'العروض'}]},
+ {id:'finance',label:'المالية والمحافظ',icon:'💰',tabs:[{id:'wallets',label:'المحافظ'},{id:'topups',label:'طلبات الشحن',count:()=>state.topups.filter(t=>t.status==='pending').length},{id:'pricing',label:'الأسعار والعمولات'}]},
+ {id:'operations',label:'تشغيل المنصة والإدارة',icon:'⚙️',tabs:[{id:'services',label:'المهن والخدمات'},{id:'regions',label:'المناطق'},{id:'complaints',label:'الشكاوى'},{id:'support',label:'الدعم والمخالفات'},{id:'notifications',label:'الإشعارات'},{id:'content',label:'الإعلانات والأسئلة الشائعة'},{id:'reports',label:'التقارير'},{id:'security',label:'سجل التدقيق والأمان'},{id:'settings',label:'الإعدادات'},{id:'roles',label:'صلاحيات المشرفين'}]}
+];
+function getAdminSectionForTab(tab){return ADMIN_SECTIONS.find(section=>section.tabs.some(item=>item.id===tab))?.id||'dashboard';}
+function setSection(sectionId){const section=ADMIN_SECTIONS.find(item=>item.id===sectionId);if(!section)return;setTab(section.tabs[0].id);}
+function setClientStatusFilter(value){state.clientStatusFilter=['all','active','suspended'].includes(value)?value:'all';applyClientFilter();}
+
 let state={
-  tab:'dashboard',
+  tab:'dashboard',clientStatusFilter:'all',
   adminEmail:'',adminPass:'',currentAdminRoleLabel:'',loading:false,loadingOrders:false,publishingOrders:[],deletingItems:[],
   dropdowns:{}, pendingActions:{},
   fannis:[],filtered:[],topups:[],filteredTopups:[],orders:[],filteredOrders:[],complaints:[],filteredComplaints:[],loadingComplaints:false,
@@ -191,45 +212,26 @@ function render(){
         </form>
       </section>
     `:`
-      <section class="mt-4 premium-panel p-3">
-        <div class="flex items-center justify-between mb-3 px-1">
-          <h2 class="text-[12px] font-black text-slate-700">مركز التحكم - جميع الأقسام</h2>
-          
+      <section class="mt-4 premium-panel p-3 space-y-3">
+        <div class="flex items-center justify-between px-1">
+          <h2 class="text-[12px] font-black text-slate-700">مركز التحكم</h2>
+          <span class="text-[10px] text-slate-500">6 أقسام رئيسية</span>
         </div>
-        <div class="tab-grid">
-          ${[
-            {id:'dashboard',label:'الرئيسية',icon:'🏠',c:''},
-            {id:'fannis',label:'الفنيون',icon:'👷',c:state.fannis.length},
-            {id:'pending',label:'انتظار',icon:'⏳',c:pendingCount},
-            {id:'levels',label:'المستويات',icon:'⭐',c:''},
-            {id:'roles',label:'المناصب',icon:'👑',c:''},
-            {id:'orders',label:'الطلبات',icon:'📦',c:state.orders.length},
-            {id:'offers',label:'العروض',icon:'💬',c:''},
-            {id:'pricing',label:'الأسعار',icon:'💰',c:''},
-            {id:'wallets',label:'المحافظ',icon:'👛',c:''},
-            {id:'topups',label:'الشحن',icon:'💳',c:state.topups.length},
-            {id:'complaints',label:'الشكاوى',icon:'⚠️',c:state.complaints.length},
-            {id:'services',label:'الخدمات',icon:'🛠️',c:state.services.length},
-            {id:'regions',label:'المناطق',icon:'📍',c:''},
-            {id:'notifications',label:'الإشعارات',icon:'🔔',c:''},
-            {id:'settings',label:'الإعدادات',icon:'⚙️',c:''},
-            {id:'security',label:'الأمان',icon:'🛡️',c:''},
-            {id:'reports',label:'التقارير',icon:'📊',c:''},
-            {id:'support',label:'الدعم',icon:'🎧',c:''},
-            {id:'content',label:'المحتوى',icon:'📝',c:''},
-            {id:'stats',label:'الإحصائيات',icon:'📈',c:''},
-            {id:'clients',label:'العملاء',icon:'👥',c:state.clients.length},
-            {id:'disabled',label:'المعطلون',icon:'⛔',c:disabledCount},
-          ].map(t=>`
-            <button onclick="setTab('${t.id}')" class="tab-btn ${state.tab===t.id?'active':''}">
-              <span class="ic">${t.icon}</span>
-              <span class="font-black text-[11px]">${escHtml(t.label)}</span>
-              <span class="co">${t.c!==''?escHtml(String(t.c)):''}</span>
+        <div class="section-nav">
+          ${ADMIN_SECTIONS.map(section=>`
+            <button type="button" onclick="setSection('${section.id}')" class="section-nav-btn ${getAdminSectionForTab(state.tab)===section.id?'active':''}">
+              <span class="section-nav-icon">${section.icon}</span><span>${escHtml(section.label)}</span>
+            </button>
+          `).join('')}
+        </div>
+        <div class="subnav-wrap" aria-label="الأقسام الفرعية">
+          ${(ADMIN_SECTIONS.find(section=>section.id===getAdminSectionForTab(state.tab))||ADMIN_SECTIONS[0]).tabs.map(item=>`
+            <button type="button" onclick="setTab('${item.id}')" class="subnav-btn ${state.tab===item.id?'active':''}">
+              ${escHtml(item.label)}${item.count!==undefined&&item.count!==''?` <span class="subnav-count">${escHtml(String(typeof item.count==='function'?item.count():item.count))}</span>`:''}
             </button>
           `).join('')}
         </div>
       </section>
-
       <div class="mt-3 premium-panel p-3 flex flex-col gap-2.5">
         <div class="relative">
           <span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
@@ -716,9 +718,9 @@ function renderClients(){
   const clients=Array.isArray(state.filteredClients)?state.filteredClients:[];
   return `
   <section class="mt-4 space-y-4">
-    <div class="premium-panel p-4 space-y-3"><div class="flex items-center justify-between"><label class="text-[11px] font-black"><input type="checkbox" onchange="toggleAllBulkSelection('clients',state.filteredClients.filter(c=>c.registered).map(c=>c.phone),this.checked)"> تحديد الحسابات المسجلة الظاهرة</label><span class="text-[10px] text-slate-500">المحدد: ${(state.selectedBulkClientPhones||[]).length}</span></div><button onclick="runBulkAction('clients','delete')" class="pill-btn danger-pill">حذف الحسابات المحددة</button><div class="flex gap-2"><input id="client-search" value="${escHtml(state.clientSearch||'')}" placeholder="اسم / هاتف / كود الطلب" class="field flex-1"><button onclick="searchClients()" class="pill-btn primary-pill">بحث</button></div></div>
+    <div class="premium-panel p-4 space-y-3"><div class="flex items-center justify-between"><label class="text-[11px] font-black"><input type="checkbox" onchange="toggleAllBulkSelection('clients',state.filteredClients.filter(c=>c.registered).map(c=>c.phone),this.checked)"> تحديد الحسابات المسجلة الظاهرة</label><span class="text-[10px] text-slate-500">المحدد: ${(state.selectedBulkClientPhones||[]).length}</span></div><button onclick="runBulkAction('clients','delete')" class="pill-btn danger-pill">حذف الحسابات المحددة</button><div class="flex gap-2"><input id="client-search" value="${escHtml(state.clientSearch||'')}" placeholder="اسم / هاتف / كود الطلب" class="field flex-1"><button onclick="searchClients()" class="pill-btn primary-pill">بحث</button></div><label class="text-[10px] font-black text-slate-600">حالة حساب العميل</label><select onchange="setClientStatusFilter(this.value)" class="field"><option value="all" ${state.clientStatusFilter==='all'?'selected':''}>كل العملاء</option><option value="active" ${state.clientStatusFilter==='active'?'selected':''}>الحسابات النشطة</option><option value="suspended" ${state.clientStatusFilter==='suspended'?'selected':''}>العملاء الموقوفون</option></select></div>
     ${state.clientsLoading?'<p class="premium-panel p-4">جاري تحميل العملاء...</p>':''}
-    ${clients.map(c=>`<article class="premium-card p-4"><label class="text-[10px] font-bold"><input type="checkbox" ${((state.selectedBulkClientPhones||[]).includes(String(c.phone||''))&&c.registered)?'checked':''} ${c.registered?'':'disabled'} onchange="toggleBulkSelection('clients','${escHtml(c.phone||'')}',this.checked)"> تحديد</label><p class="font-black">${escHtml(c.name||'عميل')}</p><p dir="ltr">${escHtml(c.phone||'')}</p><p class="text-[10px]">${c.registered?'حساب مسجل':'طلب بدون حساب'} • الطلبات: ${Number(c.orderCount||0)}</p><div class="flex gap-2 mt-3"><button onclick="openClient('${escHtml(c.phone||'')}')" class="pill-btn soft-btn">طلبات العميل</button><button onclick="blockClient('${escHtml(c.phone||'')}')" ${c.registered?'':'disabled'} class="pill-btn soft-btn">حظر</button><button onclick="noteClient('${escHtml(c.phone||'')}')" ${c.registered?'':'disabled'} class="pill-btn soft-btn">ملاحظة</button><button onclick="deleteRegisteredClient('${escHtml(c.phone||'')}')" ${c.registered?'':'disabled'} class="pill-btn soft-btn text-red-600">حذف الحساب</button></div></article>`).join('')||'<div class="premium-panel p-8 text-center">لا توجد نتائج</div>'}
+    ${clients.map(c=>`<article class="premium-card p-4 space-y-3"><div class="flex items-start justify-between gap-3"><div class="min-w-0"><p class="font-black">${escHtml(c.name||'عميل')}</p><p dir="ltr" class="text-sm text-slate-600">${escHtml(c.phone||'')}</p><p class="text-[10px] text-slate-500 mt-1">${c.registered?'حساب مسجل':'طلب بدون حساب'} • الطلبات: ${Number(c.orderCount||0)}</p></div><span class="text-[10px] rounded-full border px-2 py-1 font-black ${c.registered&&c.status==='معلق'?'border-red-200 bg-red-50 text-red-700':'border-slate-200 bg-slate-50 text-slate-600'}">${c.registered?(c.status==='معلق'?'موقوف':'نشط'):'بدون حساب'}</span></div><div class="flex gap-2 items-center"><button onclick="openClient('${escHtml(c.phone||'')}')" class="pill-btn primary-pill flex-1">التفاصيل</button><details class="relative"><summary class="pill-btn soft-btn list-none cursor-pointer">إجراءات أخرى ▾</summary><div class="absolute left-0 top-full z-20 mt-1 min-w-44 rounded-xl border border-slate-200 bg-white p-2 shadow-xl space-y-1"><button onclick="blockClient('${escHtml(c.phone||'')}')" ${c.registered&&c.status!=='معلق'?'':'disabled'} class="dropdown-item w-full text-right">تعليق الحساب</button><button onclick="unblockClient('${escHtml(c.phone||'')}')" ${c.registered&&c.status==='معلق'?'':'disabled'} class="dropdown-item w-full text-right">إعادة تفعيل الحساب</button><button onclick="noteClient('${escHtml(c.phone||'')}')" ${c.registered?'':'disabled'} class="dropdown-item w-full text-right">ملاحظة داخلية</button><button onclick="deleteRegisteredClient('${escHtml(c.phone||'')}')" ${c.registered?'':'disabled'} class="dropdown-item w-full text-right text-red-600">حذف الحساب</button></div></details><label class="text-[10px] font-bold"><input type="checkbox" ${((state.selectedBulkClientPhones||[]).includes(String(c.phone||''))&&c.registered)?'checked':''} ${c.registered?'':'disabled'} onchange="toggleBulkSelection('clients','${escHtml(c.phone||'')}',this.checked)"> تحديد</label></div></article>`).join('')||'<div class="premium-panel p-8 text-center">لا توجد نتائج</div>'}
   </section>`;
 }
 function renderStats(){
@@ -749,7 +751,7 @@ function applyFilter(){let list=[...state.fannis];if(state.tab==='pending'){list
 function applyTopupFilter(){let list=[...state.topups]; if(state.filterTopup!=='الكل'){list=list.filter(t=>String(t.status||'pending').toLowerCase()===state.filterTopup.toLowerCase());} if(state.search){const s=state.search.toLowerCase(); list=list.filter(t=>String(t.fromPhone||t.phone||'').toLowerCase().includes(s)||String(t.amount||'').includes(s));} state.filteredTopups=list; if(state.tab==='topups')render();}
 function applyOrderFilter(){let list=[...state.orders]; if(state.filterOrder!=='الكل'){list=list.filter(o=>String(o.status||'قيد المراجعة')===state.filterOrder);} if(state.search)list=list.filter(o=>orderSearchMatch(o,state.search)); state.filteredOrders=list; if(state.tab==='orders')render();}
 function applyComplaintFilter(){let list=[...state.complaints]; if(state.filterComplaint!=='الكل')list=list.filter(c=>String(c.status||'جديدة')===state.filterComplaint); if(state.search){const q=state.search.toLowerCase(); list=list.filter(c=>[c.sn,c.clientName,c.text,c.status,c.adminNote,c.adminResponse].some(v=>String(v||'').toLowerCase().includes(q)));} state.filteredComplaints=list; if(state.tab==='complaints')render();}
-function applyClientFilter(){let list=[...(state.clients||[])];const q=String(state.clientSearch||'').trim().toLowerCase();if(q)list=list.filter(c=>[c.name,c.phone,c.lastOrder].some(v=>String(v||'').toLowerCase().includes(q)));state.filteredClients=list;if(state.tab==='clients')render();}
+function applyClientFilter(){let list=[...(state.clients||[])];const q=String(state.clientSearch||'').trim().toLowerCase();if(q)list=list.filter(c=>[c.name,c.phone,c.lastOrder].some(v=>String(v||'').toLowerCase().includes(q)));if(state.clientStatusFilter==='suspended')list=list.filter(c=>c.registered&&c.status==='معلق');else if(state.clientStatusFilter==='active')list=list.filter(c=>c.registered&&c.status!=='معلق');state.filteredClients=list;if(state.tab==='clients')render();}
 function applyServicesFilter(){const q=String(state.search||'').trim().toLowerCase(); if(!q){state.filteredServices=state.services.map(cat=>({label:cat.label,name:cat.name,emoji:cat.emoji,services:cat.services,_displayServices:Array.isArray(cat.services)?cat.services:[],_isCategoryMatch:true}));}else{const result=[]; state.services.forEach(cat=>{const label=String(cat.label||cat.name||'').toLowerCase(); const allServices=Array.isArray(cat.services)?cat.services:[]; const labelMatch=label.includes(q); const matchedServices=allServices.filter(s=>String(s||'').toLowerCase().includes(q)); if(labelMatch){result.push({label:cat.label,name:cat.name,emoji:cat.emoji,services:cat.services,_displayServices:allServices,_isCategoryMatch:true});}else if(matchedServices.length>0){result.push({label:cat.label,name:cat.name,emoji:cat.emoji,services:cat.services,_displayServices:matchedServices,_isCategoryMatch:false});}}); state.filteredServices=result; state.filteredServices.forEach((_,i)=>{state.openServices[i]=true;});} if(state.tab==='services')render();}
 function toggleServiceCat(idx){idx=Number(idx); if(state.openServices[idx]===undefined)state.openServices[idx]=true; state.openServices[idx]=!state.openServices[idx]; render();}
 async function loadServices(){if(!getToken())return; state.servicesLoading=true; state.servicesError=''; state.errors.services=''; if(state.tab==='services')render(); try{const res=await api('/api/admin/services',{method:'GET'}); if(!res.ok)throw new Error(res.data?.message||'تعذر تحميل الخدمات'); const data=res.data; const categories=data.categories||data.data?.categories||[]; if(!Array.isArray(categories))throw new Error('بنية الخدمات غير متوقعة'); state.services=categories; state.openServices={}; categories.forEach((_,i)=>{state.openServices[i]=true;}); applyServicesFilter();}catch(e){state.services=[]; state.filteredServices=[]; state.servicesError=e.message||'تعذر تحميل الخدمات'; state.errors.services=state.servicesError; console.error(e);}finally{state.servicesLoading=false; if(state.tab==='services')render();}}
@@ -873,7 +875,8 @@ async function exportReport(){const report=state.reports;if(!report?.summary)ret
 async function loadClients(query=''){state.clientsLoading=true;state.clientSearch=String(query||'').trim();if(state.tab==='clients')render();try{const url='/api/admin/clients'+(state.clientSearch?'?search='+encodeURIComponent(state.clientSearch):'');const data=await tryApi([url],{method:'GET'});state.clients=extractList(data,['clients','items']);applyClientFilter();}catch(e){state.clients=[];state.filteredClients=[];showToast(e.message||'تعذر تحميل العملاء','error');}finally{state.clientsLoading=false;if(state.tab==='clients')render();}}
 async function searchClients(){await loadClients(String(document.getElementById('client-search')?.value||'').trim());}
 async function openClient(phone){setTab('orders'); state.search=phone; applyOrderFilter(); showToast('عرض طلبات العميل '+phone);}
-async function blockClient(phone){if(!phone)return showToast('رقم هاتف العميل غير متاح','error');const reason=prompt('سبب تعليق حساب العميل '+phone+' (مطلوب للتوثيق):','مراجعة إدارية');if(reason===null)return;if(reason.trim().length<2)return showToast('اكتب سببًا واضحًا من حرفين على الأقل','error');if(!confirm('تأكيد تعليق حساب العميل '+phone+'؟ سيُمنع من تسجيل الدخول واستخدام المسارات المحمية.'))return;try{const data=await tryApi([`/api/admin/clients/${encodeURIComponent(phone)}/block`],{method:'POST',body:JSON.stringify({reason:reason.trim()})});showToast(data.message||'تم تعليق حساب العميل');}catch(e){showToast(e.message||'تعذر تعليق حساب العميل','error');}}
+async function blockClient(phone){if(!phone)return showToast('رقم هاتف العميل غير متاح','error');const reason=prompt('سبب تعليق حساب العميل '+phone+' (مطلوب للتوثيق):','مراجعة إدارية');if(reason===null)return;if(reason.trim().length<2)return showToast('اكتب سببًا واضحًا من حرفين على الأقل','error');if(!confirm('تأكيد تعليق حساب العميل '+phone+'؟ سيُمنع من تسجيل الدخول واستخدام المسارات المحمية.'))return;try{const data=await tryApi([`/api/admin/clients/${encodeURIComponent(phone)}/block`],{method:'POST',body:JSON.stringify({reason:reason.trim()})});showToast(data.message||'تم تعليق حساب العميل');await loadClients(state.clientSearch||'');}catch(e){showToast(e.message||'تعذر تعليق حساب العميل','error');}}
+async function unblockClient(phone){if(!phone)return showToast('رقم هاتف العميل غير متاح','error');if(!confirm('إعادة تفعيل حساب العميل '+phone+'؟'))return;try{const data=await tryApi([`/api/admin/clients/${encodeURIComponent(phone)}/unblock`],{method:'POST',body:JSON.stringify({})});showToast(data.message||'تمت إعادة تفعيل حساب العميل');await loadClients(state.clientSearch||'');}catch(e){showToast(e.message||'تعذر إعادة تفعيل حساب العميل','error');}}
 async function deleteRegisteredClient(phone){if(!phone)return showToast('رقم هاتف العميل غير متاح','error');if(!confirm('حذف حساب العميل المسجل '+phone+'؟ سجل الطلبات التاريخي سيظل محفوظًا، والحذف مرفوض أثناء وجود طلب نشط.'))return;try{const result=await tryApi(['/api/admin/clients/'+encodeURIComponent(phone)+'/account'],{method:'DELETE'});showToast(result.message||'تم حذف الحساب');await loadClients(state.clientSearch||'');}catch(e){showToast(e.message||'تعذر حذف الحساب','error');}}
 async function noteClient(phone){if(!phone)return showToast('رقم هاتف العميل غير متاح','error');const note=prompt('الملاحظة الداخلية للعميل '+phone+' (حتى 2000 حرف):');if(note===null)return;if(!note.trim())return showToast('اكتب الملاحظة قبل الحفظ','error');try{const data=await tryApi([`/api/admin/clients/${encodeURIComponent(phone)}/note`],{method:'POST',body:JSON.stringify({note:note.trim()})});showToast(data.message||'تم حفظ الملاحظة الداخلية');}catch(e){showToast(e.message||'تعذر حفظ الملاحظة','error');}}
 

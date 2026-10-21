@@ -1031,6 +1031,19 @@ router.post('/clients/:phone/block', auth('admin'), async (req, res, next) => {
   } catch (error) { return next(error); }
 });
 
+router.post('/clients/:phone/unblock', auth('admin'), async (req, res, next) => {
+  try {
+    const phone = normalizePhone(req.params.phone);
+    if (!phone) return res.status(400).json({ message: 'رقم هاتف العميل غير صالح' });
+    const client = await Client.findOne({ phone });
+    if (!client) return res.status(404).json({ message: 'لا يوجد حساب عميل مسجل بهذا الرقم' });
+    if (client.status !== 'معلق') return res.json({ message: 'حساب العميل نشط بالفعل', client: { id: String(client._id), name: client.name, phone: client.phone, status: client.status } });
+    client.status = 'نشط';
+    await client.save();
+    return res.json({ message: 'تمت إعادة تفعيل حساب العميل', client: { id: String(client._id), name: client.name, phone: client.phone, status: client.status } });
+  } catch (error) { return next(error); }
+});
+
 router.post('/clients/:phone/note', auth('admin'), async (req, res, next) => {
   try {
     const phone = normalizePhone(req.params.phone);
