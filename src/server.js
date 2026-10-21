@@ -298,6 +298,7 @@ function sendHtml(res, filename) {
 app.get('/', (req, res) => sendHtml(res, 'index.html'));
 app.get('/client', (req, res) => sendHtml(res, 'client.html'));
 app.get('/fanni', (req, res) => sendHtml(res, 'fanni.html'));
+app.get('/technicians', (req, res) => sendHtml(res, 'technicians.html'));
 app.get('/admin', (req, res) => sendHtml(res, 'admin.html'));
 
 app.use('/api', (req, res) => {
