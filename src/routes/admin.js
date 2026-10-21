@@ -1566,10 +1566,30 @@ router.delete('/services/:id', auth('admin'), async (req, res, next) => {
     }
     if (!service) return res.status(404).json({ message: 'الخدمة غير موجودة في القسم المحدد' });
     const name = service.name, category = service.category;
-    service.isActive = false;
-    await service.save();
-    await writeAdminAudit(req, 'حذف خدمة من القوائم المتاحة', 'services', name, JSON.stringify({ category, softDelete: true }));
-    return res.json({ ok: true, message: 'تم حذف الخدمة من القوائم المتاحة مع الحفاظ على الطلبات السابقة' });
+    const legacyCategory = findCategoryByLabel(category);
+    const isLegacyService = Boolean(legacyCategory && legacyCategory.services.some(item => normalizeForCompare(item) === normalizeForCompare(name)));
+
+    // الخدمات الموجودة في القائمة البرمجية تحتاج سجل إخفاء حتى لا تعود من المصدر القديم.
+    // أما الخدمات المدارة بالكامل من قاعدة البيانات فتحذف فعليًا، مع بقاء نص الخدمة داخل الطلبات القديمة.
+    let deleted = false;
+    if (isLegacyService) {
+      service.isActive = false;
+      await service.save();
+    } else {
+      const result = await Service.deleteOne({ _id: service._id });
+      if (result.deletedCount !== 1) {
+        return res.status(409).json({ message: 'لم يتم حذف الخدمة؛ حدّث القائمة وحاول مرة أخرى' });
+      }
+      deleted = true;
+    }
+    await writeAdminAudit(req, deleted ? 'حذف نهائي لخدمة' : 'إزالة خدمة أساسية من القوائم المتاحة', 'services', name, JSON.stringify({ category, deleted, legacyTombstone: isLegacyService }));
+    return res.json({
+      ok: true,
+      deleted,
+      message: deleted
+        ? 'تم حذف الخدمة نهائيًا من قائمة الخدمات. الطلبات السابقة محفوظة.'
+        : 'تمت إزالة الخدمة الأساسية من القوائم المتاحة مع الحفاظ على الطلبات السابقة.'
+    });
   } catch (err) { next(err); }
 });
 
