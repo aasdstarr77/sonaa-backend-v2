@@ -22,6 +22,7 @@ const decisionSchema = new mongoose.Schema({
       'تعديل ثقة',
       'ترقية إداري',
       'تغيير منصب إداري',
+      'تغيير صلاحيات إدارية',
       'سحب صلاحية إدارية'
     ],
     required: true
