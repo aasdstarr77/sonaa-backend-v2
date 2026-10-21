@@ -66,13 +66,8 @@ router.get('/services', async (req, res, next) => {
         services: []
       });
 
-      for (const name of category.services) {
-        categoriesMap.get(categoryKey).services.push({
-          name,
-          emoji: category.emoji,
-          isActive: true,
-          source: 'legacy'
-        });
+      for (const [index, name] of category.services.entries()) {
+        categoriesMap.get(categoryKey).services.push({ name, emoji: category.emoji, isActive: true, source: 'legacy', sortOrder: (index + 1) * 10 });
       }
     }
 
@@ -107,17 +102,16 @@ router.get('/services', async (req, res, next) => {
           emoji: saved.emoji || category.emoji || '🔧',
           isActive: true,
           source: 'database',
-          sortOrder: saved.sortOrder || 0
+          sortOrder: Number.isFinite(Number(saved.sortOrder)) ? Number(saved.sortOrder) : 0
         });
       }
     }
 
     const categories = Array.from(categoriesMap.values())
-      .map(category => ({
-        label: category.label,
-        emoji: category.emoji,
-        services: category.services.map(item => item.name)
-      }))
+      .map(category => {
+        category.services.sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, 'ar'));
+        return { label: category.label, emoji: category.emoji, services: category.services.map(item => item.name) };
+      })
       .filter(category => category.services.length > 0);
 
     const services = [
