@@ -104,6 +104,12 @@ const fanniSchema = new mongoose.Schema({
     index: true
   },
 
+  // صلاحيات مفصلة يحددها المدير العام لكل حساب إداري: { section: { read, write } }
+  adminPermissions: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
+  },
+
   // ========== الحقول الجديدة للوحة الإدارة الفخمة - 22 قسم ==========
   
   // 1. نظام المستويات
