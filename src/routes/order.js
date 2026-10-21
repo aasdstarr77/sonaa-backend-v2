@@ -1176,6 +1176,15 @@ router.post('/:sn/accept', async (req, res, next) => {
   if (responsePayload && responseStatus === 200 && responsePayload.order) {
     const acceptedOrder = responsePayload.order;
     await createNotification({
+      recipientRole: 'fanni',
+      recipientId: notificationFanniId,
+      type: 'commission_deducted',
+      title: 'تم خصم عمولة المنصة',
+      message: 'تم خصم عمولة قدرها ' + Number(responsePayload.commission?.amount || 0) + ' جنيه (' + Number(responsePayload.commission?.rate || 0) + '%) من محفظتك عند قبول الطلب ' + acceptedOrder.sn + '.',
+      link: '/fanni',
+      dedupeKey: 'commission-deducted:' + String(notificationOrderId || acceptedOrder.sn)
+    });
+    await createNotification({
       recipientRole: 'fanni', recipientId: notificationFanniId, type: 'offer_accepted',
       title: 'تم قبول عرضك', message: 'العميل قبل عرضك على الطلب ' + acceptedOrder.sn + '.',
       link: '/fanni', dedupeKey: 'offer-accepted:' + String(notificationOrderId || acceptedOrder.sn)
