@@ -788,7 +788,7 @@ function requireRootAdmin(req, res) {
   return true;
 }
 function publicAdminUser(user) {
-  return { id: String(user._id), name: user.name, phone: user.phone, role: user.role, isRootAdmin: isRootAdmin(user), adminRole: user.adminRole || (isRootAdmin(user) ? 'مدير عام' : null), status: user.status, adminPermissions: user.adminPermissions || {} };
+  return { id: String(user._id), name: user.name, phone: user.phone, role: user.role, isRootAdmin: isRootAdmin(user), adminRole: user.adminRole || (isRootAdmin(user) ? 'مدير عام' : (user.role === 'admin' ? 'مشرف' : null)), status: user.status, adminPermissions: user.adminPermissions || {} };
 }
 router.get('/me', auth('admin'), async (req, res) => {
   const role = isRootAdmin(req.user) ? 'أدمن رئيسي' : (req.user.adminRole || '');
@@ -832,10 +832,10 @@ router.patch('/admin-users/:id/role', auth('admin'), async (req, res, next) => {
     if (!validId(req.params.id)) return sendBadId(res);
     const adminRole = String(req.body?.role || '');
     if (!ADMIN_ROLES.includes(adminRole)) return res.status(400).json({ message: 'المنصب الإداري غير صالح' });
-    const fanni = await Fanni.findOne({ _id: req.params.id, role: 'fanni' });
-    if (!fanni || !fanni.adminRole) return res.status(404).json({ message: 'المشرف غير موجود' });
-    const previous = fanni.adminRole;
-    if (previous === adminRole) return res.json({ message: 'المنصب لم يتغير', user: publicAdminUser(fanni) });
+    const fanni = await Fanni.findById(req.params.id);
+    if (!fanni || isRootAdmin(fanni) || !((fanni.role === 'fanni' && fanni.adminRole) || fanni.role === 'admin')) return res.status(404).json({ message: 'المشرف غير موجود' });
+    const previous = fanni.adminRole || 'مشرف';
+    if (previous === adminRole && fanni.adminRole) return res.json({ message: 'المنصب لم يتغير', user: publicAdminUser(fanni) });
     fanni.adminRole = adminRole;
     fanni.decisions.push({ action: 'تغيير منصب إداري', reason: `من ${previous} إلى ${adminRole}`, date: new Date(), by: adminName(req), byId: req.user?._id, meta: { previousRole: previous, newRole: adminRole } });
     await fanni.save();
@@ -873,11 +873,16 @@ router.delete('/admin-users/:id', auth('admin'), async (req, res, next) => {
   try {
     if (!requireRootAdmin(req, res)) return;
     if (!validId(req.params.id)) return sendBadId(res);
-    const fanni = await Fanni.findOne({ _id: req.params.id, role: 'fanni' });
-    if (!fanni || !fanni.adminRole) return res.status(404).json({ message: 'المشرف غير موجود' });
-    const previous = fanni.adminRole;
+    const fanni = await Fanni.findById(req.params.id);
+    if (!fanni || isRootAdmin(fanni) || !((fanni.role === 'fanni' && fanni.adminRole) || fanni.role === 'admin')) return res.status(404).json({ message: 'المشرف غير موجود' });
+    const previous = fanni.adminRole || 'مشرف قديم';
     fanni.adminRole = null;
-    fanni.decisions.push({ action: 'سحب صلاحية إدارية', reason: `سحب منصب ${previous} مع الاحتفاظ بحساب الفني`, date: new Date(), by: adminName(req), byId: req.user?._id, meta: { previousRole: previous } });
+    // Legacy accounts whose role is still 'admin' must remain unable to enter
+    // admin APIs after revocation; never convert them into technician accounts.
+    if (fanni.role === 'admin') {
+      fanni.adminPermissions = Object.fromEntries(['dashboard','fannis','orders','complaints','services','clients','topups','wallet','pricing','settings','content','support','regions','offers','notifications','clientsData'].map(key => [key, { read: false, write: false }]));
+    }
+    fanni.decisions.push({ action: 'سحب صلاحية إدارية', reason: `سحب منصب ${previous} مع الاحتفاظ بالحساب`, date: new Date(), by: adminName(req), byId: req.user?._id, meta: { previousRole: previous } });
     await fanni.save();
     return res.json({ message: 'تم سحب الصلاحية الإدارية، وحساب الفني ما زال فعالًا', user: publicAdminUser(fanni) });
   } catch (err) { next(err); }
