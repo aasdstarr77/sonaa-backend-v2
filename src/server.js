@@ -146,7 +146,7 @@ if (req.path === '/health') {
 
     // Maintenance mode blocks customer/technician APIs while keeping admin access
     // and public configuration/service lists available to display the notice.
-    const maintenanceExempt = ['/health', '/content', '/services', '/areas', '/vodafone-cash'];
+    const maintenanceExempt = ['/health', '/content', '/services', '/areas'];
     const isAdminPath = req.path.startsWith('/admin') ||
       req.path.startsWith('/admins') || req.path.startsWith('/auth/admin');
     if (!isAdminPath && !maintenanceExempt.includes(req.path)) {

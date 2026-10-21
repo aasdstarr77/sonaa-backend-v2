@@ -89,8 +89,7 @@ function publicTopup(request) {
     status: statusMap[item.status] || 'pending',
     actualStatus: item.status,
     fromPhone: item.senderNumber || '',
-    phone: item.fanniPhone || '',
-    walletNumber: process.env.VODAFONE_CASH_NUMBER || ''
+    phone: item.fanniPhone || ''
   };
 }
 
@@ -1083,40 +1082,52 @@ router.post('/regions', auth('admin'), async (req, res, next) => {
     return next(error);
   }
 });
-router.post('/notifications/broadcast', auth('admin'), async (req, res, next) => {
+router.post('/notifications/direct', auth('admin'), async (req, res, next) => {
   try {
     const schema = Joi.object({
       title: Joi.string().trim().min(2).max(100).required(),
       message: Joi.string().trim().min(2).max(300).required(),
-      audience: Joi.string().valid('fannis', 'cairo_fannis', 'clients', 'all').required()
+      recipientRole: Joi.string().valid('fanni', 'client').required(),
+      phone: Joi.string().trim().required()
     }).required();
-    const { error, value } = schema.validate(req.body, { abortEarly: false, stripUnknown: true });
-    if (error) return res.status(400).json({ message: 'بيانات الإشعار غير صحيحة', details: error.details.map(item => item.message) });
+    const { error, value } = schema.validate(req.body || {}, { abortEarly: false, stripUnknown: true });
+    if (error) return res.status(400).json({ message: 'بيانات الرسالة أو المستلم غير صحيحة' });
 
-    const MAX_BROADCAST_RECIPIENTS = 1000;
-    const targets = [];
-    if (value.audience === 'fannis' || value.audience === 'all' || value.audience === 'cairo_fannis') {
-      const fanniFilter = { role: 'fanni', status: 'معتمد' };
-      if (value.audience === 'cairo_fannis') fanniFilter.areas = { $regex: 'القاهرة', $options: 'i' };
-      const fannis = await Fanni.find(fanniFilter).select('_id').limit(MAX_BROADCAST_RECIPIENTS + 1).lean();
-      targets.push(...fannis.map(item => ({ recipientRole: 'fanni', recipientId: item._id })));
+    const phone = normalizePhone(value.phone);
+    if (!phone || !/^01[0-9]{9}$/.test(phone)) {
+      return res.status(400).json({ message: 'اكتب رقم هاتف مصري صحيحًا للمستلم' });
     }
-    if (value.audience === 'clients' || value.audience === 'all') {
-      const clients = await Client.find({ status: 'نشط' }).select('_id').limit(MAX_BROADCAST_RECIPIENTS + 1).lean();
-      targets.push(...clients.map(item => ({ recipientRole: 'client', recipientId: item._id })));
-    }
-    if (targets.length > MAX_BROADCAST_RECIPIENTS) {
-      return res.status(413).json({ message: 'عدد المستلمين أكبر من الحد المسموح (1000). اختر فئة أصغر.' });
-    }
-    if (!targets.length) return res.status(404).json({ message: 'لا يوجد مستلمون نشطون في الفئة المحددة' });
 
-    const createdAt = new Date();
-    const documents = targets.map(target => ({
-      ...target, type: 'announcement', title: value.title, message: value.message,
-      link: '', readAt: null, createdAt, updatedAt: createdAt
-    }));
-    const inserted = await Notification.insertMany(documents, { ordered: false });
-    return res.status(201).json({ message: 'تم إرسال الإشعار داخل التطبيق', sent: inserted.length, audience: value.audience });
+    let recipient;
+    if (value.recipientRole === 'fanni') {
+      recipient = await Fanni.findOne({ phone, role: 'fanni', status: { $ne: 'مرفوض' } })
+        .select('_id name phone status').lean();
+    } else {
+      recipient = await Client.findOne({ phone, status: 'نشط' })
+        .select('_id name phone status').lean();
+    }
+    if (!recipient) {
+      return res.status(404).json({
+        message: value.recipientRole === 'fanni'
+          ? 'لا يوجد فني بهذا الرقم يمكن إرسال رسالة إليه'
+          : 'لا يوجد عميل مسجل ونشط بهذا الرقم'
+      });
+    }
+
+    await Notification.create({
+      recipientRole: value.recipientRole,
+      recipientId: recipient._id,
+      type: 'admin_message',
+      title: value.title,
+      message: value.message,
+      link: '',
+      readAt: null
+    });
+    return res.status(201).json({
+      message: 'تم إرسال الرسالة داخل التطبيق إلى المستلم المحدد فقط',
+      sent: 1,
+      recipient: { role: value.recipientRole, name: recipient.name, phone: recipient.phone }
+    });
   } catch (error) { return next(error); }
 });
 router.get('/settings', auth('admin'), async (req, res, next) => {

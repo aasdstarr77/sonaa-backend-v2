@@ -113,7 +113,8 @@ function toast(message,type='success'){
 }
 
 async function copyWalletNumber(){
- const walletNumber='01152822263';
+ const walletNumber=String(document.getElementById('wallet-transfer-number')?.textContent||'').trim();
+ if(!/^01[0-9]{9}$/.test(walletNumber))return toast('رقم المحفظة غير متاح حاليًا.','error');
 
  try{
   if(navigator.clipboard&&window.isSecureContext){

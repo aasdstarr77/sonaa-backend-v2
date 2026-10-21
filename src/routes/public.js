@@ -152,25 +152,6 @@ router.get('/content', async (req, res, next) => {
 });
 
 /*
- * GET /api/vodafone-cash
- */
-router.get('/vodafone-cash', async (req, res, next) => {
-  try {
-    const setting = await Settings.findOne({
-      key: 'vodafone_cash_number'
-    });
-
-    return res.json({
-      number: setting
-        ? setting.value
-        : process.env.VODAFONE_CASH_NUMBER
-    });
-  } catch (err) {
-    next(err);
-  }
-});
-
-/*
  * GET /api/health
  */
 router.get('/health', (req, res) => {
