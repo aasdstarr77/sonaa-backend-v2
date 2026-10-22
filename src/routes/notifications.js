@@ -14,7 +14,12 @@ function owner(req, role) {
 }
 
 function roleAuth(role) {
-  return role === 'client' ? clientAuth : auth();
+  if (role === 'client') return clientAuth;
+  if (role !== 'admin') return auth();
+  return (req, res, next) => auth()(req, res, () => {
+    if (req.user?.role !== 'admin' && !req.user?.adminRole) return res.status(403).json({ message: 'هذه الإشعارات مخصصة لحسابات الإدارة.' });
+    return next();
+  });
 }
 
 function mountRoleRoutes(role) {
