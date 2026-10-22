@@ -210,11 +210,11 @@ router.post('/admin/requests/:id/reply', supportAdminAuth, async (req, res, next
   try {
     const text = clean(req.body?.text);
     if (!text) return res.status(400).json({ message: 'اكتب الرد أولًا.' });
-    const item = await PasswordRecovery.findOne({ _id: req.params.id, accountId: { $ne: null }, expiresAt: { $gt: new Date() } });
+    const item = await PasswordRecovery.findOne({ _id: req.params.id, accountId: { $ne: null }, expiresAt: { $gt: new Date() } }).select('+codeHash');
     if (!item) return res.status(404).json({ message: 'طلب الاستعادة غير موجود.' });
     if (['تمت الاستعادة', 'مرفوضة', 'منتهية'].includes(item.status)) return res.status(409).json({ message: 'طلب الاستعادة مغلق.' });
     item.messages.push({ senderRole: 'admin', senderId: String(req.user._id), text });
-    item.status = 'بانتظار رد المستخدم';
+    item.status = item.codeHash && item.codeExpiresAt > new Date() && !item.codeUsedAt ? 'تم التحقق' : 'بانتظار رد المستخدم';
     await item.save();
     return res.json({ message: 'تم إرسال الرد.', recovery: safeRequest(item) });
   } catch (e) { return next(e); }
