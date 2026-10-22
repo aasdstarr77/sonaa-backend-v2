@@ -229,6 +229,12 @@ async function run() {
         .send({ text: 'رمز استعادة كلمة المرور: ' + issued.body.code });
       assert.equal(sent.status, 200);
       assert.equal(sent.body.recovery.status, 'تم التحقق');
+      assert.ok(sent.body.recovery.messages.some(m => String(m.text).includes(issued.body.code)), 'the user-facing support transcript should show the issued code');
+      const PasswordRecovery = require('../models/PasswordRecovery');
+      const storedRecovery = await PasswordRecovery.findById(opened.body.requestId).lean();
+      const storedCodeMessage = storedRecovery.messages.find(m => String(m.text).startsWith('__SONAA_RECOVERY_SECRET_V1__:'));
+      assert.ok(storedCodeMessage, 'the code message must be encrypted at rest');
+      assert.equal(storedCodeMessage.text.includes(issued.body.code), false);
 
       const verified = await request(app).post('/api/password-recovery/request/' + opened.body.requestId + '/verify-code')
         .set('X-Recovery-Token', opened.body.recoveryToken).send({ code: issued.body.code });
