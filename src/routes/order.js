@@ -1681,10 +1681,10 @@ router.post('/:sn/price-change/:requestId/decision', async (req, res, next) => {
     order.chatMessages.push({
       senderRole: 'client',
       senderId: String(order.clientAccount || order._id),
-      targetOfferId: '',
+      targetOfferId: String(order.acceptedOfferId || ''),
       text: approved
-        ? 'العميل وافق على زيادة السعر إلى ' + Number(request.newPrice) + ' جنيه.'
-        : 'العميل رفض زيادة السعر؛ السعر السابق ' + Number(request.oldPrice) + ' جنيه ما زال ساريًا.',
+        ? 'وافقت على زيادة العرض إلى ' + Number(request.newPrice) + ' جنيه.'
+        : 'رفضت زيادة العرض؛ السعر السابق ' + Number(request.oldPrice) + ' جنيه ما زال ساريًا.',
       createdAt: new Date()
     });
     await order.save({ session });
