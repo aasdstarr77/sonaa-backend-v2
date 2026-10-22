@@ -12,6 +12,7 @@ const Client = require('../models/Client');
 const Notification = require('../models/Notification');
 const TopupRequest = require('../models/TopupRequest');
 const Order = require('../models/Order');
+const Rating = require('../models/Rating');
 const Complaint = require('../models/Complaint');
 const WalletTransaction = require('../models/WalletTransaction');
 const { createNotification } = require('../utils/notifications');
@@ -236,8 +237,28 @@ router.patch('/complaints/:id', auth('admin'), validate(Joi.object({
 router.get('/fannis', auth('admin'), async (req, res, next) => {
   try {
     const list = await Fanni.find({ role: 'fanni' }).select('-passwordHash').sort({ createdAt: -1 }).limit(MAX_LIST_LIMIT).lean();
-    const fannis = list.map(publicFanni);
-    return res.json({ fannis, data: fannis });
+    const ids = list.map(item => item._id);
+    const [ratingStats, completedStats] = ids.length ? await Promise.all([
+      Rating.aggregate([
+        { $match: { fanniId: { $in: ids }, reviewerRole: 'client' } },
+        { $group: { _id: '$fanniId', average: { $avg: '$stars' }, count: { $sum: 1 } } }
+      ]),
+      Order.aggregate([
+        { $match: { assignedFanni: { $in: ids }, status: 'تم الانتهاء' } },
+        { $group: { _id: '$assignedFanni', count: { $sum: 1 } } }
+      ])
+    ]) : [[], []];
+    const ratingsById = new Map(ratingStats.map(item => [String(item._id), item]));
+    const completedById = new Map(completedStats.map(item => [String(item._id), item.count]));
+    const fannis = list.map(item => {
+      const result = publicFanni(item);
+      const rating = ratingsById.get(String(item._id));
+      result.ratingAverage = rating ? Math.round(rating.average * 100) / 100 : 0;
+      result.ratingCount = rating?.count || 0;
+      result.completedJobs = completedById.get(String(item._id)) || 0;
+      return result;
+    });
+    return res.set('Cache-Control', 'no-store').json({ fannis, data: fannis });
   } catch (err) { next(err); }
 });
 
@@ -1264,6 +1285,26 @@ router.get('/clients', auth('admin'), async (req, res, next) => {
     for (const order of orders) { const phone = String(order.clientPhone || ''); if (!phone) continue; const item = byPhone.get(phone) || { name: order.clientName || 'عميل', phone, status: 'غير مسجل', orderCount: 0, lastOrder: '' }; item.orderCount++; if (!item.lastOrder) item.lastOrder = order.sn || ''; byPhone.set(phone, item); }
     for (const client of registered) { const item = byPhone.get(client.phone) || { name: client.name, phone: client.phone, orderCount: 0, lastOrder: '' }; Object.assign(item, { name: client.name, status: client.status, adminNote: client.adminNote || '', registered: true }); byPhone.set(client.phone, item); }
     const clients = Array.from(byPhone.values()).sort((a,b) => (b.orderCount || 0) - (a.orderCount || 0)).slice(0, 200);
+    const phones = clients.map(client => normalizePhone(client.phone || '')).filter(Boolean);
+    const [ratingStats, completedStats] = phones.length ? await Promise.all([
+      Rating.aggregate([
+        { $match: { clientPhone: { $in: phones }, reviewerRole: 'fanni' } },
+        { $group: { _id: '$clientPhone', average: { $avg: '$stars' }, count: { $sum: 1 } } }
+      ]),
+      Order.aggregate([
+        { $match: { clientPhone: { $in: phones }, status: 'تم الانتهاء' } },
+        { $group: { _id: '$clientPhone', count: { $sum: 1 } } }
+      ])
+    ]) : [[], []];
+    const ratingsByPhone = new Map(ratingStats.map(item => [normalizePhone(item._id || ''), item]));
+    const completedByPhone = new Map(completedStats.map(item => [normalizePhone(item._id || ''), item.count]));
+    for (const client of clients) {
+      const phone = normalizePhone(client.phone || '');
+      const rating = ratingsByPhone.get(phone);
+      client.ratingAverage = rating ? Math.round(rating.average * 100) / 100 : 0;
+      client.ratingCount = rating?.count || 0;
+      client.completedJobs = completedByPhone.get(phone) || 0;
+    }
     return res.set('Cache-Control', 'no-store').json({ clients, items: clients });
   } catch (err) { next(err); }
 });
