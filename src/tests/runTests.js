@@ -55,7 +55,9 @@ async function run() {
       assert.equal(canAccessAdmin(readOnly, { path: '/orders', method: 'GET' }), true);
       assert.equal(canAccessAdmin(readOnly, { path: '/orders/SN123456/publish', method: 'POST' }), false);
       const manager = { role: 'fanni', adminRole: 'مدير' };
-      assert.equal(canAccessAdmin(manager, { path: '/orders/SN123456/publish', method: 'POST' }), true);
+      assert.equal(canAccessAdmin(manager, { path: '/admin/SN123456/publish', method: 'POST' }), true, 'manager must have the dedicated publish permission on the actual mounted route');
+      assert.equal(canAccessAdmin({ role: 'fanni', adminRole: 'مشرف' }, { path: '/admin/SN123456/publish', method: 'POST' }), false, 'supervisor must not publish by default');
+      assert.equal(canAccessAdmin({ role: 'fanni', adminRole: 'مدير', adminPermissions: { __customOverrides: true, publishOrders: { read: true, write: false } } }, { path: '/admin/SN123456/publish', method: 'POST' }), false, 'a custom override must revoke publishing without changing order permissions');
       assert.equal(canAccessAdmin(manager, { path: '/offers/SN123456/0/reject', method: 'POST' }), true);
       assert.equal(defaultAdminPermissions('مشرف').orders.write, true);
       assert.equal(defaultAdminPermissions('مشرف').settings.write, false);
