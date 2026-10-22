@@ -3,6 +3,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const SupportCase = require('../models/SupportCase');
+const { notifyAdmins } = require('../utils/notifications');
 const { auth, canAccessAdmin, isRootAdmin } = require('../middleware/auth');
 const { clientAuth } = require('../middleware/clientAuth');
 
@@ -43,6 +44,7 @@ async function createCase(req, res, role) {
     needsHuman: true,
     messages: [{ senderRole: role, senderId: String(owner._id), text }]
   });
+  await notifyAdmins({ type: 'admin_support_request', title: 'طلب دعم جديد', message: `وصل طلب دعم جديد من ${item.ownerName || (role === 'fanni' ? 'فني' : 'عميل')}: ${item.subject}.`, link: '/admin?tab=support', dedupeKey: 'admin-support:' + String(item._id) });
   return res.status(201).json({ message: 'تم فتح محادثة الدعم.', supportCase: publicCase(item) });
 }
 async function listCases(req, res, role) {

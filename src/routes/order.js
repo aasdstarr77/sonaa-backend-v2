@@ -6,7 +6,7 @@ const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 
 const Order = require('../models/Order');
-const { createNotification } = require('../utils/notifications');
+const { createNotification, notifyAdmins } = require('../utils/notifications');
 const Fanni = require('../models/Fanni');
 const Rating = require('../models/Rating');
 const WalletTransaction = require('../models/WalletTransaction');
@@ -425,6 +425,7 @@ router.post('/', clientAuth, async (req, res, next) => {
       });
     }
 
+    await notifyAdmins({ type: 'admin_new_order', title: 'طلب جديد يحتاج مراجعة', message: `وصل طلب جديد ${order.sn} لخدمة ${order.service}.`, link: '/admin?tab=orders', dedupeKey: 'admin-new-order:' + String(order._id) });
     await createNotification({
       recipientRole: 'client', recipientId: order.clientAccount, type: 'order_created',
       title: 'تم استلام طلبك', message: 'استلمنا طلبك ' + order.sn + ' وسيتم مراجعته من الإدارة.',

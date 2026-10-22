@@ -12,6 +12,7 @@ const TopupRequest = require('../models/TopupRequest');
 const { auth } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const { normalizePhone } = require('../utils/phone');
+const { notifyAdmins } = require('../utils/notifications');
 
 const router = express.Router();
 
@@ -109,6 +110,7 @@ router.post(
         role: 'fanni'
       });
 
+      await notifyAdmins({ type: 'admin_new_technician', title: 'فني جديد يحتاج مراجعة', message: `سجّل فني جديد باسم ${fanni.name} ورقم ${fanni.phone}.`, link: '/admin?tab=fannis', dedupeKey: 'admin-new-technician:' + String(fanni._id) });
       return res.status(201).json({
         message: 'تم إنشاء الحساب بنجاح. الحساب قيد مراجعة الإدارة.',
         id: String(fanni._id),

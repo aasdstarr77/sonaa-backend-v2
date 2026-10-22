@@ -2,6 +2,7 @@
 
 const Notification = require('../models/Notification');
 const PushToken = require('../models/PushToken');
+const Fanni = require('../models/Fanni');
 
 async function sendPushNotification({ recipientRole, recipientId, title, message, type, link = '' }) {
   try {
@@ -45,7 +46,7 @@ async function sendPushNotification({ recipientRole, recipientId, title, message
 }
 
 async function createNotification({ recipientRole, recipientId, type, title, message, link = '', dedupeKey = null }) {
-  if (!recipientId || !['client', 'fanni'].includes(recipientRole)) return null;
+  if (!recipientId || !['client', 'fanni', 'admin'].includes(recipientRole)) return null;
   try {
     const payload = { recipientRole, recipientId, type, title, message, link };
     let notification;
@@ -72,4 +73,10 @@ async function createNotification({ recipientRole, recipientId, type, title, mes
   }
 }
 
-module.exports = { createNotification, sendPushNotification };
+async function notifyAdmins({ type, title, message, link = '', dedupeKey = null }) {
+  try {
+    const admins = await Fanni.find({ $or: [{ role: 'admin' }, { adminRole: { $in: ['مشرف', 'مشرف أول', 'مدير', 'قراءة فقط'] } }] }).select('_id').lean();
+    for (const admin of admins) await createNotification({ recipientRole: 'admin', recipientId: admin._id, type, title, message, link, dedupeKey: dedupeKey ? `${dedupeKey}:${String(admin._id)}` : null });
+  } catch (error) { console.error('Admin notification creation failed:', error.message); }
+}
+module.exports = { createNotification, sendPushNotification, notifyAdmins };

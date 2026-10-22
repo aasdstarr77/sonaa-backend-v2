@@ -25,6 +25,7 @@ function mountRoleRoutes(role) {
       if (role === 'fanni' && req.user?.role !== 'fanni') {
         return res.status(403).json({ message: 'تسجيل إشعارات الفنيين يتطلب حساب فني.' });
       }
+      if (role === 'admin' && req.user?.role !== 'admin' && !req.user?.adminRole) return res.status(403).json({ message: 'تسجيل إشعارات الإدارة يتطلب حسابًا إداريًا.' });
       const token = typeof req.body?.token === 'string' ? req.body.token.trim() : '';
       if (!/^(Exponent|Expo)PushToken\[[^\]]+\]$/.test(token)) {
         return res.status(400).json({ message: 'رمز إشعارات Expo غير صالح.' });
@@ -95,5 +96,6 @@ function mountRoleRoutes(role) {
 
 mountRoleRoutes('client');
 mountRoleRoutes('fanni');
+mountRoleRoutes('admin');
 
 module.exports = router;

@@ -10,6 +10,7 @@ const Fanni = require('../models/Fanni');
 const PasswordRecovery = require('../models/PasswordRecovery');
 const { auth, isRootAdmin, canAccessAdmin } = require('../middleware/auth');
 const { clientAuth } = require('../middleware/clientAuth');
+const { notifyAdmins } = require('../utils/notifications');
 
 const router = express.Router();
 const adminSelfAuth = (req, res, next) => auth()(req, res, () => {
@@ -143,6 +144,7 @@ router.post('/request', recoveryLimiter, async (req, res, next) => {
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
       messages: [{ senderRole: 'user', text: 'طلب استعادة كلمة المرور. يرجى التحقق من ملكية الحساب قبل إصدار رمز الاستعادة.' }]
     });
+    await notifyAdmins({ type: 'admin_password_recovery', title: 'طلب تغيير/استعادة كلمة مرور', message: `وصل طلب استعادة كلمة مرور لحساب ${role} برقم ${phone}.`, link: '/admin?tab=support', dedupeKey: 'admin-password-recovery:' + String(item._id) });
     return res.status(201).json({ message: 'لو كان الحساب مطابقًا للبيانات، سيظهر طلبك للدعم. احتفظ برمز متابعة الطلب.', recoveryToken: token, requestId: String(item._id) });
   } catch (e) { return next(e); }
 });
