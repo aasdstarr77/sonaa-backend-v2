@@ -1226,20 +1226,31 @@ async function refreshFanniChatsSilently(){
   if(fanniLiveRenderPending&&liveFanniCanRender()){
    fanniLiveRenderPending=false;const scrollY=window.scrollY||window.pageYOffset||0;render();window.scrollTo({top:scrollY,left:0,behavior:'instant'});
   }
-  if(state.tab==='myOffers'){
-   await Promise.allSettled((state.myOffers||[]).map(async function(offer){
-    const sn=String(offer.orderSn||offer.sn||offer.order?.sn||'').toUpperCase();if(!/^SN\d{6}$/.test(sn))return;
-    const offerId=String(offer._id||''),targetId=offer.accepted===true?'fanni-accepted-chat-'+sn:'fanni-prechat-chat-'+sn+'-'+offerId;
-    if(!document.getElementById(targetId))return;
-    const data=await API.chat(sn),messages=Array.isArray(data.messages)?data.messages:[];offer.chatMessages=messages;
-    const box=document.getElementById(targetId);if(box)box.innerHTML=renderFanniChatMessages(messages,offer.accepted===true);
-   }));
-   if(newlyAccepted){const accepted=state.myOffers.find(o=>o.accepted===true&&o.orderStatus==='تم اختيار فني');if(accepted)setTimeout(()=>document.getElementById('fanni-accepted-chat-'+String(accepted.orderSn||accepted.sn||'').toUpperCase())?.scrollIntoView({behavior:'smooth',block:'center'}),80);}
-  }
- }catch(_){/* Preserve the last successful state during temporary network failures. */}
+  if(newlyAccepted){const accepted=state.myOffers.find(o=>o.accepted===true&&o.orderStatus==='تم اختيار فني');if(accepted)setTimeout(()=>document.getElementById('fanni-accepted-chat-'+String(accepted.orderSn||accepted.sn||'').toUpperCase())?.scrollIntoView({behavior:'smooth',block:'center'}),80);}}catch(_){/* Preserve the last successful state during temporary network failures. */}
  finally{fanniChatPollInFlight=false;}
 }
+let fanniMessagesPollInFlight=false;
+async function refreshFanniChatMessagesSilently(){
+ if(!getToken()||document.hidden||fanniMessagesPollInFlight||state.tab!=='myOffers')return;
+ fanniMessagesPollInFlight=true;
+ try{
+  await Promise.allSettled((state.myOffers||[]).map(async function(offer){
+   const sn=String(offer.orderSn||offer.sn||offer.order?.sn||'').toUpperCase();
+   if(!/^SN\d{6}$/.test(sn))return;
+   const offerId=String(offer._id||'');
+   const accepted=offer.accepted===true;
+   const targetId=accepted?'fanni-accepted-chat-'+sn:'fanni-prechat-chat-'+sn+'-'+offerId;
+   if(!document.getElementById(targetId))return;
+   const data=await API.chat(sn),messages=Array.isArray(data.messages)?data.messages:[];
+   offer.chatMessages=messages;
+   const box=document.getElementById(targetId);
+   if(box)box.innerHTML=renderFanniChatMessages(messages,accepted);
+  }));
+ }catch(_){/* Keep the last successful chat visible during temporary network failures. */}
+ finally{fanniMessagesPollInFlight=false;}
+}
 setInterval(refreshFanniChatsSilently,3000);
+setInterval(refreshFanniChatMessagesSilently,2000);
 start();
 </script>
 <a href="support.html?role=fanni" aria-label="مركز مساعدة صُنّاع" title="مركز مساعدة صُنّاع" class="fixed bottom-[calc(88px+env(safe-area-inset-bottom))] right-4 z-[80] flex h-12 w-12 items-center justify-center rounded-full border border-white/70 bg-gradient-to-br from-[#0d9488] to-[#0f766e] text-white text-xl shadow-lg ring-1 ring-teal-200/70">🎧</a>
