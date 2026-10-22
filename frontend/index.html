@@ -21,9 +21,11 @@
     .shell{width:min(1120px,calc(100% - 36px));margin:auto}
     .topbar{height:82px;display:flex;align-items:center;justify-content:space-between;gap:16px}
     .brand{display:flex;align-items:center;gap:11px;font-weight:900;color:var(--navy);font-size:25px;letter-spacing:-.5px}
-    .brand-mark{width:45px;height:45px;border-radius:15px;background:#F8FAFC;border:2px solid #14B8A6;display:grid;place-items:center;box-shadow:0 8px 18px #0f172a18;color:var(--navy)}
+    .brand-mark{width:46px;height:46px;flex:0 0 46px;display:block;background:transparent;border:0;border-radius:0;box-shadow:none;padding:0;line-height:0}
     .brand-mark svg{width:34px;height:34px}
-    .brand-mark .sonaa-logo-svg{display:block;width:100%;height:100%;max-width:38px;max-height:38px;object-fit:contain;border-radius:10px}
+    .brand-mark .sonaa-logo-svg{display:block;width:46px;height:46px;max-width:none;max-height:none;object-fit:contain;border:0;border-radius:0;box-shadow:none}
+    .topbar{position:relative;z-index:1}
+    .home-nav{position:relative;z-index:0;clear:both;margin-top:8px;}
     .top-note{font-size:13px;font-weight:700;color:#64748b;background:#fff;border:1px solid var(--line);border-radius:999px;padding:9px 15px}
     .hero{position:relative;isolation:isolate;overflow:hidden;border-radius:30px;background:radial-gradient(circle at 10% 10%,#28528a 0,transparent 35%),linear-gradient(125deg,#0b1b3a,#123568 68%,#19477d);color:#fff;padding:clamp(28px,5vw,60px);box-shadow:0 24px 55px #0b1b3a20}
     .hero:before,.hero:after{content:"";position:absolute;border:1px solid #ffffff14;border-radius:50%;z-index:-1}
