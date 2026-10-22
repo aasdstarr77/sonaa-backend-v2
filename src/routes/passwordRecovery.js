@@ -25,6 +25,29 @@ const supportAdminAuth = (req, res, next) => auth()(req, res, () => {
 const passwordSchema = Joi.string().min(8).max(128).required();
 const codeSchema = Joi.string().pattern(/^\d{6}$/).required();
 const digest = value => crypto.createHash('sha256').update(String(value)).digest('hex');
+const SECRET_MESSAGE_PREFIX = '__SONAA_RECOVERY_SECRET_V1__:';
+function encryptRecoveryMessage(text) {
+  const key = crypto.createHash('sha256').update(String(process.env.JWT_SECRET || '') + '|sonaa-recovery-chat-v1').digest();
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const encrypted = Buffer.concat([cipher.update(String(text), 'utf8'), cipher.final()]);
+  return SECRET_MESSAGE_PREFIX + [iv.toString('hex'), cipher.getAuthTag().toString('hex'), encrypted.toString('hex')].join(':');
+}
+function decryptRecoveryMessage(text) {
+  if (typeof text !== 'string' || !text.startsWith(SECRET_MESSAGE_PREFIX)) return text;
+  try {
+    const parts = text.slice(SECRET_MESSAGE_PREFIX.length).split(':');
+    if (parts.length !== 3) return 'رسالة رمز استعادة محمية.';
+    const key = crypto.createHash('sha256').update(String(process.env.JWT_SECRET || '') + '|sonaa-recovery-chat-v1').digest();
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(parts[0], 'hex'));
+    decipher.setAuthTag(Buffer.from(parts[1], 'hex'));
+    return Buffer.concat([decipher.update(Buffer.from(parts[2], 'hex')), decipher.final()]).toString('utf8');
+  } catch (_) { return 'رسالة رمز استعادة محمية.'; }
+}
+function protectRecoveryMessage(text, item) {
+  return item.codeHash && item.codeExpiresAt > new Date() && !item.codeUsedAt && /\\d{6}/.test(text)
+    ? encryptRecoveryMessage(text) : text;
+}
 const randomToken = () => crypto.randomBytes(32).toString('hex');
 const clean = (v, max = 2000) => typeof v === 'string' ? v.trim().slice(0, max) : '';
 const sameDigest = (a, b) => {
@@ -55,7 +78,7 @@ async function lookupAccount(role, phone) {
   const actualRole = user.role === 'admin' || user.adminRole ? 'admin' : 'fanni';
   return actualRole === role ? { user, role: actualRole } : null;
 }
-function safeUserRecovery(item) { const data = safeRequest(item); return { id: data.id, status: data.status, messages: data.messages, lastMessageAt: data.lastMessageAt, expiresAt: data.expiresAt }; }
+function safeUserRecovery(item) { const data = safeRequest(item); return { id: data.id, status: data.status, messages: (data.messages || []).map(message => ({ ...message, text: decryptRecoveryMessage(message.text) })), lastMessageAt: data.lastMessageAt, expiresAt: data.expiresAt }; }
 function ownerAuth(req, res, next) {
   const role = req.params.role;
   if (role === 'client') return clientAuth(req, res, next);
@@ -134,7 +157,7 @@ router.get('/request/:id', async (req, res, next) => {
   try {
     const item = await findByTicket(req, res);
     if (!item) return;
-    return res.json({ recovery: { id: String(item._id), status: item.status, messages: item.messages || [], lastMessageAt: item.lastMessageAt, expiresAt: item.expiresAt } });
+    return res.json({ recovery: { id: String(item._id), status: item.status, messages: safeRequest(item).messages, lastMessageAt: item.lastMessageAt, expiresAt: item.expiresAt } });
   } catch (e) { return next(e); }
 });
 router.post('/request/:id/messages', async (req, res, next) => {
@@ -198,7 +221,7 @@ router.get('/admin/requests', supportAdminAuth, async (req, res, next) => {
   try {
     const items = await PasswordRecovery.find({ accountId: { $ne: null }, status: { $nin: ['تمت الاستعادة', 'مرفوضة', 'منتهية'] }, expiresAt: { $gt: new Date() } })
       .sort({ lastMessageAt: -1 }).limit(200).select('+codeHash').lean();
-    return res.json({ recoveries: items.map(x => ({ id: String(x._id), ownerRole: x.ownerRole, accountName: x.accountName, phone: x.phone, status: x.status, messages: x.messages, lastMessageAt: x.lastMessageAt, createdAt: x.createdAt })) });
+    return res.json({ recoveries: items.map(x => ({ id: String(x._id), ownerRole: x.ownerRole, accountName: x.accountName, phone: x.phone, status: x.status, lastMessageAt: x.lastMessageAt, createdAt: x.createdAt })) });
   } catch (e) { return next(e); }
 });
 router.get('/admin/requests/:id', supportAdminAuth, async (req, res, next) => {
@@ -215,7 +238,7 @@ router.post('/admin/requests/:id/reply', supportAdminAuth, async (req, res, next
     const item = await PasswordRecovery.findOne({ _id: req.params.id, accountId: { $ne: null }, expiresAt: { $gt: new Date() } }).select('+codeHash');
     if (!item) return res.status(404).json({ message: 'طلب الاستعادة غير موجود.' });
     if (['تمت الاستعادة', 'مرفوضة', 'منتهية'].includes(item.status)) return res.status(409).json({ message: 'طلب الاستعادة مغلق.' });
-    item.messages.push({ senderRole: 'admin', senderId: String(req.user._id), text });
+    item.messages.push({ senderRole: 'admin', senderId: String(req.user._id), text: protectRecoveryMessage(text, item) });
     item.status = item.codeHash && item.codeExpiresAt > new Date() && !item.codeUsedAt ? 'تم التحقق' : 'بانتظار رد المستخدم';
     await item.save();
     return res.json({ message: 'تم إرسال الرد.', recovery: safeRequest(item) });
