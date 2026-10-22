@@ -178,7 +178,7 @@ async function saveStatus(){
 }
 async function refresh(){
  const active=document.activeElement;
- if(pollBusy||document.hidden||busy||(active&&['INPUT','TEXTAREA','SELECT'].includes(active.tagName)))return;
+ if(pollBusy||document.hidden||busy)return;
  pollBusy=true;
  try{
   await loadCases(true);
