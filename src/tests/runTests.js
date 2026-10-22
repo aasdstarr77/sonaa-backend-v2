@@ -24,6 +24,7 @@ async function run() {
   let supportCaseId;
   let orderSN;
   let orderClientToken;
+  let adminToken;
 
   async function test(name, fn) {
     try {
@@ -146,6 +147,68 @@ async function run() {
       assert.equal(r.body.client.passwordHash, undefined);
       clientToken = r.body.token;
       clientId = r.body.client.id;
+    });
+
+    await test('client can change their own password only with the current password', async () => {
+      const denied = await request(app).post('/api/password-recovery/change/client')
+        .set('Authorization', 'Bearer ' + clientToken)
+        .send({ currentPassword: 'WrongPass123', newPassword: 'NewPass12345', confirmPassword: 'NewPass12345' });
+      assert.equal(denied.status, 400);
+      const changed = await request(app).post('/api/password-recovery/change/client')
+        .set('Authorization', 'Bearer ' + clientToken)
+        .send({ currentPassword: 'TestPass123', newPassword: 'NewPass12345', confirmPassword: 'NewPass12345' });
+      assert.equal(changed.status, 200);
+      const login = await request(app).post('/api/client/login').send({ phone: '01012345678', password: 'NewPass12345' });
+      assert.equal(login.status, 200);
+      clientToken = login.body.token;
+    });
+
+    await test('support-managed recovery issues a one-time code and resets the client password', async () => {
+      const bcrypt = require('bcryptjs');
+      const jwt = require('jsonwebtoken');
+      const Fanni = require('../models/Fanni');
+      const admin = await Fanni.create({
+        name: 'مدير الاختبار', phone: '01012345678', passwordHash: await bcrypt.hash('AdminTestPass123', 12),
+        specialties: ['إدارة'], areas: ['الإدارة'], status: 'معتمد', role: 'admin'
+      });
+      adminToken = jwt.sign({ id: String(admin._id), role: 'admin' }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+      const opened = await request(app).post('/api/password-recovery/request')
+        .send({ role: 'client', phone: '01012345678' });
+      assert.equal(opened.status, 201);
+      assert.ok(opened.body.recoveryToken);
+      assert.ok(opened.body.requestId);
+
+      const queue = await request(app).get('/api/password-recovery/admin/requests')
+        .set('Authorization', 'Bearer ' + adminToken);
+      assert.equal(queue.status, 200);
+      const item = queue.body.recoveries.find(x => x.id === opened.body.requestId);
+      assert.ok(item);
+
+      const issued = await request(app).post('/api/password-recovery/admin/requests/' + opened.body.requestId + '/issue-code')
+        .set('Authorization', 'Bearer ' + adminToken).send({});
+      assert.equal(issued.status, 200);
+      assert.match(issued.body.code, /^\d{6}$/);
+
+      const sent = await request(app).post('/api/password-recovery/admin/requests/' + opened.body.requestId + '/reply')
+        .set('Authorization', 'Bearer ' + adminToken)
+        .send({ text: 'رمز استعادة كلمة المرور: ' + issued.body.code });
+      assert.equal(sent.status, 200);
+      assert.equal(sent.body.recovery.status, 'تم التحقق');
+
+      const verified = await request(app).post('/api/password-recovery/request/' + opened.body.requestId + '/verify-code')
+        .set('X-Recovery-Token', opened.body.recoveryToken).send({ code: issued.body.code });
+      assert.equal(verified.status, 200);
+
+      const reset = await request(app).post('/api/password-recovery/request/' + opened.body.requestId + '/reset-password')
+        .set('X-Recovery-Token', opened.body.recoveryToken)
+        .send({ newPassword: 'RecoveredPass123', confirmPassword: 'RecoveredPass123' });
+      assert.equal(reset.status, 200);
+
+      const oldLogin = await request(app).post('/api/client/login').send({ phone: '01012345678', password: 'NewPass12345' });
+      assert.equal(oldLogin.status, 401);
+      const newLogin = await request(app).post('/api/client/login').send({ phone: '01012345678', password: 'RecoveredPass123' });
+      assert.equal(newLogin.status, 200);
     });
 
     await test('duplicate client phone is rejected', async () => {
