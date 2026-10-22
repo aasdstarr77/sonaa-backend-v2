@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+<title id="title">صُنّاع</title><desc id="desc">شعار صُنّاع: حرف S مصمم من أدوات الحرفيين داخل دائرة تركواز</desc>
+<circle cx="256" cy="256" r="231" fill="#fff" stroke="#1EB5A6" stroke-width="26"/>
+<path d="M350 115c-29-23-65-35-108-35-75 0-125 39-125 98 0 51 37 77 105 96l47 13c37 10 51 22 51 43 0 27-28 44-72 44-43 0-79-14-111-42l-44 57c38 34 92 53 155 53 88 0 146-43 146-111 0-52-32-81-103-101l-52-15c-34-10-48-20-48-39 0-21 22-35 55-35 29 0 55 8 79 25z" fill="#0A2342"/>
+<!-- Hammer integrated into upper arm of S -->
+<g fill="#0A2342" stroke="#0A2342" stroke-linecap="round" stroke-linejoin="round">
+<path d="M291 109l24-18 44 59-24 18z"/>
+<path d="M274 84l37-28 39 51-37 28z"/>
+<path d="M263 73l27-20 16 22-27 20z"/>
+<!-- Wrench integrated into lower curve -->
+<path d="M180 345l-31 31 29 29 31-31 18 18-31 31c-8 8-20 8-28 0l-38-38c-8-8-8-20 0-28l31-31z"/>
+<path d="M192 333l17-17 48 48-17 17z"/>
+</g>
+</svg>
