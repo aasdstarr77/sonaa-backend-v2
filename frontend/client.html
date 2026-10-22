@@ -1110,13 +1110,17 @@ document.addEventListener('DOMContentLoaded',()=>{
         })());
         tasks.push(loadNotifications());
       }
-      if(state.tracked&&state.trackInput)tasks.push(refreshTrackedSilently());
+
       await Promise.allSettled(tasks);
       if(clientLiveRenderPending&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)){
         clientLiveRenderPending=false;const scrollY=window.scrollY||window.pageYOffset||0;render();window.scrollTo({top:scrollY,left:0,behavior:'instant'});focusClientPostAction();
       }
     }finally{clientLivePollInFlight=false;}
   },5000);
+  setInterval(async function(){
+    if(document.hidden||!state.tracked||!state.trackInput)return;
+    await refreshTrackedSilently();
+  },3000);
 });
 render();
 </script>

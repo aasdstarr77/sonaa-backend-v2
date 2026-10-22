@@ -1237,7 +1237,7 @@ async function refreshFanniChatsSilently(){
  }catch(_){/* Preserve the last successful state during temporary network failures. */}
  finally{fanniChatPollInFlight=false;}
 }
-setInterval(refreshFanniChatsSilently,5000);
+setInterval(refreshFanniChatsSilently,3000);
 start();
 </script>
 <a href="support.html?role=fanni" aria-label="مركز مساعدة صُنّاع" title="مركز مساعدة صُنّاع" class="fixed bottom-[calc(88px+env(safe-area-inset-bottom))] right-4 z-[80] flex h-12 w-12 items-center justify-center rounded-full border border-white/70 bg-gradient-to-br from-[#0d9488] to-[#0f766e] text-white text-xl shadow-lg ring-1 ring-teal-200/70">🎧</a>
