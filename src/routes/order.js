@@ -610,12 +610,39 @@ router.get('/available', auth(), async (req, res, next) => {
       );
     }
 
-    const safeOrders = matchingOrders.map(order =>
-      publicOrder(order, {
+    let clientRatingsByPhone = new Map();
+    let clientCompletedByPhone = new Map();
+    if (req.user.role === 'fanni' && matchingOrders.length) {
+      const phones = [...new Set(matchingOrders.map(order => normalizePhone(order.clientPhone || '')).filter(Boolean))];
+      if (phones.length) {
+        const [ratingStats, completedStats] = await Promise.all([
+          Rating.aggregate([
+            { $match: { clientPhone: { $in: phones }, reviewerRole: 'fanni' } },
+            { $group: { _id: '$clientPhone', average: { $avg: '$stars' }, count: { $sum: 1 } } }
+          ]),
+          Order.aggregate([
+            { $match: { clientPhone: { $in: phones }, status: 'تم الانتهاء' } },
+            { $group: { _id: '$clientPhone', count: { $sum: 1 } } }
+          ])
+        ]);
+        clientRatingsByPhone = new Map(ratingStats.map(item => [normalizePhone(item._id || ''), item]));
+        clientCompletedByPhone = new Map(completedStats.map(item => [normalizePhone(item._id || ''), item.count]));
+      }
+    }
+    const safeOrders = matchingOrders.map(order => {
+      const safeOrder = publicOrder(order, {
         includeAddress: false,
         includeClientName: false
-      })
-    );
+      });
+      if (req.user.role === 'fanni') {
+        const phone = normalizePhone(order.clientPhone || '');
+        const rating = clientRatingsByPhone.get(phone);
+        safeOrder.clientRatingAverage = rating ? Math.round(Number(rating.average || 0) * 100) / 100 : 0;
+        safeOrder.clientRatingCount = rating?.count || 0;
+        safeOrder.clientCompletedJobs = clientCompletedByPhone.get(phone) || 0;
+      }
+      return safeOrder;
+    });
 
     return res.json({
       orders: safeOrders,
