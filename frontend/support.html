@@ -178,7 +178,7 @@ async function saveStatus(){
 }
 async function refresh(){
  const active=document.activeElement;
- if(pollBusy||document.hidden||busy||(active&&['INPUT','TEXTAREA','SELECT'].includes(active.tagName)))return;
+ if(pollBusy||document.hidden||busy)return;
  pollBusy=true;
  try{
   await loadCases(true);
@@ -200,7 +200,7 @@ function init(){
   $('main').classList.remove('hidden');$('create-btn').addEventListener('click',createCase);$('refresh-btn').addEventListener('click',()=>refresh());$('send-btn').addEventListener('click',()=>sendOwnerMessage(false));$('human-btn').addEventListener('click',()=>sendOwnerMessage(true));
  }
  loadCases(false).catch(e=>showError(e.message));
- setInterval(refresh,5000);
+ setInterval(refresh,3000);
 }
 init();
 </script>

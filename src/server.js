@@ -21,6 +21,7 @@ const clientRouter = require('./routes/client');
 const complaintRouter = require('./routes/Complaint');
 const notificationsRouter = require('./routes/notifications');
 const supportRouter = require('./routes/support');
+const passwordRecoveryRouter = require('./routes/passwordRecovery');
 const { auth } = require('./middleware/auth');
 const errorHandler = require('./middleware/error');
 
@@ -227,6 +228,7 @@ app.use('/api', publicRouter);
 app.use('/api/client', clientRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/support', supportRouter);
+app.use('/api/password-recovery', passwordRecoveryRouter);
 
 // Public complaint submission/tracking uses order code + name, so limit attempts
 // to reduce guessing and spam. This is defense-in-depth, not identity proof.

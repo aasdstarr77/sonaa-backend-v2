@@ -946,7 +946,7 @@ async function noteClient(phone){if(!phone)return showToast('رقم هاتف ا�
 
 function renderLogin(){
   const app=document.getElementById('app');
-  app.innerHTML=`<div class="min-h-screen flex items-center justify-center p-4" style="background:#f1f5fb"><div class="premium-card p-7 w-full max-w-[360px]"><h2 class="font-black text-[16px] text-center mb-4">🔐 دخول الإدارة</h2><input id="login-phone" placeholder="الإيميل أو الهاتف" class="field mb-3" dir="ltr"><input id="login-pass" type="password" placeholder="كلمة المرور" class="field mb-4" dir="ltr"><button onclick="doLogin()" id="login-btn" class="w-full h-12 rounded-full bg-slate-900 text-white font-black">دخول</button><p id="login-error" class="text-[11px] font-bold text-red-600 mt-3 text-center hidden"></p><button onclick="localStorage.clear(); location.reload()" class="w-full mt-3 h-10 rounded-full bg-slate-100 text-[11px] font-black">مسح الجلسة</button></div></div>`;
+  app.innerHTML=`<div class="min-h-screen flex items-center justify-center p-4" style="background:#f1f5fb"><div class="premium-card p-7 w-full max-w-[360px]"><h2 class="font-black text-[16px] text-center mb-4">🔐 دخول الإدارة</h2><input id="login-phone" placeholder="الإيميل أو الهاتف" class="field mb-3" dir="ltr"><input id="login-pass" type="password" placeholder="كلمة المرور" class="field mb-2" dir="ltr"><p class="mb-4 text-left"><a class="text-xs font-bold text-blue-700" href="password.html?role=admin&mode=recovery">نسيت كلمة المرور؟</a></p><button onclick="doLogin()" id="login-btn" class="w-full h-12 rounded-full bg-slate-900 text-white font-black">دخول</button><p id="login-error" class="text-[11px] font-bold text-red-600 mt-3 text-center hidden"></p><button onclick="localStorage.clear(); location.reload()" class="w-full mt-3 h-10 rounded-full bg-slate-100 text-[11px] font-black">مسح الجلسة</button></div></div>`;
 }
 async function doLogin(){
   const p=(document.getElementById('login-phone')?.value||'').trim();
@@ -966,5 +966,6 @@ if(getToken()){ loadAll(); } else { renderLogin(); }
 
 </script>
 
+<nav id="sonaa-password-links" style="position:fixed;z-index:9999;bottom:12px;left:12px;right:12px;max-width:680px;margin:auto;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:8px;background:#ffffffee;border:1px solid #dbe4f0;border-radius:14px;box-shadow:0 6px 24px #0b1b3a22;font-family:Cairo,Arial,sans-serif"><a href="password.html?role=admin&mode=account" style="padding:8px 12px;border-radius:10px;background:#0b1b3a;color:white;text-decoration:none;font-size:12px;font-weight:800">حسابي</a><a href="password.html?role=admin&mode=recovery" style="padding:8px 12px;border-radius:10px;background:#e2e8f0;color:#0b1b3a;text-decoration:none;font-size:12px;font-weight:800">نسيت كلمة المرور؟</a><a href="password.html?role=admin&mode=support" style="padding:8px 12px;border-radius:10px;background:#0d9488;color:white;text-decoration:none;font-size:12px;font-weight:800">طلبات استعادة كلمة المرور</a></nav>
 </body>
 </html>
