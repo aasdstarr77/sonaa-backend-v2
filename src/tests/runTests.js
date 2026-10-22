@@ -10,7 +10,7 @@ const assert = require('node:assert/strict');
 const request = require('supertest');
 const { MongoMemoryServer } = require('mongodb-memory-server');
 const errorHandler = require('../middleware/error');
-const { canAccessAdmin, isRootAdmin } = require('../middleware/auth');
+const { canAccessAdmin, isRootAdmin, defaultAdminPermissions } = require('../middleware/auth');
 
 async function run() {
   let mongo;
@@ -45,13 +45,25 @@ async function run() {
     await test('only the configured root administrator bypasses the permission matrix', async () => {
       assert.equal(isRootAdmin({ role: 'admin', phone: '01012345678' }), true);
       assert.equal(isRootAdmin({ role: 'admin', phone: '01012345679' }), false);
-      assert.equal(canAccessAdmin({ role: 'admin', phone: '01012345679', adminPermissions: { orders: { read: true, write: false } } }, { path: '/orders', method: 'GET' }), true);
+      assert.equal(canAccessAdmin({ role: 'admin', phone: '01012345679', adminPermissions: { orders: { read: false, write: false } } }, { path: '/orders', method: 'GET' }), true, 'legacy full matrices must not override role defaults');
       assert.equal(canAccessAdmin({ role: 'fanni', adminRole: 'مشرف', adminPermissions: { orders: { read: true, write: false } } }, { path: '/api/admin/orders', method: 'GET' }), true);
       assert.equal(canAccessAdmin({ role: 'admin', phone: '01012345679' }, { path: '/settings', method: 'GET' }), false);
     });
 
+    await test('role defaults are restored and manager can publish orders and moderate offers', async () => {
+      const readOnly = { role: 'fanni', adminRole: 'قراءة فقط' };
+      assert.equal(canAccessAdmin(readOnly, { path: '/orders', method: 'GET' }), true);
+      assert.equal(canAccessAdmin(readOnly, { path: '/orders/SN123456/publish', method: 'POST' }), false);
+      const manager = { role: 'fanni', adminRole: 'مدير' };
+      assert.equal(canAccessAdmin(manager, { path: '/orders/SN123456/publish', method: 'POST' }), true);
+      assert.equal(canAccessAdmin(manager, { path: '/offers/SN123456/0/reject', method: 'POST' }), true);
+      assert.equal(defaultAdminPermissions('مشرف').orders.write, true);
+      assert.equal(defaultAdminPermissions('مشرف').settings.write, false);
+      assert.equal(defaultAdminPermissions('مشرف أول').services.write, true);
+    });
+
     await test('custom admin permissions separate reading from execution and protect permission management', async () => {
-      const user = { role: 'fanni', adminRole: 'مشرف', adminPermissions: { orders: { read: true, write: false }, settings: { read: false, write: false } } };
+      const user = { role: 'fanni', adminRole: 'مشرف', adminPermissions: { __customOverrides: true, orders: { read: true, write: false }, settings: { read: false, write: false } } };
       assert.equal(canAccessAdmin(user, { path: '/orders', method: 'GET' }), true);
       assert.equal(canAccessAdmin(user, { path: '/orders', method: 'POST' }), false);
       assert.equal(canAccessAdmin(user, { path: '/settings', method: 'GET' }), false);
@@ -59,7 +71,7 @@ async function run() {
     });
 
     await test('wallet balance mutations are governed by wallet permissions, not technician-list permissions', async () => {
-      const user = { role: 'fanni', adminRole: 'مدير', adminPermissions: { fannis: { read: false, write: false }, wallet: { read: true, write: true } } };
+      const user = { role: 'fanni', adminRole: 'مدير', adminPermissions: { __customOverrides: true, fannis: { read: false, write: false }, wallet: { read: true, write: true } } };
       assert.equal(canAccessAdmin(user, { path: '/fannis/507f1f77bcf86cd799439011/set-balance', method: 'POST' }), true);
       user.adminPermissions.wallet.write = false;
       assert.equal(canAccessAdmin(user, { path: '/fannis/507f1f77bcf86cd799439011/set-balance', method: 'POST' }), false);
