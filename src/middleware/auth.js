@@ -6,7 +6,7 @@ const { normalizePhone } = require('../utils/phone');
 
 const ADMIN_ROLES = ['مشرف', 'مشرف أول', 'مدير', 'قراءة فقط'];
 
-const ADMIN_PERMISSION_KEYS = ['dashboard','fannis','orders','complaints','services','clients','topups','wallet','pricing','settings','content','support','regions','offers','notifications','clientsData'];
+const ADMIN_PERMISSION_KEYS = ['dashboard','fannis','orders','publishOrders','complaints','services','clients','topups','wallet','pricing','settings','content','support','regions','offers','notifications','clientsData'];
 const ROLE_WRITE_SECTIONS = {
   'قراءة فقط': [],
   'مشرف': ['orders','complaints','support','offers'],
@@ -30,6 +30,7 @@ const PERMISSION_SECTIONS = {
   dashboard: [/^\/me$/, /^\/reports?(\/|$)/, /^\/stats?(\/|$)/],
   wallet: [/^\/wallet(\/|$)/, /^\/fannis\/[^/]+\/(set-balance|add-balance)$/],
   fannis: [/^\/fannis(\/|$)/],
+  publishOrders: [/^\/admin\/[^/]+\/publish$/],
   orders: [/^\/orders(\/|$)/],
   complaints: [/^\/complaints(\/|$)/],
   services: [/^\/services(\/|$)/],
