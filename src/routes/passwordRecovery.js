@@ -60,7 +60,7 @@ function safeRequest(item, includeMessages = true) {
   return {
     id: String(data._id), ownerRole: data.ownerRole, accountName: data.accountName,
     phone: data.phone, subject: data.subject, status: data.status,
-    verifiedAt: data.verifiedAt, messages: includeMessages ? (data.messages || []) : [],
+    verifiedAt: data.verifiedAt, messages: includeMessages ? (data.messages || []).map(message => ({ ...message, text: decryptRecoveryMessage(message.text) })) : [],
     lastMessageAt: data.lastMessageAt, expiresAt: data.expiresAt,
     createdAt: data.createdAt, updatedAt: data.updatedAt
   };
