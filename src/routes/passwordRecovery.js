@@ -125,7 +125,8 @@ router.post('/request', recoveryLimiter, async (req, res, next) => {
 async function findByTicket(req, res) {
   const token = String(req.headers['x-recovery-token'] || req.body?.recoveryToken || req.query?.token || '');
   if (!/^[a-f0-9]{64}$/.test(token)) { res.status(401).json({ message: 'رمز متابعة الطلب غير صحيح.' }); return null; }
-  const item = await PasswordRecovery.findOne({ accessTokenHash: digest(token), expiresAt: { $gt: new Date() } }).select('+codeHash');
+  if (!/^[a-f0-9]{24}$/i.test(String(req.params.id || ''))) { res.status(400).json({ message: 'معرّف طلب الاستعادة غير صحيح.' }); return null; }
+  const item = await PasswordRecovery.findOne({ _id: req.params.id, accessTokenHash: digest(token), expiresAt: { $gt: new Date() } }).select('+codeHash');
   if (!item) { res.status(404).json({ message: 'طلب الاستعادة غير موجود أو انتهت صلاحيته.' }); return null; }
   return item;
 }
