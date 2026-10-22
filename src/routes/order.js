@@ -458,12 +458,7 @@ router.post('/', clientAuth, async (req, res, next) => {
 
 router.post('/admin/:sn/publish', auth('admin'), async (req, res, next) => {
   try {
-    if (req.user.role !== 'admin' && req.user.adminRole !== 'مدير') {
-      return res.status(403).json({
-        message: 'نشر طلبات العملاء متاح للمدير العام أو المدير التشغيلي فقط'
-      });
-    }
-
+    // auth('admin') enforces the dedicated publishOrders permission for this route.
     const sn = String(req.params.sn || '').toUpperCase();
 
     if (!validSN(sn)) {
