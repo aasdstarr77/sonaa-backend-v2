@@ -797,7 +797,8 @@ router.get('/me', auth('admin'), async (req, res) => {
     name: req.user.name,
     role: req.user.role,
     adminRole: req.user.adminRole || null,
-    adminRoleLabel: role
+    adminRoleLabel: role,
+    adminPermissions: req.user.adminPermissions || {}
   });
 });
 
@@ -847,7 +848,7 @@ router.patch('/admin-users/:id/permissions', auth('admin'), async (req, res, nex
     if (!requireRootAdmin(req, res)) return;
     if (!validId(req.params.id)) return sendBadId(res);
     const permissions = req.body?.permissions;
-    const allowedSections = ['dashboard','fannis','orders','complaints','services','clients','topups','wallet','pricing','settings','content','support','regions','offers','notifications','clientsData'];
+    const allowedSections = ['dashboard','fannis','orders','publishOrders','complaints','services','clients','topups','wallet','pricing','settings','content','support','regions','offers','notifications','clientsData'];
     if (!permissions || typeof permissions !== 'object' || Array.isArray(permissions)) {
       return res.status(400).json({ message: 'قائمة الصلاحيات غير صحيحة' });
     }
