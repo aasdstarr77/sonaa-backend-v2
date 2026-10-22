@@ -1069,6 +1069,29 @@ async function refreshTrackedSilently(){
  }catch(_){/* Keep the last successful order and conversation visible during temporary network failures. */}
  finally{clientChatPollInFlight=false;}
 }
+let clientMessagesPollInFlight=false;
+async function refreshTrackedChatSilently(){
+ const input=String(state.trackInput||'').trim().toUpperCase();
+ if(!VALIDATORS.sn(input)||!state.tracked||document.hidden||clientMessagesPollInFlight)return;
+ clientMessagesPollInFlight=true;
+ try{
+  const data=await API.chat(input);
+  if(!state.tracked||String(state.tracked.sn||'').toUpperCase()!==input)return;
+  const previousRequests=JSON.stringify((state.tracked.priceChangeRequests||[]).map(r=>({id:String(r._id||''),status:r.status||'',newPrice:r.newPrice??null,requestedAt:r.requestedAt||''})));
+  const nextRequests=Array.isArray(data.priceChangeRequests)?data.priceChangeRequests:state.tracked.priceChangeRequests||[];
+  const nextMessages=Array.isArray(data.messages)?data.messages:[];
+  state.tracked.chatMessages=nextMessages;
+  state.tracked.priceChangeRequests=nextRequests;
+  updateClientChatDom(nextMessages);
+  const nextRequestSignature=JSON.stringify(nextRequests.map(r=>({id:String(r._id||''),status:r.status||'',newPrice:r.newPrice??null,requestedAt:r.requestedAt||''})));
+  if(previousRequests!==nextRequestSignature&&state.tab==='track'){
+   if(!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)){
+    const scrollY=window.scrollY||window.pageYOffset||0;render();window.scrollTo({top:scrollY,left:0,behavior:'instant'});focusClientPostAction();
+   }else clientLiveRenderPending=true;
+  }
+ }catch(_){/* Keep the last successful conversation visible during temporary network failures. */}
+ finally{clientMessagesPollInFlight=false;}
+}
 async function doTrack(){
   if(state.trackLoading)return;
   const input=state.trackInput.trim().toUpperCase();
@@ -1122,6 +1145,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(document.hidden||!state.tracked||!state.trackInput)return;
     await refreshTrackedSilently();
   },3000);
+  setInterval(refreshTrackedChatSilently,2000);
 });
 render();
 </script>
