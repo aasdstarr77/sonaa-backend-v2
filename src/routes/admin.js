@@ -28,7 +28,7 @@ const {
   findCategoryByLabel
 } = require('../config/professions');
 
-const { auth } = require('../middleware/auth');
+const { auth, defaultAdminPermissions, ADMIN_PERMISSION_KEYS } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const { normalizePhone } = require('../utils/phone');
 const router = express.Router();
@@ -851,20 +851,31 @@ router.patch('/admin-users/:id/permissions', auth('admin'), async (req, res, nex
     if (!permissions || typeof permissions !== 'object' || Array.isArray(permissions)) {
       return res.status(400).json({ message: 'قائمة الصلاحيات غير صحيحة' });
     }
-    const clean = {};
+    const cleanInput = {};
     for (const key of allowedSections) {
       const item = permissions[key] || {};
       if (typeof item.read !== 'boolean' || typeof item.write !== 'boolean') {
         return res.status(400).json({ message: 'يجب تحديد القراءة والتنفيذ لكل قسم' });
       }
-      clean[key] = { read: item.read || item.write, write: item.write };
+      cleanInput[key] = { read: item.read || item.write, write: item.write };
     }
     const fanni = await Fanni.findById(req.params.id);
     if (!fanni || isRootAdmin(fanni) || (fanni.role !== 'admin' && (fanni.role !== 'fanni' || !ADMIN_ROLES.includes(fanni.adminRole)))) {
       return res.status(404).json({ message: 'حساب المشرف غير موجود' });
     }
-    fanni.adminPermissions = clean;
-    fanni.decisions.push({ action: 'تغيير صلاحيات إدارية', reason: 'تحديث صلاحيات القراءة والتنفيذ', date: new Date(), by: adminName(req), byId: req.user?._id, meta: { sections: Object.keys(clean).filter(key => clean[key].read || clean[key].write) } });
+    const role = fanni.adminRole || (fanni.role === 'admin' ? 'مشرف' : '');
+    const defaults = defaultAdminPermissions(role);
+    const overrides = { __customOverrides: true };
+    for (const key of ADMIN_PERMISSION_KEYS) {
+      const desired = cleanInput[key] || { read: false, write: false };
+      const base = defaults[key] || { read: false, write: false };
+      const delta = {};
+      if (desired.read !== base.read) delta.read = desired.read;
+      if (desired.write !== base.write) delta.write = desired.write;
+      if (Object.keys(delta).length) overrides[key] = delta;
+    }
+    fanni.adminPermissions = overrides;
+    fanni.decisions.push({ action: 'تغيير صلاحيات إدارية', reason: 'تحديث الاستثناءات الفردية فوق الصلاحيات الافتراضية للمنصب', date: new Date(), by: adminName(req), byId: req.user?._id, meta: { sections: Object.keys(overrides).filter(key => key !== '__customOverrides') } });
     await fanni.save();
     return res.json({ message: 'تم حفظ الصلاحيات المخصصة بنجاح', user: publicAdminUser(fanni) });
   } catch (err) { next(err); }
@@ -880,7 +891,7 @@ router.delete('/admin-users/:id', auth('admin'), async (req, res, next) => {
     // Legacy accounts whose role is still 'admin' must remain unable to enter
     // admin APIs after revocation; never convert them into technician accounts.
     if (fanni.role === 'admin') {
-      fanni.adminPermissions = Object.fromEntries(['dashboard','fannis','orders','complaints','services','clients','topups','wallet','pricing','settings','content','support','regions','offers','notifications','clientsData'].map(key => [key, { read: false, write: false }]));
+      fanni.adminPermissions = { __customOverrides: true, ...Object.fromEntries(ADMIN_PERMISSION_KEYS.map(key => [key, { read: false, write: false }])) };
     }
     fanni.decisions.push({ action: 'سحب صلاحية إدارية', reason: `سحب منصب ${previous} مع الاحتفاظ بالحساب`, date: new Date(), by: adminName(req), byId: req.user?._id, meta: { previousRole: previous } });
     await fanni.save();

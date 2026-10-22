@@ -6,6 +6,26 @@ const { normalizePhone } = require('../utils/phone');
 
 const ADMIN_ROLES = ['مشرف', 'مشرف أول', 'مدير', 'قراءة فقط'];
 
+const ADMIN_PERMISSION_KEYS = ['dashboard','fannis','orders','complaints','services','clients','topups','wallet','pricing','settings','content','support','regions','offers','notifications','clientsData'];
+const ROLE_WRITE_SECTIONS = {
+  'قراءة فقط': [],
+  'مشرف': ['orders','complaints','support','offers'],
+  'مشرف أول': ['fannis','orders','complaints','services','clients','topups','wallet','support','regions','offers','notifications','clientsData'],
+  'مدير': ADMIN_PERMISSION_KEYS
+};
+function defaultAdminPermissions(role) {
+  const writes = new Set(ROLE_WRITE_SECTIONS[role] || []);
+  const reads = role === 'قراءة فقط'
+    ? new Set(ADMIN_PERMISSION_KEYS)
+    : new Set(role === 'مدير' || role === 'مشرف أول'
+      ? ADMIN_PERMISSION_KEYS
+      : ['dashboard','fannis','orders','complaints','services','clients','topups','wallet','pricing','content','support','regions','offers','notifications','clientsData']);
+  return Object.fromEntries(ADMIN_PERMISSION_KEYS.map(key => [key, {
+    read: reads.has(key) || writes.has(key),
+    write: writes.has(key)
+  }]));
+}
+
 const PERMISSION_SECTIONS = {
   dashboard: [/^\/me$/, /^\/reports?(\/|$)/, /^\/stats?(\/|$)/],
   wallet: [/^\/wallet(\/|$)/, /^\/fannis\/[^/]+\/(set-balance|add-balance)$/],
@@ -50,9 +70,13 @@ function canAccessAdmin(user, req) {
   // أي endpoint غير مصنّف يظل مغلقًا للمناصب الفرعية إلى أن تتم مراجعته.
   if (!section) return false;
 
-  const permissions = user.adminPermissions && typeof user.adminPermissions === 'object'
+  const defaults = defaultAdminPermissions(role);
+  const stored = user.adminPermissions && typeof user.adminPermissions === 'object'
     ? user.adminPermissions : {};
-  const grant = permissions[section] || {};
+  // Old releases saved a full permission matrix that accidentally replaced role defaults.
+  // Only the new sparse override format may customize the defaults.
+  const overrides = stored.__customOverrides === true ? stored : {};
+  const grant = { ...defaults[section], ...(overrides[section] || {}) };
   const isRead = method === 'GET' || method === 'HEAD';
   return isRead ? grant.read === true : grant.write === true;
 }
@@ -87,4 +111,4 @@ function auth(requiredRole = null) {
   };
 }
 
-module.exports = { auth, canAccessAdmin, isRootAdmin, PERMISSION_SECTIONS };
+module.exports = { auth, canAccessAdmin, isRootAdmin, PERMISSION_SECTIONS, defaultAdminPermissions, ADMIN_PERMISSION_KEYS };
