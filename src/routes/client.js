@@ -34,7 +34,7 @@ function issueToken(client) {
   );
 }
 
-function safeOrder(order, clientRating = null) {
+function safeOrder(order, clientRating = null, ratingsByFanni = new Map(), completedByFanni = new Map()) {
   const data = typeof order.toObject === 'function' ? order.toObject() : { ...order };
   const acceptedOffer = Array.isArray(data.offers)
     ? data.offers.find(offer => String(offer._id) === String(data.acceptedOfferId))
@@ -54,15 +54,31 @@ function safeOrder(order, clientRating = null) {
     assignedFanniPhone: data.status === 'تم اختيار فني' && acceptedOffer ? (acceptedOffer.fanniPhone || '') : '',
     acceptedOfferId: data.acceptedOfferId || null,
     acceptedOfferPrice: data.acceptedOfferPrice ?? null,
-    offers: (Array.isArray(data.offers) ? data.offers : []).map(offer => ({
-      _id: offer._id,
-      fanniName: offer.fanniName || 'فني',
-      fanniLevel: offer.fanniLevel || 'مبتدئ',
-      fanniBadges: Array.isArray(offer.fanniBadges) ? offer.fanniBadges : [],
-      price: offer.price,
-      priceNum: offer.priceNum,
-      message: offer.message || '',
-      date: offer.date
+    offers: (Array.isArray(data.offers) ? data.offers : []).map(offer => {
+      const id = String(offer.fanni || '');
+      const rating = ratingsByFanni.get(id);
+      return {
+        _id: offer._id,
+        fanniName: offer.fanniName || 'فني',
+        fanniLevel: offer.fanniLevel || 'مبتدئ',
+        fanniBadges: Array.isArray(offer.fanniBadges) ? offer.fanniBadges : [],
+        price: offer.price,
+        priceNum: offer.priceNum,
+        message: offer.message || '',
+        date: offer.date,
+        fanniRatingAverage: rating ? Math.round(Number(rating.average || 0) * 100) / 100 : 0,
+        fanniRatingCount: rating?.count || 0,
+        fanniCompletedJobs: completedByFanni.get(id) || 0
+      };
+    }),
+    priceChangeRequests: (Array.isArray(data.priceChangeRequests) ? data.priceChangeRequests : []).map(request => ({
+      _id: String(request._id),
+      oldPrice: request.oldPrice,
+      newPrice: request.newPrice,
+      reason: request.reason,
+      status: request.status,
+      requestedAt: request.requestedAt,
+      decidedAt: request.decidedAt
     })),
     myRating: clientRating ? {
       reviewerRole: clientRating.reviewerRole,
@@ -194,8 +210,22 @@ router.get('/orders', clientAuth, async (req, res, next) => {
         }).select('orderId reviewerRole stars comment createdAt').lean()
       : [];
     const ratingsByOrderId = new Map(ratings.map(rating => [String(rating.orderId), rating]));
-    return res.json({
-      orders: orders.map(order => safeOrder(order, ratingsByOrderId.get(String(order._id)) || null)),
+    const fanniIds = [...new Set(orders.flatMap(order => (order.offers || []).map(offer => String(offer.fanni || '')).filter(Boolean)))];
+    const objectIds = fanniIds.filter(id => /^[a-f0-9]{24}$/i.test(id));
+    const [fanniRatingStats, fanniCompletedStats] = objectIds.length ? await Promise.all([
+      Rating.aggregate([
+        { $match: { fanniId: { $in: objectIds.map(id => new (require('mongoose').Types.ObjectId)(id)) }, reviewerRole: 'client' } },
+        { $group: { _id: '$fanniId', average: { $avg: '$stars' }, count: { $sum: 1 } } }
+      ]),
+      Order.aggregate([
+        { $match: { assignedFanni: { $in: objectIds.map(id => new (require('mongoose').Types.ObjectId)(id)) }, status: 'تم الانتهاء' } },
+        { $group: { _id: '$assignedFanni', count: { $sum: 1 } } }
+      ])
+    ]) : [[], []];
+    const ratingsByFanni = new Map(fanniRatingStats.map(item => [String(item._id), item]));
+    const completedByFanni = new Map(fanniCompletedStats.map(item => [String(item._id), item.count]));
+    return res.set('Cache-Control', 'no-store').json({
+      orders: orders.map(order => safeOrder(order, ratingsByOrderId.get(String(order._id)) || null, ratingsByFanni, completedByFanni)),
       count: orders.length
     });
   } catch (error) {
