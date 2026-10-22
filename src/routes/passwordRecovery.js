@@ -75,8 +75,9 @@ async function lookupAccount(role, phone) {
     $or: [{ role: 'fanni' }, { role: 'admin' }, { adminRole: { $in: ['مشرف', 'مشرف أول', 'مدير', 'قراءة فقط'] } }]
   }).select('+passwordHash');
   if (!user) return null;
-  const actualRole = user.role === 'admin' || user.adminRole ? 'admin' : 'fanni';
-  return actualRole === role ? { user, role: actualRole } : null;
+  const canRecoverAsAdmin = user.role === 'admin' || Boolean(user.adminRole);
+  if (role === 'admin') return canRecoverAsAdmin ? { user, role: 'admin' } : null;
+  return user.role === 'fanni' ? { user, role: 'fanni' } : null;
 }
 function safeUserRecovery(item) { const data = safeRequest(item); return { id: data.id, status: data.status, messages: (data.messages || []).map(message => ({ ...message, text: decryptRecoveryMessage(message.text) })), lastMessageAt: data.lastMessageAt, expiresAt: data.expiresAt }; }
 function ownerAuth(req, res, next) {
