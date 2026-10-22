@@ -1548,6 +1548,25 @@ router.post('/:sn/chat', async (req, res, next) => {
     }
     order.chatMessages.push({ senderRole: isClient ? 'client' : 'fanni', senderId: isClient ? String(order.clientAccount || order._id) : String(fanniId), targetOfferId, text, createdAt: new Date() });
     await order.save();
+
+    // Notify the other participant for every newly sent order-chat message.
+    // Before acceptance, a client message is routed only to the technician who owns that offer.
+    const targetOffer = (order.offers || []).find(o => String(o._id) === targetOfferId);
+    const recipientRole = isClient ? 'fanni' : 'client';
+    const recipientId = isClient
+      ? (accepted ? order.assignedFanni : targetOffer?.fanni)
+      : order.clientAccount;
+    if (recipientId) {
+      await createNotification({
+        recipientRole,
+        recipientId,
+        type: 'order_message',
+        title: isClient ? 'رسالة جديدة من العميل' : 'رسالة جديدة من الفني',
+        message: 'طلب ' + order.sn + ': ' + text.slice(0, 140),
+        link: '/?tab=orders'
+      });
+    }
+
     return res.status(201).json({ message: 'تم إرسال الرسالة.', messages: order.chatMessages.filter(m => accepted ? (!m.targetOfferId || String(m.targetOfferId) === targetOfferId) : String(m.targetOfferId || '') === targetOfferId) });
   } catch (err) { next(err); }
 });
