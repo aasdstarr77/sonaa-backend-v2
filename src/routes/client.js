@@ -7,6 +7,7 @@ const Joi = require('joi');
 
 const Client = require('../models/Client');
 const Order = require('../models/Order');
+const Rating = require('../models/Rating');
 const { clientAuth } = require('../middleware/clientAuth');
 const { normalizePhone } = require('../utils/phone');
 
@@ -33,7 +34,7 @@ function issueToken(client) {
   );
 }
 
-function safeOrder(order) {
+function safeOrder(order, clientRating = null) {
   const data = typeof order.toObject === 'function' ? order.toObject() : { ...order };
   const acceptedOffer = Array.isArray(data.offers)
     ? data.offers.find(offer => String(offer._id) === String(data.acceptedOfferId))
@@ -62,7 +63,14 @@ function safeOrder(order) {
       priceNum: offer.priceNum,
       message: offer.message || '',
       date: offer.date
-    }))
+    })),
+    myRating: clientRating ? {
+      reviewerRole: clientRating.reviewerRole,
+      stars: clientRating.stars,
+      comment: clientRating.comment || '',
+      createdAt: clientRating.createdAt
+    } : null,
+    canRate: !clientRating
   };
 }
 
@@ -179,7 +187,17 @@ router.get('/orders', clientAuth, async (req, res, next) => {
       .sort({ createdAt: -1 })
       .limit(100)
       .lean();
-    return res.json({ orders: orders.map(safeOrder), count: orders.length });
+    const ratings = orders.length
+      ? await Rating.find({
+          orderId: { $in: orders.map(order => order._id) },
+          reviewerRole: 'client'
+        }).select('orderId reviewerRole stars comment createdAt').lean()
+      : [];
+    const ratingsByOrderId = new Map(ratings.map(rating => [String(rating.orderId), rating]));
+    return res.json({
+      orders: orders.map(order => safeOrder(order, ratingsByOrderId.get(String(order._id)) || null)),
+      count: orders.length
+    });
   } catch (error) {
     return next(error);
   }
