@@ -1088,7 +1088,7 @@ async function refreshTrackedChatSilently(){
   state.tracked.priceChangeRequests=nextRequests;
   updateClientChatDom(nextMessages);
   const nextRequestSignature=JSON.stringify(nextRequests.map(r=>({id:String(r._id||''),status:r.status||'',newPrice:r.newPrice??null,requestedAt:r.requestedAt||''})));
-  if(previousRequests!==nextRequestSignature&&state.tab==='track'){
+  if(previousRequests!==nextRequestSignature&&['track','orders'].includes(state.tab)){
    if(!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)){
     const scrollY=window.scrollY||window.pageYOffset||0;render();window.scrollTo({top:scrollY,left:0,behavior:'instant'});focusClientPostAction();
    }else clientLiveRenderPending=true;
