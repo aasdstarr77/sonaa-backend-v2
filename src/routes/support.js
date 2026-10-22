@@ -108,7 +108,7 @@ router.get('/admin', supportAdminAuth, async (req, res, next) => {
     return res.json({ supportCases: items });
   } catch (e) { return next(e); }
 });
-router.get('/admin/:id', auth('admin'), async (req, res, next) => {
+router.get('/admin/:id', supportAdminAuth, async (req, res, next) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: 'معرّف محادثة الدعم غير صحيح.' });
     const item = await SupportCase.findById(req.params.id);
@@ -116,7 +116,7 @@ router.get('/admin/:id', auth('admin'), async (req, res, next) => {
     return res.json({ supportCase: publicCase(item) });
   } catch (e) { return next(e); }
 });
-router.post('/admin/:id/reply', auth('admin'), async (req, res, next) => {
+router.post('/admin/:id/reply', supportAdminAuth, async (req, res, next) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: 'معرّف محادثة الدعم غير صحيح.' });
     const text = cleanText(req.body?.text);
@@ -131,7 +131,7 @@ router.post('/admin/:id/reply', auth('admin'), async (req, res, next) => {
     return res.json({ message: 'تم إرسال رد الدعم.', supportCase: publicCase(item) });
   } catch (e) { return next(e); }
 });
-router.patch('/admin/:id/status', auth('admin'), async (req, res, next) => {
+router.patch('/admin/:id/status', supportAdminAuth, async (req, res, next) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: 'معرّف محادثة الدعم غير صحيح.' });
     const status = cleanText(req.body?.status, 40);
