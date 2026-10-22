@@ -523,7 +523,7 @@ function render(){
     <div class="h-11 w-11 rounded-2xl bg-[#F8FAFC] border-2 border-[#14B8A6] flex items-center justify-center shrink-0"><svg class="sonaa-logo-svg" width="30" height="30" viewBox="0 0 64 64" fill="none" role="img" aria-label="شعار صُنّاع"><circle cx="32" cy="32" r="27" stroke="#14B8A6" stroke-width="3.5"/><text x="32" y="43" text-anchor="middle" font-family="Cairo, sans-serif" font-size="34" font-weight="900" fill="#0F172A">S</text></svg></div>
     <div class="min-w-0"><h1 class="font-extrabold text-[16px]">صناع</h1><div class="text-[10px] text-blue-100/75 mt-0.5 truncate">${authenticated?esc(user?.name||'فني')+' · الرصيد '+esc(balance)+' جنيه':'لوحة الفني والخدمات'}</div>${authenticated?`<div class="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-amber-200/30 bg-amber-400/15 px-2.5 py-1 text-[10px] font-extrabold text-amber-100"><span>مستواك المهني:</span><span>${esc(user?.level||'مبتدئ')}</span></div>`:''}</div>
    </div>
-   <div class="flex items-center gap-2 shrink-0"><button onclick="toggleNotifications()" aria-label="الإشعارات" class="relative h-9 w-9 rounded-xl border border-amber-200 bg-amber-50 text-[18px] text-amber-600">🔔${notificationBadge()}</button>
+   <div class="flex items-center gap-2 shrink-0"><a href="https://aasdstarr77.github.io/sonaa-download/" aria-label="تحميل تطبيق صُنّاع" title="تحميل تطبيق صُنّاع" class="h-9 w-9 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 inline-flex items-center justify-center font-black text-lg" href="https://aasdstarr77.github.io/sonaa-download/"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg></a><button onclick="toggleNotifications()" aria-label="الإشعارات" class="relative h-9 w-9 rounded-xl border border-amber-200 bg-amber-50 text-[18px] text-amber-600">🔔${notificationBadge()}</button>
     
     ${authenticated?'<button onclick="logout()" class="h-9 px-3 rounded-xl bg-white/10 text-[11px] font-bold">خروج</button>':''}
    </div>
@@ -640,6 +640,7 @@ function render(){
         <p class="text-[12px] font-bold text-slate-800">📍 ${esc(o.area||'غير محددة')}</p>
         <p class="text-[10px] text-slate-500 mt-2">بيانات التواصل والعنوان التفصيلي غير متاحة قبل قبول العميل للعرض.</p>
        </div>
+       <div class="rounded-xl border border-amber-100 bg-amber-50 p-3"><div class="text-[10px] font-extrabold text-amber-900 mb-2">تقييم العميل وسجل أعماله</div><div class="flex flex-wrap gap-2 text-[10px] font-extrabold"><span class="rounded-full border border-amber-200 bg-white px-2 py-1 text-amber-800">★ ${Number(o.clientRatingAverage||0).toFixed(1)} (${Number(o.clientRatingCount||0)} تقييم)</span><span class="rounded-full border border-emerald-200 bg-white px-2 py-1 text-emerald-800">✓ ${Number(o.clientCompletedJobs||0)} عمل مكتمل</span></div></div>
 
        ${String(o.budget??'').trim()?`<div class="text-[11px] font-extrabold text-emerald-800 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2 break-words">💰 ميزانية العميل: ${esc(String(o.budget).slice(0,50))}</div>`:''}
 
