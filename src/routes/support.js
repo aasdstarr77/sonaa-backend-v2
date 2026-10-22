@@ -3,10 +3,16 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const SupportCase = require('../models/SupportCase');
-const { auth } = require('../middleware/auth');
+const { auth, canAccessAdmin, isRootAdmin } = require('../middleware/auth');
 const { clientAuth } = require('../middleware/clientAuth');
 
 const router = express.Router();
+const supportAdminAuth = (req, res, next) => auth()(req, res, () => {
+  if (req.user.role !== 'admin' && !req.user.adminRole) return res.status(403).json({ message: 'ليس لديك صلاحية إدارة الدعم.' });
+  const scopedReq = { ...req, path: '/support/cases', method: req.method };
+  if (!isRootAdmin(req.user) && !canAccessAdmin(req.user, scopedReq)) return res.status(403).json({ message: 'هذا الإجراء خارج صلاحيات الدعم لمنصبك الإداري.' });
+  return next();
+});
 const CASE_STATUSES = ['جديدة', 'بانتظار الدعم', 'قيد المعالجة', 'بانتظار رد المستخدم', 'تم الحل', 'مغلقة'];
 
 function cleanText(value, max = 2000) {
@@ -93,7 +99,7 @@ router.post('/fanni/:id/messages', auth('fanni'), async (req, res, next) => {
   try { return await sendOwnerMessage(req, res, 'fanni'); } catch (e) { return next(e); }
 });
 
-router.get('/admin', auth('admin'), async (req, res, next) => {
+router.get('/admin', supportAdminAuth, async (req, res, next) => {
   try {
     const filter = {};
     if (req.query?.needsHuman === 'true') filter.needsHuman = true;
