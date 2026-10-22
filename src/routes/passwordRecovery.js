@@ -8,10 +8,20 @@ const rateLimit = require('express-rate-limit');
 const Client = require('../models/Client');
 const Fanni = require('../models/Fanni');
 const PasswordRecovery = require('../models/PasswordRecovery');
-const { auth } = require('../middleware/auth');
+const { auth, isRootAdmin, canAccessAdmin } = require('../middleware/auth');
 const { clientAuth } = require('../middleware/clientAuth');
 
 const router = express.Router();
+const adminSelfAuth = (req, res, next) => auth()(req, res, () => {
+  if (req.user.role !== 'admin' && !req.user.adminRole) return res.status(403).json({ message: 'هذا الإجراء مخصص لحسابات الإدارة.' });
+  return next();
+});
+const supportAdminAuth = (req, res, next) => auth()(req, res, () => {
+  if (req.user.role !== 'admin' && !req.user.adminRole) return res.status(403).json({ message: 'هذا الإجراء مخصص لحسابات الإدارة.' });
+  const scopedReq = { ...req, path: '/support/recovery', method: req.method };
+  if (!isRootAdmin(req.user) && !canAccessAdmin(req.user, scopedReq)) return res.status(403).json({ message: 'ليست لديك صلاحية إدارة طلبات استعادة الحساب.' });
+  return next();
+});
 const passwordSchema = Joi.string().min(8).max(128).required();
 const codeSchema = Joi.string().pattern(/^\d{6}$/).required();
 const digest = value => crypto.createHash('sha256').update(String(value)).digest('hex');
@@ -79,7 +89,7 @@ router.post('/change/fanni', auth('fanni'), async (req, res, next) => {
     return res.json({ message: 'تم تغيير كلمة المرور بنجاح.' });
   } catch (e) { return next(e); }
 });
-router.post('/change/admin', auth('admin'), async (req, res, next) => {
+router.post('/change/admin', adminSelfAuth, async (req, res, next) => {
   try {
     const user = await Fanni.findById(req.user._id).select('+passwordHash');
     const { currentPassword, newPassword, confirmPassword } = req.body || {};
@@ -122,7 +132,7 @@ router.get('/request/:id', async (req, res, next) => {
   try {
     const item = await findByTicket(req, res);
     if (!item) return;
-    return res.json({ recovery: safeRequest(item), accountMatched: Boolean(item.accountId) });
+    return res.json({ recovery: { id: String(item._id), status: item.status, messages: item.messages || [], lastMessageAt: item.lastMessageAt, expiresAt: item.expiresAt } });
   } catch (e) { return next(e); }
 });
 router.post('/request/:id/messages', async (req, res, next) => {
@@ -171,6 +181,7 @@ router.post('/request/:id/reset-password', async (req, res, next) => {
     account.passwordHash = await bcrypt.hash(newPassword, 12);
     await account.save();
     item.status = 'تمت الاستعادة';
+    item.accessTokenHash = digest(randomToken());
     item.codeHash = '';
     item.codeExpiresAt = null;
     item.codeUsedAt = null;
@@ -181,21 +192,21 @@ router.post('/request/:id/reset-password', async (req, res, next) => {
 });
 
 // Admin/support queue. The operator must verify identity through the conversation before issuing a code.
-router.get('/admin/requests', auth('admin'), async (req, res, next) => {
+router.get('/admin/requests', supportAdminAuth, async (req, res, next) => {
   try {
     const items = await PasswordRecovery.find({ accountId: { $ne: null }, status: { $nin: ['تمت الاستعادة', 'مرفوضة', 'منتهية'] }, expiresAt: { $gt: new Date() } })
       .sort({ lastMessageAt: -1 }).limit(200).select('+codeHash').lean();
     return res.json({ recoveries: items.map(x => ({ id: String(x._id), ownerRole: x.ownerRole, accountName: x.accountName, phone: x.phone, status: x.status, messages: x.messages, lastMessageAt: x.lastMessageAt, createdAt: x.createdAt })) });
   } catch (e) { return next(e); }
 });
-router.get('/admin/requests/:id', auth('admin'), async (req, res, next) => {
+router.get('/admin/requests/:id', supportAdminAuth, async (req, res, next) => {
   try {
     const item = await PasswordRecovery.findOne({ _id: req.params.id, accountId: { $ne: null }, expiresAt: { $gt: new Date() } });
     if (!item) return res.status(404).json({ message: 'طلب الاستعادة غير موجود.' });
     return res.json({ recovery: safeRequest(item) });
   } catch (e) { return next(e); }
 });
-router.post('/admin/requests/:id/reply', auth('admin'), async (req, res, next) => {
+router.post('/admin/requests/:id/reply', supportAdminAuth, async (req, res, next) => {
   try {
     const text = clean(req.body?.text);
     if (!text) return res.status(400).json({ message: 'اكتب الرد أولًا.' });
@@ -208,7 +219,7 @@ router.post('/admin/requests/:id/reply', auth('admin'), async (req, res, next) =
     return res.json({ message: 'تم إرسال الرد.', recovery: safeRequest(item) });
   } catch (e) { return next(e); }
 });
-router.post('/admin/requests/:id/issue-code', auth('admin'), async (req, res, next) => {
+router.post('/admin/requests/:id/issue-code', supportAdminAuth, async (req, res, next) => {
   try {
     const item = await PasswordRecovery.findOne({ _id: req.params.id, accountId: { $ne: null }, expiresAt: { $gt: new Date() } }).select('+codeHash');
     if (!item) return res.status(404).json({ message: 'طلب الاستعادة غير موجود.' });
@@ -227,7 +238,7 @@ router.post('/admin/requests/:id/issue-code', auth('admin'), async (req, res, ne
     return res.json({ message: 'تم إصدار الرمز بعد تأكيد التحقق. أرسل الرمز للمستخدم من نفس المحادثة.', code, expiresInSeconds: 600, recovery: safeRequest(item) });
   } catch (e) { return next(e); }
 });
-router.post('/admin/requests/:id/reject', auth('admin'), async (req, res, next) => {
+router.post('/admin/requests/:id/reject', supportAdminAuth, async (req, res, next) => {
   try {
     const reason = clean(req.body?.reason, 500) || 'تعذر التحقق من ملكية الحساب.';
     const item = await PasswordRecovery.findOne({ _id: req.params.id, accountId: { $ne: null }, expiresAt: { $gt: new Date() } });
