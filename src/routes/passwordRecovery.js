@@ -55,6 +55,7 @@ async function lookupAccount(role, phone) {
   const actualRole = user.role === 'admin' || user.adminRole ? 'admin' : 'fanni';
   return actualRole === role ? { user, role: actualRole } : null;
 }
+function safeUserRecovery(item) { const data = safeRequest(item); return { id: data.id, status: data.status, messages: data.messages, lastMessageAt: data.lastMessageAt, expiresAt: data.expiresAt }; }
 function ownerAuth(req, res, next) {
   const role = req.params.role;
   if (role === 'client') return clientAuth(req, res, next);
@@ -139,13 +140,13 @@ router.post('/request/:id/messages', async (req, res, next) => {
   try {
     const item = await findByTicket(req, res);
     if (!item) return;
-    if (!item.accountId || ['تمت الاستعادة', 'مرفوضة', 'منتهية'].includes(item.status)) return res.status(409).json({ message: 'لا يمكن متابعة هذا الطلب. تواصل مع الدعم أو ابدأ طلبًا جديدًا.' });
+    if (['تمت الاستعادة', 'مرفوضة', 'منتهية'].includes(item.status)) return res.status(409).json({ message: 'لا يمكن متابعة هذا الطلب. تواصل مع الدعم أو ابدأ طلبًا جديدًا.' });
     const text = clean(req.body?.text);
     if (!text) return res.status(400).json({ message: 'اكتب رسالتك أولًا.' });
     item.messages.push({ senderRole: 'user', text });
     if (item.status === 'بانتظار رد المستخدم') item.status = 'قيد التحقق';
     await item.save();
-    return res.json({ message: 'تم إرسال رسالتك للدعم.', recovery: safeRequest(item) });
+    return res.json({ message: 'تم إرسال رسالتك للدعم.', recovery: safeUserRecovery(item) });
   } catch (e) { return next(e); }
 });
 router.post('/request/:id/verify-code', async (req, res, next) => {
@@ -224,6 +225,7 @@ router.post('/admin/requests/:id/issue-code', supportAdminAuth, async (req, res,
     const item = await PasswordRecovery.findOne({ _id: req.params.id, accountId: { $ne: null }, expiresAt: { $gt: new Date() } }).select('+codeHash');
     if (!item) return res.status(404).json({ message: 'طلب الاستعادة غير موجود.' });
     if (['تمت الاستعادة', 'مرفوضة', 'منتهية'].includes(item.status)) return res.status(409).json({ message: 'طلب الاستعادة مغلق.' });
+    if (item.codeHash && item.codeExpiresAt > new Date() && !item.codeUsedAt) return res.status(409).json({ message: 'يوجد رمز صالح بالفعل. انتظر انتهاء صلاحيته قبل إصدار رمز جديد.' });
     const code = String(crypto.randomInt(100000, 1000000));
     item.codeHash = digest(code);
     item.codeExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
