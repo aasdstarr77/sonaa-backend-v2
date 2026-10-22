@@ -47,6 +47,9 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
 .section-nav-btn{min-height:46px;border:1px solid #e2e8f0;border-radius:13px;background:#fff;display:flex;align-items:center;justify-content:flex-start;gap:8px;padding:9px 11px;font-size:11px;font-weight:900;color:#334155}
 .section-nav-btn.active{background:linear-gradient(135deg,#0b1b3a,#1e3a8a);border-color:#0b1b3a;color:#fff;box-shadow:0 5px 14px #0b1b3a20}
 .section-nav-icon{font-size:17px;line-height:1}
+.section-nav-label{flex:1;min-width:0}
+.section-nav-count{display:inline-flex;align-items:center;justify-content:center;min-width:21px;height:21px;padding:0 5px;border-radius:999px;background:#dc2626;color:#fff;font-size:10px;font-weight:900;line-height:1;box-shadow:0 2px 6px #dc262633}
+.section-nav-btn.active .section-nav-count{background:#fbbf24;color:#0b1b3a;box-shadow:none}
 .subnav-wrap{display:flex;flex-wrap:wrap;gap:7px;padding-top:10px;border-top:1px solid #e2e8f0}
 .subnav-btn{min-height:34px;border:1px solid #e2e8f0;border-radius:999px;background:#f8fafc;padding:7px 12px;font-size:10px;font-weight:800;color:#475569}
 .subnav-btn.active{background:#dbeafe;border-color:#93c5fd;color:#1e40af}
@@ -100,6 +103,17 @@ const ADMIN_SECTIONS = [
  {id:'finance',label:'المالية والمحافظ',icon:'💰',tabs:[{id:'wallets',label:'المحافظ'},{id:'topups',label:'طلبات الشحن',count:()=>state.topups.filter(t=>t.status==='pending').length},{id:'pricing',label:'الأسعار والعمولات'}]},
  {id:'operations',label:'تشغيل المنصة والإدارة',icon:'⚙️',tabs:[{id:'services',label:'المهن والخدمات'},{id:'regions',label:'المناطق'},{id:'complaints',label:'الشكاوى',count:()=>state.complaints.filter(c=>['جديدة','pending','open','قيد المراجعة'].includes(String(c.status||''))).length},{id:'support',label:'الدعم والمخالفات',count:()=>state.supportViolations.length},{id:'notifications',label:'الإشعارات'},{id:'content',label:'الإعلانات والأسئلة الشائعة'},{id:'reports',label:'التقارير'},{id:'security',label:'سجل التدقيق والأمان'},{id:'settings',label:'الإعدادات'},{id:'roles',label:'صلاحيات المشرفين'}]}
 ];
+function getAdminSectionCount(section){
+  if(!section)return 0;
+  const sum=(ids)=>section.tabs.filter(item=>ids.includes(item.id)).reduce((total,item)=>total+(typeof item.count==='function'?Math.max(0,Number(item.count())||0):Math.max(0,Number(item.count)||0)),0);
+  if(section.id==='dashboard')return 0;
+  if(section.id==='clients')return state.clients.filter(c=>c.isDisabled===true||c.isBlocked===true||c.isSuspended===true||['blocked','suspended','موقوف','محظور','معلق'].includes(String(c.status||'').toLowerCase())).length;
+  if(section.id==='technicians')return state.fannis.filter(f=>!f.isApproved&&!f.isDisabled&&!['rejected','مرفوض'].includes(String(f.status||''))).length;
+  if(section.id==='orders')return state.orders.filter(o=>['قيد المراجعة','pending','مراجعة','بانتظار المراجعة'].includes(String(o.status||''))).length;
+  if(section.id==='finance')return state.topups.filter(t=>['pending','قيد المراجعة','جديد','جديدة'].includes(String(t.status||''))).length;
+  if(section.id==='operations')return state.complaints.filter(c=>['جديدة','pending','open','قيد المراجعة'].includes(String(c.status||''))).length+state.supportViolations.length;
+  return sum(section.tabs.filter(item=>item.count).map(item=>item.id));
+}
 function getAdminSectionForTab(tab){return ADMIN_SECTIONS.find(section=>section.tabs.some(item=>item.id===tab))?.id||'dashboard';}
 function setSection(sectionId){const section=ADMIN_SECTIONS.find(item=>item.id===sectionId);if(!section)return;setTab(section.tabs[0].id);}
 function setClientStatusFilter(value){state.clientStatusFilter=['all','active','suspended'].includes(value)?value:'all';applyClientFilter();}
@@ -219,7 +233,7 @@ function render(){
         <div class="section-nav">
           ${ADMIN_SECTIONS.map(section=>`
             <button type="button" onclick="setSection('${section.id}')" class="section-nav-btn ${getAdminSectionForTab(state.tab)===section.id?'active':''}">
-              <span class="section-nav-icon">${section.icon}</span><span>${escHtml(section.label)}</span>
+              <span class="section-nav-icon">${section.icon}</span><span class="section-nav-label">${escHtml(section.label)}</span>${getAdminSectionCount(section)>0?`<span class="section-nav-count" aria-label="عدد الحالات التي تحتاج مراجعة">${escHtml(String(getAdminSectionCount(section)))}</span>`:''}
             </button>
           `).join('')}
         </div>
