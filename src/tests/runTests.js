@@ -149,6 +149,40 @@ async function run() {
       clientId = r.body.client.id;
     });
 
+    await test('duplicate client phone is rejected', async () => {
+      const r = await request(app).post('/api/client/register').send({
+        name: 'عميل مكرر', phone: '01012345678',
+        password: 'TestPass123', confirmPassword: 'TestPass123'
+      });
+      assert.equal(r.status, 409);
+    });
+
+    await test('client login rejects an incorrect password', async () => {
+      const r = await request(app).post('/api/client/login').send({
+        phone: '01012345678', password: 'WrongPass123'
+      });
+      assert.equal(r.status, 401);
+    });
+
+    await test('client login returns an authenticated session', async () => {
+      const r = await request(app).post('/api/client/login').send({
+        phone: '01012345678', password: 'TestPass123'
+      });
+      assert.equal(r.status, 200);
+      assert.ok(r.body.token);
+      clientToken = r.body.token;
+    });
+
+    await test('second client receives a distinct account', async () => {
+      const r = await request(app).post('/api/client/register').send({
+        name: 'عميل اختبار ثان', phone: '01012345679',
+        password: 'TestPass456', confirmPassword: 'TestPass456'
+      });
+      assert.equal(r.status, 201);
+      assert.notEqual(r.body.client.id, clientId);
+      secondClientToken = r.body.token;
+    });
+
     await test('client can change their own password only with the current password', async () => {
       const denied = await request(app).post('/api/password-recovery/change/client')
         .set('Authorization', 'Bearer ' + clientToken)
@@ -209,40 +243,6 @@ async function run() {
       assert.equal(oldLogin.status, 401);
       const newLogin = await request(app).post('/api/client/login').send({ phone: '01012345678', password: 'RecoveredPass123' });
       assert.equal(newLogin.status, 200);
-    });
-
-    await test('duplicate client phone is rejected', async () => {
-      const r = await request(app).post('/api/client/register').send({
-        name: 'عميل مكرر', phone: '01012345678',
-        password: 'TestPass123', confirmPassword: 'TestPass123'
-      });
-      assert.equal(r.status, 409);
-    });
-
-    await test('client login rejects an incorrect password', async () => {
-      const r = await request(app).post('/api/client/login').send({
-        phone: '01012345678', password: 'WrongPass123'
-      });
-      assert.equal(r.status, 401);
-    });
-
-    await test('client login returns an authenticated session', async () => {
-      const r = await request(app).post('/api/client/login').send({
-        phone: '01012345678', password: 'TestPass123'
-      });
-      assert.equal(r.status, 200);
-      assert.ok(r.body.token);
-      clientToken = r.body.token;
-    });
-
-    await test('second client receives a distinct account', async () => {
-      const r = await request(app).post('/api/client/register').send({
-        name: 'عميل اختبار ثان', phone: '01012345679',
-        password: 'TestPass456', confirmPassword: 'TestPass456'
-      });
-      assert.equal(r.status, 201);
-      assert.notEqual(r.body.client.id, clientId);
-      secondClientToken = r.body.token;
     });
 
     await test('support endpoints reject unauthenticated users', async () => {
