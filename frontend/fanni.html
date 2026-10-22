@@ -281,7 +281,7 @@ async function loadServices(){
 }
 
 let state={
- tab:getToken()?'available':'login',
+ tab:getToken()?'myOffers':'login',
  loginPhone:'',loginPass:'',
  regName:'',regPhone:'',regPass:'',regPassConfirm:'',
  regSpecialties:[],regAreas:[],regAreaSearch:'',regAreaCustom:'',openSpecialtyCategory:'',
@@ -295,6 +295,7 @@ let state={
 };
 
 let currentUser=getUser();
+if(getToken()) Promise.resolve().then(()=>loadMyOffers());
 
 function isApproved(){
  return String(currentUser?.status||'').trim()==='معتمد';
