@@ -236,6 +236,17 @@ const API={
       body:JSON.stringify({offerId,clientToken:token})
     });
   },
+  async cancelOrder(sn){
+    const cleanSN=sanitizeInput(sn,20).toUpperCase();
+    if(!VALIDATORS.sn(cleanSN))throw new Error('كود الطلب غير صحيح.');
+    const token=this.getClientToken(cleanSN)||state.accountToken;
+    if(!token)throw new Error('سجّل الدخول أو افتح الطلب من الجهاز الذي حُفظت عليه بيانات المتابعة.');
+    return this.request('/api/orders/'+encodeURIComponent(cleanSN)+'/cancel',{
+      method:'POST',
+      headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},
+      body:JSON.stringify({clientToken:token})
+    });
+  },
   async chat(sn){const token=this.getClientToken(sn)||state.accountToken;if(!token)throw new Error('سجّل الدخول لمتابعة المحادثة.');return this.request('/api/orders/'+encodeURIComponent(sn)+'/chat',{method:'GET',headers:{Authorization:'Bearer '+token}});},
   async sendChat(sn,text,offerId){const token=this.getClientToken(sn)||state.accountToken;if(!token)throw new Error('سجّل الدخول لمتابعة المحادثة.');return this.request('/api/orders/'+encodeURIComponent(sn)+'/chat',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({text,...(offerId?{offerId}:{})})});},
   async decidePrice(sn,id,approved){const token=this.getClientToken(sn)||state.accountToken;if(!token)throw new Error('سجّل الدخول لمتابعة الطلب.');return this.request('/api/orders/'+encodeURIComponent(sn)+'/price-change/'+encodeURIComponent(id)+'/decision',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({approved})});},
@@ -268,7 +279,7 @@ const API={
   }
 };
 let state={
-  account:null,accountToken:(()=>{try{return localStorage.getItem('sonaa_client_account_token')||'';}catch{return '';}})(),accountAuthMode:'login',accountLoading:false,accountError:'',myOrders:[],accountOrdersLoading:false,notifications:[],notificationsUnread:0,notificationsOpen:false,
+  account:null,accountToken:(()=>{try{return localStorage.getItem('sonaa_client_account_token')||'';}catch{return '';}})(),accountAuthMode:'login',accountLoading:false,accountError:'',myOrders:[],accountOrdersLoading:false,accountOrdersTab:'current',notifications:[],notificationsUnread:0,notificationsOpen:false,
   tab:'new',service:'',clientName:'',area:'',address:'',phone:'',budget:'',desc:'',loading:false,sn:null,
   trackInput:'',tracked:null,trackError:'',trackLoading:false,acceptingOffer:'',
   ratingStars:5,ratingComment:'',ratingSubmitting:false,
@@ -366,15 +377,22 @@ async function openAccountOrder(sn){
 }
 function renderOrders(){
   var h='<div class="mt-4 space-y-3"><div class="panel p-4 flex items-center justify-between gap-3"><div><h3 class="font-extrabold text-[15px]">طلباتي</h3><p class="mt-1 text-[11px] text-slate-500">تابع كل طلباتك من هنا.</p></div></div>';
+  const closedStatuses=['تم الانتهاء','منتهي','ملغي','مؤرشف','منتهي - اعتذار'];
+  const currentOrders=state.myOrders.filter(o=>!closedStatuses.includes(String(o.status||'')));
+  const previousOrders=state.myOrders.filter(o=>closedStatuses.includes(String(o.status||'')));
+  const visibleOrders=state.accountOrdersTab==='previous'?previousOrders:currentOrders;
+  h+='<div class="grid grid-cols-2 gap-2 p-1 rounded-xl bg-slate-100"><button type="button" onclick="state.accountOrdersTab=\'current\';render()" class="h-10 rounded-lg text-xs font-extrabold '+(state.accountOrdersTab==='current'?'tab-active':'text-slate-600')+'">طلبات جارية ('+currentOrders.length+')</button><button type="button" onclick="state.accountOrdersTab=\'previous\';render()" class="h-10 rounded-lg text-xs font-extrabold '+(state.accountOrdersTab==='previous'?'tab-active':'text-slate-600')+'">طلبات سابقة ('+previousOrders.length+')</button></div>';
   h+='<div class="panel p-4"><h4 class="font-extrabold text-sm">ربط طلب قديم</h4><p class="mt-1 text-[11px] leading-5 text-slate-500">لو عندك طلب أنشأته قبل تسجيل الحساب، اكتب رقمه مرة واحدة من نفس الجهاز الذي أنشأته منه، بشرط أن يكون رقم موبايله هو رقم حسابك.</p><div class="mt-3 flex gap-2"><input id="claimOrderSN" maxlength="20" placeholder="SN123456" dir="ltr" class="field h-11 px-3 flex-1 min-w-0 text-sm font-bold uppercase"><button type="button" onclick="claimOldOrder()" class="h-11 px-4 rounded-xl blue-btn text-xs font-extrabold">ربط الطلب</button></div></div>';
   if(state.accountOrdersLoading)return h+'<div class="panel p-8 text-center text-sm font-bold text-slate-500">جاري تحميل طلباتك...</div></div>';
-  if(!state.myOrders.length)return h+'<div class="panel p-8 text-center"><div class="text-3xl">📝</div><p class="mt-3 font-extrabold text-sm">لسه ما عندكش طلبات</p><button type="button" onclick="setTab(\'new\')" class="mt-4 h-11 px-5 rounded-xl blue-btn text-xs font-extrabold">إنشاء طلب جديد</button></div></div>';
+  if(!visibleOrders.length)return h+'<div class="panel p-8 text-center"><div class="text-3xl">📝</div><p class="mt-3 font-extrabold text-sm">'+(state.accountOrdersTab==='previous'?'لا توجد طلبات سابقة.':'لا توجد طلبات جارية.')+'</p><button type="button" onclick="setTab(\'new\')" class="mt-4 h-11 px-5 rounded-xl blue-btn text-xs font-extrabold">إنشاء طلب جديد</button></div></div>';
   h+='<div class="space-y-3">';
-  state.myOrders.forEach(function(o){
+  visibleOrders.forEach(function(o){
     h+='<div class="panel p-4"><div class="flex items-start justify-between gap-3"><div class="min-w-0"><p class="text-[10px] text-slate-500">مرجع داخلي</p><h4 class="mt-1 font-extrabold text-sm">'+escHtml(o.sn||'طلب')+'</h4><p class="mt-2 text-sm font-extrabold">'+escHtml(o.service||'')+'</p><p class="mt-1 text-[11px] text-slate-500">'+escHtml(o.area||'')+'</p></div><span class="shrink-0 rounded-full bg-blue-50 border border-blue-100 px-3 py-1.5 text-[10px] font-extrabold text-blue-800">'+escHtml(o.status||'قيد المراجعة')+'</span></div><p class="mt-3 text-xs leading-6 text-slate-600">'+escHtml(maskPhoneNumbers(o.description||''))+'</p>';
     if(Array.isArray(o.offers)&&o.offers.length){h+='<p class="mt-3 text-xs font-extrabold">عروض الفنيين ('+o.offers.length+')</p>';o.offers.forEach(function(v){h+='<div class="mt-2 rounded-xl bg-slate-50 border border-slate-100 p-3"><div class="flex justify-between gap-2"><span class="text-xs font-extrabold">'+escHtml(v.fanniName||'فني')+'</span><span class="text-sm font-black text-blue-700">'+escHtml(v.price==null?'':String(v.price))+' جنيه</span></div><p class="mt-1 text-[11px] leading-5 text-slate-600">'+escHtml(maskPhoneNumbers(v.message||''))+'</p>';if(o.status==='تم اختيار فني')h+='<p class="mt-2 text-[11px] font-extrabold text-emerald-700">تم اختيار فني</p>';else if(!['تم الانتهاء','منتهي','اعتذار','منتهي - اعتذار','ملغي','مؤرشف'].includes(o.status))h+='<button type="button" onclick="acceptAccountOffer(\''+escAttr(o.sn)+'\',\''+escAttr(String(v._id||''))+'\')" class="mt-2 w-full h-10 rounded-lg blue-btn text-xs font-extrabold">قبول العرض</button>';h+='</div>';});}
     else h+='<p class="mt-3 text-[11px] text-slate-500">لا توجد عروض حتى الآن.</p>';
-    h+='<button type="button" onclick="openAccountOrder(\''+escAttr(o.sn)+'\')" class="mt-3 w-full h-10 rounded-xl bg-slate-100 text-slate-800 text-xs font-extrabold">تفاصيل الطلب</button></div>';
+    h+='<button type="button" onclick="openAccountOrder(\''+escAttr(o.sn)+'\')" class="mt-3 w-full h-10 rounded-xl bg-slate-100 text-slate-800 text-xs font-extrabold">تفاصيل الطلب</button>';
+    if(!['تم اختيار فني','تم الانتهاء','ملغي','مؤرشف','منتهي','منتهي - اعتذار'].includes(String(o.status||'')))h+='<button type="button" onclick="cancelAccountOrder(\''+escAttr(o.sn)+'\')" class="mt-2 w-full h-10 rounded-xl border border-red-200 bg-red-50 text-red-700 text-xs font-extrabold">إلغاء الطلب</button>';
+    h+='</div>';
   });
   return h+'</div></div>';
 }
@@ -388,6 +406,19 @@ async function claimOldOrder(){
   }catch(error){showToast(error.message||'تعذر ربط الطلب القديم.');}
 }
 async function acceptAccountOffer(sn,id){if(!confirm('تأكيد قبول هذا العرض؟'))return;try{await API.acceptOffer(sn,id);showToast('تم قبول العرض بنجاح','success');await loadMyOrders(false);render();}catch(error){showToast(error.message||'تعذر قبول العرض.');}}
+async function cancelAccountOrder(sn){
+  const cleanSN=String(sn||'').trim().toUpperCase();
+  if(!VALIDATORS.sn(cleanSN)){showToast('كود الطلب غير صحيح.');return;}
+  if(!confirm('هل تريد إلغاء الطلب '+cleanSN+'؟ لن يمكن التراجع عن الإلغاء.'))return;
+  try{
+    const result=await API.cancelOrder(cleanSN);
+    showToast(result.message||'تم إلغاء الطلب بنجاح.','success');
+    await loadMyOrders(false);
+    if(state.trackInput===cleanSN){state.tracked=null;state.trackError='';}
+    render();
+  }catch(error){showToast(error.message||'تعذر إلغاء الطلب.');}
+}
+
 
 async function loadNotifications(){
  if(!state.accountToken||!state.account)return;
