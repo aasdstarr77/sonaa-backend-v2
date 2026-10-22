@@ -1098,27 +1098,25 @@ async function sendComplaint(){
 document.addEventListener('DOMContentLoaded',()=>{
   loadServices();loadPublicContent();initializeClientAccount();render();
   document.addEventListener('click',handleOutsideServiceClick);
-  let clientLivePollInFlight=false;
+  let clientLivePollInFlight=false,clientNotificationPollInFlight=false;
   setInterval(async function(){
     if(document.hidden||clientLivePollInFlight)return;
+    if(state.accountToken&&state.account&&!clientNotificationPollInFlight){
+      clientNotificationPollInFlight=true;
+      loadNotifications().catch(()=>{}).finally(()=>{clientNotificationPollInFlight=false;});
+    }
+    if(!state.accountToken||!state.account)return;
     clientLivePollInFlight=true;
     try{
-      const tasks=[];
-      if(state.accountToken&&state.account){
-        tasks.push((async function(){
-          const before=JSON.stringify((state.myOrders||[]).map(o=>({id:String(o._id||''),status:o.status,acceptedOfferId:String(o.acceptedOfferId||''),updatedAt:o.updatedAt||'',offers:(o.offers||[]).map(x=>({id:String(x._id||''),price:x.priceNum??x.price??null,status:x.offerStatus||''})),priceChangeRequests:(o.priceChangeRequests||[]).map(r=>({id:String(r._id||''),status:r.status||'',newPrice:r.newPrice??null,requestedAt:r.requestedAt||''}))})));
-          const data=await API.getMyOrders();state.myOrders=Array.isArray(data.orders)?data.orders:[];
-          const after=JSON.stringify(state.myOrders.map(o=>({id:String(o._id||''),status:o.status,acceptedOfferId:String(o.acceptedOfferId||''),updatedAt:o.updatedAt||'',offers:(o.offers||[]).map(x=>({id:String(x._id||''),price:x.priceNum??x.price??null,status:x.offerStatus||''})),priceChangeRequests:(o.priceChangeRequests||[]).map(r=>({id:String(r._id||''),status:r.status||'',newPrice:r.newPrice??null,requestedAt:r.requestedAt||''}))})));
-          if(before!==after&&state.tab==='orders')clientLiveRenderPending=true;
-        })());
-        tasks.push(loadNotifications());
-      }
-
-      await Promise.allSettled(tasks);
+      const before=JSON.stringify((state.myOrders||[]).map(o=>({id:String(o._id||''),status:o.status,acceptedOfferId:String(o.acceptedOfferId||''),updatedAt:o.updatedAt||'',offers:(o.offers||[]).map(x=>({id:String(x._id||''),price:x.priceNum??x.price??null,status:x.offerStatus||''})),priceChangeRequests:(o.priceChangeRequests||[]).map(r=>({id:String(r._id||''),status:r.status||'',newPrice:r.newPrice??null,requestedAt:r.requestedAt||''}))})));
+      const data=await API.getMyOrders();state.myOrders=Array.isArray(data.orders)?data.orders:[];
+      const after=JSON.stringify(state.myOrders.map(o=>({id:String(o._id||''),status:o.status,acceptedOfferId:String(o.acceptedOfferId||''),updatedAt:o.updatedAt||'',offers:(o.offers||[]).map(x=>({id:String(x._id||''),price:x.priceNum??x.price??null,status:x.offerStatus||''})),priceChangeRequests:(o.priceChangeRequests||[]).map(r=>({id:String(r._id||''),status:r.status||'',newPrice:r.newPrice??null,requestedAt:r.requestedAt||''}))})));
+      if(before!==after&&state.tab==='orders')clientLiveRenderPending=true;
       if(clientLiveRenderPending&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)){
         clientLiveRenderPending=false;const scrollY=window.scrollY||window.pageYOffset||0;render();window.scrollTo({top:scrollY,left:0,behavior:'instant'});focusClientPostAction();
       }
-    }finally{clientLivePollInFlight=false;}
+    }catch(_){/* Keep the last successful orders during temporary network failures. */}
+    finally{clientLivePollInFlight=false;}
   },3000);
   setInterval(async function(){
     if(document.hidden||!state.tracked||!state.trackInput)return;
