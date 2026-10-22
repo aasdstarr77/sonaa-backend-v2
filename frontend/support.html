@@ -200,7 +200,7 @@ function init(){
   $('main').classList.remove('hidden');$('create-btn').addEventListener('click',createCase);$('refresh-btn').addEventListener('click',()=>refresh());$('send-btn').addEventListener('click',()=>sendOwnerMessage(false));$('human-btn').addEventListener('click',()=>sendOwnerMessage(true));
  }
  loadCases(false).catch(e=>showError(e.message));
- setInterval(refresh,5000);
+ setInterval(refresh,3000);
 }
 init();
 </script>
