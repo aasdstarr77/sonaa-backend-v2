@@ -680,6 +680,15 @@ router.get('/my-offers', auth(), async (req, res, next) => {
         }
 
         if (isAcceptedByThisFanni) {
+          const clientPhone = normalizePhone(order.clientPhone || '');
+          const [clientRatingStats, clientCompletedJobs] = clientPhone ? await Promise.all([
+            Rating.aggregate([
+              { $match: { clientPhone, reviewerRole: 'fanni' } },
+              { $group: { _id: null, average: { $avg: '$stars' }, count: { $sum: 1 } } }
+            ]),
+            Order.countDocuments({ clientPhone, status: 'تم الانتهاء' })
+          ]) : [[], 0];
+          const clientRating = clientRatingStats[0] || { average: 0, count: 0 };
           safeOffer.client = {
             name: sanitizeText(order.clientName || ''),
             area: order.area || '',
@@ -688,12 +697,12 @@ router.get('/my-offers', auth(), async (req, res, next) => {
             budget: order.budget || '',
             acceptedOfferPrice: order.acceptedOfferPrice,
             commissionAmount: order.commissionAmount,
-            commissionCharged: Boolean(order.commissionCharged)
+            commissionCharged: Boolean(order.commissionCharged),
+            ratingAverage: Math.round(Number(clientRating.average || 0) * 100) / 100,
+            ratingCount: Number(clientRating.count || 0),
+            completedJobs: Number(clientCompletedJobs || 0)
           };
-
-          if (!isCompletedByThisFanni) {
-            safeOffer.client.phone = order.clientPhone || '';
-          }
+          if (!isCompletedByThisFanni) safeOffer.client.phone = order.clientPhone || '';
         }
 
         offers.push(safeOffer);
@@ -1691,12 +1700,30 @@ async function trackOrder(req, res, next) {
     // ملء مستوى وشارات الفني للعروض القديمة دون كشف رقم الهاتف أو بيانات الحساب.
     const fanniIds = [...new Set((order.offers || []).map(offer => String(offer.fanni || '')).filter(Boolean))];
     if (fanniIds.length) {
-      const fannis = await Fanni.find({ _id: { $in: fanniIds } }).select('_id level badges').lean();
+      const objectIds = fanniIds.filter(mongoose.isValidObjectId).map(id => new mongoose.Types.ObjectId(id));
+      const [fannis, ratingStats, completedStats] = await Promise.all([
+        Fanni.find({ _id: { $in: objectIds } }).select('_id level badges').lean(),
+        Rating.aggregate([
+          { $match: { fanniId: { $in: objectIds }, reviewerRole: 'client' } },
+          { $group: { _id: '$fanniId', average: { $avg: '$stars' }, count: { $sum: 1 } } }
+        ]),
+        Order.aggregate([
+          { $match: { assignedFanni: { $in: objectIds }, status: 'تم الانتهاء' } },
+          { $group: { _id: '$assignedFanni', count: { $sum: 1 } } }
+        ])
+      ]);
       const fannisById = new Map(fannis.map(fanni => [String(fanni._id), fanni]));
+      const ratingsById = new Map(ratingStats.map(item => [String(item._id), item]));
+      const completedById = new Map(completedStats.map(item => [String(item._id), item.count]));
       for (const offer of order.offers || []) {
-        const fanni = fannisById.get(String(offer.fanni || ''));
+        const id = String(offer.fanni || '');
+        const fanni = fannisById.get(id);
+        const rating = ratingsById.get(id);
         offer.fanniLevel = fanni?.level || offer.fanniLevel || 'مبتدئ';
         offer.fanniBadges = Array.isArray(fanni?.badges) ? fanni.badges : (offer.fanniBadges || []);
+        offer.fanniRatingAverage = rating ? Math.round(rating.average * 100) / 100 : 0;
+        offer.fanniRatingCount = rating?.count || 0;
+        offer.fanniCompletedJobs = completedById.get(id) || 0;
       }
     }
 
