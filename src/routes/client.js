@@ -4,6 +4,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const Joi = require('joi');
+const mongoose = require('mongoose');
 
 const Client = require('../models/Client');
 const Order = require('../models/Order');
@@ -214,11 +215,11 @@ router.get('/orders', clientAuth, async (req, res, next) => {
     const objectIds = fanniIds.filter(id => /^[a-f0-9]{24}$/i.test(id));
     const [fanniRatingStats, fanniCompletedStats] = objectIds.length ? await Promise.all([
       Rating.aggregate([
-        { $match: { fanniId: { $in: objectIds.map(id => new (require('mongoose').Types.ObjectId)(id)) }, reviewerRole: 'client' } },
+        { $match: { fanniId: { $in: objectIds.map(id => new mongoose.Types.ObjectId(id)) }, reviewerRole: 'client' } },
         { $group: { _id: '$fanniId', average: { $avg: '$stars' }, count: { $sum: 1 } } }
       ]),
       Order.aggregate([
-        { $match: { assignedFanni: { $in: objectIds.map(id => new (require('mongoose').Types.ObjectId)(id)) }, status: 'تم الانتهاء' } },
+        { $match: { assignedFanni: { $in: objectIds.map(id => new mongoose.Types.ObjectId(id)) }, status: 'تم الانتهاء' } },
         { $group: { _id: '$assignedFanni', count: { $sum: 1 } } }
       ])
     ]) : [[], []];
