@@ -352,13 +352,13 @@ async function submitClientAccount(e){
     var d=reg?await API.registerClient({name:name,phone:phone,password:password,confirmPassword:confirmPassword}):await API.loginClient({phone:phone,password:password});
     if(!d.token||!d.client)throw new Error('الخادم لم يُرجع بيانات حساب صحيحة.');
     state.accountToken=d.token;state.account=d.client;try{localStorage.setItem('sonaa_client_account_token',d.token);}catch(e){}
-    state.clientName=d.client.name||name;state.phone=d.client.phone||phone;state.tab='new';state.accountError='';showToast(d.message||'تم تسجيل الدخول بنجاح','success');await loadMyOrders(false);await loadNotifications();
+    state.clientName=d.client.name||name;state.phone=d.client.phone||phone;state.tab='orders';state.accountError='';showToast(d.message||'تم تسجيل الدخول بنجاح','success');await loadMyOrders(false);await loadNotifications();
   }catch(error){state.accountError=error.message||'تعذر إتمام العملية.';}
   finally{state.accountLoading=false;render();}
 }
 async function initializeClientAccount(){
   if(!state.accountToken){render();return;}
-  try{var d=await API.getClientMe(state.accountToken);state.account=d.client||null;if(state.account){state.clientName=state.account.name||'';state.phone=state.account.phone||'';await loadMyOrders(false);await loadNotifications();}}
+  try{var d=await API.getClientMe(state.accountToken);state.account=d.client||null;if(state.account){state.clientName=state.account.name||'';state.phone=state.account.phone||'';state.tab='orders';await loadMyOrders(false);await loadNotifications();}}
   catch(error){state.accountToken='';state.account=null;try{localStorage.removeItem('sonaa_client_account_token');}catch(e){}}
   render();
 }
