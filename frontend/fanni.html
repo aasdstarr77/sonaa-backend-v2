@@ -481,6 +481,7 @@ function renderAcceptedClient(o){
    <div><h4 class="text-[13px] font-extrabold text-emerald-900">بيانات العميل — تم قبول عرضك</h4><p class="text-[10px] text-emerald-800 mt-1">استخدم البيانات للتواصل بشأن تنفيذ الخدمة.</p></div>
   </div>
   <div class="rounded-xl bg-white border border-emerald-100 p-3"><div class="text-[10px] text-slate-500 mb-1">اسم العميل</div><b class="text-[12px]">${esc(client.name||'غير متاح')}</b></div>
+  <div class="rounded-xl bg-white border border-emerald-100 p-3"><div class="text-[10px] text-slate-500 mb-1">سجل العميل</div><div class="mt-1 flex flex-wrap gap-2"><span class="rounded-full bg-amber-50 border border-amber-200 px-2 py-1 text-[10px] font-extrabold text-amber-800">★ ${Number(client.ratingAverage||0).toFixed(1)} (${Number(client.ratingCount||0)} تقييم)</span><span class="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-1 text-[10px] font-extrabold text-emerald-800">✓ ${Number(client.completedJobs||0)} عمل مكتمل</span></div></div>
   <div class="rounded-xl bg-white border border-emerald-100 p-3">
    <div class="text-[10px] text-slate-500 mb-1">رقم العميل</div>
    <b class="text-[13px]" dir="ltr">${esc(client.phone||'غير متاح')}</b>
@@ -519,7 +520,7 @@ function render(){
  <header class="sticky top-0 z-40 bg-[#0b1b3a] text-white shadow-lg">
   <div class="mx-auto max-w-[680px] px-3 py-3 flex items-center justify-between gap-3">
    <div class="flex items-center gap-3 min-w-0">
-    <div class="h-11 w-11 rounded-2xl bg-[#F8FAFC] border-2 border-[#14B8A6] flex items-center justify-center shrink-0"><svg class="sonaa-logo-svg" width="30" height="30" viewBox="0 0 64 64" fill="none" role="img" aria-label="شعار صُنّاع"><circle cx="32" cy="32" r="27" stroke="#14B8A6" stroke-width="3.5"/><text x="32" y="43" text-anchor="middle" font-family="Cairo, sans-serif" font-size="34" font-weight="900" fill="#0F172A">ص</text></svg></div>
+    <div class="h-11 w-11 rounded-2xl bg-[#F8FAFC] border-2 border-[#14B8A6] flex items-center justify-center shrink-0"><svg class="sonaa-logo-svg" width="30" height="30" viewBox="0 0 64 64" fill="none" role="img" aria-label="شعار صُنّاع"><circle cx="32" cy="32" r="27" stroke="#14B8A6" stroke-width="3.5"/><text x="32" y="43" text-anchor="middle" font-family="Cairo, sans-serif" font-size="34" font-weight="900" fill="#0F172A">S</text></svg></div>
     <div class="min-w-0"><h1 class="font-extrabold text-[16px]">صناع</h1><div class="text-[10px] text-blue-100/75 mt-0.5 truncate">${authenticated?esc(user?.name||'فني')+' · الرصيد '+esc(balance)+' جنيه':'لوحة الفني والخدمات'}</div>${authenticated?`<div class="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-amber-200/30 bg-amber-400/15 px-2.5 py-1 text-[10px] font-extrabold text-amber-100"><span>مستواك المهني:</span><span>${esc(user?.level||'مبتدئ')}</span></div>`:''}</div>
    </div>
    <div class="flex items-center gap-2 shrink-0"><button onclick="toggleNotifications()" aria-label="الإشعارات" class="relative h-9 w-9 rounded-xl border border-amber-200 bg-amber-50 text-[18px] text-amber-600">🔔${notificationBadge()}</button>
