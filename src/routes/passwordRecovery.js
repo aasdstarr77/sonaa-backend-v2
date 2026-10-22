@@ -45,7 +45,7 @@ function decryptRecoveryMessage(text) {
   } catch (_) { return 'رسالة رمز استعادة محمية.'; }
 }
 function protectRecoveryMessage(text, item) {
-  return item.codeHash && item.codeExpiresAt > new Date() && !item.codeUsedAt && /\\d{6}/.test(text)
+  return item.codeHash && item.codeExpiresAt > new Date() && !item.codeUsedAt && /\d{6}/.test(text)
     ? encryptRecoveryMessage(text) : text;
 }
 const randomToken = () => crypto.randomBytes(32).toString('hex');
