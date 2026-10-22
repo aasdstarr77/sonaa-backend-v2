@@ -1678,6 +1678,15 @@ router.post('/:sn/price-change/:requestId/decision', async (req, res, next) => {
     request.status = approved ? 'مقبول' : 'مرفوض';
     request.decidedAt = new Date();
     request.decidedByRole = 'client';
+    order.chatMessages.push({
+      senderRole: 'client',
+      senderId: String(order.clientAccount || order._id),
+      targetOfferId: '',
+      text: approved
+        ? 'العميل وافق على زيادة السعر إلى ' + Number(request.newPrice) + ' جنيه.'
+        : 'العميل رفض زيادة السعر؛ السعر السابق ' + Number(request.oldPrice) + ' جنيه ما زال ساريًا.',
+      createdAt: new Date()
+    });
     await order.save({ session });
     await session.commitTransaction();
     await createNotification({
