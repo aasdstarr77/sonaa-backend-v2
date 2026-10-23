@@ -69,9 +69,10 @@ const fanniSchema = new mongoose.Schema({
     type: [String],
     validate: [arr => arr.length > 0, 'التخصص مطلوب']
   },
+  // اختياري للتوافق مع الحسابات القديمة؛ فرص العمل لا تُطابق بمناطق الفني.
   areas: {
     type: [String],
-    validate: [arr => arr.length > 0, 'المنطقة مطلوبة']
+    default: []
   },
   works: [String],
   prices: {

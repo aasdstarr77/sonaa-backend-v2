@@ -27,9 +27,8 @@ const registerSchema = Joi.object({
     .required(),
   areas: Joi.array()
     .items(Joi.string().trim().min(2).max(60))
-    .min(1)
     .max(30)
-    .required()
+    .optional()
 });
 
 const loginSchema = Joi.object({
@@ -105,7 +104,7 @@ router.post(
         phone,
         passwordHash,
         specialties: req.body.specialties,
-        areas: req.body.areas,
+        areas: req.body.areas || [],
         status: 'قيد المراجعة',
         role: 'fanni'
       });

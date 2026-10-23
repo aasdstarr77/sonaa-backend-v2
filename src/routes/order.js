@@ -209,7 +209,7 @@ const createSchema = Joi.object({
       'any.only': 'الخدمة المطلوبة غير موجودة في قائمة الخدمات المتاحة',
       'any.required': 'الخدمة مطلوبة'
     }),
-  area: Joi.string().trim().min(2).max(100).required(),
+  area: Joi.string().trim().min(2).max(100).optional()
   address: Joi.string().trim().min(2).max(250).allow('').optional(),
   phone: Joi.string().trim().required(),
   clientPhone: Joi.string().trim(),
@@ -367,8 +367,9 @@ router.post('/', clientAuth, async (req, res, next) => {
       });
     }
 
-    const area = String(value.area || '').trim();
     const address = String(value.address || '').trim();
+    // يدعم التطبيق من دون حقل منطقة مستقل، مع إبقاء حقل المنطقة للواجهات القديمة.
+    const area = String(value.area || address.slice(0, 100)).trim();
 
     if (area.length < 2 || area.length > 100) {
       return res.status(400).json({
