@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+Disallow: /api/
+Disallow: /admin
+Disallow: /admin-setup.html
+
+Sitemap: https://sonaa-backend-v2.vercel.app/sitemap.xml
