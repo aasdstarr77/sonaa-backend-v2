@@ -1257,6 +1257,48 @@ router.put('/settings', auth('admin'), async (req, res, next) => {
     return res.json({ message: 'تم حفظ الإعدادات. وضع الصيانة مفعل على طلبات العملاء والفنيين؛ حد محاولات تسجيل الفني لكل IP خلال 15 دقيقة مطبق.', settings: config.settings });
   } catch (err) { next(err); }
 });
+router.delete('/content/faqs/:index', auth('admin'), async (req, res, next) => {
+  try {
+    const index = Number(req.params.index);
+    if (!Number.isInteger(index) || index < 0) {
+      return res.status(400).json({ message: 'رقم السؤال غير صالح' });
+    }
+    const announcementSchema = Joi.string().trim().max(1000).allow('');
+    const announcementResult = announcementSchema.validate(
+      req.body && req.body.announcement !== undefined ? req.body.announcement : undefined
+    );
+    if (req.body && req.body.announcement !== undefined && announcementResult.error) {
+      return res.status(400).json({ message: 'نص الإعلان غير صالح' });
+    }
+    const config = await getAdminConfig();
+    const content = config.content || { announcement: '', faqs: [] };
+    const faqs = Array.isArray(content.faqs) ? content.faqs : [];
+    if (index >= faqs.length) {
+      return res.status(404).json({ message: 'السؤال غير موجود أو تم حذفه بالفعل' });
+    }
+    const beforeCount = faqs.length;
+    const removed = faqs[index];
+    faqs.splice(index, 1);
+    content.faqs = faqs;
+    if (req.body && req.body.announcement !== undefined) {
+      content.announcement = announcementResult.value;
+    }
+    config.content = content;
+    config.history.push({
+      key: 'content',
+      before: { announcementLength: String(content.announcement || '').length, faqCount: beforeCount },
+      after: { announcementLength: String(content.announcement || '').length, faqCount: faqs.length },
+      by: adminName(req),
+      byId: String(req.user?._id || ''),
+      reason: 'حذف سؤال شائع: ' + String(removed.question || '').slice(0, 200),
+      createdAt: new Date()
+    });
+    if (config.history.length > 200) config.history = config.history.slice(-200);
+    await config.save();
+    await writeAdminAudit(req, 'حذف سؤال شائع', 'content', 'faq', 'تم حذف سؤال من الأسئلة الشائعة');
+    return res.json({ message: 'تم حذف السؤال ونشر التغيير لواجهة العميل.', content: config.content });
+  } catch (err) { next(err); }
+});
 router.get('/content', auth('admin'), async (req, res, next) => {
   try { const config = await getAdminConfig(); return res.json({ content: config.content }); }
   catch (err) { next(err); }

@@ -957,19 +957,18 @@ async function removeFaq(index){
  const faq=state.content.faqs[index];
  if(!confirm('حذف السؤال «'+String(faq?.question||'').slice(0,120)+'» نهائيًا من واجهة العميل؟'))return;
  const announcement=String(document.getElementById('content-announcement')?.value??state.content.announcement??'').trim();
- const previousFaqs=state.content.faqs.map(item=>({...item}));
- const nextFaqs=previousFaqs.filter((_,i)=>i!==index);
- state.content.faqs=nextFaqs;
+ const btn=document.getElementById('save-content-btn');
+ if(btn)btn.disabled=true;
  try{
-  const data=await tryApi(['/api/admin/content'],{method:'PUT',body:JSON.stringify({announcement,faqs:nextFaqs})});
-  state.content=data.content||{announcement,faqs:nextFaqs};
+  const data=await tryApi(['/api/admin/content/faqs/'+index],{method:'DELETE',body:JSON.stringify({announcement})});
+  state.content=data.content||{announcement,faqs:state.content.faqs.filter((_,i)=>i!==index)};
   showToast(data.message||'تم حذف السؤال ونشر التغيير لواجهة العميل');
   render();
  }catch(e){
-  state.content={announcement,faqs:previousFaqs};
   showToast(e.message||'تعذر حذف السؤال من واجهة العميل؛ لم يتم اعتماد الحذف','error');
+  await loadContent();
   render();
- }
+ }finally{const currentBtn=document.getElementById('save-content-btn');if(currentBtn)currentBtn.disabled=false;}
 }
 function previewContent(){const announcement=String(document.getElementById('content-announcement')?.value||state.content?.announcement||'').trim();const faqs=Array.isArray(state.content?.faqs)?state.content.faqs:[];const sample=faqs.slice(0,10).map((f,i)=>(i+1)+'. '+f.question+'\n'+f.answer).join('\n\n');alert('معاينة محتوى صُنّاع\n\nالإعلان:\n'+(announcement||'لا يوجد إعلان')+'\n\nالأسئلة الشائعة ('+faqs.length+'):\n'+(sample||'لا توجد أسئلة'));}
 async function saveContent(){const announcement=String(document.getElementById('content-announcement')?.value||'').trim();const faqs=Array.isArray(state.content?.faqs)?state.content.faqs:[];const btn=document.getElementById('save-content-btn');if(btn)btn.disabled=true;try{const data=await tryApi(['/api/admin/content'],{method:'PUT',body:JSON.stringify({announcement,faqs})});state.content=data.content||{announcement,faqs};showToast(data.message||'تم حفظ المحتوى');render();}catch(e){showToast(e.message||'تعذر حفظ المحتوى','error');}finally{if(btn)btn.disabled=false;}}
