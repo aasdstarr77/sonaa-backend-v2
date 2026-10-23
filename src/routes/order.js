@@ -209,7 +209,7 @@ const createSchema = Joi.object({
       'any.only': 'الخدمة المطلوبة غير موجودة في قائمة الخدمات المتاحة',
       'any.required': 'الخدمة مطلوبة'
     }),
-  area: Joi.string().trim().min(2).max(100).optional()
+  area: Joi.string().trim().min(2).max(100).optional(),
   address: Joi.string().trim().min(2).max(250).allow('').optional(),
   phone: Joi.string().trim().required(),
   clientPhone: Joi.string().trim(),
