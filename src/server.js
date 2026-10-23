@@ -92,6 +92,14 @@ app.use(express.static(frontendPath, {
   dotfiles: 'ignore'
 }));
 
+// Serve official Sonaa brand assets from the repository public folder.
+app.use('/images', express.static(path.join(__dirname, '..', 'public', 'images'), {
+  dotfiles: 'ignore',
+  fallthrough: false,
+  immutable: true,
+  maxAge: '7d'
+}));
+
 // اختبار قاعدة البيانات فعليًا، وليس الاكتفاء بحالة الاتصال.
 async function checkDatabase(req, res) {
   try {

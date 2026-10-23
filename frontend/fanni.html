@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0A2342">
-<link rel="icon" type="image/svg+xml" href="/icons/sonaa-logo.svg">
-<link rel="apple-touch-icon" href="/icons/sonaa-logo.svg">
+<link rel="icon" type="image/svg+xml" href="/images/LOGO_UPLOAD_HERE/logo.png">
+<link rel="apple-touch-icon" href="/images/LOGO_UPLOAD_HERE/logo.png">
 <link rel="manifest" href="/manifest.webmanifest">
 <title>صناع - لوحة الفني</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -524,7 +524,7 @@ function render(){
  <header class="sticky top-0 z-40 bg-[#0b1b3a] text-white shadow-lg">
   <div class="mx-auto max-w-[680px] px-3 py-3 flex items-center justify-between gap-3">
    <div class="flex items-center gap-3 min-w-0">
-    <div class="h-11 w-11 rounded-2xl bg-[#F8FAFC] border-2 border-[#14B8A6] flex items-center justify-center shrink-0"><img class="sonaa-logo-svg" src="/icons/sonaa-logo.svg" alt="شعار صُنّاع" width="120" height="120" decoding="async"></div>
+    <div class="h-11 w-11 rounded-2xl bg-[#F8FAFC] border-2 border-[#14B8A6] flex items-center justify-center shrink-0"><img class="sonaa-logo-svg" src="/images/LOGO_UPLOAD_HERE/logo.png" alt="شعار صُنّاع" width="120" height="120" decoding="async"></div>
     <div class="min-w-0"><h1 class="font-extrabold text-[16px]">صناع</h1><div class="text-[10px] text-blue-100/75 mt-0.5 truncate">${authenticated?esc(user?.name||'فني')+' · الرصيد '+esc(balance)+' جنيه':'لوحة الفني والخدمات'}</div>${authenticated?`<div class="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-amber-200/30 bg-amber-400/15 px-2.5 py-1 text-[10px] font-extrabold text-amber-100"><span>مستواك المهني:</span><span>${esc(user?.level||'مبتدئ')}</span></div>`:''}</div>
    </div>
    <div class="flex items-center gap-2 shrink-0"><a href="https://aasdstarr77.github.io/sonaa-download/" aria-label="تحميل تطبيق صُنّاع" title="تحميل تطبيق صُنّاع" class="h-9 px-3 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 inline-flex items-center justify-center gap-2 text-[11px] font-extrabold whitespace-nowrap"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg><span>تحميل التطبيق</span></a><button onclick="toggleNotifications()" aria-label="الإشعارات" class="relative h-9 w-9 rounded-xl border border-amber-200 bg-amber-50 text-[18px] text-amber-600">🔔${notificationBadge()}</button>
