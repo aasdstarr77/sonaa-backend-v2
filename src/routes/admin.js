@@ -234,6 +234,13 @@ router.patch('/complaints/:id', auth('admin'), validate(Joi.object({
   } catch (err) { next(err); }
 });
 
+router.get('/counts', auth('admin'), async (req, res, next) => {
+  try {
+    const [technicians, clients] = await Promise.all([Fanni.countDocuments({ role: 'fanni' }), Client.countDocuments({})]);
+    return res.set('Cache-Control', 'no-store').json({ counts: { technicians, clients } });
+  } catch (err) { next(err); }
+});
+
 router.get('/fannis', auth('admin'), async (req, res, next) => {
   try {
     const list = await Fanni.find({ role: 'fanni' }).select('-passwordHash').sort({ createdAt: -1 }).limit(MAX_LIST_LIMIT).lean();
@@ -1340,13 +1347,6 @@ router.delete('/content/faqs/:index', auth('admin'), async (req, res, next) => {
     if (!Number.isInteger(index) || index < 0) {
       return res.status(400).json({ message: 'رقم السؤال غير صالح' });
     }
-    const announcementSchema = Joi.string().trim().max(1000).allow('');
-    const announcementResult = announcementSchema.validate(
-      req.body && req.body.announcement !== undefined ? req.body.announcement : undefined
-    );
-    if (req.body && req.body.announcement !== undefined && announcementResult.error) {
-      return res.status(400).json({ message: 'نص الإعلان غير صالح' });
-    }
     const config = await getAdminConfig();
     const content = config.content || { announcement: '', faqs: [] };
     const faqs = Array.isArray(content.faqs) ? content.faqs : [];
@@ -1357,9 +1357,6 @@ router.delete('/content/faqs/:index', auth('admin'), async (req, res, next) => {
     const removed = faqs[index];
     faqs.splice(index, 1);
     content.faqs = faqs;
-    if (req.body && req.body.announcement !== undefined) {
-      content.announcement = announcementResult.value;
-    }
     config.content = content;
     config.history.push({
       key: 'content',
@@ -1380,6 +1377,31 @@ router.get('/content', auth('admin'), async (req, res, next) => {
   try { const config = await getAdminConfig(); return res.json({ content: config.content }); }
   catch (err) { next(err); }
 });
+router.patch('/content/announcement', auth('admin'), async (req, res, next) => {
+  try {
+    const schema = Joi.object({ announcement: Joi.string().trim().max(1000).allow('').required() }).required();
+    const { error, value } = schema.validate(req.body || {}, { abortEarly: false, stripUnknown: true });
+    if (error) return res.status(400).json({ message: 'نص الإعلان غير صالح؛ الحد الأقصى 1000 حرف' });
+    const config = await getAdminConfig();
+    const previousLength = String(config.content?.announcement || '').length;
+    const content = config.content?.toObject ? config.content.toObject() : (config.content || {});
+    config.content = { ...content, announcement: value.announcement };
+    const faqCount = Array.isArray(config.content.faqs) ? config.content.faqs.length : 0;
+    config.history.push({
+      key: 'content',
+      before: { announcementLength: previousLength, faqCount },
+      after: { announcementLength: value.announcement.length, faqCount },
+      by: adminName(req), byId: String(req.user?._id || ''),
+      reason: value.announcement ? 'تعديل الإعلان فقط' : 'مسح الإعلان',
+      createdAt: new Date()
+    });
+    if (config.history.length > 200) config.history = config.history.slice(-200);
+    await config.save();
+    await writeAdminAudit(req, value.announcement ? 'تعديل الإعلان' : 'مسح الإعلان', 'content', 'announcement', 'تم تحديث الإعلان دون تغيير الأسئلة الشائعة');
+    return res.json({ message: value.announcement ? 'تم حفظ الإعلان ونشره لواجهة العميل.' : 'تم مسح الإعلان ونشر التغيير لواجهة العميل.', content: config.content });
+  } catch (err) { next(err); }
+});
+
 router.put('/content', auth('admin'), async (req, res, next) => {
   try {
     const schema = Joi.object({
@@ -1812,20 +1834,28 @@ router.delete('/services/:id', auth('admin'), async (req, res, next) => {
     }
     if (!service) return res.status(404).json({ message: 'الخدمة غير موجودة في القسم المحدد' });
     const name = service.name, category = service.category;
+    if (requestedCategory && normalizeForCompare(category) !== normalizeForCompare(requestedCategory)) {
+      return res.status(404).json({ message: 'الخدمة لا تنتمي إلى القسم المحدد؛ لم يتم حذف أي سجل' });
+    }
+    const normalizedName = normalizeForCompare(name);
     const legacyCategory = findCategoryByLabel(category);
-    const isLegacyService = Boolean(legacyCategory && legacyCategory.services.some(item => normalizeForCompare(item) === normalizeForCompare(name)));
-
-    // الخدمات الموجودة في القائمة البرمجية تحتاج سجل إخفاء حتى لا تعود من المصدر القديم.
-    // أما الخدمات المدارة بالكامل من قاعدة البيانات فتحذف فعليًا، مع بقاء نص الخدمة داخل الطلبات القديمة.
+    const isLegacyService = Boolean(legacyCategory && legacyCategory.services.some(item => normalizeForCompare(item) === normalizedName));
     let deleted = false;
     if (isLegacyService) {
-      service.isActive = false;
-      await service.save();
-    } else {
-      const result = await Service.deleteOne({ _id: service._id });
-      if (result.deletedCount !== 1) {
-        return res.status(409).json({ message: 'لم يتم حذف الخدمة؛ حدّث القائمة وحاول مرة أخرى' });
+      const sameCategoryRows = await Service.find({ category }).select('_id name isActive');
+      const legacyRows = sameCategoryRows.filter(item => normalizeForCompare(item.name) === normalizedName);
+      for (const row of legacyRows) {
+        if (row.isActive) { row.isActive = false; await row.save(); }
       }
+      if (!legacyRows.length) await ensureHiddenLegacy(name, category);
+    } else {
+      const sameCategoryRows = await Service.find({ category }).select('_id name');
+      const duplicateIds = sameCategoryRows.filter(item => normalizeForCompare(item.name) === normalizedName).map(item => item._id);
+      if (!duplicateIds.length) return res.status(409).json({ message: 'لم يتم العثور على سجل الخدمة لحذفه؛ حدّث القائمة وحاول مرة أخرى' });
+      const result = await Service.deleteMany({ _id: { $in: duplicateIds } });
+      if (result.deletedCount !== duplicateIds.length) return res.status(409).json({ message: 'لم يتم حذف كل سجلات الخدمة المكررة؛ راجع القائمة وحاول مرة أخرى' });
+      const remaining = await Service.find({ category }).select('name').lean();
+      if (remaining.some(item => normalizeForCompare(item.name) === normalizedName)) return res.status(409).json({ message: 'ما زالت هناك نسخة من الخدمة في القسم؛ لم نؤكد اكتمال الحذف' });
       deleted = true;
     }
     await writeAdminAudit(req, deleted ? 'حذف نهائي لخدمة' : 'إزالة خدمة أساسية من القوائم المتاحة', 'services', name, JSON.stringify({ category, deleted, legacyTombstone: isLegacyService }));
