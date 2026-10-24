@@ -117,6 +117,16 @@ button.secondary-btn,button.soft-btn,button[class*="bg-green-50"],button[class*=
   border:1px solid #C7D2FE!important;border-bottom:4px solid #C7D2FE!important;box-shadow:0 4px 0 rgba(99,102,241,.10)!important;
 }
 
+
+/* Match the client panel's light surfaces and indigo selection states. */
+:root{--navy:#312E81;--navy-light:#4338CA;--blue:#4F46E5;--blue-dark:#3730A3;--page:#F8FAFC;--border:#E2E8F0}
+body{background:var(--page);color:#1E293B}
+.panel,.premium-panel,.premium-card{background:#fff;border-color:#E2E8F0}
+.section-title,.field{color:#1E293B}
+.service-chip.selected{background:#EEF2FF;border-color:#818CF8;color:#312E81;box-shadow:0 0 0 1px #C7D2FE inset}
+.service-chip.selected .service-icon{background:#DDD6FE}
+.global-refresh-float,.support-float{background:linear-gradient(145deg,#4F46E5,#312E81)!important;box-shadow:0 8px 24px rgba(79,70,229,.24)}
+
 </style>
 </head>
 <body class="min-h-screen antialiased">
