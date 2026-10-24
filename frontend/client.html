@@ -49,7 +49,7 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--blue)!im
 .service-choice .service-icon{width:42px;height:42px;border-radius:13px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:25px;flex-shrink:0}
 .service-choice.selected{background:#0b1b3a;color:white;border-color:#0b1b3a}
 .service-choice.selected .service-icon{background:#ffffff20}
-.service-choice-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:10px}
+.service-choice-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:10px}.service-picker-dialog{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:100;width:calc(100% - 24px);max-width:520px;max-height:82dvh;overflow:auto;border-radius:20px;background:#fff;box-shadow:0 0 0 100vmax rgba(15,23,42,.48),0 24px 70px #0f172a40;animation:fadeIn .18s ease both}.service-picker-dialog:has(.category-details) .category-tile-grid,.service-picker-dialog:has(.category-details) .service-search-intro{display:none}
 @media(max-width:380px){.service-choice-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 .animate-fade{animation:fadeIn .2s ease both}
@@ -572,7 +572,7 @@ function render(){
                 <span class="text-slate-500 text-[12px]">${state.showService?'▲':'▼'}</span>
               </button>
               ${state.showService?`
-              <div id="servicePanel" class="mt-2 rounded-[14px] border border-slate-200 bg-white shadow-lg overflow-hidden">
+              <div id="servicePanel" class="service-picker-dialog border border-slate-200">
                 ${state.servicesLoading?`
                   <div class="p-6 text-center">
                     <div class="inline-block h-6 w-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
@@ -585,7 +585,7 @@ function render(){
                     <p class="mt-2 text-[10px] text-slate-500">لن يتم عرض قائمة قديمة؛ المصدر الرسمي هو /api/services</p>
                   </div>
                 `:`
-                <div class="p-2 bg-slate-50 border-b border-slate-100">
+                <div class="p-2 bg-slate-50 border-b border-slate-100 service-search-intro">
                   <input id="svcSearch" value="${escAttr(state.searchService)}" oninput="searchService(this.value)" placeholder="ابحث عن خدمة أو قسم..." class="field h-10 px-3 text-[12px] font-bold">
                   <p class="text-[12px] text-slate-700 font-bold mt-2 px-1 leading-6">اختار القسم اللي يناسبك، وبعدها افتحه واختار خدمة واحدة من جواه.</p>
                 </div>
@@ -607,7 +607,7 @@ function render(){
                           <h3 class="font-extrabold text-[13px] text-slate-900">${escHtml(selectedCategory.label)}</h3>
                           <p class="text-[11px] text-slate-500 font-bold mt-0.5">اختار الخدمة التفصيلية</p>
                         </div>
-                        <button type="button" onclick="toggleCategory('')" class="text-[11px] font-extrabold text-blue-700 px-2 py-1" aria-label="إغلاق الخدمات التفصيلية">إغلاق</button>
+                        <button type="button" onclick="toggleCategory('')" class="text-[11px] font-extrabold text-blue-700 px-2 py-1" aria-label="الرجوع للمهن الرئيسية">رجوع</button>
                       </div>
                       <div class="service-choice-grid">
                         ${selectedCategory.services.map(s=>`
