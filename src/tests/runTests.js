@@ -72,6 +72,9 @@ async function run() {
       assert.equal(canAccessAdmin(user, { path: '/orders', method: 'GET' }), true);
       assert.equal(canAccessAdmin(user, { path: '/orders', method: 'POST' }), false);
       assert.equal(canAccessAdmin(user, { path: '/settings', method: 'GET' }), false);
+      assert.equal(canAccessAdmin(user, { path: '/reports', method: 'POST' }), true, 'report generation is read-only even though it uses POST');
+      const noDashboardRead = { role: 'fanni', adminRole: 'مشرف', adminPermissions: { __customOverrides: true, dashboard: { read: false, write: false } } };
+      assert.equal(canAccessAdmin(noDashboardRead, { path: '/reports', method: 'POST' }), false, 'report generation still respects dashboard read permission');
       assert.equal(canAccessAdmin(user, { path: '/admin-users/123/permissions', method: 'PATCH' }), false);
     });
 

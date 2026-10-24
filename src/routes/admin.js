@@ -725,6 +725,48 @@ router.patch('/fannis/:id/limit', auth('admin'), async (req, res, next) => {
   } catch(e){ next(e); }
 });
 
+router.patch('/fannis/:id/profile-controls', auth('admin'), async (req, res, next) => {
+  try {
+    if (!validId(req.params.id)) return sendBadId(res);
+    const schema = Joi.object({
+      trustScore: Joi.number().integer().min(0).max(100).optional(),
+      isVerified: Joi.boolean().optional(),
+      isFeatured: Joi.boolean().optional(),
+      featuredUntil: Joi.date().iso().allow(null).optional()
+    }).min(1).required();
+    const { error, value } = schema.validate(req.body || {}, { abortEarly: false, stripUnknown: true });
+    if (error) return res.status(400).json({ message: 'إعدادات الثقة والظهور غير صحيحة' });
+    const rawFeaturedUntil = req.body?.featuredUntil;
+    const dateOnly = typeof rawFeaturedUntil === 'string' && rawFeaturedUntil.length === 10 && rawFeaturedUntil[4] === '-' && rawFeaturedUntil[7] === '-';
+    const normalizedFeaturedUntil = dateOnly ? new Date(String(rawFeaturedUntil) + 'T23:59:59.999Z') : value.featuredUntil;
+    if (value.isFeatured === true && normalizedFeaturedUntil && new Date(normalizedFeaturedUntil) <= new Date()) {
+      return res.status(400).json({ message: 'تاريخ انتهاء التمييز يجب أن يكون اليوم أو تاريخًا مستقبليًا' });
+    }
+    const fanni = await Fanni.findOne({ _id: req.params.id, role: 'fanni' });
+    if (!fanni) return res.status(404).json({ message: 'الفني غير موجود' });
+    const before = { trustScore: fanni.trustScore, isVerified: fanni.isVerified, isFeatured: fanni.isFeatured, featuredUntil: fanni.featuredUntil };
+    if (value.trustScore !== undefined) fanni.trustScore = value.trustScore;
+    if (value.isVerified !== undefined) {
+      fanni.isVerified = value.isVerified;
+      const badges = new Set(Array.isArray(fanni.badges) ? fanni.badges : []);
+      if (value.isVerified) badges.add('verified'); else badges.delete('verified');
+      fanni.badges = Array.from(badges);
+    }
+    if (value.isFeatured !== undefined) fanni.isFeatured = value.isFeatured;
+    if (Object.prototype.hasOwnProperty.call(value, 'featuredUntil')) fanni.featuredUntil = normalizedFeaturedUntil || undefined;
+    if (fanni.isFeatured === false) fanni.featuredUntil = undefined;
+    fanni.decisions.push({
+      action: 'تعديل الثقة والظهور',
+      reason: 'تحديث إعدادات الثقة والتحقق والتمييز من لوحة الإدارة',
+      date: new Date(), by: adminName(req), byId: req.user?._id,
+      meta: { before, after: { trustScore: fanni.trustScore, isVerified: fanni.isVerified, isFeatured: fanni.isFeatured, featuredUntil: fanni.featuredUntil } }
+    });
+    await fanni.save();
+    await writeAdminAudit(req, 'تعديل الثقة والظهور', 'fannis', String(fanni._id), JSON.stringify({ before, after: { trustScore: fanni.trustScore, isVerified: fanni.isVerified, isFeatured: fanni.isFeatured, featuredUntil: fanni.featuredUntil } }));
+    return res.json({ message: 'تم حفظ درجة الثقة والتحقق والظهور', fanni: publicFanni(fanni) });
+  } catch (error) { next(error); }
+});
+
 // ===== عروض الطلبات - بناء على Order.js الجديد =====
 router.get('/orders/:sn/offers', auth('admin'), async (req, res, next) => {
   try {
@@ -1140,16 +1182,51 @@ router.post('/regions', auth('admin'), async (req, res, next) => {
     const schema = Joi.object({ name: Joi.string().trim().min(2).max(100).required() }).required();
     const { error, value } = schema.validate(req.body || {}, { abortEarly: false, stripUnknown: true });
     if (error) return res.status(400).json({ message: 'اسم المنطقة مطلوب من حرفين إلى 100 حرف' });
-    const name = value.name.normalize('NFC').trim().replace(/\\s+/g, ' ');
+    const name = value.name.normalize('NFC').trim().replace(/\s+/g, ' ');
     const normalizedName = name.toLocaleLowerCase('ar-EG');
     const exists = await Region.findOne({ normalizedName }).select('_id name').lean();
     if (exists) return res.status(409).json({ message: 'المنطقة موجودة بالفعل', region: exists });
     const region = await Region.create({ name, createdBy: adminName(req) });
-    return res.status(201).json({ message: 'تمت إضافة المنطقة إلى قائمة مناطق الإدارة', region });
+    await writeAdminAudit(req, 'إضافة منطقة خدمة', 'regions', String(region._id), name);
+    return res.status(201).json({ message: 'تمت إضافة المنطقة وربطها بقائمة مناطق طلب العميل', region });
   } catch (error) {
     if (error && error.code === 11000) return res.status(409).json({ message: 'المنطقة موجودة بالفعل' });
     return next(error);
   }
+});
+
+router.patch('/regions/:id', auth('admin'), async (req, res, next) => {
+  try {
+    if (!validId(req.params.id)) return sendBadId(res);
+    const schema = Joi.object({ name: Joi.string().trim().min(2).max(100).optional(), isActive: Joi.boolean().optional() }).min(1).required();
+    const { error, value } = schema.validate(req.body || {}, { abortEarly: false, stripUnknown: true });
+    if (error) return res.status(400).json({ message: 'بيانات تعديل المنطقة غير صحيحة' });
+    const region = await Region.findById(req.params.id);
+    if (!region) return res.status(404).json({ message: 'المنطقة غير موجودة' });
+    const before = { name: region.name, isActive: region.isActive };
+    if (value.name !== undefined) {
+      const name = value.name.normalize('NFC').trim().replace(/\s+/g, ' ');
+      const normalizedName = name.toLocaleLowerCase('ar-EG');
+      const duplicate = await Region.findOne({ normalizedName, _id: { $ne: region._id } }).select('_id name').lean();
+      if (duplicate) return res.status(409).json({ message: 'اسم المنطقة مستخدم بالفعل', region: duplicate });
+      region.name = name;
+    }
+    if (value.isActive !== undefined) region.isActive = value.isActive;
+    await region.save();
+    await writeAdminAudit(req, 'تعديل منطقة خدمة', 'regions', String(region._id), JSON.stringify({ before, after: { name: region.name, isActive: region.isActive } }));
+    return res.json({ message: region.isActive ? 'تم حفظ المنطقة وهي متاحة في نموذج طلب العميل' : 'تم تعطيل المنطقة وإخفاؤها من نموذج طلب العميل', region });
+  } catch (error) { return next(error); }
+});
+
+router.delete('/regions/:id', auth('admin'), async (req, res, next) => {
+  try {
+    if (!validId(req.params.id)) return sendBadId(res);
+    const region = await Region.findById(req.params.id);
+    if (!region) return res.status(404).json({ message: 'المنطقة غير موجودة أو حُذفت بالفعل' });
+    await Region.deleteOne({ _id: region._id });
+    await writeAdminAudit(req, 'حذف منطقة خدمة', 'regions', String(region._id), region.name);
+    return res.json({ message: 'تم حذف المنطقة من قائمة الإدارة؛ الطلبات التاريخية محفوظة كما هي' });
+  } catch (error) { return next(error); }
 });
 
 router.post('/notifications/direct', auth('admin'), async (req, res, next) => {
@@ -1700,7 +1777,7 @@ router.patch('/services/order', auth('admin'), async (req, res, next) => {
     }).required()).required() }).required();
     const { error, value } = schema.validate(req.body || {}, { abortEarly: false, stripUnknown: true });
     if (error) return res.status(400).json({ message: 'بيانات ترتيب الخدمات غير صحيحة' });
-    const category = value.category.replace(/\\s+/g, ' ');
+    const category = value.category.replace(/\s+/g, ' ');
     const categoryError = validateCategoryField(category);
     if (categoryError) return res.status(400).json({ message: categoryError });
     const seen = new Set();
