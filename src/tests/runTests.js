@@ -219,6 +219,20 @@ async function run() {
       const item = queue.body.recoveries.find(x => x.id === opened.body.requestId);
       assert.ok(item);
 
+      const adminQuestion = await request(app).post('/api/password-recovery/admin/requests/' + opened.body.requestId + '/reply')
+        .set('Authorization', 'Bearer ' + adminToken)
+        .send({ text: 'من فضلك اذكر تفاصيل تساعدنا على التحقق من ملكية الحساب.' });
+      assert.equal(adminQuestion.status, 200);
+      assert.equal(adminQuestion.body.recovery.status, 'بانتظار رد المستخدم');
+      assert.ok(adminQuestion.body.recovery.messages.some(m => m.text === 'من فضلك اذكر تفاصيل تساعدنا على التحقق من ملكية الحساب.'));
+
+      const userReply = await request(app).post('/api/password-recovery/request/' + opened.body.requestId + '/messages')
+        .set('X-Recovery-Token', opened.body.recoveryToken)
+        .send({ text: 'هذه بيانات إضافية للتحقق من ملكية الحساب.' });
+      assert.equal(userReply.status, 200);
+      assert.equal(userReply.body.recovery.status, 'قيد التحقق');
+      assert.ok(userReply.body.recovery.messages.some(m => m.text === 'هذه بيانات إضافية للتحقق من ملكية الحساب.'));
+
       const issued = await request(app).post('/api/password-recovery/admin/requests/' + opened.body.requestId + '/issue-code')
         .set('Authorization', 'Bearer ' + adminToken).send({});
       assert.equal(issued.status, 200);
