@@ -135,6 +135,17 @@ button.secondary-btn,button.soft-btn,button[class*="bg-green-50"],button[class*=
   border:1px solid #C7D2FE!important;border-bottom:4px solid #C7D2FE!important;box-shadow:0 4px 0 rgba(99,102,241,.10)!important;
 }
 
+
+/* Unified page surfaces with the new indigo 3D button identity. */
+:root{--navy:#312E81;--navy2:#4338CA;--blue:#4F46E5;--blue-dark:#3730A3;--page:#F8FAFC;--border:#E2E8F0}
+body{background:var(--page);color:#1E293B}
+.app-header{background:rgba(255,255,255,.97);border-bottom-color:#E2E8F0}
+.panel,.premium-panel,.premium-card{background:#fff;border-color:#E2E8F0}
+.category-tile.active,.category-tile:hover,.category-tile:focus-visible{background:#EEF2FF;border-color:#A5B4FC}
+.category-tile-icon,.category-tile.active .category-tile-icon{background:#EEF2FF}
+.service-choice.selected{background:linear-gradient(180deg,#4F46E5,#4338CA)!important;color:#fff;border-color:#4338CA}
+.service-choice.selected .service-icon{background:rgba(255,255,255,.14)}
+
 </style>
 </head>
 <body class="min-h-screen antialiased">
