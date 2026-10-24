@@ -79,6 +79,33 @@ input:focus,textarea:focus,select:focus{border-color:#14B8A6!important;box-shado
 .service-choice.selected .service-icon{background:rgba(255,255,255,.14)}
 .global-refresh-float{background:linear-gradient(145deg,#14B8A6,#0F172A);box-shadow:0 8px 24px rgba(15,23,42,.22)}
 
+
+/* Match Android app action buttons: indigo primary, soft-indigo secondary, 15px corners and raised lower edge. */
+:root{--app-button:#4F46E5;--app-button-hover:#4338CA;--app-button-soft:#EEF2FF;--app-button-border:#C7D2FE;--app-button-text:#312E81}
+button.primary-btn,button.blue-btn,button.primary-pill,button.tab-active,button.tab-btn.active,button.section-nav-btn.active,
+button[class*="bg-blue-600"],button[class*="bg-blue-700"],button[class*="bg-indigo-600"],button[class*="bg-indigo-700"]{
+  background:linear-gradient(180deg,#4F46E5,#4338CA)!important;
+  color:#fff!important;border:1px solid #4338CA!important;border-bottom:3px solid #312E81!important;
+  border-radius:15px!important;box-shadow:0 5px 10px rgba(49,46,129,.22)!important;
+  font-weight:800;transition:background .18s,border-color .18s,box-shadow .18s,transform .18s
+}
+button.primary-btn:hover,button.blue-btn:hover,button.primary-pill:hover,
+button[class*="bg-blue-600"]:hover,button[class*="bg-indigo-600"]:hover{background:linear-gradient(180deg,#4338CA,#3730A3)!important}
+button.secondary-btn,button.soft-btn,button.subnav-btn.active,
+button[class*="bg-blue-50"],button[class*="bg-indigo-50"]{
+  background:#EEF2FF!important;color:#312E81!important;border:1px solid #C7D2FE!important;
+  border-bottom:3px solid #C7D2FE!important;border-radius:15px!important;
+  box-shadow:0 3px 7px rgba(99,102,241,.10)!important;font-weight:800
+}
+button.pill-btn,button.success-pill,button.danger-pill,button.tab-btn,button.section-nav-btn,button.subnav-btn{
+  border-radius:15px; border-bottom-width:3px;font-weight:800;
+  transition:background .18s,border-color .18s,box-shadow .18s,transform .18s
+}
+button.tab-btn:not(.active),button.section-nav-btn:not(.active),button.subnav-btn:not(.active){
+  border-color:#C7D2FE;background:#fff
+}
+button:focus-visible{outline:3px solid rgba(79,70,229,.22);outline-offset:2px}
+
 </style>
 </head>
 <body class="min-h-screen antialiased">
