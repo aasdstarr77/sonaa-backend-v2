@@ -39,6 +39,8 @@
     /* Header */
     .topbar{height:68px;display:flex;align-items:center;justify-content:space-between}
     .brand{display:flex;align-items:center;gap:10px;font-weight:900;color:var(--navy);font-size:23px}
+    .brand-mark{width:42px;height:42px;display:grid;place-items:center;background:#fff;border-radius:12px;border:1px solid var(--line)}
+    .brand-mark img{width:34px;height:34px;object-fit:contain}
     .brand img{width:38px;height:38px;object-fit:contain}
     .top-note{font-size:12px;font-weight:700;color:#5a6a85;background:#fff;border:1px solid var(--line);border-radius:999px;padding:7px 14px}
 
@@ -110,8 +112,9 @@
 </head>
 <body>
   <header class="shell topbar">
-    <a class="brand" href="/">
-      <img src="/images/LOGO_UPLOAD_HERE/logo.png" alt="شعار صُنّاع" width="120" height="120"> <span>صُنّاع</span>
+    <a class="brand" href="/" aria-label="صُنّاع - الصفحة الرئيسية">
+      <span class="brand-mark" aria-hidden="true"><img class="sonaa-logo-svg" src="/images/LOGO_UPLOAD_HERE/logo.png" alt="شعار صُنّاع" width="120" height="120" decoding="async"></span>
+      <span>صُنّاع</span>
     </a>
     <span class="top-note">خدمات أقرب.. وفرص أكبر</span>
   </header>
