@@ -88,6 +88,35 @@ button.tab-btn:not(.active),button.section-nav-btn:not(.active),button.subnav-bt
 }
 button:focus-visible{outline:3px solid rgba(79,70,229,.22);outline-offset:2px}
 
+
+
+/* Complete visual pass: remove leftover green/teal primary buttons and apply the same raised indigo 3D style across every panel. */
+button:not(.danger-pill):not(.danger-btn):not(.btn-danger):not(.delete-btn):not(.is-danger):not([data-variant="danger"]),
+input[type="button"],input[type="submit"],input[type="reset"],
+a.btn:not(.danger-btn):not(.btn-danger):not(.delete-btn),
+button[class*="bg-green-"],button[class*="bg-emerald-"],button[class*="bg-teal-"],button[class*="bg-cyan-"]{
+  border-radius:15px!important;
+  box-shadow:0 5px 0 rgba(49,46,129,.22),0 7px 14px rgba(49,46,129,.12)!important;
+  font-weight:800;transition:background .18s,border-color .18s,box-shadow .18s,transform .18s!important;
+}
+button:not(.danger-pill):not(.danger-btn):not(.btn-danger):not(.delete-btn):not(.is-danger):not([data-variant="danger"]),
+input[type="button"],input[type="submit"],input[type="reset"],a.btn:not(.danger-btn):not(.btn-danger):not(.delete-btn),
+button[class*="bg-green-"],button[class*="bg-emerald-"],button[class*="bg-teal-"],button[class*="bg-cyan-"],
+button[style*="#14B8A6"],button[style*="#0D9488"],button[style*="#0d9488"],button[style*="#0F766E"],button[style*="#0f766e"],button[style*="rgb(20, 184, 166)"],button[style*="rgb(13, 148, 136)"]{
+  background:linear-gradient(180deg,#4F46E5,#4338CA)!important;color:#fff!important;
+  border:1px solid #4338CA!important;border-bottom:4px solid #312E81!important;
+}
+button:not(.danger-pill):not(.danger-btn):not(.btn-danger):not(.delete-btn):not(.is-danger):not([data-variant="danger"]):hover,
+input[type="button"]:hover,input[type="submit"]:hover,input[type="reset"]:hover,a.btn:not(.danger-btn):not(.btn-danger):not(.delete-btn):hover{
+  background:linear-gradient(180deg,#4338CA,#3730A3)!important;
+  box-shadow:0 3px 0 rgba(49,46,129,.28),0 5px 10px rgba(49,46,129,.14)!important;transform:translateY(1px);
+}
+button:active,input[type="button"]:active,input[type="submit"]:active,a.btn:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(49,46,129,.24)!important}
+button.secondary-btn,button.soft-btn,button[class*="bg-green-50"],button[class*="bg-emerald-50"],button[class*="bg-teal-50"]{
+  background:linear-gradient(180deg,#F5F3FF,#EEF2FF)!important;color:#312E81!important;
+  border:1px solid #C7D2FE!important;border-bottom:4px solid #C7D2FE!important;box-shadow:0 4px 0 rgba(99,102,241,.10)!important;
+}
+
 </style>
 </head>
 <body class="min-h-screen antialiased">
