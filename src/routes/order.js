@@ -1544,9 +1544,10 @@ router.get('/:sn/chat', async (req, res, next) => {
     if (!isClient && !(await hasAcceptedGuidelines(fanniId))) return res.status(428).json({ code: 'TECHNICIAN_GUIDELINES_REQUIRED', message: 'يجب الموافقة على ميثاق التعامل المهني أولًا.' });
     const accepted = ['تم اختيار فني', 'تم الانتهاء'].includes(order.status);
     if (!isClient && accepted && String(order.assignedFanni || '') !== String(fanniId)) return res.status(403).json({ message: 'المحادثة بعد القبول متاحة للفني المعيّن فقط.' });
+    const requestedOfferId = String(req.query?.offerId || '').trim();
     const visibleMessages = (order.chatMessages || []).filter(m => {
       if (accepted) return isClient ? (!m.targetOfferId || String(m.targetOfferId) === String(order.acceptedOfferId || '')) : String(m.targetOfferId || '') === String(order.acceptedOfferId || '');
-      if (isClient) return Boolean(m.targetOfferId);
+      if (isClient) return Boolean(m.targetOfferId) && (!requestedOfferId || String(m.targetOfferId) === requestedOfferId);
       return String(m.targetOfferId || '') === String(technicianOffer._id);
     }).map(m => ({ senderRole: m.senderRole, text: m.text, targetOfferId: m.targetOfferId || '', createdAt: m.createdAt }));
     return res.json({ messages: visibleMessages, priceChangeRequests: accepted ? (order.priceChangeRequests || []) : [] });
