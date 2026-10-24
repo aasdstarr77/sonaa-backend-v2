@@ -1,12 +1,169 @@
-.cards{
-  display:grid;
-  grid-template-columns: 1fr 1fr !important;
-  gap:12px;
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head><style>
+@font-face {
+  font-family: "Optimistic";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("/fonts/OptimisticAI_VF_Optimized.woff2") format("woff2");
 }
-@media(max-width:700px){
-  .cards{grid-template-columns:1fr 1fr !important; gap:10px}
-  .entry{min-height:185px; padding:14px 12px 12px}
-  .entry h3{font-size:15px}
-  .entry p{font-size:11px}
-  .action-hint{display:none}
+@font-face {
+  font-family: "Optimistic Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/OptimisticMono_W_TextRegular.woff2") format("woff2");
 }
+:where(html) {
+  font-family: "Optimistic", system-ui, sans-serif;
+}
+:where(code, pre, kbd, samp) {
+  font-family: "Optimistic Mono", ui-monospace, monospace;
+}
+</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0A2342">
+  <link rel="icon" type="image/png" href="/images/LOGO_UPLOAD_HERE/logo.png">
+  <title>صُنّاع | كل خدمة تبدأ بخطوة</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root{--navy:#0b1b3a;--blue:#2563eb;--gold:#f5b928;--ink:#152544;--muted:#64748b;--line:#e7edf5;--paper:#f7f9fc}
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;font-family:'Cairo',system-ui,sans-serif;color:var(--ink);background:var(--paper);overflow-x:hidden}
+    a{text-decoration:none;color:inherit}
+    .shell{width:min(1120px,calc(100% - 32px));margin:auto}
+
+    /* Header */
+    .topbar{height:68px;display:flex;align-items:center;justify-content:space-between}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:900;color:var(--navy);font-size:23px}
+    .brand img{width:38px;height:38px;object-fit:contain}
+    .top-note{font-size:12px;font-weight:700;color:#5a6a85;background:#fff;border:1px solid var(--line);border-radius:999px;padding:7px 14px}
+
+    .home-nav{display:flex;align-items:center;gap:8px;padding:8px 0 16px}
+    .home-nav a,.home-nav button{border:1px solid var(--line);background:#fff;border-radius:10px;padding:7px 11px;color:var(--navy);font-size:12px;font-weight:800;cursor:pointer}
+    .home-nav .download-link{border-color:#a7f3d0;background:#ecfdf5;color:#047857;display:inline-flex;align-items:center;gap:6px}
+
+    /* HERO - تم تصغيره 60% */
+    .hero{position:relative;isolation:isolate;overflow:hidden;border-radius:20px;background:linear-gradient(115deg,#0b1b3a 20%,#143868 85%);color:#fff;padding:22px 26px;display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:132px;box-shadow:0 14px 30px #0b1b3a18}
+    .hero::before{content:"";position:absolute;width:300px;height:300px;left:-80px;top:-140px;border:1px solid #ffffff14;border-radius:50%}
+    .hero-text{position:relative;z-index:1;max-width:620px}
+    .eyebrow{display:inline-flex;align-items:center;gap:7px;border:1px solid #ffffff25;background:#ffffff10;border-radius:999px;padding:5px 10px;color:#ffe08a;font-size:11px;font-weight:800}
+    .eyebrow i{width:6px;height:6px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 3px #f5b92825}
+    h1{font-size:clamp(22px,2.8vw,32px);line-height:1.35;letter-spacing:-.5px;margin:10px 0 6px;font-weight:900}
+    h1 span{color:#ffd45e}
+    .hero-copy{font-size:13.5px;line-height:1.8;color:#c8d8ef;margin:0;max-width:520px;opacity:.95}
+    
+    .hero-badge{display:none}
+    @media(min-width:800px){
+      .hero-badge{display:flex;align-items:center;gap:10px;background:#ffffff12;border:1px solid #ffffff20;border-radius:14px;padding:10px 14px;font-size:12px;font-weight:700;color:#dbe7f8;backdrop-filter:blur(6px)}
+      .hero-badge b{color:#ffd45e}
+    }
+
+    /* Choose Section - بقى ظاهر فوق بدون سكرول */
+    .choose{padding:20px 0 10px}
+    .section-head{text-align:center;margin:0 auto 18px}
+    .section-head h2{margin:0;color:var(--navy);font-size:24px;font-weight:900}
+    .section-head p{margin:4px 0 0;color:var(--muted);font-size:13px}
+    
+    .cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:780px;margin:0 auto}
+    .entry{position:relative;display:flex;flex-direction:column;min-height:228px;padding:20px 20px 16px;border-radius:18px;background:#fff;border:1px solid var(--line);box-shadow:0 8px 24px #15254406;transition:.25s ease}
+    .entry:hover{transform:translateY(-5px);box-shadow:0 16px 32px #15254412;border-color:#d0ddf0}
+    .entry-icon{width:56px;height:56px;border-radius:16px;display:grid;place-items:center;margin-bottom:12px}
+    .customer .entry-icon{background:#eef4ff;color:#2a5bd0}
+    .technician .entry-icon{background:#fff7d6;color:#8a6500}
+    .entry-icon svg{width:30px;height:30px}
+    .entry h3{font-size:18px;font-weight:900;margin:0 0 4px;color:var(--navy)}
+    .entry p{margin:0;color:#6b7a90;line-height:1.75;font-size:12.8px}
+    .entry-action{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto;padding-top:16px}
+    .action-label{display:inline-flex;align-items:center;gap:7px;padding:10px 14px;border-radius:11px;font-weight:900;font-size:13px;color:#fff;background:var(--blue)}
+    .technician .action-label{background:#f0b51e;color:#172744}
+    .action-label svg{width:16px;height:16px}
+    .action-hint{font-size:11px;color:#8a98ad;font-weight:700}
+
+    /* Trust */
+    .trust-row{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:12px 22px;padding:18px 0 20px;color:#7a889d;font-size:11px;font-weight:700}
+    .trust-row span{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--line);padding:6px 10px;border-radius:999px}
+    .trust-row svg{width:14px;height:14px;color:#2c7b61}
+    
+    footer{border-top:1px solid var(--line);padding:14px 0;text-align:center;color:#9aa7b8;font-size:11px}
+
+    @media(max-width:700px){
+      .hero{padding:18px 18px;min-height:auto;border-radius:18px;flex-direction:column;align-items:flex-start}
+      h1{font-size:21px}
+      .hero-copy{font-size:12.8px}
+      .cards{grid-template-columns:1fr 1fr;gap:10px;max-width:100%}
+      .entry{min-height:185px;padding:14px 12px 12px;border-radius:16px}
+      .entry h3{font-size:15px}
+      .entry p{font-size:11px;line-height:1.6}
+      .entry-icon{width:48px;height:48px;border-radius:13px;margin-bottom:8px}
+      .action-label{padding:8px 10px;font-size:11.5px}
+      .action-hint{display:none}
+    }
+    @media(max-width:380px){
+      .cards{gap:8px}
+      .entry{padding:12px 10px}
+    }
+  </style>
+</head>
+<body>
+  <header class="shell topbar">
+    <a class="brand" href="/">
+      <img src="/images/LOGO_UPLOAD_HERE/logo.png" alt="شعار صُنّاع" width="120" height="120"> <span>صُنّاع</span>
+    </a>
+    <span class="top-note">خدمات أقرب.. وفرص أكبر</span>
+  </header>
+  <nav class="shell home-nav"><button type="button" onclick="if(history.length>1)history.back()">← رجوع</button><a href="/">⌂ الرئيسية</a><a href="https://aasdstarr77.github.io/sonaa-download/" class="download-link">⬇ تحميل التطبيق</a></nav>
+
+  <main class="shell">
+    <section class="hero">
+      <div class="hero-text">
+        <span class="eyebrow"><i></i> أهلاً بيك في صُنّاع</span>
+        <h1>إيد بتشتغل.. وعميل <span>بيلاقي خدمته</span></h1>
+        <p class="hero-copy">منصة بتوصّل الفني الشاطر بالعميل المحتاج، في مكان واحد وبخطوات بسيطة.</p>
+      </div>
+      <div class="hero-badge">✓ <div>أكتر من <b>12 خدمة</b><br>في مكان واحد</div></div>
+    </section>
+
+    <section class="choose">
+      <div class="section-head">
+        <h2>تحب تدخل بصفتك إيه؟</h2>
+        <p>اختار عشان نوصّلك للمكان الصح</p>
+      </div>
+      <div class="cards">
+        <a class="entry customer" href="/client">
+          <span class="entry-icon">
+            <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 21 24 7l17 14"/><path d="M12 19v22h24V19"/><path d="M20 41V28h8v13"/></svg>
+          </span>
+          <h3>الدخول كعميل</h3>
+          <p>محتاج سباك، كهربائي، نجار؟ اطلب خدمتك وتابعها بسهولة.</p>
+          <span class="entry-action">
+            <span class="action-label">ابدأ كعميل <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M19 12H5m7 7-7-7 7-7"/></svg></span>
+            <span class="action-hint">خدمتك على بُعد خطوة</span>
+          </span>
+        </a>
+        <a class="entry technician" href="/fanni">
+          <span class="entry-icon">
+            <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M27.5 9.5a12 12 0 0 0-15.8 15.8L5 32l11 11 6.7-6.7a12 12 0 0 0 15.8-15.8L29 30l-11-11 9.5-9.5Z"/></svg>
+          </span>
+          <h3>الدخول كفني</h3>
+          <p>مهارتك هي رزقك. انضم وابدأ تستقبل طلبات قريبة منك.</p>
+          <span class="entry-action">
+            <span class="action-label">ادخل لوحة الفني <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M19 12H5m7 7-7-7 7-7"/></svg></span>
+            <span class="action-hint">فرصتك تبدأ هنا</span>
+          </span>
+        </a>
+      </div>
+    </section>
+
+    <div class="trust-row">
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m5 12 4 4L19 6"/></svg> خطوات بسيطة</span>
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m5 12 4 4L19 6"/></svg> خدمات متنوعة</span>
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m5 12 4 4L19 6"/></svg> متابعة في مكان واحد</span>
+    </div>
+  </main>
+  <footer><div class="shell">صُنّاع — كل مهارة ليها فرصة، وكل خدمة ليها بداية.</div></footer>
+<script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script></body>
+</html>
