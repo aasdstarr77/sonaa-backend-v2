@@ -43,6 +43,24 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
   .global-refresh.is-refreshing svg{animation:global-refresh-spin .8s linear infinite}@keyframes global-refresh-spin{to{transform:rotate(360deg)}}
 .global-refresh-float{position:fixed;right:16px;bottom:calc(86px + env(safe-area-inset-bottom));z-index:80;width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#2563eb,#0b1b3a);color:#fff;border:2px solid #fff;box-shadow:0 8px 24px #0b1b3a35;transition:transform .18s,opacity .18s}.global-refresh-float:active{transform:scale(.94)}.global-refresh-float svg{width:23px;height:23px}.global-refresh-float.prelogin-floating{bottom:18px}
 .support-float{position:fixed;left:16px;bottom:calc(86px + env(safe-area-inset-bottom));z-index:80;width:52px;height:52px;border-radius:18px;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#0d9488,#0f766e);color:#fff;border:2px solid #fff;box-shadow:0 8px 24px #0d948835}.support-float.prelogin-floating{bottom:18px}.support-float svg{width:25px;height:25px}
+
+/* App-aligned visual refresh: presentation only; keep layout and behavior unchanged. */
+:root{--navy:#0F172A;--navy-light:#1E293B;--blue:#14B8A6;--blue-dark:#0D9488;--page:#F8FAFC;--border:#E2E8F0}
+body{background:var(--page);color:#1E293B}
+.panel{border-color:#E2E8F0;border-radius:20px;box-shadow:0 8px 24px rgba(15,23,42,.045)}
+.field{border-color:#E2E8F0;border-radius:14px;color:#1E293B}
+.field-label,.section-title{color:#1E293B}
+.primary-btn{background:linear-gradient(135deg,#14B8A6,#0D9488);border-radius:14px;box-shadow:0 4px 12px rgba(20,184,166,.18)}
+.primary-btn:hover{background:#0D9488}
+.secondary-btn{background:#F0FDFA;color:#0F766E;border-color:#99F6E4}
+input:focus,textarea:focus,select:focus{border-color:#14B8A6!important;box-shadow:0 0 0 3px rgba(20,184,166,.14)}
+.service-chip{border-color:#E2E8F0;border-radius:17px;box-shadow:0 2px 8px rgba(15,23,42,.025);color:#334155}
+.service-chip.selected{background:#F0FDFA;border-color:#14B8A6;color:#0F766E;box-shadow:0 0 0 1px #99F6E4 inset}
+.service-chip .service-icon{background:#CCFBF1}
+.service-chip.selected .service-icon{background:#99F6E4}
+.global-refresh-float{background:linear-gradient(145deg,#14B8A6,#0F172A);box-shadow:0 8px 24px rgba(15,23,42,.22)}
+.support-float{background:linear-gradient(145deg,#14B8A6,#0F766E);box-shadow:0 8px 24px rgba(20,184,166,.22)}
+
 </style>
 </head>
 <body class="min-h-screen antialiased">
