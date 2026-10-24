@@ -229,7 +229,7 @@ function render(){
         <div class="section-nav">
           ${ADMIN_SECTIONS.map(section=>`
             <button type="button" onclick="setSection('${section.id}')" class="section-nav-btn ${getAdminSectionForTab(state.tab)===section.id?'active':''}">
-              <span class="section-nav-icon">${section.icon}</span><span class="section-nav-label">${escHtml(section.label)}</span>${getAdminSectionCount(section)>0?`<span class="section-nav-count" aria-label="عدد الحالات التي تحتاج مراجعة">${escHtml(String(getAdminSectionCount(section)))}</span>`:''}
+              <span class="section-nav-icon">${section.icon}</span><span class="section-nav-label">${escHtml(section.label)}</span><span class="section-nav-count" aria-label="عدد الحالات التي تحتاج تدخل">${escHtml(String(Math.max(0,Number(getAdminSectionCount(section))||0)))}</span>
             </button>
           `).join('')}
         </div>
