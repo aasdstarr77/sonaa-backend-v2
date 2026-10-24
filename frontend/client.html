@@ -606,7 +606,7 @@ function render(){
                     `).join('')||'<p class="p-4 text-[12px] text-slate-500 text-center">مفيش نتائج مطابقة.</p>'}
                   </div>
                   ${selectedCategory?`
-                    <section class="category-details mt-3 border border-slate-200 rounded-2xl overflow-hidden">
+                    <section id="selectedCategoryDetails" class="category-details mt-3 border border-slate-200 rounded-2xl overflow-hidden">
                       <div class="flex items-center gap-2 px-3 py-3 bg-slate-50 border-b border-slate-100">
                         <span class="text-xl" aria-hidden="true">${escHtml(selectedCategory.emoji)}</span>
                         <div class="min-w-0 flex-1">
@@ -631,7 +631,7 @@ function render(){
 
             <div>
               <label for="areaInput" class="text-[12px] font-extrabold mb-1.5 block">المنطقة أو الحي *</label>
-              <input id="areaInput" type="text" value="${escAttr(state.area)}" oninput="onAreaInput(this.value)" maxlength="100" class="field h-[50px] px-4 text-[13px] font-bold" autocomplete="address-level2" placeholder="اكتب اسم المنطقة أو الحي">
+              <input id="areaInput" type="text" value="${escAttr(state.area)}" oninput="onAreaInput(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('addrInput')?.focus()}" maxlength="100" class="field h-[50px] px-4 text-[13px] font-bold" autocomplete="address-level2" placeholder="اكتب اسم المنطقة أو الحي">
               <p class="mt-1 text-[10px] text-slate-500">اكتب اسم المنطقة أو الحي، واكتب الشارع ورقم العمارة في العنوان التفصيلي.</p>
             </div>
             <div>
@@ -639,7 +639,7 @@ function render(){
                 <span>🏠 العنوان بالتفصيل</span>
                 <span id="addrCounter" class="text-[10px] text-slate-400">${state.address.length}/250</span>
               </label>
-              <input id="addrInput" value="${escAttr(state.address)}" oninput="onAddressInput(this.value)" maxlength="250" placeholder="اسم الشارع، رقم العمارة، الدور أو علامة مميزة..." class="field h-[50px] px-4 text-[13px] font-bold" autocomplete="street-address">
+              <input id="addrInput" value="${escAttr(state.address)}" oninput="onAddressInput(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('phoneInput')?.focus()}" maxlength="250" placeholder="اسم الشارع، رقم العمارة، الدور أو علامة مميزة..." class="field h-[50px] px-4 text-[13px] font-bold" autocomplete="street-address">
               <p class="mt-1 text-[10px] text-slate-500">اكتب عنوان المكان فقط، من غير أرقام تليفونات.</p>
             </div>
             <div>
@@ -647,12 +647,12 @@ function render(){
                 <span>📞 رقم تليفونك</span>
                 <span id="phoneStatus" class="text-[10px] font-bold ${VALIDATORS.phone(state.phone)?'text-emerald-600':'text-slate-400'}">${VALIDATORS.phone(state.phone)?'✓ صحيح':'11 رقم يبدأ بـ 01'}</span>
               </label>
-              <input id="phoneInput" value="${escAttr(state.phone)}" oninput="onPhoneInput(this.value)" inputmode="numeric" type="tel" maxlength="11" placeholder="01012345678" class="field h-[50px] px-4 text-[15px] font-bold tracking-widest" dir="ltr" autocomplete="tel">
+              <input id="phoneInput" value="${escAttr(state.phone)}" oninput="onPhoneInput(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('budgetInput')?.focus()}" inputmode="numeric" type="tel" maxlength="11" placeholder="01012345678" class="field h-[50px] px-4 text-[15px] font-bold tracking-widest" dir="ltr" autocomplete="tel">
               <p class="mt-1 text-[10px] text-slate-500">دي الخانة الوحيدة المخصصة لرقم تليفونك.</p>
             </div>
             <div>
               <label for="budgetInput" class="text-[12px] font-extrabold mb-1.5 block">💰 الميزانية المتوقعة (اختياري)</label>
-              <input id="budgetInput" value="${escAttr(state.budget)}" oninput="onBudgetInput(this.value)" maxlength="50" placeholder="مثال: من 300 إلى 500 جنيه" class="field h-[50px] px-4 text-[13px] font-bold">
+              <input id="budgetInput" value="${escAttr(state.budget)}" oninput="onBudgetInput(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('descInput')?.focus()}" maxlength="50" placeholder="مثال: من 300 إلى 500 جنيه" class="field h-[50px] px-4 text-[13px] font-bold">
               <p class="mt-1 text-[10px] text-slate-500">اكتب ميزانيتك التقريبية أو اترك الخانة فارغة، من غير أرقام تليفونات.</p>
             </div>
             <div>
@@ -660,7 +660,7 @@ function render(){
                 <span>وصف المشكلة وتفاصيل الشغل</span>
                 <span id="descCounter" class="text-[10px] text-slate-400">${state.desc.length}/1000</span>
               </label>
-              <textarea id="descInput" oninput="onDescInput(this.value)" maxlength="1000" placeholder="احكي المشكلة بالتفصيل، واكتب المطلوب من الفني..." class="field min-h-[112px] p-3.5 text-[13px] font-semibold resize-none leading-6">${escHtml(state.desc)}</textarea>
+              <textarea id="descInput" oninput="onDescInput(this.value)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();document.querySelector('button[onclick="createOrder()"]')?.focus()}" maxlength="1000" placeholder="احكي المشكلة بالتفصيل، واكتب المطلوب من الفني..." class="field min-h-[112px] p-3.5 text-[13px] font-semibold resize-none leading-6">${escHtml(state.desc)}</textarea>
               <p class="mt-1 text-[10px] text-slate-500">ما تكتبش رقم تليفونك داخل التفاصيل؛ رقمك موجود في الخانة المخصصة له.</p>
             </div>
             <button type="button" onclick="createOrder()" ${state.loading||state.servicesLoading?'disabled':''} class="w-full h-[52px] rounded-xl blue-btn font-extrabold text-[14px] flex items-center justify-center gap-2">
@@ -897,6 +897,8 @@ function toggleCategory(label){
   restoreScrollPosition(position);
   if(opening){
     requestAnimationFrame(()=>{
+      const details=document.getElementById('selectedCategoryDetails');
+      if(details)details.scrollIntoView({behavior:'smooth',block:'center'});
       const list=document.getElementById('serviceList');
       if(!list)return;
       const headings=list.querySelectorAll('.category-tile');
@@ -933,6 +935,7 @@ function selectService(serviceName){
   const clean=String(serviceName||'').trim();
   if(!clean||!ALL_SERVICES.includes(clean)){showToast('الخدمة غير موجودة في القائمة الرسمية.');return;}
   state.service=clean;state.showService=false;state.searchService='';state.openCategory='';render();
+  requestAnimationFrame(()=>{const next=document.getElementById('areaInput');if(next){next.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>{try{next.focus({preventScroll:true});}catch(error){next.focus();}},180);}});
 }
 function selectServiceByIndex(index){
   const service=ALL_SERVICES[index];
