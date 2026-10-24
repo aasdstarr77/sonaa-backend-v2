@@ -32,12 +32,12 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
 .primary-btn:hover{background:var(--blue-dark)}
 .secondary-btn{background:#eff6ff;color:#1d4ed8;border:1px solid #dbeafe;border-radius:12px;font-weight:800}
 .section-title{font-size:15px;font-weight:800;color:var(--navy)}
-.service-chip{display:flex;min-width:0;min-height:104px;width:calc(33.333% - 6px);flex-direction:column;align-items:center;justify-content:center;gap:7px;border:1px solid #dbe3ef;border-radius:14px;padding:10px 6px;font-size:11px;font-weight:800;text-align:center;line-height:1.5;background:#fff;color:#334155;cursor:pointer}
+.service-chip{display:flex;min-width:0;min-height:104px;width:100%;flex-direction:column;align-items:center;justify-content:center;gap:7px;border:1px solid #dbe3ef;border-radius:14px;padding:10px 6px;font-size:11px;font-weight:800;text-align:center;line-height:1.5;background:#fff;color:#334155;cursor:pointer;transition:background .15s,border-color .15s,transform .15s}
 .service-chip.selected{background:#eff6ff;border-color:#60a5fa;color:#1d4ed8;box-shadow:0 0 0 1px #bfdbfe inset}
 .service-chip input{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
 .service-chip .service-icon{width:42px;height:42px;border-radius:13px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:25px;flex-shrink:0}
 .service-chip.selected .service-icon{background:#dbeafe}
-@media(max-width:380px){.service-chip{width:calc(50% - 5px)}}
+@media(max-width:380px){.service-chip{min-height:96px}.service-chip .service-icon{width:38px;height:38px;font-size:23px}}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:99px}
   .global-refresh.is-refreshing svg{animation:global-refresh-spin .8s linear infinite}@keyframes global-refresh-spin{to{transform:rotate(360deg)}}
@@ -75,28 +75,45 @@ function esc(s){
  return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
-// أيقونات متنوعة للخدمات مع اختيار رموز مناسبة لمعنى الخدمة.
+// أيقونات متنوعة ومخصصة حسب نوع الخدمة لتقليل تكرار الرموز.
 function serviceIconFor(name){
   const s=String(name||'');
   const rules=[
-    [/كاميرات|مراقبة|دش|رسيفر|استقبال|شاشة تلفزيون|شبكة إنترنت/,'📡'],
+    [/كاميرات|مراقبة/,'📹'],
+    [/دش|رسيفر|استقبال|شاشة تلفزيون|شاشات/,'📡'],
     [/تنظيف سجاد|موكيت|كنب|انتريهات|مراتب/,'🧽'],
-    [/تنظيف|مكافحة حشرات/,'🧹'],
-    [/كهرباء|كهربائي|قواطع|مفاتيح|برايز|إضاءة|نجف/,'⚡'],
-    [/مروحة/,'🌀'],
+    [/مكافحة حشرات/,'🪲'],
+    [/تنظيف خزانات|خزانات مياه/,'🛢️'],
+    [/تنظيف زجاج|واجهات زجاج|زجاج/,'🪟'],
+    [/تنظيف|تطهير/,'🧹'],
+    [/كهربائي سيارات/,'🚗'],
+    [/كهرباء|كهربائي|قواطع|مفاتيح|برايز|إضاءة|نجف|لوحة الكهرباء/,'⚡'],
+    [/مراوح|مروحة/,'🌀'],
     [/تسريب|مياه|سباك|صرف صحي|سيفون|خلاطات|حوض|حمامات|مواسير|قاعدة حمام/,'🚿'],
-    [/تكييف|فريون|تبريد|ثلاجات|فريزر|مبرد مياه/,'❄️'],
-    [/غسالات|أطباق|بوتاجاز|أفران|ميكروويف|سخانات|أجهزة منزلية/,'🧺'],
-    [/نجار|أثاث|موبيليا|دواليب|أبواب|شبابيك|كالون|أقفال|مفصلات/,'🪚'],
-    [/نقاش|دهانات|ديكور|ورق حائط|شروخ|ترميم|جبس/,'🎨'],
-    [/ألوميتال|زجاج|سلك شبابيك/,'🪟'],
-    [/سيراميك|رخام|محارة|بناء|أرضيات|عزل|حجر|وزر|تشطيب/,'🧱'],
-    [/كمبيوتر|لابتوب|طابعات|راوتر|إنترنت|موبايلات|شبكات/,'💻'],
-    [/نقل|تركيب ستائر|رفوف|مرايات|فك وتركيب/,'🚚'],
-    [/غاز/,'🔥'],[/لحام|معدن/,'🛠️'],[/مضخات|مواتير/,'⚙️']
+    [/تكييف|فريون|تبريد/,'❄️'],
+    [/ثلاجات|فريزر|مبرد مياه/,'🧊'],
+    [/غسالات|أطباق/,'🧺'],
+    [/بوتاجاز|أفران|ميكروويف|غاز/,'🔥'],
+    [/سخانات/,'♨️'],
+    [/نجار|أثاث|موبيليا|دواليب|أبواب|شبابيك|مفصلات/,'🪚'],
+    [/أقفال|كالون|قفل/,'🔐'],
+    [/نقاش|دهانات|طلاء/,'🖌️'],
+    [/ديكور|ورق حائط|جبس بورد/,'🎨'],
+    [/شروخ|ترميم|محارة|بياض/,'🧱'],
+    [/ألوميتال/,'🪟'],
+    [/سيراميك|رخام|بناء|أرضيات|عزل|حجر|وزر|تشطيب|طوب/,'🧱'],
+    [/كمبيوتر|لابتوب|طابعات/,'💻'],
+    [/راوتر|إنترنت|شبكات/,'📶'],
+    [/موبايلات/,'📱'],
+    [/نقل أثاث|نقل أجهزة|نقل/,'🚚'],
+    [/ستائر/,'🪟'],
+    [/تركيب رفوف|تركيب مرايات/,'🪛'],
+    [/لحام|معدن/,'🛠️'],
+    [/مضخات|مواتير/,'⚙️'],
+    [/تركيب|فك|تثبيت|صيانة|إصلاح|تصليح/,'🔧']
   ];
   for(const [pattern,icon] of rules) if(pattern.test(s)) return icon;
-  const variety=['🔧','🪛','🧰','📐','🪜','🧲','🪠','🧯','🏠','🔩','⚙️','🛠️'];
+  const variety=['🔩','🪜','🧲','🪠','🧯','🏠','📐','🧰','🪛','🧱','⚙️','🔨'];
   let hash=0;
   for(let i=0;i<s.length;i++) hash=(hash*31+s.charCodeAt(i))>>>0;
   return variety[hash%variety.length];
@@ -603,7 +620,7 @@ function render(){
         <span class="min-w-0"><span class="block text-[12px] font-extrabold text-slate-800">${esc(cat.emoji)} ${esc(cat.label)}</span><span class="mt-1 block text-[10px] font-bold text-slate-500">${selectedCount?'تم اختيار '+selectedCount+' خدمة':'اضغط لعرض الخدمات'}</span></span>
         <span class="flex shrink-0 items-center gap-2"><span class="rounded-full bg-blue-100 px-2 py-1 text-[10px] font-extrabold text-blue-800">${selectedCount}</span><span class="text-slate-500">${isOpen?'−':'+'}</span></span>
        </button>
-       ${isOpen?`<div id="${categoryId}" class="flex flex-wrap gap-2 border-t border-slate-100 p-3">${cat.services.map(s=>`<label class="service-chip ${state.regSpecialties.includes(s)?'selected':''}"><input type="checkbox" data-specialty="${esc(s)}" ${state.regSpecialties.includes(s)?'checked':''} onchange="toggleSpecialty(this.dataset.specialty)"><span class="service-icon" aria-hidden="true">${serviceIconFor(s)}</span><span>${esc(s)}</span></label>`).join('')}</div>`:''}
+       ${isOpen?`<div id="${categoryId}" class="grid grid-cols-3 gap-2 border-t border-slate-100 p-3 max-[380px]:grid-cols-2">${cat.services.map(s=>`<label class="service-chip ${state.regSpecialties.includes(s)?'selected':''}"><input type="checkbox" data-specialty="${esc(s)}" ${state.regSpecialties.includes(s)?'checked':''} onchange="toggleSpecialty(this.dataset.specialty)"><span class="service-icon" aria-hidden="true">${serviceIconFor(s)}</span><span>${esc(s)}</span></label>`).join('')}</div>`:''}
       </section>`;
      }).join('')}
     </div>
