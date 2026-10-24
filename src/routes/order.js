@@ -157,7 +157,19 @@ function publicOrder(order, options = {}) {
   }
 
   if (Array.isArray(data.offers)) {
-    data.offers = data.offers.map(sanitizeOffer);
+    // A technician is allowed one offer per order. Hide historical duplicates
+    // at the API boundary as well as preventing new concurrent duplicates.
+    const seenTechnicians = new Set();
+    const uniqueOffers = [];
+    for (const offer of data.offers) {
+      const technicianId = String(offer?.fanni?._id || offer?.fanni || offer?.fanniId || '').trim();
+      const offerId = String(offer?._id || offer?.id || '').trim();
+      const key = technicianId ? `fanni:${technicianId}` : offerId ? `offer:${offerId}` : '';
+      if (key && seenTechnicians.has(key)) continue;
+      if (key) seenTechnicians.add(key);
+      uniqueOffers.push(offer);
+    }
+    data.offers = uniqueOffers.map(sanitizeOffer);
   }
 
   return data;
@@ -913,7 +925,7 @@ router.post('/:sn/offer', auth(), async (req, res, next) => {
       });
     }
 
-    order.offers.push({
+    const offerPayload = {
       fanni: req.userId,
       fanniId: String(req.userId),
       fanniName: req.user.name,
@@ -923,10 +935,42 @@ router.post('/:sn/offer', auth(), async (req, res, next) => {
       price: String(price),
       priceNum: price,
       message: sanitizeText(result.value.message)
-    });
+    };
 
-    order.status = 'وصلتك عروض';
-    await order.save();
+    // Make the "one offer per technician per order" rule atomic. A read/check
+    // followed by order.save() can race when two requests arrive together.
+    const offerCreatedAt = new Date();
+    const updatedOrder = await Order.findOneAndUpdate(
+      {
+        _id: order._id,
+        status: { $in: ACTIVE_STATUSES },
+        'offers.fanni': { $ne: req.userId },
+        $or: [
+          { expiresAt: { $exists: false } },
+          { expiresAt: null },
+          { expiresAt: { $gt: offerCreatedAt } }
+        ]
+      },
+      {
+        $push: { offers: offerPayload },
+        $set: { status: 'وصلتك عروض' }
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedOrder) {
+      const latestOrder = await Order.findById(order._id).select('status expiresAt offers.fanni').lean();
+      if (latestOrder?.offers?.some(offer => String(offer.fanni) === String(req.userId))) {
+        return res.status(409).json({ message: 'سبق أن أرسلت عرضًا لهذا الطلب' });
+      }
+      if (!latestOrder || !ACTIVE_STATUSES.includes(latestOrder.status)) {
+        return res.status(409).json({ message: 'الطلب غير منشور أو لم يعد متاحًا للعروض' });
+      }
+      if (latestOrder.expiresAt && latestOrder.expiresAt <= new Date()) {
+        return res.status(409).json({ message: 'انتهت مدة استقبال العروض لهذا الطلب' });
+      }
+      return res.status(409).json({ message: 'تعذر تسجيل العرض بسبب تحديث متزامن. حدّث الطلب وحاول مرة أخرى.' });
+    }
 
     await createNotification({
       recipientRole: 'client', recipientId: order.clientAccount, type: 'new_offer',
@@ -939,7 +983,7 @@ router.post('/:sn/offer', auth(), async (req, res, next) => {
       orderSn: order.sn,
       requiredCommission: commissionAmount,
       walletBalance,
-      offers: order.offers.map(offer => {
+      offers: updatedOrder.offers.map(offer => {
         const safeOffer =
           typeof offer.toObject === 'function'
             ? offer.toObject()
