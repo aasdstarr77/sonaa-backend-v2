@@ -49,11 +49,11 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--blue)!im
 .service-choice .service-icon{width:42px;height:42px;border-radius:13px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:25px;flex-shrink:0}
 .service-choice.selected{background:#0b1b3a;color:white;border-color:#0b1b3a}
 .service-choice.selected .service-icon{background:#ffffff20}
-.service-choice-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:10px}.service-picker-dialog{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:100;width:calc(100% - 24px);max-width:520px;max-height:82dvh;overflow:auto;border-radius:20px;background:#fff;box-shadow:0 0 0 100vmax rgba(15,23,42,.48),0 24px 70px #0f172a40;animation:fadeIn .18s ease both}.service-picker-dialog:has(.category-details) .category-tile-grid,.service-picker-dialog:has(.category-details) .service-search-intro{display:none}
+.service-choice-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:10px}.service-picker-dialog{position:fixed;top:50%;left:50%;translate:-50% -50%;transform:none;z-index:1000;width:min(520px,calc(100vw - 24px));max-height:calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow:auto;overscroll-behavior:contain;border-radius:20px;background:#fff;box-shadow:0 0 0 100vmax rgba(15,23,42,.48),0 24px 70px #0f172a40;animation:none;margin:0}.service-picker-dialog:has(.category-details) .category-tile-grid,.service-picker-dialog:has(.category-details) .service-search-intro{display:none}
 @media(max-width:380px){.service-choice-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 .animate-fade{animation:fadeIn .2s ease both}
-@media(max-width:480px){main{padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right))}}
+@media(max-width:480px){main{padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right))}.client-section-tabs{top:112px}}
   .global-refresh.is-refreshing svg{animation:global-refresh-spin .8s linear infinite}@keyframes global-refresh-spin{to{transform:rotate(360deg)}}
 </style>
 </head>
@@ -530,7 +530,7 @@ function render(){
   </header>
   ${renderPublicContent()}
   <main class="mx-auto w-full max-w-[640px] px-3 sm:px-4 pb-[160px] safe-bottom">
-    <div class="mt-4 flex p-1 bg-white rounded-[15px] shadow-sm border border-slate-200 gap-1">
+    <div class="client-section-tabs sticky top-[112px] z-30 mt-0 flex p-1 bg-white/95 rounded-[15px] shadow-sm border border-slate-200 gap-1 backdrop-blur-xl">
       ${[{id:'new',label:'طلب جديد'},{id:'orders',label:'طلباتي'},{id:'complaint',label:'شكوى'}].map(t=>`
         <button type="button" onclick="setTab('${t.id}')" class="flex-1 h-11 rounded-xl text-[12px] font-extrabold ${state.tab===t.id?'tab-active':'tab-idle'}">${t.label}</button>
       `).join('')}
