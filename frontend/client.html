@@ -35,10 +35,16 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--blue)!im
 .tab-active{background:var(--navy);color:white}
 .tab-idle{color:var(--muted)}
 .soft-card{background:#f8fafc;border:1px solid #e8eef5}
-.category-card{border:1px solid #d5deeb;background:white;border-radius:14px;overflow:hidden}
-.category-head{width:100%;display:flex;align-items:center;gap:10px;padding:13px;text-align:right;background:#fff;transition:background .15s}
-.category-head:hover,.category-head:focus-visible{background:#eff6ff;outline:2px solid #bfdbfe;outline-offset:-2px}
-.category-head:active{background:#dbeafe}
+.category-tile-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.category-tile{min-width:0;min-height:112px;padding:10px 6px;border:1px solid #dbe3ee;border-radius:15px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;transition:background .15s,border-color .15s,transform .15s}
+.category-tile:hover,.category-tile:focus-visible{background:#eff6ff;border-color:#93c5fd;outline:2px solid #bfdbfe;outline-offset:-2px}
+.category-tile:active{transform:scale(.98)}
+.category-tile.active{background:#eff6ff;border:2px solid #2563eb;padding:9px 5px}
+.category-tile-icon{width:42px;height:42px;border-radius:13px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:25px;flex-shrink:0}
+.category-tile.active .category-tile-icon{background:#dbeafe}
+.category-tile-label{font-size:12px;line-height:1.4;font-weight:900;color:#0f172a;overflow-wrap:anywhere}
+.category-tile-count{font-size:10px;font-weight:700;color:#64748b}
+@media(max-width:380px){.category-tile-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .service-choice{min-width:0;min-height:104px;text-align:center;padding:10px 7px;border:1px solid #e2e8f0;border-radius:14px;font-size:11px;font-weight:800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;background:#fff;white-space:normal;line-height:1.5;transition:background .15s,border-color .15s,transform .15s}
 .service-choice .service-icon{width:42px;height:42px;border-radius:13px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:25px;flex-shrink:0}
 .service-choice.selected{background:#0b1b3a;color:white;border-color:#0b1b3a}
@@ -501,6 +507,8 @@ function render(){
     ...c,
     services:c.services.filter(s=>!query||s.toLowerCase().includes(query)||c.label.toLowerCase().includes(query))
   })).filter(c=>c.services.length);
+  const visibleCategories=query?matching:CATEGORIES;
+  const selectedCategory=visibleCategories.find(c=>c.label===state.openCategory);
   document.getElementById('app').innerHTML=`
   <header class="app-header sticky top-0 z-40 backdrop-blur-xl">
     <div class="mx-auto w-full max-w-[640px] px-3 sm:px-4 h-[62px] flex items-center justify-between gap-2">
@@ -581,50 +589,35 @@ function render(){
                   <input id="svcSearch" value="${escAttr(state.searchService)}" oninput="searchService(this.value)" placeholder="ابحث عن خدمة أو قسم..." class="field h-10 px-3 text-[12px] font-bold">
                   <p class="text-[12px] text-slate-700 font-bold mt-2 px-1 leading-6">اختار القسم اللي يناسبك، وبعدها افتحه واختار خدمة واحدة من جواه.</p>
                 </div>
-                <div id="serviceList" class="max-h-[390px] overflow-y-auto overscroll-contain p-2 space-y-2">
-                  ${query?matching.map(c=>`
-                    <div class="category-card">
-                      <button type="button" onclick='toggleCategory(${escAttr(JSON.stringify(c.label))})' aria-expanded="${state.openCategory===c.label?'true':'false'}" class="category-head">
-                        <span class="text-xl">${escHtml(c.emoji)}</span>
-                        <span class="font-extrabold text-[13px] flex-1">${escHtml(c.label)}</span>
-                        <span class="text-[11px] text-slate-600 font-bold">${c.services.length} خدمة</span>
+                <div id="serviceList" class="max-h-[390px] overflow-y-auto overscroll-contain p-2">
+                  <div class="category-tile-grid">
+                    ${visibleCategories.map(c=>`
+                      <button type="button" onclick='toggleCategory(${escAttr(JSON.stringify(c.label))})' aria-expanded="${state.openCategory===c.label?'true':'false'}" aria-pressed="${state.openCategory===c.label?'true':'false'}" class="category-tile ${state.openCategory===c.label?'active':''}">
+                        <span class="category-tile-icon" aria-hidden="true">${escHtml(c.emoji)}</span>
+                        <span class="category-tile-label">${escHtml(c.label)}</span>
+                        <span class="category-tile-count">${c.services.length} خدمة</span>
                       </button>
-                      ${state.openCategory===c.label?`
-                        <div class="service-choice-grid border-t border-slate-100">
-                          ${c.services.map(s=>`
-                            <button type="button" 
-onclick="selectServiceByIndex(${ALL_SERVICES.indexOf(s)})"
- class="service-choice ${state.service===s?'selected':'hover:bg-blue-50'}">
-                              <span class="service-icon" aria-hidden="true">${serviceIconFor(s)}</span>
-                              <span>${escHtml(s)}</span>
-                            </button>
-                          `).join('')}
-                        </div>`:''}
-                    </div>
-                  `).join('')||'<p class="p-4 text-[12px] text-slate-500 text-center">مفيش نتائج مطابقة.</p>'
-                  :CATEGORIES.map(c=>`
-                    <div class="category-card">
-                      <button type="button" onclick='toggleCategory(${escAttr(JSON.stringify(c.label))})' aria-expanded="${state.openCategory===c.label?'true':'false'}" class="category-head">
-                        <span class="h-11 w-11 rounded-xl bg-blue-50 flex items-center justify-center text-2xl shrink-0">${escHtml(c.emoji)}</span>
-                        <span class="flex-1 min-w-0">
-                          <span class="block font-extrabold text-[14px] text-slate-900">${escHtml(c.label)}</span>
-                          <span class="block text-[12px] text-slate-600 font-bold mt-1">${c.services.length} خدمة — اضغط للفتح</span>
-                        </span>
-                        <span class="text-slate-700 text-sm font-black shrink-0">${state.openCategory===c.label?'▲':'▼'}</span>
-                      </button>
-                      ${state.openCategory===c.label?`
-                        <div class="service-choice-grid border-t border-slate-100 bg-white">
-                          ${c.services.map(s=>`
-                            <button type="button" 
-onclick="selectServiceByIndex(${ALL_SERVICES.indexOf(s)})"
- class="service-choice ${state.service===s?'selected':'hover:bg-blue-50'}">
-                              <span class="service-icon" aria-hidden="true">${serviceIconFor(s)}</span>
-                              <span>${escHtml(s)}</span>
-                            </button>
-                          `).join('')}
-                        </div>`:''}
-                    </div>
-                  `).join('')}
+                    `).join('')||'<p class="p-4 text-[12px] text-slate-500 text-center">مفيش نتائج مطابقة.</p>'}
+                  </div>
+                  ${selectedCategory?`
+                    <section class="category-details mt-3 border border-slate-200 rounded-2xl overflow-hidden">
+                      <div class="flex items-center gap-2 px-3 py-3 bg-slate-50 border-b border-slate-100">
+                        <span class="text-xl" aria-hidden="true">${escHtml(selectedCategory.emoji)}</span>
+                        <div class="min-w-0 flex-1">
+                          <h3 class="font-extrabold text-[13px] text-slate-900">${escHtml(selectedCategory.label)}</h3>
+                          <p class="text-[11px] text-slate-500 font-bold mt-0.5">اختار الخدمة التفصيلية</p>
+                        </div>
+                        <button type="button" onclick="toggleCategory('')" class="text-[11px] font-extrabold text-blue-700 px-2 py-1" aria-label="إغلاق الخدمات التفصيلية">إغلاق</button>
+                      </div>
+                      <div class="service-choice-grid">
+                        ${selectedCategory.services.map(s=>`
+                          <button type="button" onclick="selectServiceByIndex(${ALL_SERVICES.indexOf(s)})" class="service-choice ${state.service===s?'selected':'hover:bg-blue-50'}">
+                            <span class="service-icon" aria-hidden="true">${serviceIconFor(s)}</span>
+                            <span>${escHtml(s)}</span>
+                          </button>
+                        `).join('')}
+                      </div>
+                    </section>`:''}
                 </div>`}
               </div>`:''}
               <p class="mt-1 text-[11px] text-slate-600 font-semibold">${state.servicesError?'تعذر تحميل الخدمات - اضغط لإعادة المحاولة':'لازم تختار الخدمة قبل إرسال الطلب.'}</p>
@@ -898,7 +891,7 @@ function toggleCategory(label){
     requestAnimationFrame(()=>{
       const list=document.getElementById('serviceList');
       if(!list)return;
-      const headings=list.querySelectorAll('.category-head');
+      const headings=list.querySelectorAll('.category-tile');
       for(const heading of headings){
         if(heading.textContent.includes(label)){
           const listRect=list.getBoundingClientRect();
