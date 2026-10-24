@@ -39,8 +39,12 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--blue)!im
 .category-head{width:100%;display:flex;align-items:center;gap:10px;padding:13px;text-align:right;background:#fff;transition:background .15s}
 .category-head:hover,.category-head:focus-visible{background:#eff6ff;outline:2px solid #bfdbfe;outline-offset:-2px}
 .category-head:active{background:#dbeafe}
-.service-choice{width:100%;min-height:43px;text-align:right;padding:9px 12px;border-radius:10px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:8px}
-.service-choice.selected{background:#0b1b3a;color:white}
+.service-choice{min-width:0;min-height:104px;text-align:center;padding:10px 7px;border:1px solid #e2e8f0;border-radius:14px;font-size:11px;font-weight:800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;background:#fff;white-space:normal;line-height:1.5;transition:background .15s,border-color .15s,transform .15s}
+.service-choice .service-icon{width:42px;height:42px;border-radius:13px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:25px;flex-shrink:0}
+.service-choice.selected{background:#0b1b3a;color:white;border-color:#0b1b3a}
+.service-choice.selected .service-icon{background:#ffffff20}
+.service-choice-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:10px}
+@media(max-width:380px){.service-choice-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 .animate-fade{animation:fadeIn .2s ease both}
 @media(max-width:480px){main{padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right))}}
@@ -60,6 +64,34 @@ function escHtml(value){
     .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 function escAttr(value){return escHtml(value).replace(/`/g,'&#96;')}
+
+// أيقونات متنوعة للخدمات مع اختيار رموز مناسبة لمعنى الخدمة.
+function serviceIconFor(name){
+  const s=String(name||'');
+  const rules=[
+    [/كاميرات|مراقبة|دش|رسيفر|استقبال|شاشة تلفزيون|شبكة إنترنت/,'📡'],
+    [/تنظيف سجاد|موكيت|كنب|انتريهات|مراتب/,'🧽'],
+    [/تنظيف|مكافحة حشرات/,'🧹'],
+    [/كهرباء|كهربائي|قواطع|مفاتيح|برايز|إضاءة|نجف/,'⚡'],
+    [/مروحة/,'🌀'],
+    [/تسريب|مياه|سباك|صرف صحي|سيفون|خلاطات|حوض|حمامات|مواسير|قاعدة حمام/,'🚿'],
+    [/تكييف|فريون|تبريد|ثلاجات|فريزر|مبرد مياه/,'❄️'],
+    [/غسالات|أطباق|بوتاجاز|أفران|ميكروويف|سخانات|أجهزة منزلية/,'🧺'],
+    [/نجار|أثاث|موبيليا|دواليب|أبواب|شبابيك|كالون|أقفال|مفصلات/,'🪚'],
+    [/نقاش|دهانات|ديكور|ورق حائط|شروخ|ترميم|جبس/,'🎨'],
+    [/ألوميتال|زجاج|سلك شبابيك/,'🪟'],
+    [/سيراميك|رخام|محارة|بناء|أرضيات|عزل|حجر|وزر|تشطيب/,'🧱'],
+    [/كمبيوتر|لابتوب|طابعات|راوتر|إنترنت|موبايلات|شبكات/,'💻'],
+    [/نقل|تركيب ستائر|رفوف|مرايات|فك وتركيب/,'🚚'],
+    [/غاز/,'🔥'],[/لحام|معدن/,'🛠️'],[/مضخات|مواتير/,'⚙️']
+  ];
+  for(const [pattern,icon] of rules) if(pattern.test(s)) return icon;
+  const variety=['🔧','🪛','🧰','📐','🪜','🧲','🪠','🧯','🏠','🔩','⚙️','🛠️'];
+  let hash=0;
+  for(let i=0;i<s.length;i++) hash=(hash*31+s.charCodeAt(i))>>>0;
+  return variety[hash%variety.length];
+}
+
 function sanitizeInput(value,max=500){
   return String(value||'').trim().slice(0,max)
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,'');
@@ -541,12 +573,12 @@ function render(){
                         <span class="text-[11px] text-slate-600 font-bold">${c.services.length} خدمة</span>
                       </button>
                       ${state.openCategory===c.label?`
-                        <div class="border-t border-slate-100 p-1.5">
+                        <div class="service-choice-grid border-t border-slate-100">
                           ${c.services.map(s=>`
                             <button type="button" 
 onclick="selectServiceByIndex(${ALL_SERVICES.indexOf(s)})"
  class="service-choice ${state.service===s?'selected':'hover:bg-blue-50'}">
-                              <span>${state.service===s?'✓':'○'}</span>
+                              <span class="service-icon" aria-hidden="true">${serviceIconFor(s)}</span>
                               <span>${escHtml(s)}</span>
                             </button>
                           `).join('')}
@@ -564,12 +596,12 @@ onclick="selectServiceByIndex(${ALL_SERVICES.indexOf(s)})"
                         <span class="text-slate-700 text-sm font-black shrink-0">${state.openCategory===c.label?'▲':'▼'}</span>
                       </button>
                       ${state.openCategory===c.label?`
-                        <div class="border-t border-slate-100 p-1.5 bg-white">
+                        <div class="service-choice-grid border-t border-slate-100 bg-white">
                           ${c.services.map(s=>`
                             <button type="button" 
 onclick="selectServiceByIndex(${ALL_SERVICES.indexOf(s)})"
  class="service-choice ${state.service===s?'selected':'hover:bg-blue-50'}">
-                              <span>${state.service===s?'✓':'○'}</span>
+                              <span class="service-icon" aria-hidden="true">${serviceIconFor(s)}</span>
                               <span>${escHtml(s)}</span>
                             </button>
                           `).join('')}
