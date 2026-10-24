@@ -7,6 +7,8 @@ process.env.JWT_SECRET = 'sonaa-test-only-secret-change-me';
 process.env.ADMIN_PHONE = '01012345678';
 
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const request = require('supertest');
 const { MongoMemoryServer } = require('mongodb-memory-server');
 const errorHandler = require('../middleware/error');
@@ -363,6 +365,52 @@ async function run() {
       assert.equal(r.body.order.status, 'قيد المراجعة');
       orderSN = r.body.sn;
       orderClientToken = r.body.clientToken;
+    });
+
+    await test('client order responses collapse historical duplicate offers from the same technician', async () => {
+      const { ALL_SERVICES } = require('../config/professions');
+      const created = await request(app).post('/api/orders')
+        .set('Authorization', 'Bearer ' + clientToken)
+        .send({
+          service: ALL_SERVICES[0], area: 'المعادي', address: 'شارع التحرير 10',
+          description: 'أحتاج فني لاختبار منع تكرار العروض'
+        });
+      assert.equal(created.status, 201);
+      const Order = require('../models/Order');
+      const order = await Order.findOne({ sn: created.body.sn });
+      assert.ok(order);
+      const technicianId = new mongoose.Types.ObjectId();
+      const duplicateOffer = {
+        fanni: technicianId,
+        fanniId: String(technicianId),
+        fanniName: 'فني اختبار',
+        price: '250',
+        priceNum: 250,
+        message: 'عرض تجريبي'
+      };
+      order.offers.push({ ...duplicateOffer }, { ...duplicateOffer });
+      await order.save();
+
+      const response = await request(app).get('/api/client/orders')
+        .set('Authorization', 'Bearer ' + clientToken);
+      assert.equal(response.status, 200);
+      const visibleOrder = response.body.orders.find(item => item.sn === created.body.sn);
+      assert.ok(visibleOrder);
+      assert.equal(visibleOrder.offers.length, 1);
+      assert.equal(visibleOrder.offers[0].fanniName, 'فني اختبار');
+    });
+
+    await test('offer submission uses an atomic guard against concurrent duplicate offers', async () => {
+      const source = fs.readFileSync(path.join(__dirname, '../routes/order.js'), 'utf8');
+      const offerStart = source.indexOf("router.post('/:sn/offer'");
+      const offerEnd = source.indexOf("\nrouter.post('/:sn/accept'", offerStart);
+      assert.notEqual(offerStart, -1);
+      assert.notEqual(offerEnd, -1);
+      const offerRoute = source.slice(offerStart, offerEnd);
+      assert.match(offerRoute, /Order\.findOneAndUpdate\(/);
+      assert.match(offerRoute, /'offers\.fanni': \{ \$ne: req\.userId \}/);
+      assert.match(offerRoute, /\$push: \{ offers: offerPayload \}/);
+      assert.match(offerRoute, /سبق أن أرسلت عرضًا لهذا الطلب/);
     });
 
     await test('matching tracking token can retrieve its order', async () => {
