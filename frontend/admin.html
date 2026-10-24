@@ -150,6 +150,17 @@ button.secondary-btn,button.soft-btn,button[class*="bg-green-50"],button[class*=
   border:1px solid #C7D2FE!important;border-bottom:4px solid #C7D2FE!important;box-shadow:0 4px 0 rgba(99,102,241,.10)!important;
 }
 
+
+/* Replace leftover navy dashboard chrome with light surfaces and the shared indigo identity. */
+:root{--navy:#312E81;--blue:#4F46E5;--blue2:#4338CA;--page:#F8FAFC;--card:#fff}
+body{background:radial-gradient(1000px 500px at 20% -10%,rgba(79,70,229,.07),transparent),var(--page);color:#1E293B}
+.premium-panel,.premium-card{background:linear-gradient(180deg,#fff,#F8FAFC);border-color:#E2E8F0}
+.premium-card::before{background:linear-gradient(90deg,#4F46E5,#818CF8,#C7D2FE)}
+.tab-btn.active,.section-nav-btn.active{background:linear-gradient(180deg,#4F46E5,#4338CA)!important;border-color:#4338CA!important;color:#fff;box-shadow:0 5px 0 #312E81,0 8px 18px rgba(49,46,129,.16)}
+.tab-btn.active .ic{background:rgba(255,255,255,.16)}
+.section-nav-btn.active .section-nav-count{background:#DDD6FE;color:#312E81}
+.global-refresh-float,.support-float{background:linear-gradient(145deg,#4F46E5,#312E81)!important;box-shadow:0 8px 24px rgba(79,70,229,.24)}
+
 </style>
 </head>
 <body class="min-h-screen antialiased">
