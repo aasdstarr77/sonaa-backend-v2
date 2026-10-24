@@ -55,6 +55,7 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--blue)!im
 .animate-fade{animation:fadeIn .2s ease both}
 @media(max-width:480px){main{padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right))}.client-section-tabs{top:112px}}
   .global-refresh.is-refreshing svg{animation:global-refresh-spin .8s linear infinite}@keyframes global-refresh-spin{to{transform:rotate(360deg)}}
+.global-refresh-float{position:fixed;right:16px;bottom:calc(86px + env(safe-area-inset-bottom));z-index:80;width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#2563eb,#0b1b3a);color:#fff;border:2px solid #fff;box-shadow:0 8px 24px #0b1b3a35;transition:transform .18s,opacity .18s}.global-refresh-float:active{transform:scale(.94)}.global-refresh-float svg{width:23px;height:23px}.global-refresh-float.prelogin-floating{bottom:18px}
 </style>
 </head>
 <body class="min-h-screen antialiased">
@@ -380,7 +381,7 @@ function renderAccountGate(){
   if(!reg)h+='<p class="mt-2 text-left"><a class="text-xs font-bold text-blue-700" href="password.html?role=client&mode=recovery">نسيت كلمة المرور؟</a></p>';if(reg)h+='<div><label class="block mb-1.5 text-xs font-extrabold">تأكيد كلمة السر</label><input id="accountConfirmPassword" required type="password" minlength="8" maxlength="128" autocomplete="new-password" class="field h-12 px-3 text-sm" placeholder="أعد كتابة كلمة السر"></div>';
   if(state.accountError)h+='<p class="rounded-xl bg-red-50 border border-red-200 p-3 text-xs leading-6 font-bold text-red-700">'+escHtml(state.accountError)+'</p>';
   h+='<button type="submit" '+(state.accountLoading?'disabled':'')+' class="w-full h-12 rounded-xl blue-btn font-extrabold text-sm">'+(state.accountLoading?'جاري التنفيذ...':reg?'إنشاء حساب العميل':'دخول إلى حسابي')+'</button></form><p class="mt-4 text-center text-[10px] leading-5 text-slate-500">كلمة السر لا تُشارك مع أي شخص.</p></div></div></main>';
-  document.getElementById('app').innerHTML=h+renderPublicContent();
+  document.getElementById('app').innerHTML=h+renderPublicContent()+`<button id="global-refresh" type="button" onclick="handleGlobalRefresh()" aria-label="تحديث البيانات" title="تحديث البيانات" class="global-refresh global-refresh-float prelogin-floating"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7v5h-5"/><path d="M4 17v-5h5"/><path d="M5.6 9A7 7 0 0 1 17 5l3 7M4 12l3 7a7 7 0 0 0 11.4-2"/></svg></button>`;
 }
 function renderPublicContent(){
   const c=state.publicContent||{announcement:'',faqs:[]};
@@ -521,7 +522,7 @@ function render(){
       </div>
       <div class="flex items-center gap-1.5 shrink-0"><a href="https://aasdstarr77.github.io/sonaa-download/" aria-label="تحميل تطبيق صُنّاع" title="تحميل تطبيق صُنّاع" class="h-9 px-3 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 inline-flex items-center justify-center gap-2 shrink-0 text-[11px] font-extrabold whitespace-nowrap"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg><span>تحميل التطبيق</span></a><button type="button" onclick="toggleNotifications()" aria-label="الإشعارات" class="relative h-9 w-9 rounded-xl border border-amber-200 bg-amber-50 text-[18px] text-amber-600">🔔${notificationBadge()}</button>
         
-        <button type="button" onclick="setTab('new')" class="h-9 px-3 rounded-xl primary-btn text-[11px] font-extrabold">طلب جديد +</button>
+        <a href="password.html?role=client&mode=account" class="h-9 px-3 rounded-xl border border-blue-200 bg-blue-50 text-blue-800 inline-flex items-center justify-center text-[11px] font-extrabold">حسابي</a>
         <button type="button" onclick="logoutClient()" class="h-9 px-3 rounded-xl bg-slate-100 text-slate-700 text-[11px] font-extrabold">خروج</button>
       </div>
     </div>
@@ -852,7 +853,7 @@ ${state.tracked.acceptedOfferId && String(state.tracked.acceptedOfferId)===offer
     </div>`:''}
   </main>
   <nav class="fixed bottom-0 inset-x-0 z-30 border-t border-slate-200 bg-white/95 backdrop-blur-xl safe-bottom">
-    <div class="mx-auto max-w-[640px] px-1 h-[72px] grid grid-cols-5 gap-0.5">
+    <div class="mx-auto max-w-[640px] px-1 h-[72px] grid grid-cols-4 gap-0.5">
       ${[{id:'new',icon:'＋',label:'طلب'},{id:'track',icon:'◉',label:'تتبع'},{id:'complaint',icon:'⚠',label:'شكوى'}].map(t=>`
         <button type="button" onclick="setTab('${t.id}')" class="rounded-xl flex flex-col items-center justify-center gap-1 ${state.tab===t.id?'bg-blue-50 text-blue-800':'text-slate-500'}">
           <span class="text-[17px] font-black">${t.icon}</span>
@@ -860,9 +861,9 @@ ${state.tracked.acceptedOfferId && String(state.tracked.acceptedOfferId)===offer
           ${state.tab===t.id?'<span class="w-5 h-0.5 rounded-full bg-blue-700"></span>':''}
         </button>`).join('')}
       <a href="support.html?role=client" aria-label="الدعم" title="الدعم" class="rounded-xl flex flex-col items-center justify-center gap-1 text-teal-700"><svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 14v-3a9 9 0 0 1 18 0v3"/><path d="M5 14h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H6a3 3 0 0 1-3-3v-2a1 1 0 0 1 1-1Zm14 0h-2a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h1a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1Z"/></svg><span class="text-[9px] font-extrabold">الدعم</span></a>
-      <button id="global-refresh" type="button" onclick="handleGlobalRefresh()" aria-label="تحديث البيانات" title="تحديث البيانات" class="global-refresh rounded-xl flex flex-col items-center justify-center gap-1 text-blue-800"><svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7v5h-5"/><path d="M4 17v-5h5"/><path d="M5.6 9A7 7 0 0 1 17 5l3 7M4 12l3 7a7 7 0 0 0 11.4-2"/></svg><span class="text-[9px] font-extrabold">تحديث</span></button>
+      
     </div>
-  </nav>`;
+  </nav><button id="global-refresh" type="button" onclick="handleGlobalRefresh()" aria-label="تحديث البيانات" title="تحديث البيانات" class="global-refresh global-refresh-float"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7v5h-5"/><path d="M4 17v-5h5"/><path d="M5.6 9A7 7 0 0 1 17 5l3 7M4 12l3 7a7 7 0 0 0 11.4-2"/></svg></button>`;
 }
 function setTab(tab){state.tab=tab;render();}
 function toggleService(){
@@ -1199,7 +1200,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 render();
 </script>
 
-<script>async function handleGlobalRefresh(){const button=document.getElementById('global-refresh');if(button?.disabled)return;if(button){button.disabled=true;button.classList.add('is-refreshing');}try{await refreshClientPage();}finally{if(button){button.disabled=false;button.classList.remove('is-refreshing');}}}</script>
-<nav id="sonaa-password-links" style="position:fixed;z-index:9999;bottom:12px;left:12px;right:12px;max-width:680px;margin:auto;display:none;gap:8px;justify-content:center;flex-wrap:wrap;padding:8px;background:#ffffffee;border:1px solid #dbe4f0;border-radius:14px;box-shadow:0 6px 24px #0b1b3a22;font-family:Cairo,Arial,sans-serif"><a href="password.html?role=client&mode=account" style="padding:8px 12px;border-radius:10px;background:#0b1b3a;color:white;text-decoration:none;font-size:12px;font-weight:800">حسابي</a></nav><script>(function(){const n=document.getElementById('sonaa-password-links');function sync(){let t='';try{t=localStorage.getItem('sonaa_client_account_token')||''}catch(_){}n.style.display=t?'flex':'none'}sync();window.addEventListener('storage',sync);setInterval(sync,1500)})();</script>
+<script>async function handleGlobalRefresh(){const button=document.getElementById('global-refresh');if(button?.disabled)return;if(button){button.disabled=true;button.classList.add('is-refreshing');}try{if(!state.account){await Promise.allSettled([loadServices(),loadPublicContent()]);showToast('تم تحديث البيانات','success');}else{await refreshClientPage();}}finally{if(button){button.disabled=false;button.classList.remove('is-refreshing');}}}</script>
+
 </body>
 </html>
