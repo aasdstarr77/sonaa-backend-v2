@@ -41,6 +41,8 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:99px}
   .global-refresh.is-refreshing svg{animation:global-refresh-spin .8s linear infinite}@keyframes global-refresh-spin{to{transform:rotate(360deg)}}
+.global-refresh-float{position:fixed;right:16px;bottom:calc(86px + env(safe-area-inset-bottom));z-index:80;width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#2563eb,#0b1b3a);color:#fff;border:2px solid #fff;box-shadow:0 8px 24px #0b1b3a35;transition:transform .18s,opacity .18s}.global-refresh-float:active{transform:scale(.94)}.global-refresh-float svg{width:23px;height:23px}.global-refresh-float.prelogin-floating{bottom:18px}
+.support-float{position:fixed;left:16px;bottom:calc(86px + env(safe-area-inset-bottom));z-index:80;width:52px;height:52px;border-radius:18px;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#0d9488,#0f766e);color:#fff;border:2px solid #fff;box-shadow:0 8px 24px #0d948835}.support-float.prelogin-floating{bottom:18px}.support-float svg{width:25px;height:25px}
 </style>
 </head>
 <body class="min-h-screen antialiased">
@@ -579,7 +581,7 @@ function render(){
    </div>
    <div class="flex items-center gap-2 shrink-0"><a href="https://aasdstarr77.github.io/sonaa-download/" aria-label="تحميل تطبيق صُنّاع" title="تحميل تطبيق صُنّاع" class="h-9 px-3 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 inline-flex items-center justify-center gap-2 text-[11px] font-extrabold whitespace-nowrap"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg><span>تحميل التطبيق</span></a><button onclick="toggleNotifications()" aria-label="الإشعارات" class="relative h-9 w-9 rounded-xl border border-amber-200 bg-amber-50 text-[18px] text-amber-600">🔔${notificationBadge()}</button>
     
-    ${authenticated?'<button onclick="logout()" class="h-9 px-3 rounded-xl bg-white/10 text-[11px] font-bold">خروج</button>':''}
+    ${authenticated?'<div class="flex flex-col gap-1"><button onclick="logout()" class="h-8 px-3 rounded-xl bg-white/10 text-[11px] font-bold">خروج</button><button onclick="setTab(\'profile\')" class="h-8 px-3 rounded-xl bg-white text-blue-900 text-[11px] font-extrabold shadow-sm">حسابي</button></div>':''}
    </div>
   </div>
   <div class="mx-auto max-w-[680px] px-3 pb-2 flex gap-2"><button type="button" onclick="goBack()" class="h-9 px-3 rounded-xl border border-white/20 bg-white/10 text-white text-[11px] font-extrabold">← رجوع</button><a href="/" aria-label="القائمة الرئيسية" title="القائمة الرئيسية" class="h-9 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 flex items-center justify-center text-white text-[11px] font-extrabold">⌂ القائمة الرئيسية</a></div>
@@ -661,7 +663,7 @@ function render(){
    <div class="mt-3 text-[11px] text-blue-100/80 leading-5"><b class="text-white">مناطق العمل:</b> ${esc(areas.join('، ')||'غير محددة')}</div>
   </section>
 
-  <section class="mt-4"><div class="grid grid-cols-5 gap-2">${[['available','📋','طلبات متاحه',state.filteredOrders.length],['myOffers','💼','طلبات جاريه',state.myOffers.length],['completed','🏁','المهام المكتملة',state.completedOffers.length],['wallet','💳','محفظتي',''],['profile','👤','حسابي','']].map(t=>`<button onclick="setTab('${t[0]}')" class="rounded-2xl border p-2 flex flex-col items-center justify-center gap-1.5 min-h-[76px] ${state.tab===t[0]?'bg-blue-50 border-blue-300 text-blue-800':'bg-white border-slate-200 text-slate-600'}"><span>${t[1]}</span><span class="text-[10px] font-extrabold">${t[2]}</span>${t[3]!==''?`<span class="text-[9px] rounded-full bg-white border px-2">${t[3]}</span>`:''}</button>`).join('')}</div></section>
+  <section class="mt-4"><div class="grid grid-cols-4 gap-2">${[['available','📋','طلبات متاحه',state.filteredOrders.length],['myOffers','💼','طلبات جاريه',state.myOffers.length],['completed','🏁','المهام المكتملة',state.completedOffers.length],['wallet','💳','محفظتي','']].map(t=>`<button onclick="setTab('${t[0]}')" class="rounded-2xl border p-2 flex flex-col items-center justify-center gap-1.5 min-h-[76px] ${state.tab===t[0]?'bg-blue-50 border-blue-300 text-blue-800':'bg-white border-slate-200 text-slate-600'}"><span>${t[1]}</span><span class="text-[10px] font-extrabold">${t[2]}</span>${t[3]!==''?`<span class="text-[9px] rounded-full bg-white border px-2">${t[3]}</span>`:''}</button>`).join('')}</div></section>
 
   ${state.tab==='available'?`
    <section class="mt-4 space-y-3">
@@ -845,12 +847,13 @@ function render(){
  </main>
 
  <nav class="fixed bottom-0 inset-x-0 z-30 border-t bg-white/95 backdrop-blur-xl safe-bottom">
-  <div class="mx-auto max-w-[680px] px-1 h-[70px] grid grid-cols-6 gap-0.5">
-   ${authenticated?[['available','📋','الطلبات'],['myOffers','💼','عروضي'],['wallet','💳','المحفظة'],['profile','👤','حسابي']].map(t=>`<button onclick="setTab('${t[0]}')" class="rounded-xl flex flex-col items-center justify-center gap-1 ${state.tab===t[0]?'bg-blue-50 text-blue-800':'text-slate-500'}"><span>${t[1]}</span><span class="text-[9px] font-extrabold">${t[2]}</span></button>`).join(''):`<button onclick="setTab('login')">🔑<span class="block text-[10px]">دخول</span></button><button onclick="setTab('register')">📝<span class="block text-[10px]">تسجيل</span></button><button onclick="goClient()">👥<span class="block text-[10px]">عميل</span></button><button onclick="setTab('register')">🧑‍🔧<span class="block text-[10px]">فني</span></button>`}
-      <a href="support.html?role=fanni" aria-label="الدعم" title="الدعم" class="rounded-xl flex flex-col items-center justify-center gap-1 text-teal-700"><svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 14v-3a9 9 0 0 1 18 0v3"/><path d="M5 14h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H6a3 3 0 0 1-3-3v-2a1 1 0 0 1 1-1Zm14 0h-2a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h1a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1Z"/></svg><span class="text-[9px] font-extrabold">الدعم</span></a>
-      <button id="global-refresh" type="button" onclick="handleGlobalRefresh()" aria-label="تحديث البيانات" title="تحديث البيانات" class="global-refresh rounded-xl flex flex-col items-center justify-center gap-1 text-blue-800"><svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7v5h-5"/><path d="M4 17v-5h5"/><path d="M5.6 9A7 7 0 0 1 17 5l3 7M4 12l3 7a7 7 0 0 0 11.4-2"/></svg><span class="text-[9px] font-extrabold">تحديث</span></button>
-  </div>
- </nav>`;
+   <div class="mx-auto max-w-[680px] px-1 h-[70px] grid grid-cols-4 gap-0.5">
+    ${authenticated?[['available','📋','الطلبات'],['myOffers','💼','عروضي'],['wallet','💳','المحفظة']].map(t=>`<button onclick="setTab('${t[0]}')" class="rounded-xl flex flex-col items-center justify-center gap-1 ${state.tab===t[0]?'bg-blue-50 text-blue-800':'text-slate-500'}"><span>${t[1]}</span><span class="text-[9px] font-extrabold">${t[2]}</span></button>`).join(''):`<button onclick="setTab('login')">🔑<span class="block text-[10px]">دخول</span></button><button onclick="setTab('register')">📝<span class="block text-[10px]">تسجيل</span></button><button onclick="goClient()">👥<span class="block text-[10px]">عميل</span></button><button onclick="setTab('register')">🧑‍🔧<span class="block text-[10px]">فني</span></button>`}
+       ${authenticated?`<a href="support.html?role=fanni" aria-label="خدمة العملاء" title="خدمة العملاء" class="rounded-xl flex flex-col items-center justify-center gap-1 text-teal-700"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 13v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="12" width="4" height="7" rx="2"/><rect x="17" y="12" width="4" height="7" rx="2"/><path d="M17 19a5 5 0 0 1-5 2h-1"/></svg><span class="text-[9px] font-extrabold">خدمة العملاء</span></a>`:''}
+   </div>
+  </nav>
+  ${!authenticated?`<a href="support.html?role=fanni" aria-label="خدمة العملاء" title="خدمة العملاء" class="support-float prelogin-floating"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 13v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="12" width="4" height="7" rx="2"/><rect x="17" y="12" width="4" height="7" rx="2"/><path d="M17 19a5 5 0 0 1-5 2h-1"/></svg></a>`:''}
+  <button id="global-refresh" type="button" onclick="handleGlobalRefresh()" aria-label="تحديث البيانات" title="تحديث البيانات" class="global-refresh global-refresh-float ${authenticated?'':'prelogin-floating'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7v5h-5"/><path d="M4 17v-5h5"/><path d="M5.6 9A7 7 0 0 1 17 5l3 7M4 12l3 7a7 7 0 0 0 11.4-2"/></svg></button>`;
 }
 
 function errorBox(s){
@@ -1312,6 +1315,6 @@ start();
 </script>
 
 <script>async function handleGlobalRefresh(){const button=document.getElementById('global-refresh');if(button?.disabled)return;if(button){button.disabled=true;button.classList.add('is-refreshing');}try{await refreshTechnicianPage();}finally{if(button){button.disabled=false;button.classList.remove('is-refreshing');}}}</script>
-<nav id="sonaa-password-links" style="position:fixed;z-index:9999;bottom:12px;left:12px;right:12px;max-width:680px;margin:auto;display:none;gap:8px;justify-content:center;flex-wrap:wrap;padding:8px;background:#ffffffee;border:1px solid #dbe4f0;border-radius:14px;box-shadow:0 6px 24px #0b1b3a22;font-family:Cairo,Arial,sans-serif"><a href="password.html?role=fanni&mode=account" style="padding:8px 12px;border-radius:10px;background:#0b1b3a;color:white;text-decoration:none;font-size:12px;font-weight:800">حسابي</a></nav><script>(function(){const n=document.getElementById('sonaa-password-links');function sync(){let t='';try{t=localStorage.getItem('fanni_token_v4')||''}catch(_){}n.style.display=t?'flex':'none'}sync();window.addEventListener('storage',sync);setInterval(sync,1500)})();</script>
+
 </body>
 </html>
