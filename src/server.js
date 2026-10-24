@@ -161,6 +161,7 @@ if (req.path === '/health') {
     if (!isAdminPath && !maintenanceExempt.includes(req.path)) {
       const config = await AdminConfig.findOne({ key: 'main' })
         .select('settings.maintenance settings.maintenanceMessage')
+        .maxTimeMS(5000)
         .lean();
       if (config?.settings?.maintenance) {
         return res.status(503).json({
