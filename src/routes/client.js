@@ -55,23 +55,33 @@ function safeOrder(order, clientRating = null, ratingsByFanni = new Map(), compl
     assignedFanniPhone: data.status === 'تم اختيار فني' && acceptedOffer ? (acceptedOffer.fanniPhone || '') : '',
     acceptedOfferId: data.acceptedOfferId || null,
     acceptedOfferPrice: data.acceptedOfferPrice ?? null,
-    offers: (Array.isArray(data.offers) ? data.offers : []).map(offer => {
-      const id = String(offer.fanni || '');
-      const rating = ratingsByFanni.get(id);
-      return {
-        _id: offer._id,
-        fanniName: offer.fanniName || 'فني',
-        fanniLevel: offer.fanniLevel || 'مبتدئ',
-        fanniBadges: Array.isArray(offer.fanniBadges) ? offer.fanniBadges : [],
-        price: offer.price,
-        priceNum: offer.priceNum,
-        message: offer.message || '',
-        date: offer.date,
-        fanniRatingAverage: rating ? Math.round(Number(rating.average || 0) * 100) / 100 : 0,
-        fanniRatingCount: rating?.count || 0,
-        fanniCompletedJobs: completedByFanni.get(id) || 0
-      };
-    }),
+    offers: (() => {
+      const seenTechnicians = new Set();
+      const uniqueOffers = (Array.isArray(data.offers) ? data.offers : []).filter(offer => {
+        const id = String(offer?.fanni?._id || offer?.fanni || offer?.fanniId || '').trim();
+        if (!id) return true;
+        if (seenTechnicians.has(id)) return false;
+        seenTechnicians.add(id);
+        return true;
+      });
+      return uniqueOffers.map(offer => {
+        const id = String(offer.fanni?._id || offer.fanni || offer.fanniId || '');
+        const rating = ratingsByFanni.get(id);
+        return {
+          _id: offer._id,
+          fanniName: offer.fanniName || 'فني',
+          fanniLevel: offer.fanniLevel || 'مبتدئ',
+          fanniBadges: Array.isArray(offer.fanniBadges) ? offer.fanniBadges : [],
+          price: offer.price,
+          priceNum: offer.priceNum,
+          message: offer.message || '',
+          date: offer.date,
+          fanniRatingAverage: rating ? Math.round(Number(rating.average || 0) * 100) / 100 : 0,
+          fanniRatingCount: rating?.count || 0,
+          fanniCompletedJobs: completedByFanni.get(id) || 0
+        };
+      });
+    })(),
     priceChangeRequests: (Array.isArray(data.priceChangeRequests) ? data.priceChangeRequests : []).map(request => ({
       _id: String(request._id),
       oldPrice: request.oldPrice,
