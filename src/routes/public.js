@@ -6,6 +6,7 @@ const Settings = require('../models/Settings');
 const AdminConfig = require('../models/AdminConfig');
 const Service = require('../models/Service');
 const Fanni = require('../models/Fanni');
+const Region = require('../models/Region');
 const { AREA_OPTIONS, ALL_AREAS_LABEL, normalizeArea } = require('../config/areas');
 
 const {
@@ -29,9 +30,17 @@ function normalize(value) {
 /* القائمة الموحدة لمناطق الخدمة: القائمة الأساسية + المناطق التي يضيفها الفنيون المعتمدون. */
 router.get('/areas', async (req, res, next) => {
   try {
-    const technicians = await Fanni.find({ status: 'معتمد', role: 'fanni' }).select('areas').lean();
+    const [technicians, adminRegions] = await Promise.all([
+      Fanni.find({ status: 'معتمد', role: 'fanni' }).select('areas').lean(),
+      Region.find({ isActive: true }).select('name').lean()
+    ]);
     const byNormalizedName = new Map();
     for (const area of AREA_OPTIONS) byNormalizedName.set(normalizeArea(area), area);
+    for (const item of adminRegions) {
+      const area = String(item.name || '').trim().normalize('NFC').replace(/\s+/g, ' ');
+      const key = normalizeArea(area);
+      if (area.length >= 2 && area.length <= 100 && key !== normalizeArea(ALL_AREAS_LABEL) && !byNormalizedName.has(key)) byNormalizedName.set(key, area);
+    }
     for (const technician of technicians) {
       for (const rawArea of Array.isArray(technician.areas) ? technician.areas : []) {
         const area = String(rawArea || '').trim().normalize('NFC').replace(/\s+/g, ' ');

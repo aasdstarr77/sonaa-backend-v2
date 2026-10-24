@@ -78,7 +78,7 @@ function canAccessAdmin(user, req) {
   // Only the new sparse override format may customize the defaults.
   const overrides = stored.__customOverrides === true ? stored : {};
   const grant = { ...defaults[section], ...(overrides[section] || {}) };
-  const isRead = method === 'GET' || method === 'HEAD';
+  const isRead = method === 'GET' || method === 'HEAD' || (method === 'POST' && /^\/reports?(\/|$)/.test(path));
   return isRead ? grant.read === true : grant.write === true;
 }
 function auth(requiredRole = null) {

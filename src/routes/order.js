@@ -860,7 +860,7 @@ router.post('/:sn/offer', auth(), async (req, res, next) => {
       _id: req.userId,
       role: 'fanni',
       status: 'معتمد'
-    }).select('specialties walletBalance level isFrozen limits');
+    }).select('specialties walletBalance level isFrozen limits badges isVerified isFeatured featuredUntil');
 
     if (!fanni) {
       return res.status(403).json({
@@ -909,6 +909,17 @@ router.post('/:sn/offer', auth(), async (req, res, next) => {
       });
     }
 
+    const maxActiveOffers = Number.isInteger(Number(fanni.limits?.maxOffers)) ? Number(fanni.limits.maxOffers) : 50;
+    if (maxActiveOffers <= 0) return res.status(403).json({ message: 'حد العروض النشطة المسموح به لحسابك يساوي صفرًا. راجع الإدارة.' });
+    const activeOfferCount = await Order.countDocuments({ status: { $in: ACTIVE_STATUSES }, offers: { $elemMatch: { fanni: req.userId } } });
+    if (activeOfferCount >= maxActiveOffers) return res.status(429).json({ message: `وصلت إلى الحد الأقصى للعروض النشطة (${maxActiveOffers}). انتظر انتهاء عرض قائم أو تواصل مع الإدارة.` });
+
+    const dailyOfferLimit = Number.isInteger(Number(fanni.limits?.dailyLimit)) ? Number(fanni.limits.dailyLimit) : 10;
+    if (dailyOfferLimit <= 0) return res.status(403).json({ message: 'حد العروض خلال آخر 24 ساعة يساوي صفرًا. راجع الإدارة.' });
+    const sinceLast24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const offersLast24Hours = await Order.countDocuments({ offers: { $elemMatch: { fanni: req.userId, date: { $gte: sinceLast24Hours } } } });
+    if (offersLast24Hours >= dailyOfferLimit) return res.status(429).json({ message: `وصلت إلى الحد الأقصى للعروض خلال آخر 24 ساعة (${dailyOfferLimit}). حاول لاحقًا.` });
+
     const walletBalance = Number(fanni.walletBalance || 0);
 
     if (
@@ -925,12 +936,16 @@ router.post('/:sn/offer', auth(), async (req, res, next) => {
       });
     }
 
+    const offerCreatedAt = new Date();
+    const offerBadges = new Set(Array.isArray(fanni.badges) ? fanni.badges : []);
+    if (fanni.isVerified === true) offerBadges.add('verified');
+    if (fanni.isFeatured === true && (!fanni.featuredUntil || new Date(fanni.featuredUntil) > offerCreatedAt)) offerBadges.add('premium');
     const offerPayload = {
       fanni: req.userId,
       fanniId: String(req.userId),
       fanniName: req.user.name,
       fanniLevel: fanni.level || 'مبتدئ',
-      fanniBadges: Array.isArray(fanni.badges) ? fanni.badges : [],
+      fanniBadges: Array.from(offerBadges),
       fanniPhone: req.user.phone,
       price: String(price),
       priceNum: price,
@@ -939,7 +954,6 @@ router.post('/:sn/offer', auth(), async (req, res, next) => {
 
     // Make the "one offer per technician per order" rule atomic. A read/check
     // followed by order.save() can race when two requests arrive together.
-    const offerCreatedAt = new Date();
     const updatedOrder = await Order.findOneAndUpdate(
       {
         _id: order._id,
