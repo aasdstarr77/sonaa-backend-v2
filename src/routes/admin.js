@@ -1616,6 +1616,8 @@ function buildAdminCategoriesMap(savedServices) {
     });
   }
   for (const saved of savedServices) {
+    // Do not show the broken service in the admin list, even if stale database copies remain.
+    if (normalizeForCompare(saved.name) === normalizeForCompare('تعليق شاشة حائط')) continue;
     const catKey = normalizeForCompare(saved.category);
     if (!map.has(catKey)) {
       map.set(catKey, {
@@ -1703,8 +1705,22 @@ async function ensureHiddenLegacy(oldName, oldCategoryLabel) {
 
 router.get('/services', auth('admin'), async (req, res, next) => {
   try {
-    const savedServices = await Service.find({}).sort({ category: 1, sortOrder: 1, name: 1 }).lean();
-    const visibleServices = savedServices.filter(item => normalizeForCompare(item.name) !== normalizeForCompare('تعليق شاشة حائط'));
+    let savedServices = await Service.find({}).sort({ category: 1, sortOrder: 1, name: 1 }).lean();
+    const brokenServiceName = normalizeForCompare('تعليق شاشة حائط');
+    const brokenRows = savedServices.filter(item => normalizeForCompare(item.name) === brokenServiceName);
+
+    // User requested permanent removal because this option freezes the client workflow.
+    // Purge all stale database copies when admin opens service management; historical orders stay intact.
+    if (brokenRows.length) {
+      await Service.deleteMany({ _id: { $in: brokenRows.map(item => item._id) } });
+      const remainingRows = await Service.find({}).select('name').lean();
+      if (remainingRows.some(item => normalizeForCompare(item.name) === brokenServiceName)) {
+        return res.status(409).json({ message: 'تعذر حذف كل نسخ خدمة تعليق شاشة حائط؛ أعد المحاولة' });
+      }
+      await writeAdminAudit(req, 'حذف تلقائي لخدمة معطلة', 'services', 'تعليق شاشة حائط', JSON.stringify({ removedCopies: brokenRows.length, historicalOrdersPreserved: true }));
+      savedServices = savedServices.filter(item => normalizeForCompare(item.name) !== brokenServiceName);
+    }
+    const visibleServices = savedServices.filter(item => normalizeForCompare(item.name) !== brokenServiceName);
     const map = buildAdminCategoriesMap(visibleServices);
     const categoriesDetailed = Array.from(map.values()).map(cat => ({
       label: cat.label,
