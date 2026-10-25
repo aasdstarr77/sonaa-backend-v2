@@ -236,7 +236,7 @@ router.patch('/complaints/:id', auth('admin'), validate(Joi.object({
 
 router.get('/counts', auth('admin'), async (req, res, next) => {
   try {
-    const legacyFanniFilter = { $or: [ { role: 'fanni' }, { role: { $exists: false }, specialties: { $exists: true, $ne: [] }, adminRole: null } ] };
+    const legacyFanniFilter = { $or: [ { role: 'fanni' }, { role: { $ne: 'admin' }, specialties: { $exists: true, $ne: [] }, adminRole: null } ] };
     const [technicians, verifiedTechnicians, clients] = await Promise.all([
       Fanni.countDocuments(legacyFanniFilter),
       Fanni.countDocuments({ ...legacyFanniFilter, status: 'معتمد' }),
@@ -250,7 +250,7 @@ router.get('/counts', auth('admin'), async (req, res, next) => {
 
 router.get('/fannis', auth('admin'), async (req, res, next) => {
   try {
-    const list = await Fanni.find({ $or: [ { role: 'fanni' }, { role: { $exists: false }, specialties: { $exists: true, $ne: [] }, adminRole: null } ] }).select('-passwordHash').sort({ createdAt: -1 }).limit(MAX_LIST_LIMIT).lean();
+    const list = await Fanni.find({ $or: [ { role: 'fanni' }, { role: { $ne: 'admin' }, specialties: { $exists: true, $ne: [] }, adminRole: null } ] }).select('-passwordHash').sort({ createdAt: -1 }).limit(MAX_LIST_LIMIT).lean();
     const ids = list.map(item => item._id);
     const [ratingStats, completedStats] = ids.length ? await Promise.all([
       Rating.aggregate([
@@ -1614,6 +1614,15 @@ function validateSortOrder(val) {
 
 function buildAdminCategoriesMap(savedServices) {
   const map = new Map();
+  // Legacy services are seeded below, so an inactive database tombstone must
+  // suppress the seed itself; merely skipping the DB row leaves the old item visible.
+  const hiddenLegacyKeys = new Set(savedServices
+    .filter(saved => saved.isActive === false)
+    .filter(saved => CATEGORIES.some(cat =>
+      normalizeForCompare(cat.label) === normalizeForCompare(saved.category) &&
+      cat.services.some(name => normalizeForCompare(name) === normalizeForCompare(saved.name))
+    ))
+    .map(saved => normalizeForCompare(saved.category) + '|' + normalizeForCompare(saved.name)));
   for (const [categoryIndex, cat] of CATEGORIES.entries()) {
     const key = normalizeForCompare(cat.label);
     map.set(key, {
@@ -1629,7 +1638,7 @@ function buildAdminCategoriesMap(savedServices) {
         category: cat.label,
         dbId: null,
         sortOrder: (index + 1) * 10
-      }))
+      })).filter(service => !hiddenLegacyKeys.has(key + '|' + service.normalizedName))
     });
   }
   for (const saved of savedServices) {
