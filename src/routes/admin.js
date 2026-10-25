@@ -1840,10 +1840,21 @@ router.delete('/services/:id', auth('admin'), async (req, res, next) => {
     }
     if (!service) return res.status(404).json({ message: 'الخدمة غير موجودة في القسم المحدد' });
     const name = service.name, category = service.category;
+    const normalizedName = normalizeForCompare(name);
+    if (normalizedName === normalizeForCompare('تعليق شاشة حائط')) {
+      const allRows = await Service.find({}).select('_id name').lean();
+      const matchingIds = allRows.filter(item => normalizeForCompare(item.name) === normalizedName).map(item => item._id);
+      if (matchingIds.length) await Service.deleteMany({ _id: { $in: matchingIds } });
+      const remainingRows = await Service.find({}).select('name').lean();
+      if (remainingRows.some(item => normalizeForCompare(item.name) === normalizedName)) {
+        return res.status(409).json({ message: 'لم نتمكن من إزالة كل نسخ الخدمة؛ لم يتم تأكيد الحذف' });
+      }
+      await writeAdminAudit(req, 'حذف نهائي لخدمة معطلة', 'services', name, JSON.stringify({ category, removedCopies: matchingIds.length, historicalOrdersPreserved: true }));
+      return res.json({ ok: true, deleted: true, message: 'تم حذف الخدمة المعطلة نهائيًا من كل الأقسام. الطلبات السابقة محفوظة.' });
+    }
     if (requestedCategory && normalizeForCompare(category) !== normalizeForCompare(requestedCategory)) {
       return res.status(404).json({ message: 'الخدمة لا تنتمي إلى القسم المحدد؛ لم يتم حذف أي سجل' });
     }
-    const normalizedName = normalizeForCompare(name);
     const isLegacyService = CATEGORIES.some(cat =>
       cat.services.some(item => normalizeForCompare(item) === normalizedName) &&
       normalizeForCompare(cat.label) === normalizeForCompare(category)
