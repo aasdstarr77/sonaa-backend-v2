@@ -1313,5 +1313,6 @@ start();
 
 <script>let globalRefreshInProgress=false;async function handleGlobalRefresh(){const button=document.getElementById('global-refresh');if(globalRefreshInProgress||button?.disabled)return;globalRefreshInProgress=true;if(button){button.disabled=true;button.classList.add('is-refreshing');}try{await refreshTechnicianPage();}finally{globalRefreshInProgress=false;const currentButton=document.getElementById('global-refresh');if(currentButton){currentButton.disabled=false;currentButton.classList.remove('is-refreshing');}}}</script>
 
+<script src="/web-push.js" defer></script>
 </body>
 </html>

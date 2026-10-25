@@ -1254,5 +1254,6 @@ render();
 
 <script>async function handleGlobalRefresh(){let button=document.getElementById('global-refresh');if(globalRefreshInProgress||button?.disabled)return;globalRefreshInProgress=true;if(button){button.disabled=true;button.classList.add('is-refreshing');}try{if(!state.account){await Promise.allSettled([loadServices(),loadPublicContent()]);showToast('تم تحديث البيانات','success');}else{await refreshClientPage();}}finally{globalRefreshInProgress=false;button=document.getElementById('global-refresh');if(button){button.disabled=false;button.classList.remove('is-refreshing');}}}</script>
 
+<script src="/web-push.js" defer></script>
 </body>
 </html>

@@ -4,6 +4,8 @@ const express = require('express');
 const mongoose = require('mongoose');
 const Notification = require('../models/Notification');
 const PushToken = require('../models/PushToken');
+const WebPushSubscription = require('../models/WebPushSubscription');
+const { getVapidKeys } = require('../utils/webPush');
 const { auth } = require('../middleware/auth');
 const { clientAuth } = require('../middleware/clientAuth');
 
@@ -22,9 +24,12 @@ function roleAuth(role) {
   });
 }
 
+router.get('/web-push-public-key',(req,res)=>{const k=getVapidKeys();if(!k)return res.status(503).json({message:'إشعارات الويب غير مهيأة على الخادم.'});return res.set('Cache-Control','no-store').json({publicKey:k.pub.toString('base64url')});});
 function mountRoleRoutes(role) {
   const guard = roleAuth(role);
 
+  router.post('/' + role + '/web-subscription',guard,async(req,res,next)=>{try{if(role==='fanni'&&req.user?.role!=='fanni')return res.status(403).json({message:'تسجيل إشعارات الفنيين يتطلب حساب فني.'});if(role==='admin'&&req.user?.role!=='admin'&&!req.user?.adminRole)return res.status(403).json({message:'تسجيل إشعارات الإدارة يتطلب حسابًا إداريًا.'});const s=req.body?.subscription,endpoint=typeof s?.endpoint==='string'?s.endpoint.trim():'',p256dh=s?.keys?.p256dh,authSecret=s?.keys?.auth;if(!endpoint||endpoint.length>2048||!endpoint.startsWith('https://')||typeof p256dh!=='string'||p256dh.length>200||typeof authSecret!=='string'||authSecret.length>100)return res.status(400).json({message:'بيانات اشتراك إشعارات المتصفح غير صالحة.'});await WebPushSubscription.findOneAndUpdate({endpoint},{$set:{recipientRole:role,recipientId:owner(req,role),endpoint,keys:{p256dh,auth:authSecret},expirationTime:Number.isFinite(s.expirationTime)?s.expirationTime:null}},{upsert:true,new:true,runValidators:true,setDefaultsOnInsert:true});return res.json({message:'تم تفعيل إشعارات المتصفح لهذا الحساب.'});}catch(e){return next(e);}});
+  router.delete('/'+role+'/web-subscription',guard,async(req,res,next)=>{try{const endpoint=typeof req.body?.endpoint==='string'?req.body.endpoint.trim():'';if(!endpoint)return res.status(400).json({message:'عنوان اشتراك المتصفح مطلوب.'});const r=await WebPushSubscription.deleteOne({endpoint,recipientRole:role,recipientId:owner(req,role)});return res.json({deleted:r.deletedCount||0});}catch(e){return next(e);}});
   router.post('/' + role + '/push-token', guard, async (req, res, next) => {
     try {
       if (role === 'fanni' && req.user?.role !== 'fanni') {

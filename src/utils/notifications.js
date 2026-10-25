@@ -3,6 +3,7 @@
 const Notification = require('../models/Notification');
 const PushToken = require('../models/PushToken');
 const Fanni = require('../models/Fanni');
+const { sendWebPushNotification } = require('./webPush');
 
 async function sendPushNotification({ recipientRole, recipientId, title, message, type, link = '' }) {
   try {
@@ -63,7 +64,7 @@ async function createNotification({ recipientRole, recipientId, type, title, mes
       notification = await Notification.create(payload);
     }
     if (isNew) {
-      await sendPushNotification({ recipientRole, recipientId, title, message, type, link });
+      await Promise.allSettled([sendPushNotification({ recipientRole, recipientId, title, message, type, link }),sendWebPushNotification({ recipientRole, recipientId, title, message, type, link })]);
     }
     return notification;
   } catch (error) {

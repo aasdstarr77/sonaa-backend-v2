@@ -85,6 +85,23 @@ async function run() {
       assert.equal(canAccessAdmin(user, { path: '/fannis/507f1f77bcf86cd799439011/set-balance', method: 'POST' }), false);
     });
 
+    await test('browser push assets are wired without removing Expo notifications', async () => {
+      const webPush = fs.readFileSync(path.join(__dirname, '../utils/webPush.js'), 'utf8');
+      const route = fs.readFileSync(path.join(__dirname, '../routes/notifications.js'), 'utf8');
+      const browser = fs.readFileSync(path.join(__dirname, '../../frontend/web-push.js'), 'utf8');
+      const worker = fs.readFileSync(path.join(__dirname, '../../frontend/service-worker.js'), 'utf8');
+      const delivery = fs.readFileSync(path.join(__dirname, '../utils/notifications.js'), 'utf8');
+      assert.match(webPush, /aes-128-gcm/); assert.match(webPush, /VAPID_PUBLIC_KEY/);
+      assert.match(route, /web-subscription/); assert.match(browser, /PushManager/);
+      assert.match(worker, /addEventListener\('push'/); assert.match(delivery, /sendPushNotification/);
+      assert.match(delivery, /sendWebPushNotification/);
+    });
+    await test('web push public key endpoint fails safely until VAPID keys are configured', async () => {
+      delete process.env.VAPID_PUBLIC_KEY; delete process.env.VAPID_PRIVATE_KEY;
+      const r = await request(app).get('/api/notifications/web-push-public-key');
+      assert.equal(r.status, 503); assert.match(r.body.message, /غير مهيأة/);
+    });
+
     await test('homepage responds without exposing Express signature', async () => {
       const r = await request(app).get('/');
       assert.equal(r.status, 200);
