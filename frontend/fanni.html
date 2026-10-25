@@ -148,6 +148,41 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
 .fanni-notification-top-btn:active{transform:translateY(2px);box-shadow:0 2px 0 #b45309!important}
 @media(max-width:380px){.fanni-header-main{padding-top:6px!important;padding-bottom:6px!important;padding-left:52px!important}.fanni-notification-top-btn{left:8px!important;top:6px!important;width:36px;height:36px}}
 
+
+/* Consistent raised 3D treatment throughout all technician screens and controls. */
+#app main button:not(.fanni-notification-top-btn),#app main a[href],#app main [role="button"],
+#app header button:not(.fanni-notification-top-btn),#app header a[href],
+#app main .field,#app main select,#app main textarea,
+#app main input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+#app main .fanni-login-panel,#app main .fanni-login-hero,
+#app main .fanni-login-tabs button,#app main .primary-btn,
+#app main .account-tab,#app main .service-choice,#app main .service-card,
+#app main .order-card,#app main .offer-card,#app main .message-bubble,
+#app main .rounded-xl.border,#app main .rounded-2xl.border{
+ box-shadow:0 4px 0 rgba(15,23,42,.12),0 7px 13px rgba(15,23,42,.09),inset 0 1px 0 rgba(255,255,255,.72)!important;
+ transition:transform .16s ease,box-shadow .16s ease,filter .16s ease;
+}
+#app main button:not(:disabled):active,#app main a[href]:active,#app main [role="button"]:active,
+#app header button:not(:disabled):not(.fanni-notification-top-btn):active,#app header a[href]:active{
+ transform:translateY(2px);
+ box-shadow:0 1px 0 rgba(15,23,42,.16),0 2px 4px rgba(15,23,42,.08)!important;
+}
+#app main .primary-btn,#app main button[type="submit"],#app main .account-submit{
+ border-bottom:2px solid rgba(15,23,42,.18)!important;
+}
+#app main .field,#app main select,#app main textarea,
+#app main input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]){
+ border-color:#cbd5e1;
+ box-shadow:inset 0 2px 3px rgba(15,23,42,.07),0 2px 0 rgba(15,23,42,.07)!important;
+}
+#app main .fanni-login-panel,#app main .fanni-login-hero,
+#app main .rounded-xl.border,#app main .rounded-2xl.border,
+#app main [class*="bg-white"][class*="rounded"]{
+ box-shadow:0 4px 0 rgba(15,23,42,.08),0 9px 18px rgba(15,23,42,.08),inset 0 1px 0 rgba(255,255,255,.85)!important;
+}
+#app main button:disabled{box-shadow:none!important;transform:none!important;opacity:.65}
+@media(prefers-reduced-motion:reduce){#app main button,#app main a[href],#app main [role="button"],#app header button,#app header a[href]{transition:none!important}}
+
 </style>
 </head>
 <body class="min-h-screen antialiased">
