@@ -128,24 +128,42 @@ router.post('/change/admin', adminSelfAuth, async (req, res, next) => {
   } catch (e) { return next(e); }
 });
 
-// Recovery requests are anonymous, ticket-token protected, and intentionally return the same response
-// whether or not the supplied account exists to reduce account enumeration.
+// Recovery requests are anonymous, but only registered accounts may open a support conversation.
 const recoveryLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 5, standardHeaders: true, legacyHeaders: false, message: { message: 'طلبات كثيرة. حاول مرة أخرى بعد قليل.' } });
 router.post('/request', recoveryLimiter, async (req, res, next) => {
   try {
     const role = clean(req.body?.role, 20);
     const phone = clean(req.body?.phone, 30).replace(/\D/g, '');
     if (!['client', 'fanni', 'admin'].includes(role) || !/^01\d{9}$/.test(phone)) return res.status(400).json({ message: 'اكتب نوع الحساب ورقم هاتف صحيحًا.' });
-    const token = randomToken();
+
+    const [registeredClient, registeredFanni] = await Promise.all([
+      Client.findOne({ phone }).select('_id name').lean(),
+      Fanni.findOne({ phone }).select('_id name role adminRole').lean()
+    ]);
+    if (!registeredClient && !registeredFanni) {
+      return res.status(404).json({ message: 'هذا الرقم غير مسجل في صُنّاع.' });
+    }
+
     const account = await lookupAccount(role, phone);
+    if (!account) {
+      if (role === 'client' && registeredFanni) {
+        return res.status(400).json({ message: 'الرقم مسجل كفني، اختر نوع الحساب الصحيح لاستعادة كلمة السر.' });
+      }
+      if (role === 'fanni' && registeredClient) {
+        return res.status(400).json({ message: 'الرقم مسجل كعميل، اختر نوع الحساب الصحيح لاستعادة كلمة السر.' });
+      }
+      return res.status(400).json({ message: 'الرقم مسجل، لكنه لا يطابق نوع الحساب المحدد.' });
+    }
+
+    const token = randomToken();
     const item = await PasswordRecovery.create({
-      ownerRole: role, accountId: account?.user?._id || null, accountName: account?.user?.name || '',
+      ownerRole: role, accountId: account.user._id, accountName: account.user.name || '',
       phone, accessTokenHash: digest(token), status: 'بانتظار الدعم',
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
       messages: [{ senderRole: 'user', text: 'طلب استعادة كلمة المرور. يرجى التحقق من ملكية الحساب قبل إصدار رمز الاستعادة.' }]
     });
     await notifyAdmins({ type: 'admin_password_recovery', title: 'طلب تغيير/استعادة كلمة مرور', message: `وصل طلب استعادة كلمة مرور لحساب ${role} برقم ${phone}.`, link: '/admin?tab=support', dedupeKey: 'admin-password-recovery:' + String(item._id) });
-    return res.status(201).json({ message: 'لو كان الحساب مطابقًا للبيانات، سيظهر طلبك للدعم. احتفظ برمز متابعة الطلب.', recoveryToken: token, requestId: String(item._id) });
+    return res.status(201).json({ message: 'تم فتح طلب استعادة كلمة السر. احتفظ برمز متابعة الطلب.', recoveryToken: token, requestId: String(item._id) });
   } catch (e) { return next(e); }
 });
 async function findByTicket(req, res) {
