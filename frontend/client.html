@@ -111,6 +111,7 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--blue)!im
 <div id="toast" class="fixed bottom-[88px] left-3 right-3 z-[200] pointer-events-none"></div>
 <script>
 'use strict';
+let globalRefreshInProgress=false;
 const IS_DEV=location.hostname==='localhost'||location.hostname==='127.0.0.1';
 const log=(...args)=>{if(IS_DEV)console.log(...args)};
 function escHtml(value){
@@ -429,7 +430,7 @@ function renderAccountGate(){
   if(!reg)h+='<p class="mt-2 text-left"><a class="text-xs font-bold text-blue-700" href="password.html?role=client&mode=recovery">نسيت كلمة المرور؟</a></p>';if(reg)h+='<div><label class="block mb-1.5 text-xs font-extrabold">تأكيد كلمة السر</label><input id="accountConfirmPassword" required type="password" minlength="8" maxlength="128" autocomplete="new-password" class="field h-12 px-3 text-sm" placeholder="أعد كتابة كلمة السر"></div>';
   if(state.accountError)h+='<p class="rounded-xl bg-red-50 border border-red-200 p-3 text-xs leading-6 font-bold text-red-700">'+escHtml(state.accountError)+'</p>';
   h+='<button type="submit" '+(state.accountLoading?'disabled':'')+' class="w-full h-12 rounded-xl blue-btn font-extrabold text-sm">'+(state.accountLoading?'جاري التنفيذ...':reg?'إنشاء حساب العميل':'دخول إلى حسابي')+'</button></form><p class="mt-4 text-center text-[10px] leading-5 text-slate-500">كلمة السر لا تُشارك مع أي شخص.</p></div></div></main>';
-  document.getElementById('app').innerHTML=h+renderPublicContent()+`<button id="global-refresh" type="button" onclick="handleGlobalRefresh()" aria-label="تحديث البيانات" title="تحديث البيانات" class="global-refresh global-refresh-float prelogin-floating"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7v5h-5"/><path d="M4 17v-5h5"/><path d="M5.6 9A7 7 0 0 1 17 5l3 7M4 12l3 7a7 7 0 0 0 11.4-2"/></svg></button>`;
+  document.getElementById('app').innerHTML=h+renderPublicContent()+`<button id="global-refresh" type="button" onclick="handleGlobalRefresh()" aria-label="تحديث البيانات" title="تحديث البيانات" class="global-refresh global-refresh-float prelogin-floating ${globalRefreshInProgress?'is-refreshing':''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7v5h-5"/><path d="M4 17v-5h5"/><path d="M5.6 9A7 7 0 0 1 17 5l3 7M4 12l3 7a7 7 0 0 0 11.4-2"/></svg></button>`;
 }
 function renderPublicContent(){
   const c=state.publicContent||{announcement:'',faqs:[]};
@@ -581,7 +582,7 @@ function render(){
     </div>
   ${notificationPanel()}
   </header>
-  <button id="global-refresh" type="button" onclick="handleGlobalRefresh()" aria-label="تحديث البيانات" title="تحديث البيانات" class="global-refresh global-refresh-float"><svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7v5h-5"/><path d="M4 17v-5h5"/><path d="M5.6 9A7 7 0 0 1 17 5l3 7M4 12l3 7a7 7 0 0 0 11.4-2"/></svg></button>
+  <button id="global-refresh" type="button" onclick="handleGlobalRefresh()" aria-label="تحديث البيانات" title="تحديث البيانات" class="global-refresh global-refresh-float ${globalRefreshInProgress?'is-refreshing':''}"><svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7v5h-5"/><path d="M4 17v-5h5"/><path d="M5.6 9A7 7 0 0 1 17 5l3 7M4 12l3 7a7 7 0 0 0 11.4-2"/></svg></button>
   ${renderPublicContent()}
   <main class="mx-auto w-full max-w-[640px] px-3 sm:px-4 pb-[160px] safe-bottom">
     <div class="client-section-tabs sticky top-[112px] z-30 mt-0 flex p-1 bg-white/95 rounded-[15px] shadow-sm border border-slate-200 gap-1 backdrop-blur-xl">
@@ -1260,7 +1261,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 render();
 </script>
 
-<script>async function handleGlobalRefresh(){const button=document.getElementById('global-refresh');if(button?.disabled)return;if(button){button.disabled=true;button.classList.add('is-refreshing');}try{if(!state.account){await Promise.allSettled([loadServices(),loadPublicContent()]);showToast('تم تحديث البيانات','success');}else{await refreshClientPage();}}finally{if(button){button.disabled=false;button.classList.remove('is-refreshing');}}}</script>
+<script>async function handleGlobalRefresh(){let button=document.getElementById('global-refresh');if(globalRefreshInProgress||button?.disabled)return;globalRefreshInProgress=true;if(button){button.disabled=true;button.classList.add('is-refreshing');}try{if(!state.account){await Promise.allSettled([loadServices(),loadPublicContent()]);showToast('تم تحديث البيانات','success');}else{await refreshClientPage();}}finally{globalRefreshInProgress=false;button=document.getElementById('global-refresh');if(button){button.disabled=false;button.classList.remove('is-refreshing');}}}</script>
 
 </body>
 </html>
