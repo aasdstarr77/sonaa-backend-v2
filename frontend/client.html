@@ -92,6 +92,13 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--blue)!im
 .client-new-order .client-order-panel{border:1px solid #d7e2f0;border-radius:25px;background:linear-gradient(145deg,#fff 0%,#fbfdff 100%);box-shadow:0 5px 0 #dce5f1,0 18px 38px #0b1b3a16,0 3px 9px #0b1b3a08}
 .client-new-order .field{border-color:#d8e2ef;border-radius:13px;background:#fbfdff;transition:border-color .18s,box-shadow .18s,background .18s}
 .client-new-order .field:focus{background:#fff;border-color:#2563eb!important;box-shadow:0 0 0 4px #2563eb18,0 3px 8px #0b1b3a08}
+.client-home-main-btn{background:linear-gradient(145deg,#3983f6 0%,#1d4ed8 55%,#173c6c 100%)!important;border:1px solid #ffffff45!important;box-shadow:0 4px 0 #123b85,0 8px 14px #0b1b3a25,inset 0 1px 0 #ffffff45!important;transition:transform .16s,box-shadow .16s,filter .16s}
+.client-home-main-btn:active{transform:translateY(3px);box-shadow:0 1px 0 #123b85,0 3px 7px #0b1b3a20!important}
+.client-submit-order-btn{background:linear-gradient(145deg,#3983f6 0%,#1d4ed8 55%,#173c6c 100%)!important;border:1px solid #ffffff45!important;box-shadow:0 6px 0 #123b85,0 12px 20px #1d4ed82e,inset 0 1px 0 #ffffff45!important;transition:transform .16s,box-shadow .16s,filter .16s}
+.client-submit-order-btn:hover{filter:brightness(1.04)}
+.client-submit-order-btn:active{transform:translateY(4px);box-shadow:0 2px 0 #123b85,0 5px 10px #1d4ed820!important}
+.client-submit-order-btn:disabled{opacity:.7;box-shadow:0 3px 0 #123b85!important}
+
 .app-header .brand-mark{width:88px;height:88px;border-radius:22px;background:linear-gradient(145deg,#fff,#e8eff9);border:1px solid #fff;box-shadow:0 5px 0 #cbd8ea,0 10px 18px #0b1b3a1c,inset 0 2px 3px #fff;overflow:visible}
 .app-header .brand-mark .sonaa-logo-svg{filter:drop-shadow(0 4px 2px #0b1b3a28) drop-shadow(0 9px 7px #0b1b3a18);transform:translateY(-2px)}
 @media(max-width:380px){.app-header .brand-mark{width:70px;height:70px}.client-new-order{padding-top:4px}.client-new-order .client-order-panel{padding:14px}}
@@ -599,7 +606,7 @@ function render(){
           <a href="password.html?role=client&mode=account" class="h-9 px-2 rounded-xl border border-blue-200 bg-blue-50 text-blue-800 inline-flex items-center justify-center text-[11px] font-extrabold whitespace-nowrap">حسابي</a>
           <button type="button" onclick="logoutClient()" class="h-9 px-2 rounded-xl bg-slate-100 text-slate-700 text-[11px] font-extrabold whitespace-nowrap">خروج</button>
         </div>
-        <a href="/" aria-label="القائمة الرئيسية" title="القائمة الرئيسية" class="h-8 px-3 rounded-lg bg-blue-600 text-white inline-flex items-center justify-center gap-1 text-[10px] font-extrabold whitespace-nowrap"><span aria-hidden="true">⌂</span><span>القائمة الرئيسية</span></a>
+        <a href="/" aria-label="القائمة الرئيسية" title="القائمة الرئيسية" class="client-home-main-btn h-8 px-3 rounded-lg text-white inline-flex items-center justify-center gap-1 text-[10px] font-extrabold whitespace-nowrap"><span aria-hidden="true">⌂</span><span>القائمة الرئيسية</span></a>
       </div>
 
     </div>
@@ -728,8 +735,8 @@ function render(){
               <textarea id="descInput" oninput="onDescInput(this.value)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();document.querySelector('button[onclick="createOrder()"]')?.focus()}" maxlength="1000" placeholder="احكي المشكلة بالتفصيل، واكتب المطلوب من الفني..." class="field min-h-[112px] p-3.5 text-[13px] font-semibold resize-none leading-6">${escHtml(state.desc)}</textarea>
               <p class="mt-1 text-[10px] text-slate-500">ما تكتبش رقم تليفونك داخل التفاصيل؛ رقمك موجود في الخانة المخصصة له.</p>
             </div>
-            <button type="button" onclick="createOrder()" ${state.loading||state.servicesLoading?'disabled':''} class="w-full h-[52px] rounded-xl blue-btn font-extrabold text-[14px] flex items-center justify-center gap-2">
-              ${state.loading?'جاري الإرسال...':state.servicesLoading?'جاري تحميل الخدمات...':'إرسال الطلب والحصول على كود التتبع'}
+            <button type="button" onclick="createOrder()" ${state.loading||state.servicesLoading?'disabled':''} class="client-submit-order-btn w-full h-[52px] rounded-xl blue-btn font-extrabold text-[14px] flex items-center justify-center gap-2">
+              ${state.loading?'جاري الإرسال...':state.servicesLoading?'جاري تحميل الخدمات...':'إرسال الطلب'}
             </button>
             <p class="text-[10px] text-center text-slate-400 leading-5">تُستخدم بياناتك للتواصل معك بخصوص الطلب.</p>
           </div>
