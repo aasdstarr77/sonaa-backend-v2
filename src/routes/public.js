@@ -93,7 +93,22 @@ router.get('/services', async (req, res, next) => {
 
       for (const [index, name] of category.services.entries()) {
         if (isBrokenWallScreenService(name)) continue;
-        categoriesMap.get(categoryKey).services.push({ name, emoji: category.emoji, isActive: true, source: 'legacy', sortOrder: (index + 1) * 10 });
+
+        // A database row is authoritative for a legacy service. In particular,
+        // an inactive row is a tombstone: do not re-add that service from CATEGORIES.
+        const savedOverride = savedServices.some(saved =>
+          normalize(saved.category) === categoryKey &&
+          normalize(saved.name) === normalize(name)
+        );
+        if (savedOverride) continue;
+
+        categoriesMap.get(categoryKey).services.push({
+          name,
+          emoji: category.emoji,
+          isActive: true,
+          source: 'legacy',
+          sortOrder: (index + 1) * 10
+        });
       }
     }
 
