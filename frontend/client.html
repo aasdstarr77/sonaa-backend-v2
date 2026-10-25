@@ -25,8 +25,14 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--blue)!im
 ::-webkit-scrollbar{width:0;height:0}
 .safe-bottom{padding-bottom:env(safe-area-inset-bottom)}
 .app-header{background:#fffffff5;border-bottom:1px solid var(--border);box-shadow:0 2px 12px #0f172a09}
+.app-header>div:first-child{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding-top:10px;padding-bottom:10px}
+.app-header>div:first-child>div:first-child{flex:1 1 155px}
+.app-header>div:first-child>div:last-child{flex:1 1 100%;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;width:100%}
+.app-header>div:first-child>div:last-child>*{min-width:0;width:100%;padding-left:4px;padding-right:4px;justify-content:center;text-align:center}
+.app-header>div:first-child>div:last-child>a:last-child{grid-column:1/-1;width:100%;min-height:40px;font-size:12px}
 .brand-mark{background:transparent;border:0;color:inherit;overflow:hidden}
 .sonaa-logo-svg{display:block;width:100%;height:100%;object-fit:contain;border:0;border-radius:0}
+@media(min-width:520px){.app-header>div:first-child{flex-wrap:nowrap}.app-header>div:first-child>div:last-child{flex:0 0 290px}}
 .primary-btn{background:linear-gradient(135deg,var(--navy),var(--navy2));color:white}
 .blue-btn{background:var(--blue);color:white}
 .blue-btn:hover{background:var(--blue-dark)}
@@ -893,21 +899,22 @@ function toggleCategory(label){
   const opening=Boolean(label)&&state.openCategory!==label;
   state.openCategory=opening?label:'';
   render();
-  if(opening){
-    requestAnimationFrame(()=>{
-      const list=document.getElementById('serviceList');
-      const details=document.getElementById('selectedCategoryDetails');
-      if(!list||!details)return;
-      // Scroll only the picker list so the detailed-service buttons start in view.
+  if(!opening)return;
+  requestAnimationFrame(()=>{
+    const panel=document.getElementById('servicePanel');
+    const list=document.getElementById('serviceList');
+    const details=document.getElementById('selectedCategoryDetails');
+    if(!panel||!list||!details)return;
+    // Show the first row of detailed choices, not the bottom of the page.
+    panel.scrollTop=0;
+    list.scrollTop=0;
+    const firstChoice=details.querySelector('.service-choice');
+    if(firstChoice){
       const listRect=list.getBoundingClientRect();
-      const detailsRect=details.getBoundingClientRect();
-      const targetTop=list.scrollTop+(detailsRect.top-listRect.top)-8;
-      list.scrollTo({top:Math.max(0,targetTop),behavior:'smooth'});
-      // If the dialog itself needs to move into view, do not scroll the page behind it.
-      details.setAttribute('tabindex','-1');
-      details.focus({preventScroll:true});
-    });
-  }
+      const choiceRect=firstChoice.getBoundingClientRect();
+      list.scrollTo({top:Math.max(0,list.scrollTop+choiceRect.top-listRect.top-8),behavior:'smooth'});
+    }
+  });
 }
 function searchService(value){
   const input=document.getElementById('svcSearch');
@@ -933,9 +940,10 @@ function selectService(serviceName){
   requestAnimationFrame(()=>{
     const pickerButton=document.querySelector('button[onclick="toggleService()"]');
     if(pickerButton){
-      pickerButton.scrollIntoView({behavior:'smooth',block:'center'});
-      pickerButton.setAttribute('aria-live','polite');
-      setTimeout(()=>{try{pickerButton.focus({preventScroll:true});}catch(error){pickerButton.focus();}},180);
+      const rect=pickerButton.getBoundingClientRect();
+      const desiredTop=window.scrollY+rect.top-(window.innerHeight*0.32);
+      window.scrollTo({top:Math.max(0,desiredTop),left:0,behavior:'smooth'});
+      setTimeout(()=>{try{pickerButton.focus({preventScroll:true});}catch(error){}},180);
     }
   });
 }
