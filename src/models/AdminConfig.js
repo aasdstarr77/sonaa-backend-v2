@@ -24,7 +24,9 @@ const adminConfigSchema = new mongoose.Schema({
     siteName: { type: String, trim: true, maxlength: 100, default: 'صُنّاع' },
     maintenance: { type: Boolean, default: false },
     maintenanceMessage: { type: String, trim: true, maxlength: 500, default: '' },
-    maxFanniSignupAttempts: { type: Number, min: 1, max: 100, default: 5 }
+    maxFanniSignupAttempts: { type: Number, min: 1, max: 100, default: 5 },
+    walletPhone1: { type: String, trim: true, maxlength: 20, default: '' },
+    walletPhone2: { type: String, trim: true, maxlength: 20, default: '' }
   },
   content: {
     announcement: { type: String, trim: true, maxlength: 1000, default: '' },
