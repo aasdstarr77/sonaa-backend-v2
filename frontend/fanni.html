@@ -1415,6 +1415,7 @@ async function start(){
  }
 }
 
+let globalRefreshInProgress=false;
 let fanniChatPollInFlight=false,fanniLiveRenderPending=false;
 function renderFanniChatMessages(messages,accepted){return (Array.isArray(messages)?messages:[]).map(function(m){return '<div class="rounded-lg p-2 '+(m.senderRole==='fanni'?'bg-blue-50':'bg-emerald-50')+'"><p class="text-[10px] font-bold">'+(m.senderRole==='fanni'?'أنت':'العميل')+'</p><p class="text-[12px] '+(accepted?'whitespace-pre-wrap break-words':'')+'">'+esc(m.text||'')+'</p></div>';}).join('');}
 function liveFanniCanRender(){return !['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName);}
@@ -1478,7 +1479,7 @@ setInterval(refreshFanniChatMessagesSilently,2000);
 start();
 </script>
 
-<script>let globalRefreshInProgress=false;async function handleGlobalRefresh(){const button=document.getElementById('global-refresh');if(globalRefreshInProgress||button?.disabled)return;globalRefreshInProgress=true;if(button){button.disabled=true;button.classList.add('is-refreshing');}try{await refreshTechnicianPage();}catch(e){toast('تعذر تحديث البيانات. حاول مرة أخرى.','error');}finally{hideFanniLoading();globalRefreshInProgress=false;const currentButton=document.getElementById('global-refresh');if(currentButton){currentButton.disabled=false;currentButton.classList.remove('is-refreshing');}}}</script>
+<script>async function handleGlobalRefresh(){const button=document.getElementById('global-refresh');if(globalRefreshInProgress||button?.disabled)return;globalRefreshInProgress=true;if(button){button.disabled=true;button.classList.add('is-refreshing');}try{await refreshTechnicianPage();}catch(e){toast('تعذر تحديث البيانات. حاول مرة أخرى.','error');}finally{hideFanniLoading();globalRefreshInProgress=false;const currentButton=document.getElementById('global-refresh');if(currentButton){currentButton.disabled=false;currentButton.classList.remove('is-refreshing');}}}</script>
 
 <script src="/web-push.js" defer></script>
 </body>
