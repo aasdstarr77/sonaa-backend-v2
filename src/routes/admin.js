@@ -1704,7 +1704,8 @@ async function ensureHiddenLegacy(oldName, oldCategoryLabel) {
 router.get('/services', auth('admin'), async (req, res, next) => {
   try {
     const savedServices = await Service.find({}).sort({ category: 1, sortOrder: 1, name: 1 }).lean();
-    const map = buildAdminCategoriesMap(savedServices);
+    const visibleServices = savedServices.filter(item => normalizeForCompare(item.name) !== normalizeForCompare('تعليق شاشة حائط'));
+    const map = buildAdminCategoriesMap(visibleServices);
     const categoriesDetailed = Array.from(map.values()).map(cat => ({
       label: cat.label,
       name: cat.label,
@@ -1830,6 +1831,22 @@ router.patch('/services/order', auth('admin'), async (req, res, next) => {
 router.delete('/services/:id', auth('admin'), async (req, res, next) => {
   try {
     const rawId = String(req.params.id || '').trim(), requestedCategory = req.query.category ? String(req.query.category).trim().replace(/\s+/g, ' ') : '';
+    const targetName = normalizeForCompare('تعليق شاشة حائط');
+    // Resolve this service before normal ID/category matching, because old admin
+    // rows may send a stale ID or an outdated category label.
+    let requestedService = null;
+    if (mongoose.isValidObjectId(rawId)) requestedService = await Service.findById(rawId).select('name').lean();
+    if (normalizeForCompare(rawId) === targetName || normalizeForCompare(requestedService?.name) === targetName) {
+      const allRows = await Service.find({}).select('_id name').lean();
+      const matchingIds = allRows.filter(item => normalizeForCompare(item.name) === targetName).map(item => item._id);
+      if (matchingIds.length) await Service.deleteMany({ _id: { $in: matchingIds } });
+      const remainingRows = await Service.find({}).select('name').lean();
+      if (remainingRows.some(item => normalizeForCompare(item.name) === targetName)) {
+        return res.status(409).json({ message: 'تعذر تأكيد حذف كل نسخ الخدمة. لم يتم الإبلاغ عن نجاح الحذف.' });
+      }
+      await writeAdminAudit(req, 'حذف نهائي لخدمة معطلة', 'services', 'تعليق شاشة حائط', JSON.stringify({ category: requestedCategory, removedCopies: matchingIds.length, historicalOrdersPreserved: true }));
+      return res.json({ ok: true, deleted: true, message: 'تم حذف الخدمة المعطلة من كل الأقسام. الطلبات القديمة محفوظة.' });
+    }
     let service = null;
     if (mongoose.isValidObjectId(rawId)) service = await Service.findById(rawId);
     else {
