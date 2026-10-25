@@ -3,7 +3,16 @@
   const keys={client:'sonaa_client_account_token',fanni:'fanni_token_v4',admin:'admin_token_v3'};
   const bytes=s=>Uint8Array.from(atob((s+'='.repeat((4-s.length%4)%4)).replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0));
   let hiddenFor='', checkedFor='', checkingFor='';
+  function pageRole(){
+    const p=String(location.pathname||'').toLowerCase();
+    if(/(^|[/_.-])admin([/_.-]|$)/.test(p))return 'admin';
+    if(/(^|[/_.-])(fanni|technician)([/_.-]|$)/.test(p))return 'fanni';
+    if(/(^|[/_.-])client([/_.-]|$)/.test(p))return 'client';
+    return '';
+  }
   function account(){
+    const preferred=pageRole();
+    if(preferred)try{const token=localStorage.getItem(keys[preferred]);if(token)return{role:preferred,token};}catch(_){}
     for(const role of ['client','fanni','admin'])try{
       const token=localStorage.getItem(keys[role]);
       if(token)return{role,token};
