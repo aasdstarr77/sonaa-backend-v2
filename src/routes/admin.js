@@ -236,8 +236,14 @@ router.patch('/complaints/:id', auth('admin'), validate(Joi.object({
 
 router.get('/counts', auth('admin'), async (req, res, next) => {
   try {
-    const [technicians, clients] = await Promise.all([Fanni.countDocuments({ role: 'fanni' }), Client.countDocuments({})]);
-    return res.set('Cache-Control', 'no-store').json({ counts: { technicians, clients } });
+    const [technicians, verifiedTechnicians, clients] = await Promise.all([
+      Fanni.countDocuments({ role: 'fanni' }),
+      Fanni.countDocuments({ role: 'fanni', status: 'معتمد' }),
+      Client.countDocuments({})
+    ]);
+    return res.set('Cache-Control', 'no-store').json({
+      counts: { technicians, verifiedTechnicians, clients }
+    });
   } catch (err) { next(err); }
 });
 
@@ -1384,9 +1390,9 @@ router.patch('/content/announcement', auth('admin'), async (req, res, next) => {
     if (error) return res.status(400).json({ message: 'نص الإعلان غير صالح؛ الحد الأقصى 1000 حرف' });
     const config = await getAdminConfig();
     const previousLength = String(config.content?.announcement || '').length;
-    const content = config.content?.toObject ? config.content.toObject() : (config.content || {});
-    config.content = { ...content, announcement: value.announcement };
-    const faqCount = Array.isArray(config.content.faqs) ? config.content.faqs.length : 0;
+    const faqCount = Array.isArray(config.content?.faqs) ? config.content.faqs.length : 0;
+    // Update only the announcement path so unrelated legacy FAQ records are not revalidated.
+    config.set('content.announcement', value.announcement);
     config.history.push({
       key: 'content',
       before: { announcementLength: previousLength, faqCount },
@@ -1838,16 +1844,29 @@ router.delete('/services/:id', auth('admin'), async (req, res, next) => {
       return res.status(404).json({ message: 'الخدمة لا تنتمي إلى القسم المحدد؛ لم يتم حذف أي سجل' });
     }
     const normalizedName = normalizeForCompare(name);
-    const legacyCategory = findCategoryByLabel(category);
-    const isLegacyService = Boolean(legacyCategory && legacyCategory.services.some(item => normalizeForCompare(item) === normalizedName));
+    const isLegacyService = CATEGORIES.some(cat =>
+      cat.services.some(item => normalizeForCompare(item) === normalizedName) &&
+      normalizeForCompare(cat.label) === normalizeForCompare(category)
+    );
     let deleted = false;
     if (isLegacyService) {
-      const sameCategoryRows = await Service.find({ category }).select('_id name isActive');
-      const legacyRows = sameCategoryRows.filter(item => normalizeForCompare(item.name) === normalizedName);
-      for (const row of legacyRows) {
-        if (row.isActive) { row.isActive = false; await row.save(); }
+      // Some older built-in services exist in more than one legacy category.
+      // Hide every matching legacy entry so it cannot reappear from another category,
+      // while leaving historical orders untouched.
+      const legacyCategories = CATEGORIES.filter(cat =>
+        cat.services.some(item => normalizeForCompare(item) === normalizedName)
+      );
+      const allRows = await Service.find({}).select('_id name category isActive');
+      for (const legacyCat of legacyCategories) {
+        const legacyRows = allRows.filter(item =>
+          normalizeForCompare(item.name) === normalizedName &&
+          normalizeForCompare(item.category) === normalizeForCompare(legacyCat.label)
+        );
+        for (const row of legacyRows) {
+          if (row.isActive) { row.isActive = false; await row.save(); }
+        }
+        if (!legacyRows.length) await ensureHiddenLegacy(name, legacyCat.label);
       }
-      if (!legacyRows.length) await ensureHiddenLegacy(name, category);
     } else {
       const sameCategoryRows = await Service.find({ category }).select('_id name');
       const duplicateIds = sameCategoryRows.filter(item => normalizeForCompare(item.name) === normalizedName).map(item => item._id);
