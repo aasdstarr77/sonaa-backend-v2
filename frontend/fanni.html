@@ -71,6 +71,18 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
 .fanni-login-panel .secondary-btn{border-radius:12px;box-shadow:0 3px 0 #cbd7e7,0 5px 8px #0b1b3a0d}
 @media(prefers-reduced-motion:reduce){.fanni-login-gate .fanni-login-tabs button,.fanni-login-panel .field,.fanni-login-panel .primary-btn{transition:none}}
 
+/* Match the client page's button order, spacing and raised controls. */
+.fanni-account-nav{direction:rtl}
+.fanni-account-nav-btn{min-height:36px;white-space:nowrap;box-shadow:0 3px 0 #0b1b3a12;transition:transform .16s,box-shadow .16s,filter .16s}
+.fanni-account-nav-btn:active{transform:translateY(2px);box-shadow:0 1px 0 #0b1b3a12}
+.fanni-account-nav .fanni-account-home-btn{background:linear-gradient(135deg,#2875f0,#173c6c)!important;color:#fff!important;-webkit-text-fill-color:#fff!important;text-decoration:none!important;border:1px solid #ffffff45!important;box-shadow:0 3px 0 #0b1b3a24,0 6px 12px #0b1b3a12,inset 0 1px 0 #ffffff45!important}
+.fanni-account-nav .fanni-account-home-btn:active{transform:translateY(2px);box-shadow:0 1px 0 #0b1b3a12!important}
+.fanni-login-panel .secondary-btn{min-height:44px;padding-inline:16px;font-weight:800;border:1px solid #d5dfed;background:linear-gradient(145deg,#fff,#eaf0f8);color:#344965;box-shadow:0 3px 0 #cbd7e7,0 5px 8px #0b1b3a0d;transition:transform .16s,box-shadow .16s}
+.fanni-login-panel .secondary-btn:active{transform:translateY(2px);box-shadow:0 1px 0 #cbd7e7}
+.fanni-login-panel .primary-btn{min-height:48px}
+@media(max-width:360px){.fanni-account-nav-btn{padding-inline:10px;font-size:10px}}
+@media(prefers-reduced-motion:reduce){.fanni-account-nav-btn,.fanni-login-panel .secondary-btn{transition:none}}
+
 /* Complete client-login visual parity for technician login and registration */
 .fanni-login-gate{max-width:480px;margin-left:auto;margin-right:auto}
 .fanni-login-gate .fanni-login-brand{height:132px;width:132px;border-radius:30px;background:linear-gradient(145deg,#fff 0%,#e8eff9 100%);border:1px solid #fff;box-shadow:0 7px 0 #cbd8ea,0 16px 24px #0b1b3a20,inset 0 2px 3px #fff;transform:perspective(700px) rotateX(3deg);filter:drop-shadow(0 10px 12px #0b1b3a16)}
@@ -626,10 +638,10 @@ function render(){
     </div>
    </div>
   </div>
-  <div class="mx-auto max-w-[680px] px-3 pb-2 flex items-center justify-between gap-2">
-   <button type="button" onclick="goBack()" class="h-9 px-3 rounded-xl border border-white/20 bg-white/10 text-white text-[11px] font-extrabold">← رجوع</button>
-   <a href="/" aria-label="القائمة الرئيسية" title="القائمة الرئيسية" class="h-9 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 flex items-center justify-center gap-1.5 text-white text-[11px] font-extrabold"><span aria-hidden="true">⌂</span><span>القائمة الرئيسية</span></a>
-  </div>
+  <nav class="fanni-account-nav mx-auto max-w-[680px] px-3 pb-2 flex flex-row-reverse items-center justify-between gap-2">
+   <a href="/" aria-label="القائمة الرئيسية" title="القائمة الرئيسية" class="fanni-account-nav-btn fanni-account-home-btn order-1 h-9 px-3 rounded-xl flex items-center justify-center text-[11px] font-extrabold"><span aria-hidden="true">⌂</span><span class="mr-1">القائمة الرئيسية</span></a>
+   <button type="button" onclick="goBack()" class="fanni-account-nav-btn order-2 h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-700 text-[11px] font-extrabold">← رجوع</button>
+  </nav>
   ${notificationPanel()}
   </header>
 
