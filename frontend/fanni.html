@@ -70,6 +70,33 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
 .fanni-login-panel .primary-btn:active,.fanni-login-panel button.primary-btn:active{transform:translateY(3px);box-shadow:0 2px 0 #123b85,0 4px 8px #0b1b3a20!important}
 .fanni-login-panel .secondary-btn{border-radius:12px;box-shadow:0 3px 0 #cbd7e7,0 5px 8px #0b1b3a0d}
 @media(prefers-reduced-motion:reduce){.fanni-login-gate .fanni-login-tabs button,.fanni-login-panel .field,.fanni-login-panel .primary-btn{transition:none}}
+
+/* Complete client-login visual parity for technician login and registration */
+.fanni-login-gate{max-width:480px;margin-left:auto;margin-right:auto}
+.fanni-login-gate .fanni-login-brand{height:132px;width:132px;border-radius:30px;background:linear-gradient(145deg,#fff 0%,#e8eff9 100%);border:1px solid #fff;box-shadow:0 7px 0 #cbd8ea,0 16px 24px #0b1b3a20,inset 0 2px 3px #fff;transform:perspective(700px) rotateX(3deg);filter:drop-shadow(0 10px 12px #0b1b3a16)}
+.fanni-login-gate .fanni-login-brand img{width:118px;height:118px;object-fit:contain;filter:drop-shadow(0 5px 2px #0b1b3a28) drop-shadow(0 12px 10px #0b1b3a16);transform:translateY(-2px)}
+.fanni-login-gate .fanni-login-slogan{color:#173c6c!important}
+.fanni-login-gate .fanni-login-hero>div>div:first-child{background:initial}
+.fanni-login-gate .fanni-login-hero .grid>div{background:linear-gradient(145deg,#fff,#edf3fb)!important;border:1px solid #d5e0ef;color:#24456f;box-shadow:0 3px 0 #d5dfed,0 5px 9px #0b1b3a0c,inset 0 1px 0 #fff}
+.fanni-login-gate .fanni-login-tabs button[class*="bg-[#0b1b3a]"]{background:linear-gradient(145deg,#315f99 0%,#173c6c 65%,#102b50 100%)!important;color:#fff!important;border-color:#42628a;box-shadow:0 4px 0 #0b1b3a,0 7px 12px #0b1b3a2c,inset 0 1px 0 #ffffff40!important}
+.fanni-login-gate .fanni-login-tabs button:not([class*="bg-[#0b1b3a]"]){background:linear-gradient(145deg,#fff,#eaf0f8)!important;color:#344965!important;border-color:#d5dfed!important;box-shadow:0 3px 0 #cbd7e7,0 5px 8px #0b1b3a0d,inset 0 1px 0 #fff!important}
+.fanni-login-panel{padding:20px!important}
+.fanni-login-panel .field{width:100%;min-height:48px;padding:11px 13px;border:1px solid #d8e2ef!important;border-radius:13px!important;background:linear-gradient(145deg,#fbfdff,#f1f6fd)!important;color:#0b1b3a;box-shadow:inset 0 2px 4px #0b1b3a08,0 3px 0 #dce5f1!important;transition:border-color .18s,box-shadow .18s,background .18s,transform .18s}
+.fanni-login-panel .field:focus{background:#fff!important;border-color:#2563eb!important;box-shadow:0 0 0 4px #2563eb18,0 3px 0 #bfdbfe,inset 0 1px 2px #0b1b3a08!important;outline:none}
+.fanni-login-panel .field-label{display:block;margin-bottom:6px;color:#243b5b;font-size:12px;font-weight:900}
+.fanni-login-panel .service-chip{border-color:#d5e0ef;border-radius:16px;background:linear-gradient(145deg,#fff,#edf3fb);box-shadow:0 4px 0 #dce5f1,0 7px 12px #0b1b3a0d,inset 0 1px 0 #fff;transition:transform .16s,box-shadow .16s,background .16s}
+.fanni-login-panel .service-chip:active{transform:translateY(3px);box-shadow:0 1px 0 #dce5f1,0 3px 6px #0b1b3a0d}
+.fanni-login-panel .service-chip.selected{background:linear-gradient(145deg,#dbeafe,#eff6ff);border-color:#60a5fa;color:#1d4ed8;box-shadow:0 4px 0 #93c5fd,0 7px 12px #2563eb15,inset 0 1px 0 #fff}
+.fanni-login-panel .service-chip .service-icon{background:linear-gradient(145deg,#fff,#dbeafe);box-shadow:0 3px 0 #bfdbfe}
+.fanni-login-panel input[type="checkbox"],.fanni-login-panel input[type="radio"]{accent-color:#2563eb}
+.fanni-login-panel .rounded-2xl.border.p-3{border-color:#d5e0ef!important;border-radius:18px!important;background:linear-gradient(145deg,#fff,#f7faff);box-shadow:inset 0 1px 0 #fff,0 3px 0 #e0e8f3}
+.fanni-login-gate nav .account-nav-btn,.fanni-login-gate nav button,.fanni-login-gate nav a{border-radius:12px!important;font-weight:900!important;transition:transform .16s,box-shadow .16s,filter .16s}
+.fanni-login-gate nav .account-home-btn,.fanni-login-gate nav a{background:linear-gradient(145deg,#3983f6 0%,#1d4ed8 55%,#173c6c 100%)!important;color:#fff!important;border:1px solid #ffffff45!important;box-shadow:0 4px 0 #123b85,0 7px 12px #1d4ed82e,inset 0 1px 0 #ffffff45!important}
+.fanni-login-gate nav button{background:linear-gradient(145deg,#fff,#eaf0f8)!important;color:#344965!important;border:1px solid #d5dfed!important;box-shadow:0 4px 0 #cbd7e7,0 7px 12px #0b1b3a0d,inset 0 1px 0 #fff!important}
+.fanni-login-gate nav .account-nav-btn:active,.fanni-login-gate nav button:active,.fanni-login-gate nav a:active{transform:translateY(3px);box-shadow:0 1px 0 #cbd7e7!important}
+.fanni-login-panel .primary-btn,.fanni-login-panel button.primary-btn{min-height:48px;background:linear-gradient(145deg,#3983f6 0%,#1d4ed8 55%,#173c6c 100%)!important;color:#fff!important;border:1px solid #ffffff45!important;border-radius:13px!important;box-shadow:0 5px 0 #123b85,0 9px 16px #1d4ed82e,inset 0 1px 0 #ffffff45!important;text-shadow:0 1px 2px #102b5066;transition:transform .16s,box-shadow .16s,filter .16s}
+.fanni-login-panel .primary-btn:active,.fanni-login-panel button.primary-btn:active{transform:translateY(3px);box-shadow:0 2px 0 #123b85,0 4px 8px #0b1b3a20!important}
+@media(max-width:380px){.fanni-login-gate .fanni-login-brand{height:108px;width:108px}.fanni-login-gate .fanni-login-brand img{height:98px;width:98px}.fanni-login-panel{padding:16px!important}}
 </style>
 </head>
 <body class="min-h-screen antialiased">
@@ -609,9 +636,9 @@ function render(){
  <main class="mx-auto max-w-[680px] px-3 pb-[160px]">
  ${!authenticated?`
   <section class="fanni-login-gate mt-5">
-   <div class="fanni-login-hero rounded-2xl bg-gradient-to-br from-[#0b1b3a] to-[#163b70] text-white p-5 shadow-md">
-    <div class="flex items-center gap-3"><div class="h-12 w-12 rounded-2xl bg-white/10 flex items-center justify-center text-2xl">🧰</div><div><h2 class="text-[17px] font-extrabold">أهلاً بيك في صناع</h2><p class="text-[11px] text-blue-100/80 mt-1">استقبل طلبات مناسبة لتخصصك ومناطق عملك</p></div></div>
-    <div class="grid grid-cols-3 gap-2 mt-4">${[['🛠️','تخصصات متنوعة'],['📍','مناطق عملك'],['📋','متابعة الطلبات']].map(x=>`<div class="rounded-xl bg-white/10 p-2.5 text-center"><div>${x[0]}</div><div class="text-[10px] font-bold mt-1">${x[1]}</div></div>`).join('')}</div>
+   <div class="fanni-login-hero rounded-2xl p-5 text-center">
+    <div class="fanni-login-brand mx-auto flex items-center justify-center"><img class="sonaa-logo-svg" src="/images/LOGO_UPLOAD_HERE/logo.png" alt="شعار صُنّاع" width="144" height="144" decoding="async"></div><h2 class="mt-4 text-2xl font-black">صُنّاع</h2><p class="fanni-login-slogan mt-1 text-sm font-black">كل خدمة تبدأ بخطوة</p><p class="mt-2 text-[12px] leading-6">سجّل دخولك أو أنشئ حسابك الفني واستقبل طلبات مناسبة لتخصصك ومناطق عملك.</p>
+    <div class="grid grid-cols-3 gap-2 mt-4">${[['🛠️','تخصصات متنوعة'],['📍','مناطق عملك'],['📋','متابعة الطلبات']].map(x=>`<div class="rounded-xl p-2.5 text-center"><div>${x[0]}</div><div class="text-[10px] font-bold mt-1">${x[1]}</div></div>`).join('')}</div>
    </div>
 
    <div class="fanni-login-tabs mt-4 flex p-1 bg-white rounded-2xl border shadow-sm">
