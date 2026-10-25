@@ -208,7 +208,7 @@ function render(){
         </div>
       </div>
       <div class="flex gap-1.5 shrink-0 items-center">
-        <div class="flex flex-col gap-1 items-center"><button onclick="goFanni()" class="h-8 px-3 rounded-lg bg-white/10 hover:bg-white/15 text-[11px] font-black border border-white/10">لوحة الفني</button><a href="password.html?role=admin&amp;mode=account" class="text-[10px] font-extrabold text-blue-100 hover:text-white underline underline-offset-2">حسابي</a></div>
+        <div class="flex flex-col gap-1 items-center"><button onclick="goFanni()" class="h-8 px-3 rounded-lg bg-white/10 hover:bg-white/15 text-[11px] font-black border border-white/10">لوحة الفني</button><a href="password.html?role=admin&amp;mode=account" class="h-7 min-w-[88px] px-3 rounded-lg bg-white/10 hover:bg-white/20 border border-white/15 text-[10px] font-black text-white inline-flex items-center justify-center gap-1 no-underline"><span aria-hidden="true">👤</span><span>حسابي</span></a></div>
         ${isAuth?'<button onclick="logout()" class="h-9 w-9 rounded-xl bg-white/10 flex items-center justify-center">⎋</button>':''}
       </div>
     </div>
@@ -248,6 +248,7 @@ function render(){
               ${escHtml(item.label)} <span class="subnav-count" aria-label="عدد الحالات التي تحتاج تدخل">${escHtml(String(Math.max(0,Number(typeof item.count==='function'?item.count():item.count)||0)))}</span>
             </button>
           `).join('')}
+          ${getAdminSectionForTab(state.tab)==='customer-operations'?'<a href="password.html?role=admin&amp;mode=support" class="subnav-btn inline-flex items-center justify-center gap-2 no-underline"><span aria-hidden="true">🔐</span>طلبات استعادة كلمة المرور <span id="sonaa-recovery-count" class="subnav-count" aria-label="عدد طلبات استعادة كلمة المرور">!</span></a>':''}
         </div>
       </section>
       <div class="mt-3 premium-panel p-3 flex flex-col gap-2.5">
@@ -805,7 +806,7 @@ function renderSupport(){
  const result=state.supportResults||{orders:[],complaints:[]};
  return `
  <section class="mt-4 space-y-4">
- <div class="premium-panel p-4"><h3 class="font-black text-sm">محادثات خدمة العملاء</h3><p class="text-[11px] text-slate-500 mt-1 leading-6">افتح صندوق المحادثات لمتابعة رسائل العملاء والفنيين والرد عليهم وتغيير حالة كل محادثة.</p><div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2"><a href="support.html?role=admin" class="pill-btn primary-pill w-full inline-flex items-center justify-center no-underline">مركز مساعدة صُنّاع 🎧</a><a href="password.html?role=admin&amp;mode=support" class="pill-btn soft-btn w-full inline-flex items-center justify-center gap-2 no-underline">طلبات استعادة كلمة المرور <span id="sonaa-recovery-count" aria-label="عدد طلبات استعادة كلمة المرور" class="inline-flex min-w-[21px] h-[21px] px-1.5 rounded-full bg-white text-emerald-700 border border-emerald-200 text-[11px] font-black leading-[19px] text-center items-center justify-center">!</span></a></div></div>
+ <div class="premium-panel p-4"><h3 class="font-black text-sm">محادثات خدمة العملاء</h3><p class="text-[11px] text-slate-500 mt-1 leading-6">افتح صندوق المحادثات لمتابعة رسائل العملاء والفنيين والرد عليهم وتغيير حالة كل محادثة.</p><div class="mt-3"><a href="support.html?role=admin" class="pill-btn primary-pill w-full inline-flex items-center justify-center no-underline">مركز مساعدة صُنّاع 🎧</a></div></div>
  <div class="premium-panel p-4"><div class="flex gap-2"><input id="support-query" value="${escHtml(state.supportQuery||'')}" placeholder="رقم طلب / كود تتبع / هاتف" class="field flex-1"><button onclick="searchSupport()" class="pill-btn primary-pill">بحث</button></div><button onclick="loadSupportViolations()" class="pill-btn soft-btn mt-3 w-full">سجل المخالفات / إجراءات الدعم</button></div>
  ${(result.orders||[]).map(o=>`<article class="premium-card p-3"><p class="font-black">طلب ${escHtml(o.sn)} — ${escHtml(o.clientName||'عميل')} — ${escHtml(o.clientPhone||'')}</p><p class="text-[10px] text-slate-500">${escHtml(o.service||'')} • ${escHtml(o.status||'')}</p><button onclick="markSupportReview('${escHtml(o.sn)}')" class="pill-btn soft-btn mt-2">وضع علامة مراجعة</button></article>`).join('')}
  ${(result.complaints||[]).map(c=>`<article class="premium-card p-3"><p class="font-black">شكوى ${escHtml(c.sn)} — ${escHtml(c.clientName||'')}</p><p class="text-[10px] text-slate-600">${escHtml(c.text||'')}</p><p class="text-[10px]">الحالة: ${escHtml(c.status||'')}</p><button onclick="markSupportReview('${escHtml(c.sn)}')" class="pill-btn soft-btn mt-2">وضع علامة مراجعة</button></article>`).join('')}
