@@ -101,6 +101,13 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--blue)!im
 .client-submit-order-btn:active{transform:translateY(4px);box-shadow:0 2px 0 #123b85,0 5px 10px #1d4ed820!important}
 .client-submit-order-btn:disabled{opacity:.7;box-shadow:0 3px 0 #123b85!important}
 
+/* Raised 3D styling for complaint actions. */
+.client-complaint-submit-btn{background:linear-gradient(145deg,#fb7185 0%,#dc2626 52%,#991b1b 100%)!important;color:#fff!important;border:1px solid #ffffff55!important;box-shadow:0 5px 0 #7f1d1d,0 9px 16px #991b1b2e,inset 0 1px 0 #ffffff55!important;text-shadow:0 1px 2px #7f1d1d66;transition:transform .16s,box-shadow .16s,filter .16s}
+.client-complaint-track-btn{background:linear-gradient(145deg,#60a5fa 0%,#2563eb 52%,#1e3a8a 100%)!important;color:#fff!important;border:1px solid #ffffff65!important;box-shadow:0 5px 0 #1e3a8a,0 9px 16px #1d4ed82e,inset 0 1px 0 #ffffff60!important;text-shadow:0 1px 2px #1e3a8a66;transition:transform .16s,box-shadow .16s,filter .16s}
+.client-complaint-submit-btn:active,.client-complaint-track-btn:active{transform:translateY(3px);filter:brightness(.98);box-shadow:0 2px 0 #1e3a8a,0 4px 8px #0b1b3a20!important}
+.client-complaint-submit-btn:disabled,.client-complaint-track-btn:disabled{opacity:.72;filter:saturate(.8);transform:none}
+
+
 .app-header .brand-mark{width:88px;height:88px;border-radius:22px;background:linear-gradient(145deg,#fff,#e8eff9);border:1px solid #fff;box-shadow:0 5px 0 #cbd8ea,0 10px 18px #0b1b3a1c,inset 0 2px 3px #fff;overflow:visible}
 .app-header .brand-mark .sonaa-logo-svg{filter:drop-shadow(0 4px 2px #0b1b3a28) drop-shadow(0 9px 7px #0b1b3a18);transform:translateY(-2px)}
 @media(max-width:380px){.app-header .brand-mark{width:70px;height:70px}.client-new-order{padding-top:4px}.client-new-order .client-order-panel{padding:14px}}
@@ -1026,7 +1033,7 @@ ${state.tracked.acceptedOfferId && String(state.tracked.acceptedOfferId)===offer
             <span id="complaintTextStatus">${VALIDATORS.text(state.complaintText,10,1000)?'✓ تفاصيل الشكوى مكتملة':''}</span>
           </div>
           <p class="text-[10px] text-slate-500">ما تكتبش رقم تليفون داخل الاسم أو الشكوى؛ استخدم بيانات الطلب للتواصل.</p>
-          <button type="button" onclick="sendComplaint()" ${state.complaintLoading?'disabled':''} class="w-full h-[48px] rounded-xl bg-red-600 text-white font-extrabold text-[13px]">
+          <button type="button" onclick="sendComplaint()" ${state.complaintLoading?'disabled':''} class="client-complaint-submit-btn w-full h-[48px] rounded-xl font-extrabold text-[13px]">
             ${state.complaintLoading?'جاري إرسال الشكوى...':'إرسال الشكوى'}
           </button>
         </div>
@@ -1049,7 +1056,7 @@ ${state.tracked.acceptedOfferId && String(state.tracked.acceptedOfferId)===offer
             <label for="complaintTrackNameInput" class="text-[12px] font-extrabold mb-1.5 block">اسم العميل</label>
             <input id="complaintTrackNameInput" value="${escAttr(state.complaintTrackName)}" oninput="onComplaintTrackName(this.value)" placeholder="الاسم المسجل عند إنشاء الطلب" maxlength="50" class="field h-[48px] px-4 text-[13px] font-bold">
           </div>
-          <button type="button" onclick="trackComplaints()" ${state.complaintTrackLoading?`disabled`:``} class="w-full h-[48px] rounded-xl primary-btn font-extrabold text-[13px]">
+          <button type="button" onclick="trackComplaints()" ${state.complaintTrackLoading?`disabled`:``} class="client-complaint-track-btn w-full h-[48px] rounded-xl font-extrabold text-[13px]">
             ${state.complaintTrackLoading?`جاري تحميل الشكاوى...`:`متابعة الشكوى`}
           </button>
           ${state.complaintTrackError?`<p class="text-[12px] font-bold text-red-700 bg-red-50 border border-red-200 rounded-xl p-3">${escHtml(state.complaintTrackError)}</p>`:``}
