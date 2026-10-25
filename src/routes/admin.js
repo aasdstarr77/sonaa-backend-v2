@@ -1855,7 +1855,6 @@ router.delete('/services/:id', auth('admin'), async (req, res, next) => {
     if (requestedCategory && normalizeForCompare(category) !== normalizeForCompare(requestedCategory)) {
       return res.status(404).json({ message: 'الخدمة لا تنتمي إلى القسم المحدد؛ لم يتم حذف أي سجل' });
     }
-    const normalizedName = normalizeForCompare(name);
     const isLegacyService = CATEGORIES.some(cat =>
       cat.services.some(item => normalizeForCompare(item) === normalizedName) &&
       normalizeForCompare(cat.label) === normalizeForCompare(category)
