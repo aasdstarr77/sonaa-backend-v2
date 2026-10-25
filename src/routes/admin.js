@@ -1334,7 +1334,9 @@ router.put('/settings', auth('admin'), async (req, res, next) => {
       siteName: Joi.string().trim().min(2).max(100).required(),
       maintenance: Joi.boolean().required(),
       maintenanceMessage: Joi.string().trim().max(500).allow('').required(),
-      maxFanniSignupAttempts: Joi.number().integer().min(1).max(100).required()
+      maxFanniSignupAttempts: Joi.number().integer().min(1).max(100).required(),
+      walletPhone1: Joi.string().trim().max(20).allow('').default(''),
+      walletPhone2: Joi.string().trim().max(20).allow('').default('')
     }).required();
     const { error, value } = schema.validate(req.body || {}, { abortEarly: false, stripUnknown: true });
     if (error) return res.status(400).json({ message: 'بيانات الإعدادات غير صحيحة' });
