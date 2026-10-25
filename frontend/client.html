@@ -85,12 +85,12 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--blue)!im
 /* Customer sign-in: visual-only styling aligned with the Sonaa homepage. */
 .account-gate{position:relative;isolation:isolate;background:radial-gradient(ellipse at 50% 0%,#dbeafe 0%,#f4f7fb 48%,#eef2f8 100%)}
 .account-gate:before{content:"";position:absolute;z-index:-1;top:0;left:50%;width:min(520px,100%);height:250px;transform:translateX(-50%);background:radial-gradient(ellipse,#ffffffb8 0%,#ffffff00 72%);pointer-events:none}
-.account-gate .account-brand{filter:drop-shadow(0 10px 12px #0b1b3a16)}
+.account-gate .account-brand{height:132px;width:132px;border-radius:30px;background:linear-gradient(145deg,#fff 0%,#e8eff9 100%);border:1px solid #ffffff;box-shadow:0 7px 0 #cbd8ea,0 16px 24px #0b1b3a20,inset 0 2px 3px #fff;transform:perspective(700px) rotateX(3deg);filter:drop-shadow(0 10px 12px #0b1b3a16)}.account-gate .account-brand .sonaa-logo-svg{width:118px;height:118px;object-fit:contain;filter:drop-shadow(0 5px 2px #0b1b3a28) drop-shadow(0 12px 10px #0b1b3a16);transform:translateY(-2px)}
 .account-gate .account-slogan{color:#173c6c;font-weight:900;letter-spacing:.1px}
 .account-gate .account-panel{border:1px solid #d7e2f0;border-radius:25px;background:linear-gradient(145deg,#fff 0%,#fbfdff 100%);box-shadow:0 5px 0 #dce5f1,0 18px 38px #0b1b3a16,0 3px 9px #0b1b3a08}
 .account-gate .account-nav-btn{box-shadow:0 3px 0 #0b1b3a12;transition:transform .16s,box-shadow .16s}
 .account-gate .account-nav-btn:active{transform:translateY(2px);box-shadow:0 1px 0 #0b1b3a12}
-.account-gate .account-tabs{padding:5px;background:#edf2f9;border:1px solid #e1e8f2;border-radius:15px}
+.account-gate .account-tabs{padding:6px;background:linear-gradient(145deg,#e6edf7,#f8fbff);border:1px solid #d5e0ef;border-radius:17px;box-shadow:inset 0 2px 4px #0b1b3a0d,0 3px 0 #dce5f1}.account-gate .account-tab{position:relative;border:1px solid transparent;font-weight:900;letter-spacing:.1px;text-shadow:0 1px 0 #ffffff40}.account-gate .account-tab.tab-active{border-color:#42628a;background:linear-gradient(145deg,#315f99 0%,#173c6c 65%,#102b50 100%);box-shadow:0 4px 0 #0b1b3a,0 7px 12px #0b1b3a2c,inset 0 1px 0 #ffffff40;color:#fff;transform:translateY(-1px)}.account-gate .account-tab.tab-idle{background:linear-gradient(145deg,#fff,#eaf0f8);border-color:#d5dfed;color:#344965;box-shadow:0 3px 0 #cbd7e7,0 5px 8px #0b1b3a0d,inset 0 1px 0 #fff}.account-gate .account-tab:active{transform:translateY(2px);box-shadow:0 1px 0 #0b1b3a20}
 .account-gate .account-tab{min-height:44px;border-radius:11px;transition:background .18s,color .18s,box-shadow .18s}
 .account-gate .account-tab.tab-active{background:linear-gradient(135deg,#0b1b3a,#214b7d);box-shadow:0 4px 10px #0b1b3a25}
 .account-gate .account-tab.tab-idle{background:transparent;color:#52627a}
@@ -100,7 +100,7 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--blue)!im
 .account-gate .account-submit:hover{filter:brightness(1.04)}
 .account-gate .account-submit:active{transform:translateY(3px);box-shadow:0 2px 0 #163f8c,0 5px 10px #1d4ed820}
 .account-gate .account-home-btn{background:linear-gradient(135deg,#2875f0,#173c6c);box-shadow:0 3px 0 #0b1b3a24,0 6px 12px #0b1b3a12}
-@media(max-width:380px){.account-gate{padding-top:18px;padding-bottom:24px}.account-gate .account-panel{padding:16px}.account-gate .account-brand{height:82px;width:82px}}
+@media(max-width:380px){.account-gate{padding-top:18px;padding-bottom:24px}.account-gate .account-panel{padding:16px}.account-gate .account-brand{height:108px;width:108px}.account-gate .account-brand .sonaa-logo-svg{height:98px;width:98px}}
 @media(prefers-reduced-motion:reduce){.account-gate .account-nav-btn,.account-gate .account-tab,.account-gate .field,.account-gate .account-submit{transition:none}}
 .soft-card{background:#f8fafc;border:1px solid #e8eef5}
 .category-tile-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
