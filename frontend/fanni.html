@@ -71,6 +71,15 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
 .fanni-login-panel .secondary-btn{border-radius:12px;box-shadow:0 3px 0 #cbd7e7,0 5px 8px #0b1b3a0d}
 @media(prefers-reduced-motion:reduce){.fanni-login-gate .fanni-login-tabs button,.fanni-login-panel .field,.fanni-login-panel .primary-btn{transition:none}}
 
+/* Header navigation matches the client's joined, raised two-button group. */
+.fanni-account-nav{direction:rtl;justify-content:center!important;gap:0!important}
+.fanni-account-nav-btn{position:relative;display:inline-flex;align-items:center;justify-content:center;min-height:38px;white-space:nowrap;border-radius:0!important;border:1px solid #bfdbfe!important;box-shadow:0 3px 0 #dbeafe,0 5px 10px #1e3a8a12!important;transition:transform .16s,box-shadow .16s,filter .16s}
+.fanni-account-nav .fanni-account-home-btn{order:1;background:linear-gradient(145deg,#3983f6 0%,#1d4ed8 55%,#173c6c 100%)!important;color:#fff!important;-webkit-text-fill-color:#fff!important;text-decoration:none!important;border-color:#ffffff45!important;border-radius:0 13px 13px 0!important;box-shadow:0 4px 0 #123b85,0 8px 14px #0b1b3a25,inset 0 1px 0 #ffffff45!important}
+.fanni-account-nav button.fanni-account-nav-btn{order:2;background:linear-gradient(145deg,#eff6ff,#dbeafe)!important;color:#1e40af!important;-webkit-text-fill-color:#1e40af!important;border-color:#bfdbfe!important;border-radius:13px 0 0 13px!important;box-shadow:0 3px 0 #bfdbfe,0 5px 10px #1e3a8a12,inset 0 1px 0 #fff!important}
+.fanni-account-nav .fanni-account-home-btn:active,.fanni-account-nav button.fanni-account-nav-btn:active{transform:translateY(2px);box-shadow:0 1px 0 #123b85!important}
+@media(max-width:360px){.fanni-account-nav-btn{padding-inline:10px;font-size:10px}}
+@media(prefers-reduced-motion:reduce){.fanni-account-nav-btn{transition:none}}
+
 /* Match the client page's button order, spacing and raised controls. */
 .fanni-account-nav{direction:rtl}
 .fanni-account-nav-btn{min-height:36px;white-space:nowrap;box-shadow:0 3px 0 #0b1b3a12;transition:transform .16s,box-shadow .16s,filter .16s}
@@ -638,7 +647,7 @@ function render(){
     </div>
    </div>
   </div>
-  <nav class="fanni-account-nav mx-auto max-w-[680px] px-3 pb-2 flex flex-row-reverse items-center justify-between gap-2">
+  <nav class="fanni-account-nav mx-auto max-w-[680px] px-3 pb-2 flex flex-row-reverse items-center justify-center gap-0">
    <a href="/" aria-label="القائمة الرئيسية" title="القائمة الرئيسية" class="fanni-account-nav-btn fanni-account-home-btn order-1 h-9 px-3 rounded-xl flex items-center justify-center text-[11px] font-extrabold"><span aria-hidden="true">⌂</span><span class="mr-1">القائمة الرئيسية</span></a>
    <button type="button" onclick="goBack()" class="fanni-account-nav-btn order-2 h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-700 text-[11px] font-extrabold">← رجوع</button>
   </nav>
