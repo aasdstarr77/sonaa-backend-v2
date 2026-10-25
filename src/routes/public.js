@@ -17,6 +17,18 @@ const {
 
 const router = express.Router();
 
+// Publicly expose only the two transfer numbers needed by technician wallets.
+router.get('/wallet-settings', async (req, res, next) => {
+  try {
+    const config = await AdminConfig.findOne({ key: 'main' }).select('settings.walletPhone1 settings.walletPhone2').lean();
+    res.set('Cache-Control', 'no-store');
+    return res.json({
+      walletPhone1: String(config?.settings?.walletPhone1 || '').trim(),
+      walletPhone2: String(config?.settings?.walletPhone2 || '').trim()
+    });
+  } catch (err) { next(err); }
+});
+
 function normalize(value) {
   return String(value || '')
     .normalize('NFC')
