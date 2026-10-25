@@ -227,6 +227,43 @@ main button.primary-btn{border:1px solid #ffffff50;box-shadow:0 4px 0 #c2d0e3,0 
 main button.blue-btn:active,main button.primary-btn:active,.client-section-tabs button:active{transform:translateY(3px);box-shadow:0 1px 0 #c2d0e3,0 3px 6px #0b1b3a10}
 @media(prefers-reduced-motion:reduce){.client-new-order .field,#servicePanel button,nav.fixed.bottom-0 button,nav.fixed.bottom-0 a{transition:none}}
 
+
+/* Elevated 3D treatment for the customer page header and its action buttons. */
+.app-header{background:linear-gradient(180deg,#fff 0%,#eef4fc 100%)!important;border-bottom:1px solid #cbd8e9!important;box-shadow:0 5px 0 #dce5f1,0 12px 24px #0b1b3a12,inset 0 1px 0 #fff!important}
+.app-header h1{font-size:clamp(1.35rem,5vw,1.8rem)!important;font-weight:900!important;letter-spacing:-.035em;text-shadow:0 1px 0 #fff,0 2px 0 #d2deed,0 4px 7px #0b1b3a18}
+.app-header .client-header-slogan{font-size:clamp(1rem,3.8vw,1.2rem)!important;font-weight:900!important;line-height:1.5;color:#173c6c!important;text-shadow:0 1px 0 #fff,0 2px 0 #dce6f3,0 4px 7px #0b1b3a15}
+.app-header>div:first-child>div:last-child>div:first-child>a,
+.app-header>div:first-child>div:last-child>div:first-child>button,
+.app-header>div:first-child>div:last-child>a:last-child{
+  border:1px solid #c4d3e8!important;
+  border-radius:13px!important;
+  background:linear-gradient(145deg,#fff 0%,#edf3fc 100%)!important;
+  box-shadow:0 4px 0 #cbd8e9,0 7px 12px #0b1b3a13,inset 0 1px 0 #fff!important;
+  text-shadow:0 1px 0 #fff;
+  transition:transform .16s,box-shadow .16s,filter .16s;
+}
+.app-header>div:first-child>div:last-child>div:first-child>a[href*="sonaa-download"]{
+  color:#12633c!important;border-color:#a8d8bb!important;
+  background:linear-gradient(145deg,#f4fff8 0%,#d8f5e3 100%)!important;
+  box-shadow:0 4px 0 #a6d2b5,0 7px 12px #16653416,inset 0 1px 0 #fff!important;
+}
+.app-header>div:first-child>div:last-child>div:first-child>button[aria-label="الإشعارات"]{
+  color:#a16207!important;border-color:#e8cf91!important;
+  background:linear-gradient(145deg,#fff9e9 0%,#f9e7b6 100%)!important;
+  box-shadow:0 4px 0 #dfc27d,0 7px 12px #92400e18,inset 0 1px 0 #fff!important;
+}
+.app-header>div:first-child>div:last-child>div:first-child>a[href*="mode=account"]{
+  color:#1d4ed8!important;border-color:#b8cdf0!important;
+  background:linear-gradient(145deg,#f5f9ff 0%,#dbe9ff 100%)!important;
+  box-shadow:0 4px 0 #b2c8eb,0 7px 12px #1d4ed818,inset 0 1px 0 #fff!important;
+}
+.app-header>div:first-child>div:last-child>div:first-child>button,
+.app-header>div:first-child>div:last-child>div:first-child>a,
+.app-header>div:first-child>div:last-child>a:last-child{min-height:40px}
+.app-header>div:first-child>div:last-child>div:first-child>*:active,
+.app-header>div:first-child>div:last-child>a:last-child:active{transform:translateY(3px);box-shadow:0 1px 0 #cbd8e9,0 3px 6px #0b1b3a12!important}
+.app-header .brand-mark{box-shadow:0 6px 0 #cbd8ea,0 12px 20px #0b1b3a20,inset 0 2px 3px #fff!important}
+
 </style>
 </head>
 <body class="min-h-screen antialiased">
@@ -680,7 +717,7 @@ function render(){
         <div class="brand-mark h-16 w-16 sm:h-[84px] sm:w-[84px] rounded-xl flex items-center justify-center shrink-0"><img class="sonaa-logo-svg" src="/images/LOGO_UPLOAD_HERE/logo.png" alt="شعار صُنّاع" width="120" height="120" decoding="async"></div>
         <div class="min-w-0">
           <h1 class="font-extrabold text-[16px] leading-tight truncate">${escHtml(state.publicContent?.siteName||'صُنّاع')}</h1>
-          <p class="text-[11px] sm:text-xs text-slate-500 font-bold mt-1 whitespace-nowrap">خدماتك في مكان واحد</p>
+          <p class="client-header-slogan mt-2 text-sm sm:text-base font-black whitespace-nowrap">كل خدمة تبدأ بخطوة</p>
         </div>
       </div>
       <div class="flex flex-col items-end gap-1.5 shrink-0">
