@@ -890,7 +890,7 @@ function handleOutsideServiceClick(event){
   window.scrollTo({top:pageY,left:0,behavior:'instant'});
 }
 function toggleCategory(label){
-  const opening=state.openCategory!==label;
+  const opening=Boolean(label)&&state.openCategory!==label;
   state.openCategory=opening?label:'';
   render();
   if(opening){
@@ -898,9 +898,14 @@ function toggleCategory(label){
       const list=document.getElementById('serviceList');
       const details=document.getElementById('selectedCategoryDetails');
       if(!list||!details)return;
+      // Scroll only the picker list so the detailed-service buttons start in view.
       const listRect=list.getBoundingClientRect();
       const detailsRect=details.getBoundingClientRect();
-      list.scrollTo({top:list.scrollTop+(detailsRect.top-listRect.top)-8,behavior:'smooth'});
+      const targetTop=list.scrollTop+(detailsRect.top-listRect.top)-8;
+      list.scrollTo({top:Math.max(0,targetTop),behavior:'smooth'});
+      // If the dialog itself needs to move into view, do not scroll the page behind it.
+      details.setAttribute('tabindex','-1');
+      details.focus({preventScroll:true});
     });
   }
 }
@@ -925,7 +930,14 @@ function selectService(serviceName){
   const clean=String(serviceName||'').trim();
   if(!clean||!ALL_SERVICES.includes(clean)){showToast('الخدمة غير موجودة في القائمة الرسمية.');return;}
   state.service=clean;state.showService=false;state.searchService='';state.openCategory='';render();
-  requestAnimationFrame(()=>{const next=document.getElementById('areaInput');if(next){next.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>{try{next.focus({preventScroll:true});}catch(error){next.focus();}},180);}});
+  requestAnimationFrame(()=>{
+    const pickerButton=document.querySelector('button[onclick="toggleService()"]');
+    if(pickerButton){
+      pickerButton.scrollIntoView({behavior:'smooth',block:'center'});
+      pickerButton.setAttribute('aria-live','polite');
+      setTimeout(()=>{try{pickerButton.focus({preventScroll:true});}catch(error){pickerButton.focus();}},180);
+    }
+  });
 }
 function selectServiceByIndex(index){
   const service=ALL_SERVICES[index];
