@@ -840,7 +840,7 @@ function renderStats(){
     <div class="grid grid-cols-2 gap-3">
       <div class="stat-card"><p class="text-[28px] font-black">${state.accountCounts.technicians}</p><p class="text-[11px] font-bold text-slate-500">إجمالي الفنيين</p></div>
       <div class="stat-card"><p class="text-[28px] font-black text-blue-700">${state.accountCounts.clients}</p><p class="text-[11px] font-bold text-slate-500">إجمالي العملاء المسجلين</p></div>
-      <div class="stat-card"><p class="text-[28px] font-black text-emerald-600">${state.accountCounts.verifiedTechnicians}</p><p class="text-[11px] font-bold text-slate-500">معتمدون ضمن القائمة المحمّلة</p></div>
+      <div class="stat-card"><p class="text-[28px] font-black text-emerald-600">${state.accountCounts.verifiedTechnicians}</p><p class="text-[11px] font-bold text-slate-500">إجمالي الفنيين المعتمدين</p></div>
       <div class="stat-card"><p class="text-[28px] font-black text-blue-700">${state.orders.length}</p><p class="text-[11px] font-bold text-slate-500">طلبات</p></div>
       <div class="stat-card"><p class="text-[28px] font-black">${state.topups.length}</p><p class="text-[11px] font-bold text-slate-500">شحن</p></div>
       <div class="stat-card col-span-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-0"><p class="text-[26px] font-black">${state.topups.filter(t=>t.status==='approved').reduce((s,t)=>s+Number(t.amount||0),0)} جنيه</p><p class="text-[11px] font-bold text-emerald-100">إجمالي الشحن المقبول</p></div>
