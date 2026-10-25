@@ -23,7 +23,8 @@ function normalize(value) {
     .trim()
     .replace(/\s+/g, ' ')
     .toLowerCase()
-    .replace(/[\u064B-\u065F\u0670]/g, '');
+    .replace(/[\u064B-\u065F\u0670]/g, '')
+    .replace(/ريسيفر/g, 'رسيفر');
 }
 
 function normalizeBrokenWallScreenServiceName(value) {
