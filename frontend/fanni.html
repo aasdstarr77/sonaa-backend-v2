@@ -184,6 +184,13 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
 @media(prefers-reduced-motion:reduce){#app main button,#app main a[href],#app main [role="button"],#app header button,#app header a[href]{transition:none!important}}
 
 
+
+.fanni-loading-overlay{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(145deg,#f8fbff 0%,#eaf1fb 100%);opacity:1;visibility:visible;transition:opacity .2s,visibility .2s}
+.fanni-loading-overlay.is-hidden{opacity:0;visibility:hidden;pointer-events:none}
+.fanni-loading-overlay .account-brand{width:132px;height:132px;margin-left:auto;margin-right:auto;border-radius:28px;background:linear-gradient(145deg,#fff,#e8eff9);border:1px solid #fff;box-shadow:0 6px 0 #cbd8ea,0 15px 24px #0b1b3a20,inset 0 2px 3px #fff}
+.fanni-loading-overlay .sonaa-logo-svg{width:118px;height:118px;object-fit:contain;filter:drop-shadow(0 5px 2px #0b1b3a28) drop-shadow(0 12px 10px #0b1b3a16)}
+.fanni-loading-overlay .account-slogan{color:#173c6c;font-weight:900;letter-spacing:.1px}
+
 .account-loading-logo{animation:sonaa-logo-splash 1.05s ease-in-out infinite;transform-origin:center;will-change:transform}
 @keyframes sonaa-logo-splash{0%,100%{transform:translateX(0) scale(1)}22%{transform:translateX(-10px) scale(1.025)}48%{transform:translateX(0) scale(1)}72%{transform:translateX(10px) scale(1.025)}}
 @media(prefers-reduced-motion:reduce){.account-loading-logo{animation:none}}
