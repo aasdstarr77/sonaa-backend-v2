@@ -165,42 +165,25 @@ function toast(message,type='success'){
  setTimeout(()=>{if(el.firstElementChild)el.innerHTML=''},4000);
 }
 
-async function copyWalletNumber(){
- const walletNumber=String(document.getElementById('wallet-transfer-number')?.textContent||'').trim();
+async function copyWalletNumber(index){
+ const walletNumber=String(document.getElementById('wallet-transfer-number-'+index)?.textContent||'').trim();
  if(!/^01[0-9]{9}$/.test(walletNumber))return toast('رقم المحفظة غير متاح حاليًا.','error');
-
  try{
-  if(navigator.clipboard&&window.isSecureContext){
-   await navigator.clipboard.writeText(walletNumber);
-  }else{
-   const input=document.createElement('textarea');
-   input.value=walletNumber;
-   input.readOnly=true;
-   input.style.position='fixed';
-   input.style.left='-9999px';
-   input.style.top='0';
-   input.setAttribute('aria-hidden','true');
-   document.body.appendChild(input);
-   input.focus();
-   input.select();
-   input.setSelectionRange(0,input.value.length);
-
-   let copied=false;
-   try{
-    copied=document.execCommand('copy');
-   }finally{
-    input.remove();
-   }
-
+  if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(walletNumber);}
+  else{
+   const input=document.createElement('textarea');input.value=walletNumber;input.readOnly=true;input.style.position='fixed';input.style.left='-9999px';input.style.top='0';input.setAttribute('aria-hidden','true');document.body.appendChild(input);
+   input.focus();input.select();input.setSelectionRange(0,input.value.length);
+   let copied=false;try{copied=document.execCommand('copy');}finally{input.remove();}
    if(!copied)throw new Error('تعذر نسخ الرقم تلقائيًا');
   }
-
-  toast('تم نسخ رقم المحفظة كاملًا: '+walletNumber);
- }catch(error){
-  toast('تعذر النسخ تلقائيًا. اضغط مطولًا على الرقم لنسخه.','error');
- }
+  toast('تم نسخ رقم المحفظة');
+ }catch(error){toast('تعذر النسخ تلقائيًا. اضغط مطولًا على الرقم لنسخه.','error');}
 }
-
+async function loadWalletTransferNumbers(){
+ try{const data=await apiGet('/api/wallet-settings');state.walletPhone1=String(data.walletPhone1||'').trim();state.walletPhone2=String(data.walletPhone2||'').trim();}
+ catch(error){log('تعذر تحميل أرقام التحويل',error.message);state.walletPhone1='';state.walletPhone2='';}
+ if(state.tab==='wallet')render();
+}
 
 function onRegAreaSearch(value){
  state.regAreaSearch=String(value||'').slice(0,60);
@@ -299,7 +282,8 @@ const API={
  notifications:()=>apiGet('/api/notifications/fanni'),
  readNotification:id=>api('/api/notifications/fanni/'+encodeURIComponent(id)+'/read',{method:'PATCH'}),
  readAllNotifications:()=>api('/api/notifications/fanni/read-all',{method:'PATCH'}),
- areas:()=>apiGet('/api/areas')
+ areas:()=>apiGet('/api/areas'),
+ walletSettings:()=>apiGet('/api/wallet-settings')
 };
 
 async function loadServices(){
@@ -342,6 +326,7 @@ let state={
  myOffers:[],completedOffers:[],offerModal:null,offerPrice:'',offerMessage:'',
  offerError:'',offerSubmitting:false,
  walletFromPhone:'',walletAmount:'',walletRef:'',walletMethod:'vodafone_cash',
+ walletPhone1:'',walletPhone2:'',
  walletLoading:false,walletHistory:[],walletBalance:0,
  error:'',success:'',pendingMsg:''
 };
@@ -404,7 +389,7 @@ function setTab(tab){
 
  if(tab==='available')loadOrders();
 if(tab==='myOffers'||tab==='completed')loadMyOffers();
- if(tab==='wallet')loadWalletHistory();
+ if(tab==='wallet'){loadWalletHistory();loadWalletTransferNumbers();}
  if(tab==='profile')loadProfile();
 }
 
@@ -775,13 +760,10 @@ function render(){
     <div class="panel p-4">
      <div class="flex justify-between items-center"><div><h3 class="section-title">محفظتي</h3><p class="text-[10px] text-slate-500 mt-1">طلب شحن الرصيد ومتابعة الطلبات</p></div><b class="text-blue-800">${esc(balance)} ج</b></div>
 
-     <div class="mt-4 rounded-2xl bg-blue-50 border border-blue-100 p-4">
-      <p class="text-[11px] font-extrabold text-blue-900">رقم التحويل المعتمد في الصفحة</p>
-      <div class="mt-2 flex flex-wrap items-center gap-3">
-       <p id="wallet-transfer-number" class="text-[17px] font-black text-blue-800 font-mono" dir="ltr">01152822263</p>
-       <button type="button" onclick="copyWalletNumber()" class="secondary-btn px-4 py-2 text-[11px]" aria-label="نسخ رقم المحفظة كاملًا">📋 نسخ الرقم</button>
-      </div>
-      <p class="text-[10px] text-blue-800/80 mt-2 leading-5">راجع الرقم وبيانات التحويل قبل إرسال أي مبلغ. طلب الشحن يحتاج مراجعة الإدارة.</p>
+     <div class="mt-4 rounded-2xl bg-blue-50 border border-blue-100 p-4 space-y-4">
+      <p class="text-[11px] font-extrabold text-blue-900">أرقام التحويل المعتمدة</p>
+      ${[1,2].map(index=>{const number=String(state['walletPhone'+index]||'').trim();const available=/^01[0-9]{9}$/.test(number);return '<div class="rounded-xl border border-blue-100 bg-white p-3"><p class="text-[11px] font-bold text-slate-600">رقم المحفظة '+(index===1?'الأول':'الثاني')+'</p><div class="mt-2 flex flex-wrap items-center gap-3"><p id="wallet-transfer-number-'+index+'" class="text-[17px] font-black text-blue-800 font-mono" dir="ltr">'+(available?esc(number):'غير متاح')+'</p>'+(available?'<button type="button" onclick="copyWalletNumber('+index+')" class="secondary-btn px-4 py-2 text-[11px]" aria-label="نسخ رقم المحفظة '+index+'">📋 نسخ الرقم</button>':'')+'</div></div>';}).join('')}
+      <p class="text-[10px] text-blue-800/80 leading-5">راجع الرقم وبيانات التحويل قبل إرسال أي مبلغ. طلب الشحن يحتاج مراجعة الإدارة.</p>
      </div>
 
      ${!approved?'<div class="mt-3 rounded-xl bg-amber-50 border border-amber-200 p-3 text-[11px] text-amber-800">لا يمكن تقديم طلب شحن قبل اعتماد حسابك.</div>':''}
