@@ -4,6 +4,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const Complaint = require('../models/Complaint');
 const Order = require('../models/Order');
+const { notifyAdmins } = require('../utils/notifications');
 
 const router = express.Router();
 
@@ -225,6 +226,14 @@ router.post('/', async (req, res) => {
       sn: order.sn,
       clientName: registeredName,
       text: complaintText
+    });
+
+    await notifyAdmins({
+      type: 'admin_new_complaint',
+      title: 'شكوى جديدة تحتاج مراجعة',
+      message: `وصلت شكوى جديدة على الطلب ${order.sn}.`,
+      link: '/admin?tab=complaints',
+      dedupeKey: `admin-new-complaint:${String(complaint._id)}`
     });
 
     return res.status(201).json({
