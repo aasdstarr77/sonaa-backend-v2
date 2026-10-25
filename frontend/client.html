@@ -547,7 +547,7 @@ const API={
   }
 };
 let state={
-  account:null,accountToken:(()=>{try{return localStorage.getItem('sonaa_client_account_token')||'';}catch{return '';}})(),accountAuthMode:'login',accountLoading:false,accountError:'',myOrders:[],accountOrdersLoading:false,accountOrdersTab:'current',notifications:[],notificationsUnread:0,notificationsOpen:false,
+  account:null,accountInitializing:false,accountToken:(()=>{try{return localStorage.getItem('sonaa_client_account_token')||'';}catch{return '';}})(),accountAuthMode:'login',accountLoading:false,accountError:'',myOrders:[],accountOrdersLoading:false,accountOrdersTab:'current',notifications:[],notificationsUnread:0,notificationsOpen:false,
   tab:'orders',service:'',clientName:'',area:'',address:'',phone:'',budget:'',desc:'',loading:false,sn:null,
   trackInput:'',tracked:null,trackError:'',trackLoading:false,acceptingOffer:'',
   ratingStars:5,ratingComment:'',ratingSubmitting:false,
@@ -626,9 +626,29 @@ async function submitClientAccount(e){
 }
 async function initializeClientAccount(){
   if(!state.accountToken){render();return;}
-  try{var d=await API.getClientMe(state.accountToken);state.account=d.client||null;if(state.account){state.clientName=state.account.name||'';state.phone=state.account.phone||'';state.tab='orders';await loadMyOrders(false);await loadNotifications();}}
-  catch(error){state.accountToken='';state.account=null;try{localStorage.removeItem('sonaa_client_account_token');}catch(e){}}
+  /* Keep the login form hidden while a saved session is being verified. */
+  state.accountInitializing=true;
   render();
+  try{
+    var d=await API.getClientMe(state.accountToken);
+    state.account=d.client||null;
+    if(state.account){
+      state.clientName=state.account.name||'';
+      state.phone=state.account.phone||'';
+      state.tab='orders';
+      await Promise.allSettled([loadMyOrders(false),loadNotifications()]);
+    }else{
+      state.accountToken='';
+      try{localStorage.removeItem('sonaa_client_account_token');}catch(e){}
+    }
+  }catch(error){
+    state.accountToken='';
+    state.account=null;
+    try{localStorage.removeItem('sonaa_client_account_token');}catch(e){}
+  }finally{
+    state.accountInitializing=false;
+    render();
+  }
 }
 function logoutClient(){try{localStorage.removeItem('sonaa_client_account_token');}catch(e){}state.accountToken='';state.account=null;state.notifications=[];state.notificationsUnread=0;state.notificationsOpen=false;state.myOrders=[];state.tracked=null;state.tab='new';state.accountError='';render();}
 async function loadMyOrders(showLoading=true){
@@ -701,7 +721,14 @@ function notificationPanel(){
 document.addEventListener('click',function(event){var item=event.target.closest('[data-notification-id]');if(item)openNotification(item.getAttribute('data-notification-id'));});
 document.addEventListener('focusout',function(){if(!clientLiveRenderPending||!state.account||!['orders','track'].includes(state.tab))return;setTimeout(function(){if(clientLiveRenderPending&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)){clientLiveRenderPending=false;const scrollY=window.scrollY||window.pageYOffset||0;render();window.scrollTo({top:scrollY,left:0,behavior:'instant'});focusClientPostAction();}},0);});
 function render(){
-  if(!state.account){renderAccountGate();return;}
+  if(state.accountInitializing&&!state.accountToken){renderAccountGate();return;}
+  if(!state.account){
+    if(state.accountToken&&state.accountInitializing){
+      document.getElementById('app').innerHTML='<main class="account-gate min-h-screen px-4 py-8 flex items-center justify-center"><div class="w-full max-w-[440px] text-center"><div class="account-brand mx-auto mb-5 flex items-center justify-center"><img src="/images/LOGO_UPLOAD_HERE/logo.png" alt="صُنّاع" class="sonaa-logo-svg"></div><h1 class="text-2xl font-black">صُنّاع</h1><p class="account-slogan mt-1 text-base font-extrabold">كل خدمة تبدأ بخطوة</p><div class="mt-7 inline-flex items-center gap-3 rounded-2xl border border-blue-200 bg-white/90 px-5 py-4 font-extrabold text-blue-900 shadow-xl"><span class="inline-block h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent"></span>جاري فتح حسابك...</div></div></main>';
+      return;
+    }
+    renderAccountGate();return;
+  }
   const cat=getCat(state.service);
   const query=state.searchService.trim().toLowerCase();
   const matching=CATEGORIES.map(c=>({
