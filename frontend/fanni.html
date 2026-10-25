@@ -1390,9 +1390,9 @@ function showFanniLoading(message){let overlay=document.getElementById('fanniLoa
 function hideFanniLoading(){clearTimeout(fanniLoadingSafetyTimer);const overlay=document.getElementById('fanniLoadingOverlay');if(overlay)overlay.classList.add('is-hidden');}
 async function refreshTechnicianPage(){showFanniLoading(getToken()?'جاري الدخول إلى حسابك...':'جاري تحديث البيانات...');try{await Promise.allSettled([loadServices(),loadAreas()]);if(getToken())await Promise.allSettled([loadProfile(),loadOrders(),loadMyOffers(),loadWalletHistory(),loadNotifications()]);toast('تم تحديث بيانات الفني');}finally{hideFanniLoading();}}
 async function start(){
- render();
- showFanniLoading('جاري فتح حسابك...');
+ showFanniLoading('جاري الدخول إلى حسابك...');
  try{
+  render();
   await Promise.allSettled([loadServices(),loadAreas()]);
   render();
   if(!getToken())return;
@@ -1400,10 +1400,13 @@ async function start(){
   await loadProfile();
   if(!getToken())return;
   await Promise.allSettled([loadOrders(),loadMyOffers(),loadWalletHistory(),loadNotifications()]);
+ }catch(error){
+  console.error('Technician page initialization failed:',error);
+  toast('تعذر تحميل بعض بيانات الصفحة. جرّب تحديث الصفحة.','error');
  }finally{
   state.checkingSession=false;
   hideFanniLoading();
-  render();
+  try{render();}catch(error){console.error('Technician page render failed:',error);}
  }
 }
 
