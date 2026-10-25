@@ -183,6 +183,23 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
 #app main button:disabled{box-shadow:none!important;transform:none!important;opacity:.65}
 @media(prefers-reduced-motion:reduce){#app main button,#app main a[href],#app main [role="button"],#app header button,#app header a[href]{transition:none!important}}
 
+
+/* Final parity pass: raised customer-support and bottom navigation controls, plus client-style loading splash. */
+.support-float,.support-float.prelogin-floating{border:1px solid #99f6e4!important;border-radius:18px!important;background:linear-gradient(145deg,#5eead4 0%,#0d9488 52%,#115e59 100%)!important;box-shadow:0 5px 0 #0f766e,0 9px 18px #0f766e35,inset 0 1px 0 #ffffffa8!important;transform:translateY(0);transition:transform .16s,box-shadow .16s,filter .16s}
+.support-float:active{transform:translateY(3px)!important;box-shadow:0 2px 0 #0f766e,0 4px 8px #0f766e20!important}
+#app nav button,#app nav a,#app main button:not(.global-refresh),#app main a[role="button"],#app .fixed.bottom-0 button,#app .fixed.inset-x-0 button{border-style:solid!important;box-shadow:0 4px 0 #cbd8e8,0 7px 12px #0b1b3a12,inset 0 1px 0 #ffffffb0!important;transition:transform .16s,box-shadow .16s,filter .16s}
+#app nav button:active,#app nav a:active,#app main button:not(.global-refresh):active,#app main a[role="button"]:active,#app .fixed.bottom-0 button:active,#app .fixed.inset-x-0 button:active{transform:translateY(3px)!important;box-shadow:0 1px 0 #cbd8e8,0 2px 4px #0b1b3a12!important}
+.fanni-loading-overlay{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(145deg,#f8fbff 0%,#eaf1fb 100%);opacity:1;visibility:visible;transition:opacity .2s,visibility .2s}
+.fanni-loading-overlay.is-hidden{opacity:0;visibility:hidden;pointer-events:none}
+.fanni-loading-content{width:min(100%,360px);text-align:center;color:#173c6c}
+.fanni-loading-brand{width:116px;height:116px;margin:0 auto 20px;border-radius:28px;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#fff,#e8eff9);border:1px solid #fff;box-shadow:0 6px 0 #cbd8ea,0 15px 24px #0b1b3a20,inset 0 2px 3px #fff;animation:fanni-splash-bob 1.05s ease-in-out infinite}
+.fanni-loading-brand img{width:102px;height:102px;object-fit:contain;filter:drop-shadow(0 5px 2px #0b1b3a28) drop-shadow(0 12px 10px #0b1b3a16)}
+.fanni-loading-message{display:inline-flex;align-items:center;gap:10px;margin-top:24px;padding:14px 18px;border:1px solid #bfdbfe;border-radius:16px;background:#ffffffdf;box-shadow:0 4px 0 #dbeafe,0 9px 18px #0b1b3a0c;font-weight:900;font-size:13px}
+.fanni-loading-spinner{width:19px;height:19px;border:2px solid #2563eb;border-top-color:transparent;border-radius:50%;animation:fanni-spin .75s linear infinite;flex-shrink:0}
+@keyframes fanni-splash-bob{0%,100%{transform:translateX(0) scale(1)}22%{transform:translateX(-10px) scale(1.025)}48%{transform:translateX(0) scale(1)}72%{transform:translateX(10px) scale(1.025)}}
+@keyframes fanni-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.fanni-loading-brand,.fanni-loading-spinner{animation:none}}
+
 </style>
 </head>
 <body class="min-h-screen antialiased">
@@ -1372,23 +1389,25 @@ async function submitOffer(){
  }
 }
 
-async function refreshTechnicianPage(){await Promise.allSettled([loadServices(),loadAreas()]);if(getToken())await Promise.allSettled([loadProfile(),loadOrders(),loadMyOffers(),loadWalletHistory(),loadNotifications()]);toast('تم تحديث بيانات الفني');}
+let fanniLoadingSafetyTimer=null;
+function showFanniLoading(message){let overlay=document.getElementById('fanniLoadingOverlay');if(!overlay){overlay=document.createElement('div');overlay.id='fanniLoadingOverlay';overlay.className='fanni-loading-overlay';overlay.setAttribute('role','status');overlay.setAttribute('aria-live','polite');overlay.innerHTML='<div class="fanni-loading-content"><div class="fanni-loading-brand"><img src="/images/LOGO_UPLOAD_HERE/logo.png" alt="صُنّاع"></div><h1 class="text-2xl font-black">صُنّاع</h1><p class="mt-1 text-sm font-extrabold">كل خدمة تبدأ بخطوة</p><div class="fanni-loading-message"><span class="fanni-loading-spinner"></span><span id="fanniLoadingMessage">جاري فتح حسابك...</span></div></div>';document.body.appendChild(overlay);}const label=document.getElementById('fanniLoadingMessage');if(label)label.textContent=message||'جاري فتح حسابك...';overlay.classList.remove('is-hidden');clearTimeout(fanniLoadingSafetyTimer);fanniLoadingSafetyTimer=setTimeout(hideFanniLoading,15000);}
+function hideFanniLoading(){clearTimeout(fanniLoadingSafetyTimer);const overlay=document.getElementById('fanniLoadingOverlay');if(overlay)overlay.classList.add('is-hidden');}
+async function refreshTechnicianPage(){showFanniLoading(getToken()?'جاري الدخول إلى حسابك...':'جاري تحديث البيانات...');try{await Promise.allSettled([loadServices(),loadAreas()]);if(getToken())await Promise.allSettled([loadProfile(),loadOrders(),loadMyOffers(),loadWalletHistory(),loadNotifications()]);toast('تم تحديث بيانات الفني');}finally{hideFanniLoading();}}
 async function start(){
- await Promise.allSettled([loadServices(),loadAreas()]);
  render();
-
- if(!getToken())return;
-
- state.checkingSession=true;
-
+ showFanniLoading('جاري فتح حسابك...');
  try{
-  await loadProfile();
-
+  await Promise.allSettled([loadServices(),loadAreas()]);
+  render();
   if(!getToken())return;
-
+  state.checkingSession=true;
+  await loadProfile();
+  if(!getToken())return;
   await Promise.allSettled([loadOrders(),loadMyOffers(),loadWalletHistory(),loadNotifications()]);
  }finally{
   state.checkingSession=false;
+  hideFanniLoading();
+  render();
  }
 }
 
@@ -1455,7 +1474,7 @@ setInterval(refreshFanniChatMessagesSilently,2000);
 start();
 </script>
 
-<script>let globalRefreshInProgress=false;async function handleGlobalRefresh(){const button=document.getElementById('global-refresh');if(globalRefreshInProgress||button?.disabled)return;globalRefreshInProgress=true;if(button){button.disabled=true;button.classList.add('is-refreshing');}try{await refreshTechnicianPage();}finally{globalRefreshInProgress=false;const currentButton=document.getElementById('global-refresh');if(currentButton){currentButton.disabled=false;currentButton.classList.remove('is-refreshing');}}}</script>
+<script>let globalRefreshInProgress=false;async function handleGlobalRefresh(){const button=document.getElementById('global-refresh');if(globalRefreshInProgress||button?.disabled)return;globalRefreshInProgress=true;if(button){button.disabled=true;button.classList.add('is-refreshing');}try{await refreshTechnicianPage();}catch(e){toast('تعذر تحديث البيانات. حاول مرة أخرى.','error');}finally{hideFanniLoading();globalRefreshInProgress=false;const currentButton=document.getElementById('global-refresh');if(currentButton){currentButton.disabled=false;currentButton.classList.remove('is-refreshing');}}}</script>
 
 <script src="/web-push.js" defer></script>
 </body>
