@@ -77,6 +77,7 @@ router.get('/services', async (req, res, next) => {
       });
 
       for (const [index, name] of category.services.entries()) {
+        if (normalize(name) === normalize('تعليق شاشة حائط')) continue;
         categoriesMap.get(categoryKey).services.push({ name, emoji: category.emoji, isActive: true, source: 'legacy', sortOrder: (index + 1) * 10 });
       }
     }
@@ -85,6 +86,7 @@ router.get('/services', async (req, res, next) => {
     for (const saved of savedServices) {
       const categoryKey = normalize(saved.category);
       const serviceKey = normalize(saved.name);
+      if (serviceKey === normalize('تعليق شاشة حائط')) continue; // never expose the broken service
 
       if (!categoriesMap.has(categoryKey)) {
         categoriesMap.set(categoryKey, {
