@@ -1616,6 +1616,8 @@ function buildAdminCategoriesMap(savedServices) {
     });
   }
   for (const saved of savedServices) {
+    // Never render the broken service in admin management, even if stale DB copies exist.
+    if (normalizeForCompare(saved.name) === normalizeForCompare('تعليق شاشة حائط')) continue;
     const catKey = normalizeForCompare(saved.category);
     if (!map.has(catKey)) {
       map.set(catKey, {
