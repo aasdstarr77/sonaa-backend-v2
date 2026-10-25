@@ -102,6 +102,18 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--blue)!im
 .client-submit-order-btn:disabled{opacity:.7;box-shadow:0 3px 0 #123b85!important}
 
 /* Raised 3D styling for complaint actions. */
+
+.logout-confirm-overlay{position:fixed;inset:0;z-index:3000;display:flex;align-items:center;justify-content:center;padding:20px;background:#0b1b3ab8;backdrop-filter:blur(5px);animation:logoutFadeIn .16s ease-out}
+.logout-confirm-card{width:min(100%,390px);border:1px solid #ffffff;border-radius:26px;padding:24px 20px;background:linear-gradient(145deg,#fff 0%,#f4f8ff 100%);box-shadow:0 8px 0 #cbd8ea,0 24px 60px #02081766,inset 0 2px 3px #fff;text-align:center;animation:logoutCardIn .2s ease-out}
+.logout-confirm-icon{width:64px;height:64px;margin:0 auto 14px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:29px;background:linear-gradient(145deg,#fff1f2,#fecdd3);border:1px solid #fda4af;box-shadow:0 4px 0 #e11d48,0 8px 14px #e11d4824,inset 0 1px 0 #fff}
+.logout-confirm-btn{min-height:46px;border-radius:14px;font-weight:900;border:1px solid transparent;transition:transform .15s,box-shadow .15s}
+.logout-confirm-btn:active{transform:translateY(3px);box-shadow:0 1px 0 #0b1b3a!important}
+.logout-confirm-cancel{color:#1e40af;background:linear-gradient(145deg,#eff6ff,#dbeafe);border-color:#bfdbfe;box-shadow:0 4px 0 #bfdbfe,0 7px 12px #1d4ed814}
+.logout-confirm-yes{color:#fff;background:linear-gradient(145deg,#fb7185,#dc2626 60%,#991b1b);border-color:#fda4af;box-shadow:0 4px 0 #7f1d1d,0 7px 12px #991b1b24}
+@keyframes logoutFadeIn{from{opacity:0}to{opacity:1}}
+@keyframes logoutCardIn{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(prefers-reduced-motion:reduce){.logout-confirm-overlay,.logout-confirm-card{animation:none}.logout-confirm-btn{transition:none}}
+
 .client-complaint-submit-btn{background:linear-gradient(145deg,#fb7185 0%,#dc2626 52%,#991b1b 100%)!important;color:#fff!important;border:1px solid #ffffff55!important;box-shadow:0 5px 0 #7f1d1d,0 9px 16px #991b1b2e,inset 0 1px 0 #ffffff55!important;text-shadow:0 1px 2px #7f1d1d66;transition:transform .16s,box-shadow .16s,filter .16s}
 .client-complaint-track-btn{background:linear-gradient(145deg,#60a5fa 0%,#2563eb 52%,#1e3a8a 100%)!important;color:#fff!important;border:1px solid #ffffff65!important;box-shadow:0 5px 0 #1e3a8a,0 9px 16px #1d4ed82e,inset 0 1px 0 #ffffff60!important;text-shadow:0 1px 2px #1e3a8a66;transition:transform .16s,box-shadow .16s,filter .16s}
 .client-complaint-submit-btn:active,.client-complaint-track-btn:active{transform:translateY(3px);filter:brightness(.98);box-shadow:0 2px 0 #1e3a8a,0 4px 8px #0b1b3a20!important}
@@ -594,6 +606,9 @@ function showToast(message,type='error'){
   setTimeout(()=>{if(el)el.innerHTML='';},4500);
 }
 function goBack(){if(window.history.length>1){window.history.back();return;}window.location.href='/';}
+function showLogoutConfirmation(){if(document.getElementById('logoutConfirmOverlay'))return;const overlay=document.createElement('div');overlay.id='logoutConfirmOverlay';overlay.className='logout-confirm-overlay';overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');overlay.setAttribute('aria-labelledby','logoutConfirmTitle');overlay.innerHTML='<div class="logout-confirm-card"><div class="logout-confirm-icon" aria-hidden="true">↪</div><h2 id="logoutConfirmTitle" class="text-xl font-black text-slate-900">تأكيد تسجيل الخروج</h2><p class="mt-3 text-sm leading-6 font-bold text-slate-600">متأكد إنك عايز تسجّل خروج من حسابك؟</p><div class="mt-6 grid grid-cols-2 gap-3"><button type="button" class="logout-confirm-btn logout-confirm-cancel" data-logout-action="cancel">لا، خليك معايا</button><button type="button" class="logout-confirm-btn logout-confirm-yes" data-logout-action="confirm">أيوه، خروج</button></div></div>';document.body.appendChild(overlay);overlay.addEventListener('click',function(e){if(e.target===overlay||e.target.closest('[data-logout-action="cancel"]')){overlay.remove();return;}if(e.target.closest('[data-logout-action="confirm"]')){overlay.remove();performClientLogout();}});overlay.querySelector('[data-logout-action="cancel"]').focus();}
+function performClientLogout(){try{localStorage.removeItem('sonaa_client_account_token');}catch(e){}state.accountToken='';state.account=null;state.notifications=[];state.notificationsUnread=0;state.notificationsOpen=false;state.myOrders=[];state.tracked=null;state.tab='new';state.accountError='';render();}
+function logoutClient(){showLogoutConfirmation();}
 function renderAccountGate(){
   var reg=state.accountAuthMode==='register';
   var h='<main class="account-gate min-h-screen px-4 py-8 flex items-center justify-center"><div class="w-full max-w-[440px]"><nav class="mb-5 flex flex-row-reverse items-center justify-between gap-2"><a href="/" aria-label="القائمة الرئيسية" title="القائمة الرئيسية" class="account-nav-btn account-home-btn order-1 h-9 px-3 rounded-xl blue-btn flex items-center justify-center text-[11px] font-extrabold">⌂ القائمة الرئيسية</a><button type="button" onclick="goBack()" class="account-nav-btn order-2 h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-700 text-[11px] font-extrabold">← رجوع</button></nav><div class="text-center mb-6"><div class="account-brand brand-mark mx-auto h-24 w-24 rounded-2xl flex items-center justify-center"><img class="sonaa-logo-svg" src="/images/LOGO_UPLOAD_HERE/logo.png" alt="شعار صُنّاع" width="144" height="144" decoding="async"></div><h1 class="mt-4 text-2xl font-black">'+escHtml(state.publicContent?.siteName||'صُنّاع')+'</h1><p class="account-slogan mt-1 text-sm">صُنّاع كل خدمة تبدأ بخطوة</p><p class="mt-2 text-sm leading-6 text-slate-600">سجّل دخولك علشان تطلب خدمة وتتابع طلباتك من حسابك.</p></div><div class="panel account-panel p-5"><div class="account-tabs grid grid-cols-2 gap-2"><button type="button" onclick="setAccountAuthMode(\'login\')" class="account-tab h-10 text-sm font-extrabold '+(!reg?'tab-active':'tab-idle')+'">تسجيل الدخول</button><button type="button" onclick="setAccountAuthMode(\'register\')" class="account-tab h-10 text-sm font-extrabold '+(reg?'tab-active':'tab-idle')+'">حساب جديد</button></div><form class="mt-5 space-y-4" onsubmit="submitClientAccount(event)">';
@@ -662,7 +677,7 @@ async function initializeClientAccount(){
     render();
   }
 }
-function logoutClient(){try{localStorage.removeItem('sonaa_client_account_token');}catch(e){}state.accountToken='';state.account=null;state.notifications=[];state.notificationsUnread=0;state.notificationsOpen=false;state.myOrders=[];state.tracked=null;state.tab='new';state.accountError='';render();}
+
 async function loadMyOrders(showLoading=true){
   if(!state.accountToken||!state.account)return;
   if(showLoading){state.accountOrdersLoading=true;render();}
