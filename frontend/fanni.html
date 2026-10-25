@@ -738,8 +738,8 @@ function render(){
    </div>`:`
    <h2 class="font-extrabold text-[17px]">دخول الفني</h2><p class="text-[11px] text-slate-500 mt-1 mb-5">ادخل رقم تليفونك وكلمة السر للمتابعة.</p>
    <div class="space-y-4">
-    <div><label class="field-label">رقم التليفون</label><input class="field" inputmode="numeric" autocomplete="tel" value="${esc(state.loginPhone)}" oninput="state.loginPhone=this.value.replace(/\\D/g,'').slice(0,11)" placeholder="01xxxxxxxxx"></div>
-    <div><label class="field-label">كلمة السر</label><input type="password" class="field" autocomplete="current-password" value="${esc(state.loginPass)}" oninput="state.loginPass=this.value" placeholder="اكتب كلمة السر"></div>
+    <div><label class="field-label">رقم التليفون</label><input id="fanniLoginPhone" class="field" type="tel" inputmode="numeric" autocomplete="tel" value="${esc(state.loginPhone)}" oninput="state.loginPhone=this.value.replace(/\\D/g,'').slice(0,11);scheduleTechnicianAutoLogin()" onchange="scheduleTechnicianAutoLogin()" placeholder="01xxxxxxxxx"></div>
+    <div><label class="field-label">كلمة السر</label><input id="fanniLoginPassword" type="password" class="field" autocomplete="current-password" value="${esc(state.loginPass)}" oninput="state.loginPass=this.value;scheduleTechnicianAutoLogin()" onchange="scheduleTechnicianAutoLogin()" placeholder="اكتب كلمة السر"></div>
      <p class="text-left -mt-2 mb-2"><a class="text-xs font-bold text-blue-700" href="password.html?role=fanni&mode=recovery">نسيت كلمة المرور؟</a></p>
     <button onclick="doLogin()" ${state.loading?'disabled':''} class="primary-btn w-full h-12">${state.loading?'جاري تسجيل الدخول...':' تسجيل الدخول'}</button>
     ${state.pendingMsg?`<div class="rounded-xl bg-amber-50 border border-amber-200 p-3 text-center text-[12px] font-bold text-amber-800">${esc(state.pendingMsg)}</div>`:''}
@@ -955,6 +955,19 @@ function errorBox(s){
 
 function successBox(s){
  return `<p class="text-[12px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-xl p-3">${esc(s)}</p>`;
+}
+
+let technicianAutoLoginTimer=null;
+function scheduleTechnicianAutoLogin(){
+ if(technicianAutoLoginTimer)clearTimeout(technicianAutoLoginTimer);
+ technicianAutoLoginTimer=setTimeout(()=>{
+  const phoneInput=document.getElementById('fanniLoginPhone');
+  const passwordInput=document.getElementById('fanniLoginPassword');
+  if(!phoneInput||!passwordInput||state.loading||state.tab!=='login')return;
+  state.loginPhone=phoneInput.value.replace(/\\D/g,'').slice(0,11);
+  state.loginPass=passwordInput.value;
+  if(V.phone(state.loginPhone)&&V.text(state.loginPass,1,100))doLogin();
+ },450);
 }
 
 async function doLogin(){
