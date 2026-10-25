@@ -901,13 +901,6 @@ function toggleCategory(label){
       const listRect=list.getBoundingClientRect();
       const detailsRect=details.getBoundingClientRect();
       list.scrollTo({top:list.scrollTop+(detailsRect.top-listRect.top)-8,behavior:'smooth'});
-      const selected=list.querySelector('.category-tile.active');
-      if(selected){
-        const selectedRect=selected.getBoundingClientRect();
-        if(selectedRect.top<listRect.top||selectedRect.bottom>listRect.bottom){
-          list.scrollTo({top:list.scrollTop+(selectedRect.top-listRect.top)-8,behavior:'smooth'});
-        }
-      }
     });
   }
 }
