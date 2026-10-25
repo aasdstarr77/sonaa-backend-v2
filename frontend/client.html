@@ -143,6 +143,90 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--blue)!im
 @media(max-width:480px){main{padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right))}.client-section-tabs{top:112px}}
   .global-refresh.is-refreshing svg{animation:global-refresh-spin .8s linear infinite}@keyframes global-refresh-spin{to{transform:rotate(360deg)}}
 .global-refresh-float{position:fixed;right:16px;bottom:calc(86px + env(safe-area-inset-bottom));z-index:80;width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#2563eb,#0b1b3a);color:#fff;border:2px solid #fff;box-shadow:0 8px 24px #0b1b3a35;transition:transform .18s,opacity .18s}.global-refresh-float:active{transform:scale(.94)}.global-refresh-float svg{width:23px;height:23px}.global-refresh-float.prelogin-floating{bottom:18px}
+
+/* Full 3D finish for customer form controls, service choices, and bottom navigation. */
+.client-new-order .field,
+.client-new-order input:not([type="checkbox"]):not([type="radio"]),
+.client-new-order textarea,
+.client-new-order select,
+.account-gate .field,
+main .field{
+  border:1px solid #c6d5e9!important;
+  border-radius:14px!important;
+  background:linear-gradient(155deg,#fff 0%,#f4f8ff 100%)!important;
+  box-shadow:inset 0 2px 4px #0b1b3a0b,inset 0 1px 0 #fff,0 3px 0 #d6e1ef,0 6px 10px #0b1b3a0b!important;
+  transition:transform .16s,border-color .16s,box-shadow .16s,background .16s;
+}
+.client-new-order .field:focus,
+.client-new-order input:focus,
+.client-new-order textarea:focus,
+.client-new-order select:focus,
+.account-gate .field:focus,
+main .field:focus{
+  transform:translateY(-1px);
+  border-color:#4c8cf4!important;
+  background:linear-gradient(155deg,#fff 0%,#f0f6ff 100%)!important;
+  box-shadow:inset 0 1px 3px #2563eb0b,0 0 0 3px #3b82f625,0 4px 0 #b8ccec,0 8px 14px #1d4ed81a!important;
+}
+.client-new-order .field::placeholder,main .field::placeholder{color:#8796aa}
+.client-new-order label{ text-shadow:0 1px 0 #fff; }
+#servicePanel{border-radius:20px!important;background:linear-gradient(145deg,#fff,#f0f5fc)!important;box-shadow:0 5px 0 #d6e1ef,0 14px 24px #0b1b3a18,inset 0 1px 0 #fff!important;overflow:hidden}
+.category-tile-grid button,
+#serviceList button,
+#servicePanel button{
+  transition:transform .16s,box-shadow .16s,filter .16s;
+}
+.category-tile-grid .category-tile,
+#serviceList .category-tile,
+#serviceList button[aria-pressed],
+#serviceList button[aria-expanded]{
+  border:1px solid #cbd9eb!important;
+  border-radius:16px!important;
+  background:linear-gradient(145deg,#fff 0%,#edf4ff 100%)!important;
+  box-shadow:0 4px 0 #c7d5e8,0 7px 12px #0b1b3a12,inset 0 1px 0 #fff!important;
+}
+#serviceList .category-tile.active,
+#serviceList button[aria-pressed="true"],
+#serviceList button[aria-expanded="true"]{
+  border-color:#7aa8f5!important;
+  background:linear-gradient(145deg,#e5efff 0%,#cbdfff 100%)!important;
+  box-shadow:0 4px 0 #8eaddc,0 8px 14px #2563eb20,inset 0 1px 0 #fff!important;
+}
+#servicePanel button:active,.category-tile-grid button:active{transform:translateY(3px);box-shadow:0 1px 0 #b9c9df,0 3px 6px #0b1b3a12!important}
+main .panel{box-shadow:0 4px 0 #dce5f1,0 12px 26px #0b1b3a10,inset 0 1px 0 #fff}
+nav.fixed.bottom-0{
+  background:linear-gradient(180deg,#fff 0%,#edf3fc 100%)!important;
+  border-top:1px solid #cbd8e9!important;
+  box-shadow:0 -5px 0 #dce5f1,0 -12px 24px #0b1b3a13,inset 0 1px 0 #fff!important;
+}
+nav.fixed.bottom-0>div{padding-top:7px;padding-bottom:5px}
+nav.fixed.bottom-0 button,
+nav.fixed.bottom-0 a{
+  margin:0 3px;
+  border:1px solid #d3deed!important;
+  border-radius:15px!important;
+  background:linear-gradient(145deg,#fff 0%,#edf3fc 100%)!important;
+  box-shadow:0 3px 0 #cbd7e7,0 5px 9px #0b1b3a0c,inset 0 1px 0 #fff!important;
+  transition:transform .16s,box-shadow .16s,background .16s;
+}
+nav.fixed.bottom-0 button.bg-blue-50,
+nav.fixed.bottom-0 button[class*="text-blue-800"]{
+  color:#173c6c!important;
+  background:linear-gradient(145deg,#dceaff 0%,#bcd5ff 100%)!important;
+  border-color:#9dbcf0!important;
+  box-shadow:0 4px 0 #91addb,0 7px 12px #2563eb20,inset 0 1px 0 #fff!important;
+}
+nav.fixed.bottom-0 a{color:#0f766e!important}
+nav.fixed.bottom-0 button:active,
+nav.fixed.bottom-0 a:active{transform:translateY(2px);box-shadow:0 1px 0 #cbd7e7,0 2px 5px #0b1b3a10!important}
+nav.fixed.bottom-0 svg,
+nav.fixed.bottom-0 button>span:first-child{filter:drop-shadow(0 2px 1px #0b1b3a20)}
+.client-section-tabs button,
+main button.blue-btn,
+main button.primary-btn{border:1px solid #ffffff50;box-shadow:0 4px 0 #c2d0e3,0 7px 12px #0b1b3a12,inset 0 1px 0 #ffffff65;transition:transform .16s,box-shadow .16s,filter .16s}
+main button.blue-btn:active,main button.primary-btn:active,.client-section-tabs button:active{transform:translateY(3px);box-shadow:0 1px 0 #c2d0e3,0 3px 6px #0b1b3a10}
+@media(prefers-reduced-motion:reduce){.client-new-order .field,#servicePanel button,nav.fixed.bottom-0 button,nav.fixed.bottom-0 a{transition:none}}
+
 </style>
 </head>
 <body class="min-h-screen antialiased">
