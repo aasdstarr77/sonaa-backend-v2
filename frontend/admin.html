@@ -81,7 +81,7 @@ const BASE_URL='https://sonaa-backend-v2.vercel.app';
 const TOKEN_KEY='admin_token_v3';
 function escHtml(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function getToken(){try{return localStorage.getItem(TOKEN_KEY)||''}catch{return ''}}
-function currentAdminRoleLabel(){return String(state.currentAdminRoleLabel||'');}
+function currentAdminRoleLabel(){const raw=String(state.currentAdminRoleLabel||'').trim();const key=raw.toLowerCase().replace(/[ _-]+/g,' ');const labels={'admin':'أدمن','super admin':'أدمن رئيسي','root admin':'أدمن رئيسي','supervisor':'مشرف','senior supervisor':'مشرف أول','manager':'مدير','read only':'قراءة فقط','readonly':'قراءة فقط','read only admin':'مشرف للقراءة فقط','admin manager':'مدير'};return labels[key]||raw;}
 function canPublishOrders(){const role=currentAdminRoleLabel();return role==='أدمن رئيسي'||state.currentAdminPermissions?.publishOrders?.write===true;}
 function canAssignOrders(){return isRootAdminUI();}
 function toggleOrderSelection(sn,checked){sn=String(sn||'').trim().toUpperCase();if(!/^SN\d{6}$/.test(sn))return;const selected=new Set(state.selectedOrderSNs||[]);if(checked)selected.add(sn);else selected.delete(sn);state.selectedOrderSNs=Array.from(selected);render();}
@@ -207,12 +207,14 @@ function render(){
       <div class="h-[72px] w-[72px] justify-self-center rounded-xl bg-[#F8FAFC] border-2 border-[#14B8A6] flex items-center justify-center shadow-lg overflow-hidden">
         <img class="sonaa-logo-svg h-full w-full object-contain" src="/images/LOGO_UPLOAD_HERE/logo.png" alt="شعار صُنّاع" width="120" height="120" decoding="async">
       </div>
-      <div class="flex gap-1.5 shrink-0 items-center justify-self-end">
-        <div class="flex flex-col gap-1 items-center"><button onclick="goFanni()" class="h-8 px-3 rounded-lg bg-white/10 hover:bg-white/15 text-[11px] font-black border border-white/10">لوحة الفني</button><a href="password.html?role=admin&amp;mode=account" class="h-7 min-w-[88px] px-3 rounded-lg bg-white/10 hover:bg-white/20 border border-white/15 text-[10px] font-black text-white inline-flex items-center justify-center gap-1 no-underline"><span aria-hidden="true">👤</span><span>حسابي</span></a></div>
-        ${isAuth?'<button onclick="logout()" class="h-9 w-9 rounded-xl bg-white/10 flex items-center justify-center">⎋</button>':''}
+      <div class="flex flex-col gap-1.5 shrink-0 items-stretch justify-self-end w-[112px]">
+        <button onclick="goFanni()" class="h-8 w-full rounded-lg bg-white/10 hover:bg-white/15 text-[10px] font-black border border-white/10 inline-flex items-center justify-center text-center leading-none">لوحة الفني</button>
+        <a href="password.html?role=admin&amp;mode=account" class="h-8 w-full rounded-lg bg-white/10 hover:bg-white/20 border border-white/15 text-[10px] font-black text-white inline-flex items-center justify-center gap-1 no-underline leading-none"><span aria-hidden="true">👤</span><span>حسابي</span></a>
+        <a href="/" aria-label="القائمة الرئيسية" title="القائمة الرئيسية" class="h-8 w-full rounded-lg bg-white/10 hover:bg-white/15 text-white text-[10px] font-black inline-flex items-center justify-center text-center leading-none">⌂ القائمة الرئيسية</a>
+        ${isAuth?'<button onclick="logout()" class="h-8 w-full rounded-lg bg-white/10 flex items-center justify-center text-[11px]">⎋ خروج</button>':''}
       </div>
     </div>
-    <div class="mx-auto max-w-[800px] px-3 pb-2 flex items-center justify-between gap-2"><button type="button" onclick="goBack()" class="h-8 px-3 rounded-lg border border-white/20 bg-white/10 text-white text-[11px] font-extrabold">← رجوع</button><a href="/" aria-label="القائمة الرئيسية" title="القائمة الرئيسية" class="h-9 px-3 rounded-xl bg-white/10 hover:bg-white/15 text-white text-[11px] font-extrabold inline-flex items-center justify-center text-center leading-none">⌂ القائمة الرئيسية</a></div>
+    <div class="mx-auto max-w-[800px] px-3 pb-2 flex items-center justify-between gap-2"><button type="button" onclick="goBack()" class="h-8 px-3 rounded-lg border border-white/20 bg-white/10 text-white text-[11px] font-extrabold">← رجوع</button></div>
   </header>
   
   <main class="mx-auto max-w-[800px] px-3 pb-28">
