@@ -83,6 +83,18 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--blue)!im
 .tab-active{background:var(--navy);color:white}
 .tab-idle{color:var(--muted)}
 /* Customer sign-in: visual-only styling aligned with the Sonaa homepage. */
+.client-section-tabs{background:linear-gradient(145deg,#e7eef8,#fff)!important;border-color:#d5e0ef!important;box-shadow:inset 0 2px 4px #0b1b3a0a,0 4px 0 #dce5f1,0 8px 18px #0b1b3a0a!important}
+.client-section-tabs button{border:1px solid transparent;transition:transform .16s,box-shadow .16s}
+.client-section-tabs button.tab-idle{background:linear-gradient(145deg,#fff,#eaf0f8);border-color:#d5dfed;box-shadow:0 3px 0 #cbd7e7,0 5px 8px #0b1b3a0d,inset 0 1px 0 #fff;color:#344965}
+.client-section-tabs button.bg-gradient-to-l{background:linear-gradient(145deg,#315f99 0%,#173c6c 65%,#102b50 100%)!important;color:#fff!important;border-color:#42628a;box-shadow:0 4px 0 #0b1b3a,0 7px 12px #0b1b3a2c,inset 0 1px 0 #ffffff40!important}
+.client-section-tabs button:active{transform:translateY(2px);box-shadow:0 1px 0 #0b1b3a20}
+.client-new-order{background:radial-gradient(ellipse at 50% 0%,#e5efff 0%,#f4f7fb 52%,#eef2f8 100%);border-radius:24px;padding:8px 0 16px}
+.client-new-order .client-order-panel{border:1px solid #d7e2f0;border-radius:25px;background:linear-gradient(145deg,#fff 0%,#fbfdff 100%);box-shadow:0 5px 0 #dce5f1,0 18px 38px #0b1b3a16,0 3px 9px #0b1b3a08}
+.client-new-order .field{border-color:#d8e2ef;border-radius:13px;background:#fbfdff;transition:border-color .18s,box-shadow .18s,background .18s}
+.client-new-order .field:focus{background:#fff;border-color:#2563eb!important;box-shadow:0 0 0 4px #2563eb18,0 3px 8px #0b1b3a08}
+.app-header .brand-mark{width:88px;height:88px;border-radius:22px;background:linear-gradient(145deg,#fff,#e8eff9);border:1px solid #fff;box-shadow:0 5px 0 #cbd8ea,0 10px 18px #0b1b3a1c,inset 0 2px 3px #fff;overflow:visible}
+.app-header .brand-mark .sonaa-logo-svg{filter:drop-shadow(0 4px 2px #0b1b3a28) drop-shadow(0 9px 7px #0b1b3a18);transform:translateY(-2px)}
+@media(max-width:380px){.app-header .brand-mark{width:70px;height:70px}.client-new-order{padding-top:4px}.client-new-order .client-order-panel{padding:14px}}
 .account-gate{position:relative;isolation:isolate;background:radial-gradient(ellipse at 50% 0%,#dbeafe 0%,#f4f7fb 48%,#eef2f8 100%)}
 .account-gate:before{content:"";position:absolute;z-index:-1;top:0;left:50%;width:min(520px,100%);height:250px;transform:translateX(-50%);background:radial-gradient(ellipse,#ffffffb8 0%,#ffffff00 72%);pointer-events:none}
 .account-gate .account-brand{height:132px;width:132px;border-radius:30px;background:linear-gradient(145deg,#fff 0%,#e8eff9 100%);border:1px solid #ffffff;box-shadow:0 7px 0 #cbd8ea,0 16px 24px #0b1b3a20,inset 0 2px 3px #fff;transform:perspective(700px) rotateX(3deg);filter:drop-shadow(0 10px 12px #0b1b3a16)}.account-gate .account-brand .sonaa-logo-svg{width:118px;height:118px;object-fit:contain;filter:drop-shadow(0 5px 2px #0b1b3a28) drop-shadow(0 12px 10px #0b1b3a16);transform:translateY(-2px)}
@@ -603,14 +615,7 @@ function render(){
     </div>
     ${state.tab==='new'?`
       ${!state.sn?`
-      <div class="mt-4 space-y-3 animate-fade">
-        <div class="rounded-[18px] bg-gradient-to-l from-[#0b1b3a] to-[#173c6c] p-4 flex items-center justify-between gap-3 text-white">
-          <div>
-            <div class="text-[13px] font-extrabold">هل أنت فني؟</div>
-            <div class="text-[11px] text-blue-100 mt-1">استقبل طلبات العملاء في منطقتك</div>
-          </div>
-          <a href="./fanni.html" class="shrink-0 h-10 px-4 rounded-xl bg-white text-[#0b1b3a] font-extrabold text-[12px] flex items-center">دخول الفني</a>
-        </div>
+      <div class="mt-4 space-y-3 animate-fade client-new-order">
         <div class="panel p-4 sm:p-5">
           <div class="flex items-center gap-3">
             <div class="h-10 w-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center text-xl">📝</div>
