@@ -236,9 +236,10 @@ router.patch('/complaints/:id', auth('admin'), validate(Joi.object({
 
 router.get('/counts', auth('admin'), async (req, res, next) => {
   try {
+    const legacyFanniFilter = { $or: [ { role: 'fanni' }, { role: { $exists: false }, specialties: { $exists: true, $ne: [] }, adminRole: null } ] };
     const [technicians, verifiedTechnicians, clients] = await Promise.all([
-      Fanni.countDocuments({ role: 'fanni' }),
-      Fanni.countDocuments({ role: 'fanni', status: 'معتمد' }),
+      Fanni.countDocuments(legacyFanniFilter),
+      Fanni.countDocuments({ ...legacyFanniFilter, status: 'معتمد' }),
       Client.countDocuments({})
     ]);
     return res.set('Cache-Control', 'no-store').json({
@@ -249,7 +250,7 @@ router.get('/counts', auth('admin'), async (req, res, next) => {
 
 router.get('/fannis', auth('admin'), async (req, res, next) => {
   try {
-    const list = await Fanni.find({ role: 'fanni' }).select('-passwordHash').sort({ createdAt: -1 }).limit(MAX_LIST_LIMIT).lean();
+    const list = await Fanni.find({ $or: [ { role: 'fanni' }, { role: { $exists: false }, specialties: { $exists: true, $ne: [] }, adminRole: null } ] }).select('-passwordHash').sort({ createdAt: -1 }).limit(MAX_LIST_LIMIT).lean();
     const ids = list.map(item => item._id);
     const [ratingStats, completedStats] = ids.length ? await Promise.all([
       Rating.aggregate([
@@ -1553,7 +1554,8 @@ function normalizeForCompare(value) {
     .trim()
     .replace(/\s+/g, ' ')
     .toLowerCase()
-    .replace(/[\u064B-\u065F\u0670]/g, '');
+    .replace(/[\u064B-\u065F\u0670]/g, '')
+    .replace(/ريسيفر/g, 'رسيفر');
 }
 
 function normalizeBrokenWallScreenServiceName(value) {
@@ -1632,6 +1634,11 @@ function buildAdminCategoriesMap(savedServices) {
   }
   for (const saved of savedServices) {
     const catKey = normalizeForCompare(saved.category);
+    const isInactiveLegacyTombstone = saved.isActive === false && CATEGORIES.some(cat =>
+      normalizeForCompare(cat.label) === catKey &&
+      cat.services.some(name => normalizeForCompare(name) === normalizeForCompare(saved.name))
+    );
+    if (isInactiveLegacyTombstone) continue;
     if (!map.has(catKey)) {
       map.set(catKey, {
         label: saved.category,
@@ -1781,6 +1788,20 @@ router.post('/services', auth('admin'), async (req, res, next) => {
       isActive: true
     };
 
+    const existingInCategory = (await Service.find({ category }).select('+normalizedName')).find(item =>
+      normalizeForCompare(item.name) === normalizeForCompare(name)
+    );
+    if (existingInCategory) {
+      if (existingInCategory.isActive) return res.status(409).json({ message: 'الخدمة موجودة بالفعل في نفس القسم' });
+      existingInCategory.name = name;
+      existingInCategory.category = category;
+      existingInCategory.emoji = payload.emoji;
+      existingInCategory.sortOrder = payload.sortOrder;
+      existingInCategory.categorySortOrder = payload.categorySortOrder;
+      existingInCategory.isActive = true;
+      await existingInCategory.save();
+      return res.json({ ok: true, message: 'تمت إعادة إضافة الخدمة', service: existingInCategory, data: existingInCategory });
+    }
     const service = await Service.create(payload);
     
     return res.status(201).json({ ok: true, message: 'تمت إضافة الخدمة', service, data: service });
@@ -1910,6 +1931,7 @@ router.delete('/services/:id', auth('admin'), async (req, res, next) => {
         }
         if (!legacyRows.length) await ensureHiddenLegacy(name, legacyCat.label);
       }
+      deleted = true;
     } else {
       const sameCategoryRows = await Service.find({ category }).select('_id name');
       const duplicateIds = sameCategoryRows.filter(item => normalizeForCompare(item.name) === normalizedName).map(item => item._id);
@@ -1920,13 +1942,11 @@ router.delete('/services/:id', auth('admin'), async (req, res, next) => {
       if (remaining.some(item => normalizeForCompare(item.name) === normalizedName)) return res.status(409).json({ message: 'ما زالت هناك نسخة من الخدمة في القسم؛ لم نؤكد اكتمال الحذف' });
       deleted = true;
     }
-    await writeAdminAudit(req, deleted ? 'حذف نهائي لخدمة' : 'إزالة خدمة أساسية من القوائم المتاحة', 'services', name, JSON.stringify({ category, deleted, legacyTombstone: isLegacyService }));
+    await writeAdminAudit(req, 'حذف نهائي لخدمة', 'services', name, JSON.stringify({ category, deleted: true, legacyTombstone: isLegacyService }));
     return res.json({
       ok: true,
       deleted,
-      message: deleted
-        ? 'تم حذف الخدمة نهائيًا من قائمة الخدمات. الطلبات السابقة محفوظة.'
-        : 'تمت إزالة الخدمة الأساسية من القوائم المتاحة مع الحفاظ على الطلبات السابقة.'
+      message: 'تم حذف الخدمة من قائمة الخدمات. الطلبات السابقة محفوظة.'
     });
   } catch (err) { next(err); }
 });
