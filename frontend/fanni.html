@@ -1402,11 +1402,16 @@ async function start(){
   await Promise.allSettled([loadOrders(),loadMyOffers(),loadWalletHistory(),loadNotifications()]);
  }catch(error){
   console.error('Technician page initialization failed:',error);
-  toast('تعذر تحميل بعض بيانات الصفحة. جرّب تحديث الصفحة.','error');
+  const detail=String(error?.message||'خطأ غير معروف').slice(0,180);
+  toast('حصل خطأ أثناء فتح صفحة الفني: '+detail,'error');
  }finally{
   state.checkingSession=false;
   hideFanniLoading();
-  try{render();}catch(error){console.error('Technician page render failed:',error);}
+  try{render();}catch(error){
+   console.error('Technician page render failed:',error);
+   const detail=String(error?.message||'خطأ غير معروف').slice(0,180);
+   toast('تعذر عرض صفحة الفني: '+detail,'error');
+  }
  }
 }
 
