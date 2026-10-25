@@ -24,6 +24,15 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
 @keyframes fade{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
 .animate-fade{animation:fade .22s ease both}
 .safe-bottom{padding-bottom:env(safe-area-inset-bottom)}
+.fanni-header-actions{display:flex;flex:1 1 100%;flex-direction:column;align-items:stretch;gap:7px;width:100%;min-width:0}
+.fanni-header-download{width:100%;min-height:40px;box-sizing:border-box}
+.fanni-header-controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;width:100%;min-width:0}
+.fanni-header-controls>*{box-sizing:border-box;min-width:0;width:100%;padding-left:4px;padding-right:4px;justify-content:center;text-align:center}
+@media(min-width:520px){
+ .fanni-header-main{flex-wrap:nowrap}
+ .fanni-header-brand{flex:1 1 155px}
+ .fanni-header-actions{flex:0 0 290px;width:290px}
+}
 .panel{background:#fff;border:1px solid var(--border);border-radius:18px;box-shadow:0 3px 12px #0f234b09}
 .field-label{display:block;font-size:12px;font-weight:800;color:#334155;margin-bottom:6px}
 .field{display:block;width:100%;min-height:46px;border:1px solid #dbe3ef;border-radius:12px;background:#fff;padding:10px 12px;color:#0b1b3a;font-size:13px}
@@ -559,15 +568,17 @@ function render(){
 
  document.getElementById('app').innerHTML=`
  <header class="sticky top-0 z-40 bg-[#0b1b3a] text-white shadow-lg">
-  <div class="mx-auto max-w-[680px] px-3 py-3 flex items-center justify-between gap-3">
-   <div class="flex items-center gap-3 min-w-0 flex-1">
+  <div class="fanni-header-main mx-auto max-w-[680px] px-3 py-3 flex flex-wrap items-center gap-3">
+   <div class="fanni-header-brand flex items-center gap-3 min-w-0 flex-1">
     <div class="h-14 w-14 sm:h-16 sm:w-16 rounded-2xl bg-[#F8FAFC] border-2 border-[#14B8A6] flex items-center justify-center shrink-0 shadow-sm"><img class="sonaa-logo-svg" src="/images/LOGO_UPLOAD_HERE/logo.png" alt="شعار صُنّاع" width="120" height="120" decoding="async"></div>
     <div class="min-w-0"><h1 class="font-extrabold text-[17px]">صُنّاع</h1><div class="text-[10px] text-blue-100/75 mt-0.5 truncate">${authenticated?esc(user?.name||'فني')+' · الرصيد '+esc(balance)+' جنيه':'لوحة الفني والخدمات'}</div>${authenticated?`<div class="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-amber-200/30 bg-amber-400/15 px-2.5 py-1 text-[10px] font-extrabold text-amber-100"><span>مستواك المهني:</span><span>${esc(user?.level||'مبتدئ')}</span></div>`:''}</div>
    </div>
-   <div class="flex flex-wrap items-center justify-end gap-1.5 shrink-0 max-w-[58%]">
-    <a href="https://aasdstarr77.github.io/sonaa-download/" aria-label="تحميل تطبيق صُنّاع" title="تحميل تطبيق صُنّاع" class="h-9 px-2 sm:px-3 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 inline-flex items-center justify-center gap-1.5 text-[10px] sm:text-[11px] font-extrabold whitespace-nowrap"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg><span>تحميل التطبيق</span></a>
-    <button onclick="toggleNotifications()" aria-label="الإشعارات" title="الإشعارات" class="relative h-9 w-9 shrink-0 rounded-xl border border-amber-200 bg-amber-50 text-[18px] text-amber-600">🔔${notificationBadge()}</button>
-    ${authenticated?'<div class="flex items-center gap-1.5"><button onclick="setTab(\'profile\')" class="h-9 px-2.5 rounded-xl bg-white text-blue-900 text-[10px] sm:text-[11px] font-extrabold shadow-sm">حسابي</button><button onclick="logout()" class="h-9 px-2.5 rounded-xl bg-white/10 text-[10px] sm:text-[11px] font-bold">خروج</button></div>':''}
+   <div class="fanni-header-actions">
+    <a href="https://aasdstarr77.github.io/sonaa-download/" aria-label="تحميل تطبيق صُنّاع" title="تحميل تطبيق صُنّاع" class="fanni-header-download h-9 px-2 sm:px-3 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 inline-flex items-center justify-center gap-1.5 text-[10px] sm:text-[11px] font-extrabold whitespace-nowrap"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg><span>تحميل التطبيق</span></a>
+    <div class="fanni-header-controls">
+     <button onclick="toggleNotifications()" aria-label="الإشعارات" title="الإشعارات" class="relative h-9 w-9 shrink-0 rounded-xl border border-amber-200 bg-amber-50 text-[18px] text-amber-600">🔔${notificationBadge()}</button>
+     ${authenticated?'<button onclick="setTab(\'profile\')" class="h-9 px-2.5 rounded-xl bg-white text-blue-900 text-[10px] sm:text-[11px] font-extrabold shadow-sm">حسابي</button><button onclick="logout()" class="h-9 px-2.5 rounded-xl bg-white/10 text-[10px] sm:text-[11px] font-bold">خروج</button>':''}
+    </div>
    </div>
   </div>
   <div class="mx-auto max-w-[680px] px-3 pb-2 flex items-center justify-between gap-2">
