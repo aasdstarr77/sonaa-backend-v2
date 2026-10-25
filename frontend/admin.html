@@ -199,17 +199,17 @@ function render(){
   const disabledCount=state.fannis.filter(f=>f.isDisabled).length;
 
   document.getElementById('app').innerHTML=`
-  <header class="sticky top-0 z-40 glass-header text-white shadow-[0_6px_18px_rgba(11,27,58,.20)]"><div class="mx-auto max-w-[800px] px-3 py-1 grid grid-cols-[minmax(0,1fr)_64px_minmax(0,1fr)] items-center gap-2 min-h-[72px]">
+  <header class="sticky top-0 z-40 glass-header text-white shadow-[0_6px_18px_rgba(11,27,58,.20)]"><div class="mx-auto max-w-[800px] px-3 py-1 grid grid-cols-[minmax(0,1fr)_56px_minmax(0,1fr)] items-center gap-1 min-h-[64px]">
       <div class="min-w-0 text-right self-center">
         <h1 class="font-black text-[14px] leading-5">صُنّاع | لوحة الإدارة</h1>
-        ${isAuth&&currentAdminRoleLabel()?'<div class="mt-0.5 text-[10px] text-blue-100 font-bold"><span>المنصب الإداري:</span><span>${escHtml(currentAdminRoleLabel())}</span></div>':''}
-        <button type="button" onclick="goBack()" class="mt-1 h-7 px-3 rounded-lg border border-white/20 bg-white/10 text-white text-[11px] font-extrabold">← رجوع</button>
+        ${isAuth&&currentAdminRoleLabel()?'<div class="mt-0.5 text-[10px] text-blue-100 font-bold"><span>المنصب الإداري:</span><span>'+escHtml(currentAdminRoleLabel())+'</span></div>':''}
+        <button type="button" onclick="goBack()" class="mt-1 h-6 px-3 rounded-lg border border-white/20 bg-white/10 text-white text-[11px] font-extrabold">← رجوع</button>
       </div>
-      <div class="h-[64px] w-[64px] justify-self-center rounded-xl bg-[#F8FAFC] border-2 border-[#14B8A6] flex items-center justify-center shadow-lg overflow-hidden">
+      <div class="h-[56px] w-[56px] justify-self-center rounded-xl bg-[#F8FAFC] border-2 border-[#14B8A6] flex items-center justify-center shadow-lg overflow-hidden">
         <img class="sonaa-logo-svg h-full w-full object-contain" src="/images/LOGO_UPLOAD_HERE/logo.png" alt="شعار صُنّاع" width="120" height="120" decoding="async">
       </div>
-      <div class="flex flex-col gap-1.5 shrink-0 items-stretch justify-self-end w-[112px]">
-        <button onclick="goFanni()" class="h-8 w-full rounded-lg bg-white/10 hover:bg-white/15 text-[10px] font-black border border-white/10 inline-flex items-center justify-center text-center leading-none">لوحة الفني</button>
+      <div class="flex flex-col gap-1 shrink-0 items-stretch justify-self-end w-[104px]">
+        <button onclick="goFanni()" class="h-7 w-full rounded-lg bg-white/10 hover:bg-white/15 text-[10px] font-black border border-white/10 inline-flex items-center justify-center text-center leading-none">لوحة الفني</button>
         <a href="password.html?role=admin&amp;mode=account" class="h-8 w-full rounded-lg bg-white/10 hover:bg-white/20 border border-white/15 text-[10px] font-black text-white inline-flex items-center justify-center gap-1 no-underline leading-none"><span aria-hidden="true">👤</span><span>حسابي</span></a>
         <a href="/" aria-label="القائمة الرئيسية" title="القائمة الرئيسية" class="h-8 w-full rounded-lg bg-white/10 hover:bg-white/15 text-white text-[10px] font-black inline-flex items-center justify-center text-center leading-none">⌂ القائمة الرئيسية</a>
         ${isAuth?'<button onclick="logout()" class="h-8 w-full rounded-lg bg-white/10 flex items-center justify-center text-[11px]">⎋ خروج</button>':''}
