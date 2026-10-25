@@ -1556,13 +1556,19 @@ function normalizeForCompare(value) {
     .replace(/[\u064B-\u065F\u0670]/g, '');
 }
 
+function normalizeBrokenWallScreenServiceName(value) {
+  return normalizeForCompare(value)
+    .replace(/^[^ء-ي]+/, '')
+    .replace(/ة/g, 'ه');
+}
+
 const BROKEN_WALL_SCREEN_SERVICE_NAMES = [
-  normalizeForCompare('تعليق شاشة حائط'),
-  normalizeForCompare('تركيب شاشة حائط')
+  normalizeBrokenWallScreenServiceName('تعليق شاشة حائط'),
+  normalizeBrokenWallScreenServiceName('تركيب شاشة حائط')
 ];
 
 function isBrokenWallScreenService(value) {
-  return BROKEN_WALL_SCREEN_SERVICE_NAMES.includes(normalizeForCompare(value));
+  return BROKEN_WALL_SCREEN_SERVICE_NAMES.includes(normalizeBrokenWallScreenServiceName(value));
 }
 
 function parseBooleanStrict(value) {
