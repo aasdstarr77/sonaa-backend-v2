@@ -93,6 +93,8 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--blue)!im
 .client-new-order .field{border-color:#d8e2ef;border-radius:13px;background:#fbfdff;transition:border-color .18s,box-shadow .18s,background .18s}
 .client-new-order .field:focus{background:#fff;border-color:#2563eb!important;box-shadow:0 0 0 4px #2563eb18,0 3px 8px #0b1b3a08}
 .client-home-main-btn{background:linear-gradient(145deg,#3983f6 0%,#1d4ed8 55%,#173c6c 100%)!important;border:1px solid #ffffff45!important;box-shadow:0 4px 0 #123b85,0 8px 14px #0b1b3a25,inset 0 1px 0 #ffffff45!important;transition:transform .16s,box-shadow .16s,filter .16s}
+/* Keep the home/menu links readable even when generic anchor/button styles override them. */
+.account-gate .account-nav-btn.account-home-btn,.client-home-main-btn{background:linear-gradient(145deg,#3983f6 0%,#1d4ed8 55%,#173c6c 100%)!important;color:#fff!important;-webkit-text-fill-color:#fff!important;text-decoration:none!important;border:1px solid #ffffff70!important;text-shadow:0 1px 2px #102b50!important;}
 .client-home-main-btn:active{transform:translateY(3px);box-shadow:0 1px 0 #123b85,0 3px 7px #0b1b3a20!important}
 .client-submit-order-btn{background:linear-gradient(145deg,#3983f6 0%,#1d4ed8 55%,#173c6c 100%)!important;border:1px solid #ffffff45!important;box-shadow:0 6px 0 #123b85,0 12px 20px #1d4ed82e,inset 0 1px 0 #ffffff45!important;transition:transform .16s,box-shadow .16s,filter .16s}
 .client-submit-order-btn:hover{filter:brightness(1.04)}
