@@ -26,6 +26,15 @@ function normalize(value) {
     .replace(/[\u064B-\u065F\u0670]/g, '');
 }
 
+const BROKEN_WALL_SCREEN_SERVICE_NAMES = [
+  normalize('تعليق شاشة حائط'),
+  normalize('تركيب شاشة حائط')
+];
+
+function isBrokenWallScreenService(value) {
+  return BROKEN_WALL_SCREEN_SERVICE_NAMES.includes(normalize(value));
+}
+
 
 /* القائمة الموحدة لمناطق الخدمة: القائمة الأساسية + المناطق التي يضيفها الفنيون المعتمدون. */
 router.get('/areas', async (req, res, next) => {
@@ -77,7 +86,7 @@ router.get('/services', async (req, res, next) => {
       });
 
       for (const [index, name] of category.services.entries()) {
-        if (normalize(name) === normalize('تعليق شاشة حائط')) continue;
+        if (isBrokenWallScreenService(name)) continue;
         categoriesMap.get(categoryKey).services.push({ name, emoji: category.emoji, isActive: true, source: 'legacy', sortOrder: (index + 1) * 10 });
       }
     }
@@ -86,7 +95,7 @@ router.get('/services', async (req, res, next) => {
     for (const saved of savedServices) {
       const categoryKey = normalize(saved.category);
       const serviceKey = normalize(saved.name);
-      if (serviceKey === normalize('تعليق شاشة حائط')) continue; // never expose the broken service
+      if (isBrokenWallScreenService(saved.name)) continue; // never expose either historical label of the broken service
 
       if (!categoriesMap.has(categoryKey)) {
         categoriesMap.set(categoryKey, {

@@ -1556,6 +1556,15 @@ function normalizeForCompare(value) {
     .replace(/[\u064B-\u065F\u0670]/g, '');
 }
 
+const BROKEN_WALL_SCREEN_SERVICE_NAMES = [
+  normalizeForCompare('تعليق شاشة حائط'),
+  normalizeForCompare('تركيب شاشة حائط')
+];
+
+function isBrokenWallScreenService(value) {
+  return BROKEN_WALL_SCREEN_SERVICE_NAMES.includes(normalizeForCompare(value));
+}
+
 function parseBooleanStrict(value) {
   if (typeof value === 'boolean') return { ok: true, value };
   if (value === 'true' || value === 'false') {
@@ -1704,7 +1713,7 @@ async function ensureHiddenLegacy(oldName, oldCategoryLabel) {
 router.get('/services', auth('admin'), async (req, res, next) => {
   try {
     const savedServices = await Service.find({}).sort({ category: 1, sortOrder: 1, name: 1 }).lean();
-    const visibleServices = savedServices.filter(item => normalizeForCompare(item.name) !== normalizeForCompare('تعليق شاشة حائط'));
+    const visibleServices = savedServices.filter(item => !isBrokenWallScreenService(item.name));
     const map = buildAdminCategoriesMap(visibleServices);
     const categoriesDetailed = Array.from(map.values()).map(cat => ({
       label: cat.label,
@@ -1738,6 +1747,7 @@ router.post('/services', auth('admin'), async (req, res, next) => {
     const nameErr = validateNameField(name || '');
     if (nameErr) return res.status(400).json({ message: nameErr });
     name = String(name).trim().replace(/\s+/g, ' ');
+    if (isBrokenWallScreenService(name)) return res.status(400).json({ message: 'الخدمة دي محذوفة نهائيًا ولا يمكن إضافتها مرة أخرى' });
 
     if (!category || !String(category).trim()) {
       const found = findCategoryByService(name);
@@ -1831,20 +1841,19 @@ router.patch('/services/order', auth('admin'), async (req, res, next) => {
 router.delete('/services/:id', auth('admin'), async (req, res, next) => {
   try {
     const rawId = String(req.params.id || '').trim(), requestedCategory = req.query.category ? String(req.query.category).trim().replace(/\s+/g, ' ') : '';
-    const targetName = normalizeForCompare('تعليق شاشة حائط');
-    // Resolve this service before normal ID/category matching, because old admin
-    // rows may send a stale ID or an outdated category label.
+    // Treat both historical labels as the same broken service; old UI rows may
+    // carry either name and stale IDs/categories.
     let requestedService = null;
     if (mongoose.isValidObjectId(rawId)) requestedService = await Service.findById(rawId).select('name').lean();
-    if (normalizeForCompare(rawId) === targetName || normalizeForCompare(requestedService?.name) === targetName) {
+    if (isBrokenWallScreenService(rawId) || isBrokenWallScreenService(requestedService?.name)) {
       const allRows = await Service.find({}).select('_id name').lean();
-      const matchingIds = allRows.filter(item => normalizeForCompare(item.name) === targetName).map(item => item._id);
+      const matchingIds = allRows.filter(item => isBrokenWallScreenService(item.name)).map(item => item._id);
       if (matchingIds.length) await Service.deleteMany({ _id: { $in: matchingIds } });
       const remainingRows = await Service.find({}).select('name').lean();
-      if (remainingRows.some(item => normalizeForCompare(item.name) === targetName)) {
+      if (remainingRows.some(item => isBrokenWallScreenService(item.name))) {
         return res.status(409).json({ message: 'تعذر تأكيد حذف كل نسخ الخدمة. لم يتم الإبلاغ عن نجاح الحذف.' });
       }
-      await writeAdminAudit(req, 'حذف نهائي لخدمة معطلة', 'services', 'تعليق شاشة حائط', JSON.stringify({ category: requestedCategory, removedCopies: matchingIds.length, historicalOrdersPreserved: true }));
+      await writeAdminAudit(req, 'حذف نهائي لخدمة معطلة', 'services', 'تركيب شاشة حائط', JSON.stringify({ category: requestedCategory, removedCopies: matchingIds.length, historicalOrdersPreserved: true }));
       return res.json({ ok: true, deleted: true, message: 'تم حذف الخدمة المعطلة من كل الأقسام. الطلبات القديمة محفوظة.' });
     }
     let service = null;
@@ -1858,12 +1867,12 @@ router.delete('/services/:id', auth('admin'), async (req, res, next) => {
     if (!service) return res.status(404).json({ message: 'الخدمة غير موجودة في القسم المحدد' });
     const name = service.name, category = service.category;
     const normalizedName = normalizeForCompare(name);
-    if (normalizedName === normalizeForCompare('تعليق شاشة حائط')) {
+    if (isBrokenWallScreenService(normalizedName)) {
       const allRows = await Service.find({}).select('_id name').lean();
-      const matchingIds = allRows.filter(item => normalizeForCompare(item.name) === normalizedName).map(item => item._id);
+      const matchingIds = allRows.filter(item => isBrokenWallScreenService(item.name)).map(item => item._id);
       if (matchingIds.length) await Service.deleteMany({ _id: { $in: matchingIds } });
       const remainingRows = await Service.find({}).select('name').lean();
-      if (remainingRows.some(item => normalizeForCompare(item.name) === normalizedName)) {
+      if (remainingRows.some(item => isBrokenWallScreenService(item.name))) {
         return res.status(409).json({ message: 'لم نتمكن من إزالة كل نسخ الخدمة؛ لم يتم تأكيد الحذف' });
       }
       await writeAdminAudit(req, 'حذف نهائي لخدمة معطلة', 'services', name, JSON.stringify({ category, removedCopies: matchingIds.length, historicalOrdersPreserved: true }));
