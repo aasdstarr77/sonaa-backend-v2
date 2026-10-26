@@ -472,7 +472,7 @@ async function loadServices(){
 let dashboardSpecialtiesCollapsed=true;
 function toggleDashboardSpecialties(){dashboardSpecialtiesCollapsed=!dashboardSpecialtiesCollapsed;render();}
 let state={
- tab:getToken()?'myOffers':'login',
+ tab:getToken()?'myOffers':(new URLSearchParams(window.location.search).get('tab')==='register'?'register':'login'),
  loginPhone:'',loginPass:'',
  regName:'',regPhone:'',regPass:'',regPassConfirm:'',
  regSpecialties:[],regAreas:[],regAreaSearch:'',regAreaCustom:'',openSpecialtyCategory:'',
