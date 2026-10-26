@@ -50,6 +50,23 @@ function protectRecoveryMessage(text, item) {
     ? encryptRecoveryMessage(text) : text;
 }
 const randomToken = () => crypto.randomBytes(32).toString('hex');
+function encryptAccessToken(token) {
+  const key = crypto.createHash('sha256').update(String(process.env.JWT_SECRET || '') + '|sonaa-recovery-access-v1').digest();
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const encrypted = Buffer.concat([cipher.update(String(token), 'utf8'), cipher.final()]);
+  return [iv.toString('hex'), cipher.getAuthTag().toString('hex'), encrypted.toString('hex')].join(':');
+}
+function decryptAccessToken(value) {
+  try {
+    const parts = String(value || '').split(':');
+    if (parts.length !== 3) return '';
+    const key = crypto.createHash('sha256').update(String(process.env.JWT_SECRET || '') + '|sonaa-recovery-access-v1').digest();
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(parts[0], 'hex'));
+    decipher.setAuthTag(Buffer.from(parts[1], 'hex'));
+    return Buffer.concat([decipher.update(Buffer.from(parts[2], 'hex')), decipher.final()]).toString('utf8');
+  } catch (_) { return ''; }
+}
 const clean = (v, max = 2000) => typeof v === 'string' ? v.trim().slice(0, max) : '';
 const sameDigest = (a, b) => {
   const left = Buffer.from(String(a || ''), 'hex');
@@ -155,10 +172,26 @@ router.post('/request', recoveryLimiter, async (req, res, next) => {
       return res.status(400).json({ message: 'الرقم مسجل، لكنه لا يطابق نوع الحساب المحدد.' });
     }
 
+    const existing = await PasswordRecovery.findOne({
+      ownerRole: role, phone, accountId: account.user._id,
+      status: { $nin: ['تمت الاستعادة', 'مرفوضة', 'منتهية'] },
+      expiresAt: { $gt: new Date() }
+    }).select('+accessTokenHash +accessTokenEncrypted').sort({ lastMessageAt: -1 });
+    if (existing) {
+      const existingToken = decryptAccessToken(existing.accessTokenEncrypted);
+      if (!existingToken) {
+        return res.status(409).json({ message: 'عندك بالفعل طلب استعادة مفتوح. افتح طلبك السابق من نفس الجهاز لمتابعة رد الدعم، ولا تنشئ طلبًا جديدًا.' });
+      }
+      return res.status(200).json({
+        message: 'أنت قدمت طلب استعادة بالفعل. تم فتح طلبك السابق لمتابعة رد الدعم.',
+        recoveryToken: existingToken, requestId: String(existing._id), existing: true
+      });
+    }
+
     const token = randomToken();
     const item = await PasswordRecovery.create({
       ownerRole: role, accountId: account.user._id, accountName: account.user.name || '',
-      phone, accessTokenHash: digest(token), status: 'بانتظار الدعم',
+      phone, accessTokenHash: digest(token), accessTokenEncrypted: encryptAccessToken(token), status: 'بانتظار الدعم',
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
       messages: [{ senderRole: 'user', text: 'طلب استعادة كلمة المرور. يرجى التحقق من ملكية الحساب قبل إصدار رمز الاستعادة.' }]
     });
