@@ -76,17 +76,21 @@
     
     .cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:820px;margin:0 auto}
     .entry{position:relative;display:flex;flex-direction:column;min-height:248px;padding:24px 24px 20px;border-radius:22px;background:linear-gradient(155deg,#fff 0%,#f7f9fd 100%);border:1px solid #dce5f2;box-shadow:0 7px 0 #dce4f0,0 14px 28px #15254412,inset 0 1px 0 #fff;transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}
+    /* نقطة زرقاء نابضة أعلى يسار كارت العميل وكارت الفني */
+    .entry::before{content:"";position:absolute;top:14px;left:14px;width:10px;height:10px;border-radius:50%;background:#3b82f6;box-shadow:0 0 0 3px #3b82f625,0 0 10px #3b82f6b8;animation:sonaaEntryDotPulse 1.8s ease-in-out infinite;pointer-events:none}
+    @keyframes sonaaEntryDotPulse{0%,100%{opacity:1;box-shadow:0 0 0 3px #3b82f625,0 0 10px #3b82f6b8}50%{opacity:.38;box-shadow:0 0 0 2px #3b82f612,0 0 2px #3b82f650}}
+    @media(prefers-reduced-motion:reduce){.entry::before{animation:none}}
     .entry:hover{transform:translateY(-5px);box-shadow:0 9px 0 #d4deed,0 22px 36px #1525441b,inset 0 1px 0 #fff;border-color:#bdcfe8}.entry:active{transform:translateY(3px);box-shadow:0 2px 0 #d4deed,0 5px 12px #15254412}
     .entry-icon{width:68px;height:68px;border-radius:20px;display:grid;place-items:center;margin-bottom:15px;border:1px solid #ffffffc9;box-shadow:inset 0 3px 4px #ffffffb8,inset 0 -5px 0 #1525440b,0 7px 13px #15254412}
     .customer .entry-icon{background:linear-gradient(145deg,#e6efff 0%,#b8d0ff 100%);color:#2455bf;box-shadow:inset 0 3px 4px #fff,inset 0 -5px 0 #628ce433,0 8px 14px #2563eb25}
-    .technician .entry-icon{background:linear-gradient(145deg,#fff5c4 0%,#f5c84c 100%);color:#795400;box-shadow:inset 0 3px 4px #fff8d8,inset 0 -5px 0 #a9790033,0 8px 14px #d69b102b}
+    .technician .entry-icon{background:linear-gradient(145deg,#dbeafe 0%,#93c5fd 100%);color:#2455bf;box-shadow:inset 0 3px 4px #fff,inset 0 -5px 0 #628ce433,0 8px 14px #2563eb25}
     .entry-icon svg{width:32px;height:32px}
     .entry h3{font-size:19px;font-weight:900;margin:0 0 6px;color:var(--navy)}
     .entry p{margin:0;color:#65758d;line-height:1.85;font-size:13px}
     .entry-action{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto;padding-top:20px}
     .action-label{display:inline-flex;align-items:center;gap:8px;padding:12px 16px;border:1px solid #1d4ed8;border-radius:12px;font-weight:900;font-size:13px;color:#fff;background:linear-gradient(180deg,#4380ff 0%,#1d4ed8 100%);box-shadow:0 5px 0 #173fae,0 9px 15px #2563eb30,inset 0 1px 0 #ffffff75;transition:transform .15s,box-shadow .15s;position:relative;top:0}
-    .technician .action-label{border-color:#c28b08;background:linear-gradient(180deg,#ffdc69 0%,#e9a90d 100%);color:#172744;box-shadow:0 5px 0 #a87500,0 9px 15px #f0b51e45,inset 0 1px 0 #fff7cc}
-    .entry:hover .action-label{transform:translateY(-1px);box-shadow:0 6px 0 #173fae,0 12px 18px #2563eb35,inset 0 1px 0 #ffffff75}.entry:active .action-label{transform:translateY(4px);box-shadow:0 1px 0 #173fae,0 3px 7px #2563eb25}.technician:hover .action-label{box-shadow:0 6px 0 #a87500,0 12px 18px #f0b51e50,inset 0 1px 0 #fff7cc}.technician:active .action-label{box-shadow:0 1px 0 #a87500,0 3px 7px #f0b51e30}.action-label svg{width:17px;height:17px}
+    .technician .action-label{border-color:rgba(191,219,254,.9);background:linear-gradient(180deg,#4380ff 0%,#1d4ed8 100%);color:#fff;box-shadow:0 5px 0 #173fae,0 9px 15px #2563eb30,inset 0 1px 0 #ffffff75}
+    .entry:hover .action-label{transform:translateY(-1px);box-shadow:0 6px 0 #173fae,0 12px 18px #2563eb35,inset 0 1px 0 #ffffff75}.entry:active .action-label{transform:translateY(4px);box-shadow:0 1px 0 #173fae,0 3px 7px #2563eb25}.action-label svg{width:17px;height:17px}
     .action-hint{font-size:11px;color:#8a98ad;font-weight:700}
 
     /* Trust */
@@ -170,7 +174,7 @@
           <h3>الدخول كفني</h3>
           <p>مهارتك هي رزقك. انضم وابدأ تستقبل طلبات قريبة منك.</p>
           <span class="entry-action">
-            <span class="action-label">ادخل لوحة الفني <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M19 12H5m7 7-7-7 7-7"/></svg></span>
+            <span class="action-label">ابدأ كفني <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M19 12H5m7 7-7-7 7-7"/></svg></span>
             <span class="action-hint">فرصتك تبدأ هنا</span>
           </span>
         </a>
