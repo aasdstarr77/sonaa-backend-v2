@@ -308,6 +308,29 @@ body:has(.fanni-login-gate) .fanni-app-header,body:has(.fanni-login-gate) nav.fi
 /* Keep the technician account switch button the same blue as the client page. */
 .fanni-login-gate .account-switch-link{background:linear-gradient(145deg,#3983f6 0%,#1d4ed8 55%,#173c6c 100%)!important;color:#fff!important;-webkit-text-fill-color:#fff!important;border:1px solid #bfdbfe!important;box-shadow:0 4px 0 #123b85,0 7px 12px #1d4ed82e,inset 0 1px 0 #ffffff45!important}
 .fanni-login-gate .account-switch-link small{color:#fff!important;-webkit-text-fill-color:#fff!important}
+
+/* Final explicit colors: match the client's blue switch and make app download darker blue. */
+.fanni-login-gate .fanni-login-tabs button.account-switch-link,
+.fanni-login-gate .fanni-login-tabs button.account-switch-link span,
+.fanni-login-gate .fanni-login-tabs button.account-switch-link small{
+  background:linear-gradient(145deg,#3983f6 0%,#1d4ed8 55%,#173c6c 100%)!important;
+  color:#fff!important;
+  -webkit-text-fill-color:#fff!important;
+}
+.fanni-login-gate .fanni-login-tabs button.account-switch-link{
+  border:1px solid #ffffff45!important;
+  box-shadow:0 5px 0 #123b85,0 9px 16px #1d4ed82e,inset 0 1px 0 #ffffff45!important;
+}
+.fanni-account-nav .fanni-download-btn{
+  background:linear-gradient(145deg,#1e40af 0%,#173c6c 58%,#0b1b3a 100%)!important;
+  color:#fff!important;
+  -webkit-text-fill-color:#fff!important;
+  border:1px solid #93c5fd!important;
+  box-shadow:0 5px 0 #07152d,0 8px 14px #0b1b3a35,inset 0 1px 0 #ffffff40!important;
+}
+.fanni-account-nav .fanni-download-btn:active{
+  box-shadow:0 2px 0 #07152d!important;
+}
 </style>
 </head>
 <body class="min-h-screen antialiased">
