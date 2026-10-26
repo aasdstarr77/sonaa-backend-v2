@@ -23,7 +23,10 @@ const decisionSchema = new mongoose.Schema({
       'ترقية إداري',
       'تغيير منصب إداري',
       'تغيير صلاحيات إدارية',
-      'سحب صلاحية إدارية'
+      'سحب صلاحية إدارية',
+      'طلب تعديل بيانات',
+      'اعتماد تعديل بيانات',
+      'رفض تعديل بيانات'
     ],
     required: true
   },
@@ -89,6 +92,12 @@ const fanniSchema = new mongoose.Schema({
     index: true
   },
   rejectionReason: { type: String, maxlength: 500 },
+  pendingProfileChange: {
+    phone: { type: String, trim: true },
+    specialties: [{ type: String, trim: true }],
+    areas: [{ type: String, trim: true }],
+    requestedAt: { type: Date }
+  },
   suspensionReason: { type: String, maxlength: 500 },
   suspendedAt: Date,
   walletBalance: { type: Number, default: 0, min: 0 },
