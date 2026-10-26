@@ -36,9 +36,8 @@ const profileUpdateSchema = Joi.object({
   phone: Joi.string().trim().required(),
   specialties: Joi.array()
     .items(Joi.string().trim().min(1).max(100))
-    .min(1)
     .max(20)
-    .required(),
+    .optional(),
   areas: Joi.array()
     .items(Joi.string().trim().min(2).max(60))
     .min(1)
@@ -231,9 +230,11 @@ router.patch('/me', auth(), requireFanni, validate(profileUpdateSchema), async (
     if (req.user.pendingProfileChange?.requestedAt) return res.status(409).json({ message: 'لديك طلب تعديل بيانات قيد مراجعة الإدارة. انتظر القرار قبل إرسال طلب جديد.' });
     const duplicate = await Fanni.findOne({ phone, _id: { $ne: req.user._id } }).select('_id');
     if (duplicate) return res.status(409).json({ message: 'رقم الهاتف مسجل بالفعل في حساب آخر' });
-    const specialties = [...new Set(req.body.specialties.map(value => String(value).trim()).filter(Boolean))];
+    const requestedSpecialties = Array.isArray(req.body.specialties) ? req.body.specialties : [];
+    const normalizedSpecialties = [...new Set(requestedSpecialties.map(value => String(value).trim()).filter(Boolean))];
+    // التخصصات اختيارية عند تعديل الملف؛ إذا لم يحدد الفني تخصصات جديدة، احتفظ بالتخصصات الحالية.
+    const specialties = normalizedSpecialties.length ? normalizedSpecialties : [...(req.user.specialties || [])];
     const areas = [...new Set(req.body.areas.map(value => String(value).trim()).filter(value => value.length >= 2))];
-    if (!specialties.length) return res.status(400).json({ message: 'اختار تخصصًا واحدًا على الأقل' });
     if (!areas.length) return res.status(400).json({ message: 'اكتب منطقة عمل واحدة على الأقل' });
     req.user.pendingProfileChange = { phone, specialties, areas, requestedAt: new Date() };
     req.user.decisions.push({ action: 'طلب تعديل بيانات', reason: 'طلب الفني تغيير بيانات حسابه', date: new Date(), by: String(req.user.name || 'الفني'), byId: req.user._id, meta: { phone, specialties, areas } });
