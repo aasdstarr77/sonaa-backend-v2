@@ -1456,7 +1456,7 @@ function toggleEditSpecialty(specialty){
 }
 async function saveProfileChanges(){
  if(state.editSaving)return;
- const phone=String(state.editPhone||'').replace(/\\D/g,'');
+ const phone=String(state.editPhone||'').replace(/\D/g,'');
  if(!/^01[0-9]{9}$/.test(phone)){state.error='رقم التليفون لازم يكون 11 رقم ويبدأ بـ 01';render();return;}
  if(!Array.isArray(state.editSpecialties)||!state.editSpecialties.length){state.error='اختار تخصصًا واحدًا على الأقل';render();return;}
  const areas=parseAreas(state.editAreasText);
