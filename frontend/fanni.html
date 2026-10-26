@@ -331,6 +331,55 @@ body:has(.fanni-login-gate) .fanni-app-header,body:has(.fanni-login-gate) nav.fi
 .fanni-account-nav .fanni-download-btn:active{
   box-shadow:0 2px 0 #07152d!important;
 }
+
+/* Polish the technician account switch: smooth text, clean surfaces, and a crisp 3D edge. */
+.fanni-login-gate .fanni-login-tabs button.account-switch-link{
+  position:relative!important;
+  isolation:isolate!important;
+  background:linear-gradient(180deg,#438bfa 0%,#2563eb 48%,#1d4ed8 100%)!important;
+  color:#fff!important;
+  -webkit-text-fill-color:#fff!important;
+  border:1px solid rgba(255,255,255,.58)!important;
+  border-radius:13px!important;
+  box-shadow:0 4px 0 #153f9b,0 7px 12px rgba(29,78,216,.18),inset 0 1px 0 rgba(255,255,255,.55)!important;
+  text-shadow:0 1px 1px rgba(8,35,91,.18)!important;
+  -webkit-font-smoothing:antialiased!important;
+  text-rendering:optimizeLegibility!important;
+  transform:translateZ(0);
+}
+.fanni-login-gate .fanni-login-tabs button.account-switch-link span,
+.fanni-login-gate .fanni-login-tabs button.account-switch-link small{
+  display:block!important;
+  background:transparent!important;
+  background-image:none!important;
+  color:#fff!important;
+  -webkit-text-fill-color:#fff!important;
+  text-shadow:0 1px 1px rgba(8,35,91,.16)!important;
+  line-height:1.45!important;
+  opacity:1!important;
+}
+.fanni-login-gate .fanni-login-tabs button.account-switch-link small{
+  font-size:10px!important;
+  font-weight:700!important;
+  opacity:.92!important;
+}
+.fanni-login-gate .fanni-login-tabs button.account-switch-link:active{
+  transform:translateY(2px)!important;
+  box-shadow:0 2px 0 #153f9b,0 4px 7px rgba(29,78,216,.15),inset 0 1px 0 rgba(255,255,255,.4)!important;
+}
+.fanni-account-nav .fanni-download-btn{
+  background:linear-gradient(180deg,#244fae 0%,#173c82 52%,#0b1b3a 100%)!important;
+  color:#fff!important;
+  -webkit-text-fill-color:#fff!important;
+  border:1px solid rgba(191,219,254,.72)!important;
+  box-shadow:0 4px 0 #07152d,0 7px 12px rgba(11,27,58,.22),inset 0 1px 0 rgba(255,255,255,.28)!important;
+  text-shadow:0 1px 1px rgba(0,0,0,.18)!important;
+  -webkit-font-smoothing:antialiased!important;
+}
+.fanni-account-nav .fanni-download-btn:active{
+  transform:translateY(2px)!important;
+  box-shadow:0 2px 0 #07152d,0 3px 7px rgba(11,27,58,.18)!important;
+}
 </style>
 </head>
 <body class="min-h-screen antialiased">
