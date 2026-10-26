@@ -23,6 +23,7 @@
 *{font-family:'Cairo',system-ui,sans-serif;box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{margin:0;background:var(--page);color:var(--navy);overflow-x:hidden;-webkit-tap-highlight-color:transparent}
+.fanni-dashboard-tabs{position:sticky;top:0;z-index:40;background:var(--page);padding-top:8px;padding-bottom:8px}
 button,input,textarea,select{font:inherit}
 button{cursor:pointer;transition:background-color .18s,border-color .18s,transform .18s}
 button:active{transform:scale(.985)}
@@ -1104,7 +1105,7 @@ function render(){
    </details>
   </section>
 
-  <section class="mt-4"><div class="grid grid-cols-4 gap-2">${[['available','📋','طلبات متاحه',state.filteredOrders.length],['myOffers','💼','طلبات جاريه',state.myOffers.length],['completed','🏁','المهام المكتملة',state.completedOffers.length],['wallet','💳','محفظتي','']].map(t=>`<button onclick="setTab('${t[0]}')" class="rounded-2xl border p-2 flex flex-col items-center justify-center gap-1.5 min-h-[76px] ${state.tab===t[0]?'bg-blue-50 border-blue-300 text-blue-800':'bg-white border-slate-200 text-slate-600'}"><span>${t[1]}</span><span class="text-[10px] font-extrabold">${t[2]}</span>${t[3]!==''?`<span class="text-[9px] rounded-full bg-white border px-2">${t[3]}</span>`:''}</button>`).join('')}</div></section>
+  <section class="fanni-dashboard-tabs mt-4"><div class="grid grid-cols-4 gap-2">${[['available','📋','طلبات متاحه',state.filteredOrders.length],['myOffers','💼','طلبات جاريه',state.myOffers.length],['completed','🏁','المهام المكتملة',state.completedOffers.length],['wallet','💳','محفظتي','']].map(t=>`<button onclick="setTab('${t[0]}')" class="rounded-2xl border p-2 flex flex-col items-center justify-center gap-1.5 min-h-[76px] ${state.tab===t[0]?'bg-blue-50 border-blue-300 text-blue-800':'bg-white border-slate-200 text-slate-600'}"><span>${t[1]}</span><span class="text-[10px] font-extrabold">${t[2]}</span>${t[3]!==''?`<span class="text-[9px] rounded-full bg-white border px-2">${t[3]}</span>`:''}</button>`).join('')}</div></section>
 
   ${state.tab==='available'?`
    <section class="mt-4 space-y-3">
