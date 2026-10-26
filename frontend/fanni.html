@@ -577,7 +577,7 @@ async function loadServices(){
 
 let dashboardSpecialtiesCollapsed=true;
 function toggleDashboardSpecialties(){dashboardSpecialtiesCollapsed=!dashboardSpecialtiesCollapsed;render();}
-const forceTechnicianRegistration=(new URLSearchParams(window.location.search).get('tab')||'').replace(/[\u200B-\u200D\u2060\uFEFF]/g,'').trim()==='register';
+let forceTechnicianRegistration=(new URLSearchParams(window.location.search).get('tab')||'').replace(/[\u200B-\u200D\u2060\uFEFF]/g,'').trim()==='register';
 let state={
  tab:forceTechnicianRegistration?'register':(getToken()?'myOffers':'login'),
  loginPhone:'',loginPass:'',
@@ -1195,6 +1195,9 @@ async function doLogin(){
   if(!token)throw new Error('السيرفر لم يرجع رمز الدخول. راجع استجابة تسجيل الدخول في الباك إند.');
   if(!user)throw new Error('تم الدخول لكن بيانات الفني غير موجودة في الاستجابة.');
 
+  // A registration URL may keep ?tab=register after switching to login.
+  // Once login succeeds, remove that URL-only gate so the dashboard can render.
+  forceTechnicianRegistration=false;
   setAuth(token,user);
   currentUser=user;
   state.loading=false;
