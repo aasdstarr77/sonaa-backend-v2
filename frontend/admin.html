@@ -561,6 +561,39 @@ function renderRoles(){
   </section>`;
 }
 
+
+// تشغيل ومراجعة تسجيلات الطلبات داخل نفس نطاق لوحة الإدارة.
+state.voiceReviewAudioUrls = state.voiceReviewAudioUrls || {};
+state.voiceReviewAudioPlayed = state.voiceReviewAudioPlayed || {};
+state.voiceReviewAudioLoading = state.voiceReviewAudioLoading || {};
+window.adminLoadVoice = async function(sn){
+  sn=String(sn||'').trim().toUpperCase();
+  if(!/^SN\\d{6}$/.test(sn)) return;
+  state.voiceReviewAudioLoading[sn]=true; render();
+  try{
+    const token=getToken();
+    const response=await fetch(buildUrl('/api/orders/'+encodeURIComponent(sn)+'/voice'),{headers:token?{Authorization:'Bearer '+token}:{},mode:'cors',credentials:'omit'});
+    if(!response.ok){let msg='تعذر تحميل التسجيل الصوتي';try{const data=await response.json();msg=data.message||msg}catch(_){}throw new Error(msg)}
+    const blob=await response.blob();
+    if(!blob.type.startsWith('audio/')) throw new Error('استجابة التسجيل ليست ملفًا صوتيًا صالحًا');
+    state.voiceReviewAudioUrls[sn]=URL.createObjectURL(blob);
+    state.voiceReviewAudioPlayed[sn]=false;
+  }catch(e){showToast(e.message||'تعذر تحميل التسجيل الصوتي','error')}
+  finally{state.voiceReviewAudioLoading[sn]=false;render()}
+};
+window.adminVoicePlaybackEnded=function(sn){
+  sn=String(sn||'').trim().toUpperCase();
+  state.voiceReviewAudioPlayed[sn]=true;render();
+};
+window.adminMarkVoiceReviewed=async function(sn){
+  sn=String(sn||'').trim().toUpperCase();
+  if(!state.voiceReviewAudioPlayed[sn]) return showToast('شغّل التسجيل حتى نهايته أولًا.','error');
+  try{
+    const result=await tryApi(['/api/orders/admin/'+encodeURIComponent(sn)+'/voice-reviewed'],{method:'POST',body:JSON.stringify({})});
+    showToast(result.message||'تم تأكيد مراجعة التسجيل');await loadOrders();
+  }catch(e){showToast(e.message||'تعذر حفظ مراجعة التسجيل','error')}
+};
+
 function renderOrders(){
   return `
   <section class="mt-4 space-y-4">
@@ -614,6 +647,12 @@ function renderOrders(){
           </div>`:pending?`<div class="confirm-bar"><span>تأكيد ${escHtml(pending.label)}؟</span><div class="flex gap-2"><button onclick="clearPending('${menuKey}')" class="h-7 px-3 rounded-full bg-white/20 text-[10px]">إلغاء</button><button onclick="confirmPending('${menuKey}')" class="h-7 px-4 rounded-full bg-white text-slate-900 text-[10px] font-black">تأكيد</button></div></div>`:''}
           <div class="grid grid-cols-2 gap-2.5 mt-4"><div class="rounded-[14px] bg-slate-50 border p-3"><p class="text-[10px] font-black text-slate-400">العميل</p><p class="text-[11px] font-black mt-1">${escHtml(o.clientName||'غير مسجل')}</p></div><div class="rounded-[14px] bg-slate-50 border p-3"><p class="text-[10px] font-black text-slate-400">الهاتف</p><p class="text-[11px] font-black mt-1" dir="ltr">${escHtml(o.clientPhone||'')}</p></div><div class="rounded-[14px] bg-slate-50 border p-3"><p class="text-[10px] font-black text-slate-400">المنطقة</p><p class="text-[11px] font-black mt-1">${escHtml(o.area||o.city||'')}</p></div><div class="rounded-[14px] bg-blue-50 border border-blue-100 p-3"><p class="text-[10px] font-black text-blue-600">الميزانية</p><p class="text-[11px] font-black mt-1">${escHtml(o.budget?String(o.budget)+' ج':'لم تحدد')}</p></div></div>
           <div class="mt-3 rounded-[14px] bg-slate-50 border p-3"><p class="text-[10px] font-black text-slate-400">وصف الطلب</p><p class="text-[11px] font-bold mt-2 leading-6 whitespace-pre-wrap">${escHtml(o.description||'لا يوجد وصف')}</p></div>
+          ${o.hasVoiceRecording?`<div class="mt-3 rounded-[14px] border ${o.voiceReviewedAt?'border-emerald-200 bg-emerald-50':'border-amber-300 bg-amber-50'} p-3 space-y-2">
+            <div class="flex items-center justify-between gap-2"><p class="text-[12px] font-black">🎙️ التسجيل الصوتي للطلب</p><span class="text-[10px] font-black">${o.voiceReviewedAt?'تمت المراجعة':'مطلوب الاستماع قبل النشر'}</span></div>
+            <p class="text-[10px] leading-5 text-slate-600">استمع للتسجيل كاملًا للتأكد من عدم ذكر رقم هاتف أو عنوان تفصيلي أو بيانات تواصل قبل نشر الطلب.</p>
+            ${state.voiceReviewAudioUrls?.[sn]?`<audio controls preload="metadata" playsinline src="${escHtml(state.voiceReviewAudioUrls[sn])}" class="w-full" style="min-height:44px" onended="window.adminVoicePlaybackEnded('${escHtml(sn)}')"></audio>${!o.voiceReviewedAt&&state.voiceReviewAudioPlayed?.[sn]?`<button onclick="window.adminMarkVoiceReviewed('${escHtml(sn)}')" class="pill-btn primary-pill w-full">✓ تأكيد الاستماع ومراجعة التسجيل</button>`:''}`:`<button onclick="window.adminLoadVoice('${escHtml(sn)}')" class="pill-btn primary-pill w-full">${state.voiceReviewAudioLoading?.[sn]?'جارٍ تحميل التسجيل…':'▶ تحميل التسجيل والاستماع'}</button>`}
+            ${o.voiceReviewedAt?`<p class="text-[10px] text-emerald-800 font-bold">تم تأكيد المراجعة ${escHtml(o.voiceReviewedBy||'')} • ${escHtml(new Date(o.voiceReviewedAt).toLocaleString('ar-EG',{timeZone:'Africa/Cairo'}))}</p>`:''}
+          </div>`:''}
           <details class="mt-3 rounded-[16px] border overflow-hidden"><summary class="bg-slate-50 px-4 py-3 text-[11px] font-black">عروض الفنيين (${offers.length})</summary><div class="p-3 space-y-2 bg-white"><div class="mt-3 rounded-xl border border-blue-100 bg-blue-50/60 p-3 text-[11px] space-y-1"><p><b>الميزانية الأصلية:</b> ${escHtml(o.budget||'غير محددة')} جنيه</p><p><b>سعر العرض المقبول/التنفيذ:</b> ${o.acceptedOfferPrice!=null?escHtml(String(o.acceptedOfferPrice))+' جنيه':'لم يُقبل عرض بعد'}</p><p><b>الفني المنفذ:</b> ${escHtml(o.assignedFanniName||'لم يُعيّن بعد')}</p><p><b>نسبة العمولة:</b> ${o.commissionRate!=null?escHtml(String(o.commissionRate))+'%':'غير متاحة'}</p><p><b>قيمة العمولة الفعلية:</b> ${o.commissionAmount!=null?escHtml(String(o.commissionAmount))+' جنيه':'غير محسوبة'} ${o.commissionCharged?'(تم تسجيل الخصم)':'(لم يُسجل الخصم)'}</p></div>
 ${offers.map((off,i)=>`<div class="rounded-[12px] bg-slate-50 border p-3 text-[11px]"><p class="font-black">العرض ${i+1}: ${escHtml(off.fanniName||'فني')} - ${escHtml(off.price||'')} ج</p><p class="text-[10px] mt-1">${escHtml(off.message||'')}</p><div class="mt-2 flex gap-2"><button onclick="removeOffer('${escHtml(sn)}','${i}')" class="pill-btn soft-btn text-[10px]">إزالة العرض</button></div></div>`).join('')||'<p class="text-[10px] text-slate-400">لا توجد عروض</p>'}</div></details>
         </article>`;
