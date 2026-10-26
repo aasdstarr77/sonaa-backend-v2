@@ -669,6 +669,7 @@ const API={
  register:p=>apiPost('/api/fanni/register',p),
  login:p=>apiPost('/api/fanni/login',p),
  profile:()=>apiGet('/api/fanni/me'),
+ updateProfile:p=>api('/api/fanni/me',{method:'PATCH',body:JSON.stringify(p)}),
  available:()=>apiGet('/api/orders/available'),
  myOffers:()=>apiGet('/api/orders/my-offers'),
  complete:sn=>apiPost('/api/orders/'+encodeURIComponent(sn)+'/complete',{}),
@@ -723,6 +724,7 @@ let state={
  loginPhone:'',loginPass:'',
  regName:'',regPhone:'',regPass:'',regPassConfirm:'',regGuidelinesAccepted:false,
  regSpecialties:[],regAreas:[],regAreaSearch:'',regAreaCustom:'',openSpecialtyCategory:'',
+ editProfileMode:false,editPhone:'',editAreasText:'',editSpecialties:[],editSaving:false,
  loading:false,checkingSession:false,
  orders:[],filteredOrders:[],search:'',filterSkill:'الكل',
  myOffers:[],completedOffers:[],offerModal:null,offerPrice:'',offerMessage:'',
@@ -1247,17 +1249,39 @@ function render(){
     </div>
    </section>`:''}
 
-  ${state.tab==='profile'?`
+  ${state.tab==='profile'?\`
    <section class="mt-4 panel p-4">
-    <div class="flex items-center gap-3 pb-4 border-b"><div class="text-2xl">👤</div><div><h3 class="section-title">بيانات حسابي</h3><p class="text-[10px] text-slate-500 mt-1">بيانات الحساب من السيرفر</p></div></div>
-
-    <div class="mt-4 space-y-3 text-[12px]">${[['الاسم',user?.name],['رقم الهاتف',user?.phone],['حالة الحساب',user?.status],['التخصصات',specialties.join('، ')],['مناطق العمل',areas.join('، ')],['رصيد المحفظة',balance+' جنيه']].map(x=>`<div class="rounded-xl bg-slate-50 border p-3"><div class="text-[10px] text-slate-500 mb-1">${x[0]}</div><b>${esc(x[1]||'غير متاح')}</b></div>`).join('')}</div>
-    <div class="mt-4 rounded-xl border border-emerald-100 bg-emerald-50/60 p-3">
-     <div class="font-extrabold text-[12px] text-emerald-900">شاراتي</div>
-     <div class="mt-2 flex flex-wrap gap-1.5">${(Array.isArray(user?.badges)?user.badges:[]).map(b=>({trusted:'✓ فني موثوق',top_rated:'★ الأعلى تقييمًا',verified:'✓ تم التحقق',fast_response:'⚡ سريع الاستجابة',premium:'◆ فني مميز',gold:'★ الشارة الذهبية'}[b]||'')).filter(Boolean).map(label=>`<span class="rounded-full border border-emerald-200 bg-white px-2.5 py-1 text-[10px] font-extrabold text-emerald-800">${esc(label)}</span>`).join('')||'<span class="text-[11px] text-slate-500">لا توجد شارات ممنوحة حاليًا</span>'}</div>
-    </div>
-
-    <button onclick="logout()" class="mt-4 w-full h-11 rounded-xl bg-red-50 border border-red-100 text-red-700 font-extrabold text-[12px]">تسجيل الخروج</button>
+    <div class="flex items-center gap-3 pb-4 border-b"><div class="text-2xl">👤</div><div><h3 class="section-title">بيانات حسابي</h3><p class="text-[10px] text-slate-500 mt-1">راجع بياناتك وعدّل رقم التليفون والتخصصات ومناطق العمل</p></div></div>
+    ${state.editProfileMode?`
+     <div class="mt-4 space-y-4">
+      <div><label class="field-label">رقم التليفون *</label><input class="field" inputmode="numeric" autocomplete="tel" maxlength="11" value="${esc(state.editPhone)}" oninput="state.editPhone=this.value.replace(/\\D/g,'').slice(0,11)" placeholder="01xxxxxxxxx"><p class="text-[10px] text-slate-500 mt-1">رقم مصري من 11 رقمًا وغير مسجل لحساب آخر.</p></div>
+      <div><label class="field-label">مناطق العمل *</label><textarea class="field min-h-[90px]" maxlength="1800" oninput="state.editAreasText=this.value.slice(0,1800)" placeholder="اكتب المناطق أو الأحياء وافصل بينها بفاصلة، مثال: شبرا، المعادي، فيصل">${esc(state.editAreasText)}</textarea><p class="text-[10px] text-slate-500 mt-1">اكتب كل المناطق اللي تقدر تشتغل فيها، وافصل بينها بفاصلة.</p></div>
+      <div class="rounded-2xl border p-3">
+       <div class="font-extrabold text-[12px] mb-3">التخصصات * <span class="text-slate-500">(${state.editSpecialties.length} مختار)</span></div>
+       ${SERVICES_LOADING?`<p class="py-4 text-center text-[11px]">جاري تحميل التخصصات...</p>`:SERVICES_ERROR?`<div class="rounded-xl bg-red-50 border border-red-200 p-3 text-[11px] text-red-700">${esc(SERVICES_ERROR)} <button type="button" onclick="loadServices()" class="secondary-btn px-3 py-1">إعادة المحاولة</button></div>`:CATEGORIES.map((cat,index)=>{
+        const selectedCount=cat.services.filter(s=>state.editSpecialties.includes(s)).length;
+        const categoryId='edit-specialty-category-'+index;
+        const isOpen=state.openSpecialtyCategory===cat.label;
+        return `<section class="mb-2 overflow-hidden rounded-xl border border-slate-200 bg-white">
+         <button type="button" onclick="toggleEditSpecialtyCategory(this.dataset.category)" data-category="${esc(cat.label)}" aria-expanded="${isOpen}" aria-controls="${categoryId}" class="flex w-full items-center justify-between gap-3 bg-slate-50 p-3 text-right">
+          <span><span class="block text-[12px] font-extrabold">${esc(cat.emoji)} ${esc(cat.label)}</span><span class="mt-1 block text-[10px] text-slate-500">${selectedCount?'تم اختيار '+selectedCount+' خدمة':'اضغط لعرض الخدمات'}</span></span><span class="text-blue-700 font-black">${isOpen?'−':'+'}</span>
+         </button>
+         ${isOpen?`<div id="${categoryId}" class="grid grid-cols-2 sm:grid-cols-3 gap-2 border-t p-3">${cat.services.map(s=>`<label class="service-chip ${state.editSpecialties.includes(s)?'selected':''}"><input type="checkbox" data-specialty="${esc(s)}" ${state.editSpecialties.includes(s)?'checked':''} onchange="toggleEditSpecialty(this.dataset.specialty)"><span class="service-icon" aria-hidden="true">${serviceIconFor(s)}</span><span>${esc(s)}</span></label>`).join('')}</div>`:''}
+        </section>`;
+       }).join('')}
+      </div>
+      ${state.error?errorBox(state.error):''}
+      <div class="grid grid-cols-2 gap-2"><button type="button" onclick="cancelEditProfile()" class="secondary-btn h-11" ${state.editSaving?'disabled':''}>إلغاء</button><button type="button" onclick="saveProfileChanges()" class="primary-btn h-11" ${state.editSaving?'disabled':''}>${state.editSaving?'جاري الحفظ...':'حفظ التعديلات'}</button></div>
+     </div>
+    `:`
+     <div class="mt-4 space-y-3 text-[12px]">${[['الاسم',user?.name],['رقم الهاتف',user?.phone],['حالة الحساب',user?.status],['التخصصات',specialties.join('، ')],['مناطق العمل',areas.join('، ')],['رصيد المحفظة',balance+' جنيه']].map(x=>`<div class="rounded-xl bg-slate-50 border p-3"><div class="text-[10px] text-slate-500 mb-1">${x[0]}</div><b>${esc(x[1]||'غير متاح')}</b></div>`).join('')}</div>
+     <button type="button" onclick="beginEditProfile()" class="mt-4 w-full h-11 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 font-extrabold text-[12px]">✏️ تعديل البيانات</button>
+     <div class="mt-4 rounded-xl border border-emerald-100 bg-emerald-50/60 p-3">
+      <div class="font-extrabold text-[12px] text-emerald-900">شاراتي</div>
+      <div class="mt-2 flex flex-wrap gap-1.5">${(Array.isArray(user?.badges)?user.badges:[]).map(b=>({trusted:'✓ فني موثوق',top_rated:'★ الأعلى تقييمًا',verified:'✓ تم التحقق',fast_response:'⚡ سريع الاستجابة',premium:'◆ فني مميز',gold:'★ الشارة الذهبية'}[b]||'')).filter(Boolean).map(label=>`<span class="rounded-full border border-emerald-200 bg-white px-2.5 py-1 text-[10px] font-extrabold text-emerald-800">${esc(label)}</span>`).join('')||'<span class="text-[11px] text-slate-500">لا توجد شارات ممنوحة حاليًا</span>'}</div>
+     </div>
+     <button onclick="logout()" class="mt-4 w-full h-11 rounded-xl bg-red-50 border border-red-100 text-red-700 font-extrabold text-[12px]">تسجيل الخروج</button>
+    `}
    </section>`:''}
  `}
  
@@ -1413,6 +1437,39 @@ async function doRegister(){
   state.error=e.message;
   render();
  }
+}
+
+function beginEditProfile(){
+ const user=currentUser||getUser()||{};
+ state.editPhone=String(user.phone||'');
+ state.editAreasText=Array.isArray(user.areas)?user.areas.join('، '):'';
+ state.editSpecialties=Array.isArray(user.specialties)?[...user.specialties]:[];
+ state.editProfileMode=true;state.openSpecialtyCategory='';state.error='';state.success='';render();
+}
+function cancelEditProfile(){state.editProfileMode=false;state.editSaving=false;state.error='';state.success='';render();}
+function toggleEditSpecialtyCategory(label){state.openSpecialtyCategory=state.openSpecialtyCategory===label?'':label;render();}
+function toggleEditSpecialty(specialty){
+ if(state.editSpecialties.includes(specialty))state.editSpecialties=state.editSpecialties.filter(item=>item!==specialty);
+ else if(state.editSpecialties.length<20)state.editSpecialties=[...state.editSpecialties,specialty];
+ else return toast('يمكنك اختيار 20 تخصصًا كحد أقصى','error');
+ render();
+}
+async function saveProfileChanges(){
+ if(state.editSaving)return;
+ const phone=String(state.editPhone||'').replace(/\\D/g,'');
+ if(!/^01[0-9]{9}$/.test(phone)){state.error='رقم التليفون لازم يكون 11 رقم ويبدأ بـ 01';render();return;}
+ if(!Array.isArray(state.editSpecialties)||!state.editSpecialties.length){state.error='اختار تخصصًا واحدًا على الأقل';render();return;}
+ const areas=parseAreas(state.editAreasText);
+ if(!areas.length){state.error='اكتب منطقة عمل واحدة على الأقل';render();return;}
+ state.editSaving=true;state.error='';state.success='';render();
+ try{
+  const result=await API.updateProfile({phone,specialties:state.editSpecialties,areas});
+  const updated=extractUser(result)||result?.data||result?.fanni||null;
+  if(!updated||typeof updated!=='object')throw new Error('تم الحفظ لكن بيانات الحساب لم تصل من السيرفر. حدّث الصفحة للتأكد.');
+  currentUser={...(currentUser||{}),...updated};setAuth(getToken(),currentUser);
+  state.editProfileMode=false;state.editSaving=false;state.error='';state.success='';render();
+  toast(result.message||'تم تحديث بيانات حسابك بنجاح');
+ }catch(e){state.editSaving=false;state.error=e.message||'تعذر تحديث البيانات';render();}
 }
 
 async function loadProfile(){

@@ -31,6 +31,20 @@ const registerSchema = Joi.object({
     .optional()
 });
 
+const profileUpdateSchema = Joi.object({
+  phone: Joi.string().trim().required(),
+  specialties: Joi.array()
+    .items(Joi.string().trim().min(1).max(100))
+    .min(1)
+    .max(20)
+    .required(),
+  areas: Joi.array()
+    .items(Joi.string().trim().min(2).max(60))
+    .min(1)
+    .max(30)
+    .required()
+});
+
 const loginSchema = Joi.object({
   phone: Joi.string().trim().required(),
   password: Joi.string().required()
@@ -207,6 +221,40 @@ router.post('/guidelines/accept', auth(), requireFanni, requireApprovedFanni, as
 
 router.get('/me', auth(), requireFanni, async (req, res) => {
   return res.json(req.user.toSafeJSON());
+});
+
+router.patch('/me', auth(), requireFanni, validate(profileUpdateSchema), async (req, res, next) => {
+  try {
+    const phone = normalizePhone(req.body.phone);
+    if (!phone || !/^01[0-9]{9}$/.test(phone)) {
+      return res.status(400).json({ message: 'رقم الهاتف غير صحيح' });
+    }
+
+    const duplicate = await Fanni.findOne({ phone, _id: { $ne: req.user._id } }).select('_id');
+    if (duplicate) {
+      return res.status(409).json({ message: 'رقم الهاتف مسجل بالفعل في حساب آخر' });
+    }
+
+    const specialties = [...new Set(req.body.specialties.map(value => String(value).trim()).filter(Boolean))];
+    const areas = [...new Set(req.body.areas.map(value => String(value).trim()).filter(value => value.length >= 2))];
+    if (!specialties.length) return res.status(400).json({ message: 'اختار تخصصًا واحدًا على الأقل' });
+    if (!areas.length) return res.status(400).json({ message: 'اكتب منطقة عمل واحدة على الأقل' });
+
+    req.user.phone = phone;
+    req.user.specialties = specialties;
+    req.user.areas = areas;
+    await req.user.save();
+
+    return res.set('Cache-Control', 'no-store').json({
+      message: 'تم تحديث بيانات حسابك بنجاح',
+      user: req.user.toSafeJSON()
+    });
+  } catch (err) {
+    if (err && err.code === 11000) {
+      return res.status(409).json({ message: 'رقم الهاتف مسجل بالفعل في حساب آخر' });
+    }
+    next(err);
+  }
 });
 
 /*
