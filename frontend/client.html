@@ -631,7 +631,7 @@ function renderPublicContent(){
     '</section>';
 }
 async function loadPublicContent(){
-  try{const data=await API.request('/api/content',{method:'GET'});state.publicContent={siteName:String(data.siteName||'صُنّاع'),maintenance:!!data.maintenance,maintenanceMessage:String(data.maintenanceMessage||''),announcement:String(data.announcement||''),faqs:Array.isArray(data.faqs)?data.faqs:[]};document.title=state.publicContent.siteName+' - اطلب فني';render();}catch(error){log('تعذر تحميل محتوى الواجهة:',error);}
+  try{const data=await API.request('/api/content',{method:'GET'});state.publicContent={siteName:String(data.siteName||'صُنّاع'),maintenance:!!data.maintenance,maintenanceMessage:String(data.maintenanceMessage||''),announcement:String(data.announcement||''),faqs:Array.isArray(data.faqs)?data.faqs:[]};document.title=state.account?'صُنّاع - طلباتي':(state.accountAuthMode==='register'?'تسجيل عميل جديد | صُنّاع':'تسجيل دخول العميل | صُنّاع');render();}catch(error){log('تعذر تحميل محتوى الواجهة:',error);}
 }
 function setAccountAuthMode(mode){state.accountAuthMode=mode==='register'?'register':'login';state.accountError='';render();}
 async function submitClientAccount(e){
