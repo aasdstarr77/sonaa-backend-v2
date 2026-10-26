@@ -78,7 +78,7 @@ function safeRequest(item, includeMessages = true) {
   return {
     id: String(data._id), ownerRole: data.ownerRole, accountName: data.accountName,
     phone: data.phone, subject: data.subject, status: data.status,
-    verifiedAt: data.verifiedAt, messages: includeMessages ? (data.messages || []).map(message => ({ ...message, text: decryptRecoveryMessage(message.text) })) : [],
+    verifiedAt: data.verifiedAt, messages: includeMessages ? (data.messages || []).map(message => ({ id: String(message._id || message.id || ''), senderRole: message.senderRole, senderId: message.senderId ? String(message.senderId) : undefined, text: decryptRecoveryMessage(message.text), createdAt: message.createdAt || null })) : [],
     lastMessageAt: data.lastMessageAt, expiresAt: data.expiresAt,
     createdAt: data.createdAt, updatedAt: data.updatedAt
   };
