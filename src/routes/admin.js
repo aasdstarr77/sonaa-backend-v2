@@ -20,6 +20,7 @@ const Service = require('../models/Service');
 const Region = require('../models/Region');
 const AdminConfig = require('../models/AdminConfig');
 const AdminAuditLog = require('../models/AdminAuditLog');
+const PageVisit = require('../models/PageVisit');
 
 const {
   CATEGORIES,
@@ -2236,5 +2237,8 @@ router.post('/services/:name/show', auth('admin'), async (req, res, next) => {
 });
 
 
+
+
+router.get('/page-visits', auth('admin'), async (req,res,next)=>{try{const parsedLimit=Number.parseInt(req.query.limit,10),limit=Number.isInteger(parsedLimit)&&parsedLimit>0?Math.min(parsedLimit,200):100,pageKey=String(req.query.pageKey||'').trim().slice(0,80),match=pageKey?{pageKey}:{};const [summary,recent,total]=await Promise.all([PageVisit.aggregate([{$match:match},{$group:{_id:{pageKey:'$pageKey',pageName:'$pageName'},visits:{$sum:1},lastVisit:{$max:'$visitedAt'}}},{$sort:{visits:-1,lastVisit:-1}},{$limit:100}]),PageVisit.find(match).sort({visitedAt:-1}).limit(limit).select('pageKey pageName path referrer visitedAt').lean(),PageVisit.countDocuments(match)]);return res.set('Cache-Control','no-store').json({summary:summary.map(item=>({pageKey:item._id.pageKey,pageName:item._id.pageName,visits:item.visits,lastVisit:item.lastVisit})),recent,total});}catch(err){next(err);}});
 
 module.exports = router;
