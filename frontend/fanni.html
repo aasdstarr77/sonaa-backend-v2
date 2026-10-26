@@ -581,7 +581,7 @@ const forceTechnicianRegistration=(new URLSearchParams(window.location.search).g
 let state={
  tab:forceTechnicianRegistration?'register':(getToken()?'myOffers':'login'),
  loginPhone:'',loginPass:'',
- regName:'',regPhone:'',regPass:'',regPassConfirm:'',
+ regName:'',regPhone:'',regPass:'',regPassConfirm:'',regGuidelinesAccepted:false,
  regSpecialties:[],regAreas:[],regAreaSearch:'',regAreaCustom:'',openSpecialtyCategory:'',
  loading:false,checkingSession:false,
  orders:[],filteredOrders:[],search:'',filterSkill:'الكل',
@@ -913,6 +913,20 @@ function render(){
     <div><label class="field-label">كلمة السر *</label><input type="password" class="field" autocomplete="new-password" value="${esc(state.regPass)}" oninput="state.regPass=this.value.slice(0,100)" placeholder="6 أحرف على الأقل"></div>
     <div><label class="field-label">تأكيد كلمة السر *</label><input type="password" class="field" autocomplete="new-password" value="${esc(state.regPassConfirm)}" oninput="state.regPassConfirm=this.value.slice(0,100)" placeholder="اكتب كلمة السر مرة تانية"><p class="text-[10px] text-slate-500 mt-1">لازم تكون مطابقة لكلمة السر الأولى.</p></div>
 
+    <section class="rounded-2xl border border-amber-200 bg-amber-50 p-3 space-y-3">
+     <h2 class="font-extrabold text-sm text-slate-900">ميثاق التعامل المهني مع العملاء</h2>
+     <p class="text-xs leading-6 text-slate-700">اقرأ الميثاق التالي قبل إنشاء حسابك. الموافقة مطلوبة لإتمام التسجيل.</p>
+     <div class="max-h-52 overflow-y-auto rounded-xl border border-amber-200 bg-white p-3 text-xs leading-6 space-y-2">
+      <p>١. التزم بسعر العرض الذي وافق عليه العميل. أي زيادة تحتاج موافقة صريحة مسجلة داخل المنصة قبل التنفيذ.</p>
+      <p>٢. تعامل باحترام وصدق، دون ضغط أو تهديد أو تضليل.</p>
+      <p>٣. قبل قبول العرض، الردود المسموحة «نعم»، «لا»، «حسب الاتفاق». ممنوع تبادل بيانات الاتصال أو التحايل على المنصة قبل القبول.</p>
+      <p>٤. لا تضغط إنهاء المهمة إلا بعد إنجازها فعلًا.</p>
+      <p>٥. احمِ بيانات العميل ولا تستخدمها خارج الطلب.</p>
+      <p>٦. يحق للطرفين التقييم بعد الإكمال؛ ممنوع الإكراه على تقييم إيجابي أو التلاعب بالتقييمات.</p>
+      <p>٧. المخالفات قد تؤدي إلى مراجعة الطلب أو تعليق الحساب أو إيقافه.</p>
+     </div>
+     <label class="flex items-start gap-2 text-xs font-bold leading-6 text-slate-800"><input type="checkbox" class="mt-1 shrink-0" ${state.regGuidelinesAccepted?'checked':''} onchange="state.regGuidelinesAccepted=this.checked"> قرأت ميثاق التعامل المهني وفهمته وأوافق على الالتزام به.</label>
+    </section>
     <button onclick="doRegister()" ${state.loading||SERVICES_LOADING?'disabled':''} class="primary-btn w-full h-12">${state.loading?'جاري إنشاء الحساب...':SERVICES_LOADING?'جاري تحميل التخصصات...':'إنشاء حساب فني'}</button>
     ${state.error?errorBox(state.error):''}
    </div>`:`
@@ -1219,6 +1233,7 @@ async function doRegister(){
  const areas=[area];
  if(!V.text(state.regPass,6,100)){state.error='كلمة السر لازم تكون 6 أحرف على الأقل';render();return}
  if(state.regPass!==state.regPassConfirm){state.error='تأكيد كلمة السر غير مطابق. اكتب نفس كلمة السر في الخانتين.';render();return}
+ if(!state.regGuidelinesAccepted){state.error='لازم تقرأ ميثاق التعامل المهني وتحدد الموافقة قبل إنشاء الحساب.';render();return}
 
  state.loading=true;
  state.error='';
@@ -1239,6 +1254,7 @@ async function doRegister(){
   state.regPhone='';
   state.regPass='';
   state.regPassConfirm='';
+  state.regGuidelinesAccepted=false;
   state.regSpecialties=[];
   state.regAreas=[];
   state.regAreaSearch='';
