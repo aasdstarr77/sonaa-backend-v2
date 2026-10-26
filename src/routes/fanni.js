@@ -27,8 +27,9 @@ const registerSchema = Joi.object({
     .required(),
   areas: Joi.array()
     .items(Joi.string().trim().min(2).max(60))
+    .min(1)
     .max(30)
-    .optional()
+    .required()
 });
 
 const profileUpdateSchema = Joi.object({

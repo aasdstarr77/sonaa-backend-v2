@@ -1049,7 +1049,7 @@ function render(){
 
     <div>
       <label class="field-label">منطقة العمل أو الحي اللي حابب تشتغل فيه *</label>
-      <input class="field" autocomplete="address-level2" maxlength="60" value="${esc(state.regAreaCustom)}" oninput="state.regAreaCustom=this.value.slice(0,60)" placeholder="مثال: شبرا، المعادي، فيصل...">
+      <input class="field" required minlength="2" autocomplete="address-level2" maxlength="60" value="${esc(state.regAreaCustom)}" oninput="state.regAreaCustom=this.value.slice(0,60)" placeholder="مثال: شبرا، المعادي، فيصل...">
       <p class="mt-1 text-[10px] text-slate-500">اكتب اسم المنطقة أو الحي. مش لازم تختار من قائمة.</p>
      </div>
     <div><label class="field-label">كلمة السر *</label><input type="password" class="field" autocomplete="new-password" value="${esc(state.regPass)}" oninput="state.regPass=this.value.slice(0,100)" placeholder="6 أحرف على الأقل"></div>
