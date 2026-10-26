@@ -63,7 +63,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
 .glass-header{background:linear-gradient(135deg,rgba(11,27,58,.97) 0%,rgba(19,42,90,.95) 100%);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.08)}
 /* Raised 3D admin header, full-size logo, and all header controls */
 .glass-header{background:linear-gradient(145deg,#07152f 0%,#102b61 48%,#173f85 100%)!important;border-bottom:1px solid #93c5fd55!important;box-shadow:0 8px 0 #07152f,0 14px 26px #02061745,inset 0 2px 0 #ffffff24!important}
-.glass-header>div{min-height:132px!important;padding-top:3px!important;padding-bottom:9px!important;align-items:start!important}
+.glass-header>div{min-height:112px!important;padding-top:3px!important;padding-bottom:7px!important;align-items:start!important}
 .glass-header .admin-header-logo{width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;object-fit:contain!important;filter:drop-shadow(0 6px 4px #02061770)}
 .glass-header .admin-logo-frame{width:84px!important;height:84px!important;align-self:start!important;margin-top:0!important;border-radius:16px!important;box-shadow:0 6px 0 #0b1b3a,0 10px 16px #02061755,inset 0 2px 0 #ffffff!important}
 .glass-header .admin-header-title{align-self:start!important;padding-top:0!important;text-shadow:0 2px 0 #020b20,0 4px 8px #02061780}
@@ -74,9 +74,10 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
 .glass-header button[onclick="goBack()"]{background:linear-gradient(145deg,#ffffff28,#ffffff0b)!important}
 .glass-header button[onclick="goFanni()"]{background:linear-gradient(145deg,#315b9c,#17366c)!important;border-color:#93c5fd65!important}
 .glass-header a[href="password.html?role=admin&amp;mode=account"]{background:linear-gradient(145deg,#3b82f6,#1e40af)!important;border-color:#93c5fd!important}
+.glass-header a[href="password.html?role=admin&amp;mode=account"]{position:relative!important;transform:translateY(-1px);border:1px solid #bfdbfe!important;background:linear-gradient(145deg,#60a5fa 0%,#2563eb 52%,#1e3a8a 100%)!important;box-shadow:0 5px 0 #172554,0 8px 14px #02061745,inset 0 2px 0 #ffffff75,inset 0 -2px 0 #1e3a8a!important;text-shadow:0 1px 2px #172554!important}
 .glass-header a[href="/"]{background:linear-gradient(145deg,#0f766e,#115e59)!important;border-color:#5eead4!important}
 .glass-header button[onclick="logout()"]{background:linear-gradient(145deg,#dc2626,#991b1b)!important;border-color:#fca5a5!important;box-shadow:0 4px 0 #7f1d1d,0 7px 12px #02061735,inset 0 1px 0 #ffffff45!important}
-@media(max-width:380px){.glass-header>div{min-height:122px!important}.glass-header .admin-logo-frame{width:72px!important;height:72px!important}.glass-header .admin-header-title h1{font-size:12px!important;line-height:1.25!important}.glass-header .admin-header-title .admin-role{font-size:9px!important}}
+@media(max-width:380px){.glass-header>div{min-height:102px!important}.glass-header .admin-logo-frame{width:72px!important;height:72px!important}.glass-header .admin-header-title h1{font-size:12px!important;line-height:1.25!important}.glass-header .admin-header-title .admin-role{font-size:9px!important}}
 
 .dropdown-menu{position:absolute;top:calc(100% + 8px);right:0;min-width:190px;background:#fff;border:1px solid #e6eefc;border-radius:16px;box-shadow:0 16px 32px #0f234b18;z-index:50;padding:6px;animation:fadeUp .18s ease}
 .dropdown-item{width:100%;text-align:right;padding:10px 12px;border-radius:10px;font-size:11px;font-weight:800;display:flex;align-items:center;gap:8px}
@@ -226,7 +227,7 @@ function render(){
         <img class="sonaa-logo-svg admin-header-logo h-full w-full object-contain" src="/images/LOGO_UPLOAD_HERE/logo.png" alt="شعار صُنّاع" width="120" height="120" decoding="async">
       </div>
       <div class="flex flex-col gap-1 shrink-0 items-stretch justify-self-end w-[104px]">
-        <button onclick="goFanni()" class="h-7 w-full rounded-lg bg-white/10 hover:bg-white/15 text-[10px] font-black border border-white/10 inline-flex items-center justify-center text-center leading-none">لوحة الفني</button>
+        
         <a href="password.html?role=admin&amp;mode=account" class="h-8 w-full rounded-lg bg-white/10 hover:bg-white/20 border border-white/15 text-[10px] font-black text-white inline-flex items-center justify-center gap-1 no-underline leading-none"><span aria-hidden="true">👤</span><span>حسابي</span></a>
         <a href="/" aria-label="القائمة الرئيسية" title="القائمة الرئيسية" class="h-8 w-full rounded-lg bg-white/10 hover:bg-white/15 text-white text-[10px] font-black inline-flex items-center justify-center text-center leading-none">⌂ القائمة الرئيسية</a>
         ${isAuth?'<button onclick="logout()" class="h-8 w-full rounded-lg bg-white/10 flex items-center justify-center text-[11px]">⎋ خروج</button>':''}
