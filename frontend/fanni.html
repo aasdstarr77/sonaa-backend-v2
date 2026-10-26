@@ -7,7 +7,7 @@
 <link rel="icon" type="image/png" href="/images/LOGO_UPLOAD_HERE/logo.png">
 <link rel="apple-touch-icon" href="/images/LOGO_UPLOAD_HERE/logo.png">
 <link rel="manifest" href="/manifest.webmanifest">
-<title>صناع - لوحة الفني</title>
+<title>تسجيل دخول الفني | صُنّاع</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -704,6 +704,7 @@ async function requestFanniPriceChange(sn){const price=Number(document.getElemen
 function render(){
  const user=currentUser||getUser();
  const authenticated=!!getToken();
+ document.title=authenticated?'لوحة الفني | صُنّاع':(state.tab==='register'?'تسجيل فني جديد | صُنّاع':'تسجيل دخول الفني | صُنّاع');
  const specialties=Array.isArray(user?.specialties)?user.specialties:[];
  const areas=Array.isArray(user?.areas)?user.areas:[];
  const balance=state.walletBalance||user?.walletBalance||user?.balance||user?.wallet||0;
@@ -718,7 +719,7 @@ function render(){
    <button onclick="toggleNotifications()" aria-label="الإشعارات" title="الإشعارات" class="fanni-notification-top-btn">🔔<span>${notificationBadge()}</span></button>
    <div class="fanni-header-brand flex items-center gap-3 min-w-0 flex-1">
     <div class="h-[76px] w-[76px] sm:h-24 sm:w-24 rounded-2xl bg-[#F8FAFC] border-2 border-[#14B8A6] flex items-center justify-center shrink-0 shadow-[0_6px_0_#0f766e,0_10px_18px_#02061735,inset_0_2px_0_#ffffff]"><img class="sonaa-logo-svg" src="/images/LOGO_UPLOAD_HERE/logo.png" alt="شعار صُنّاع" width="144" height="144" decoding="async"></div>
-    <div class="min-w-0"><h1 class="font-extrabold text-[24px] sm:text-[28px] leading-tight">صُنّاع</h1><div class="fanni-brand-tagline text-[14px] sm:text-[17px] font-extrabold text-white mt-1">${authenticated?esc(user?.name||'فني')+' · الرصيد '+esc(balance)+' جنيه':'كل خدمة تبدأ بخطوة'}</div>${authenticated?`<div class="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-amber-200/30 bg-amber-400/15 px-2.5 py-1 text-[10px] font-extrabold text-amber-100"><span>مستواك المهني:</span><span>${esc(user?.level||'مبتدئ')}</span></div>`:''}</div>
+    <div class="min-w-0"><h1 class="font-extrabold text-[24px] sm:text-[28px] leading-tight">${!authenticated?(state.tab==='register'?'تسجيل فني جديد':'تسجيل دخول الفني'):'صُنّاع'}</h1><div class="fanni-brand-tagline text-[14px] sm:text-[17px] font-extrabold text-white mt-1">${authenticated?esc(user?.name||'فني')+' · الرصيد '+esc(balance)+' جنيه':'كل خدمة تبدأ بخطوة'}</div>${authenticated?`<div class="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-amber-200/30 bg-amber-400/15 px-2.5 py-1 text-[10px] font-extrabold text-amber-100"><span>مستواك المهني:</span><span>${esc(user?.level||'مبتدئ')}</span></div>`:''}</div>
    </div>
    <div class="fanni-header-actions">
     <div class="fanni-header-controls">
@@ -749,7 +750,7 @@ function render(){
 
   <section class="fanni-login-panel mt-4 panel p-5 animate-fade">
   ${state.tab==='register'?`
-   <h2 class="font-extrabold text-[17px]">إنشاء حساب فني</h2>
+   <h2 class="font-extrabold text-[17px]">تسجيل فني جديد</h2>
    <p class="text-[11px] text-slate-500 mt-1 mb-5">اكتب بياناتك وحدد تخصصاتك ومنطقة العمل اللي تناسبك.</p>
    <div class="space-y-4">
     <div><label class="field-label">الاسم بالكامل *</label><input class="field" autocomplete="name" value="${esc(state.regName)}" oninput="state.regName=this.value.slice(0,50)" placeholder="الاسم بالكامل"></div>
