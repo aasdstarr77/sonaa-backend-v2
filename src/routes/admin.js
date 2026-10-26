@@ -277,6 +277,46 @@ router.get('/fannis', auth('admin'), async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.get('/fanni-profile-edits', auth('admin'), async (req, res, next) => {
+  try {
+    const fannis = await Fanni.find({ role: 'fanni', 'pendingProfileChange.requestedAt': { $exists: true, $ne: null } }).select('-passwordHash').sort({ 'pendingProfileChange.requestedAt': 1 }).limit(MAX_LIST_LIMIT).lean();
+    return res.set('Cache-Control', 'no-store').json({ requests: fannis.map(item => ({ _id: item._id, name: item.name, phone: item.phone, specialties: item.specialties || [], areas: item.areas || [], pendingProfileChange: item.pendingProfileChange, status: item.status, createdAt: item.createdAt })) });
+  } catch (err) { next(err); }
+});
+
+router.post('/fanni-profile-edits/:id/approve', auth('admin'), async (req, res, next) => {
+  try {
+    if (!validId(req.params.id)) return sendBadId(res);
+    const fanni = await Fanni.findOne({ _id: req.params.id, role: 'fanni' });
+    if (!fanni || !fanni.pendingProfileChange?.requestedAt) return res.status(404).json({ message: 'طلب تعديل البيانات غير موجود أو تمت مراجعته بالفعل' });
+    const pending = fanni.pendingProfileChange;
+    const duplicate = await Fanni.findOne({ phone: pending.phone, _id: { $ne: fanni._id } }).select('_id');
+    if (duplicate) return res.status(409).json({ message: 'رقم الهاتف المطلوب أصبح مسجلًا في حساب آخر. ارفض الطلب واطلب من الفني رقمًا آخر.' });
+    const before = { phone: fanni.phone, specialties: fanni.specialties, areas: fanni.areas };
+    fanni.phone = pending.phone; fanni.specialties = pending.specialties; fanni.areas = pending.areas;
+    fanni.pendingProfileChange = undefined;
+    fanni.decisions.push(decision(req, 'اعتماد تعديل بيانات', 'اعتماد طلب تعديل بيانات الفني'));
+    fanni.decisions[fanni.decisions.length - 1].meta = { before, after: { phone: fanni.phone, specialties: fanni.specialties, areas: fanni.areas } };
+    await fanni.save();
+    await createNotification({ recipientRole: 'fanni', recipientId: fanni._id, type: 'profile_change_approved', title: 'تمت الموافقة على تعديل بياناتك', message: 'وافقت الإدارة على طلب تعديل بيانات حسابك وتم تحديث البيانات.', link: '/fanni', dedupeKey: 'profile-change-approved:' + String(fanni._id) + ':' + Date.now() });
+    return res.json({ message: 'تم اعتماد تعديل بيانات الفني بنجاح', fanni: publicFanni(fanni) });
+  } catch (err) { next(err); }
+});
+
+router.post('/fanni-profile-edits/:id/reject', auth('admin'), validate(Joi.object({ reason: reasonSchema.optional() })), async (req, res, next) => {
+  try {
+    if (!validId(req.params.id)) return sendBadId(res);
+    const fanni = await Fanni.findOne({ _id: req.params.id, role: 'fanni' });
+    if (!fanni || !fanni.pendingProfileChange?.requestedAt) return res.status(404).json({ message: 'طلب تعديل البيانات غير موجود أو تمت مراجعته بالفعل' });
+    const reason = String(req.body.reason || 'لم تتم الموافقة على الطلب').trim().slice(0, 500);
+    fanni.pendingProfileChange = undefined;
+    fanni.decisions.push(decision(req, 'رفض تعديل بيانات', reason));
+    await fanni.save();
+    await createNotification({ recipientRole: 'fanni', recipientId: fanni._id, type: 'profile_change_rejected', title: 'لم تتم الموافقة على تعديل بياناتك', message: 'رفضت الإدارة طلب تعديل البيانات. السبب: ' + reason, link: '/fanni', dedupeKey: 'profile-change-rejected:' + String(fanni._id) + ':' + Date.now() });
+    return res.json({ message: 'تم رفض طلب تعديل البيانات وإبقاء البيانات الأصلية كما هي' });
+  } catch (err) { next(err); }
+});
+
 router.get('/orders', auth('admin'), async (req, res, next) => {
   try {
     const filter = {};
