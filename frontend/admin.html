@@ -151,7 +151,7 @@ function setSection(sectionId){const section=ADMIN_SECTIONS.find(item=>item.id==
 function setClientStatusFilter(value){state.clientStatusFilter=['all','active','suspended'].includes(value)?value:'all';applyClientFilter();}
 
 let state={
-  tab:'dashboard',clientStatusFilter:'all',
+  tab:'dashboard',pageMode:'home',clientStatusFilter:'all',
   adminEmail:'',adminPass:'',currentAdminRoleLabel:'',currentAdminPermissions:{},loading:false,loadingOrders:false,publishingOrders:[],deletingItems:[],
   dropdowns:{}, pendingActions:{},
   fannis:[],filtered:[],topups:[],filteredTopups:[],orders:[],filteredOrders:[],complaints:[],filteredComplaints:[],recoveryRequests:[],loadingComplaints:false,
@@ -247,6 +247,7 @@ function render(){
   </header>
   
   <main class="mx-auto max-w-[800px] px-3 pb-28">
+    ${isAuth?`<section class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2" aria-label="إحصائيات سريعة"><div class="premium-panel p-3"><p class="text-[10px] font-bold text-slate-500">الطلبات</p><p class="text-[19px] font-black text-slate-900">${state.orders.length}</p></div><div class="premium-panel p-3"><p class="text-[10px] font-bold text-slate-500">الفنيون</p><p class="text-[19px] font-black text-slate-900">${state.accountCounts.technicians}</p></div><div class="premium-panel p-3"><p class="text-[10px] font-bold text-slate-500">العملاء</p><p class="text-[19px] font-black text-slate-900">${state.accountCounts.clients}</p></div><div class="premium-panel p-3"><p class="text-[10px] font-bold text-slate-500">الشكاوى الجديدة</p><p class="text-[19px] font-black text-slate-900">${state.complaints.filter(c=>c.status==='جديدة').length}</p></div></section>`:''}
     ${!isAuth?`
       <section class="mt-8 max-w-[420px] mx-auto premium-panel p-6 sm:p-7 animate-fade">
         <div class="flex items-center gap-3.5">
@@ -266,7 +267,7 @@ function render(){
           <h2 class="text-[12px] font-black text-slate-700">مركز التحكم</h2>
           <span class="text-[10px] text-slate-500">6 أقسام رئيسية</span>
         </div>
-        <div class="section-nav" aria-label="كل أدوات لوحة الإدارة">
+        ${state.pageMode==='home'?`<div class="section-nav" aria-label="كل أدوات لوحة الإدارة">
           ${visibleSections.map(section=>`
             <section class="section-nav-group">
               <h3 class="section-nav-heading"><span class="section-nav-icon">${section.icon}</span><span>${escHtml(section.label)}</span></h3>
@@ -281,8 +282,8 @@ function render(){
             </section>
           `).join('')}
         </div>
-      </section>
-      <div class="mt-3 premium-panel p-3 flex flex-col gap-2.5">
+      </section>`:''}
+      ${state.pageMode==='section'?`<div class="mt-3 premium-panel p-3 flex flex-col gap-2.5">
         <div class="relative">
           <span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
           <input value="${escHtml(state.search)}" oninput="onSearch(this.value)" placeholder="بحث شامل..." class="field !pr-10">
@@ -292,13 +293,13 @@ function render(){
         `:state.tab==='fannis'||state.tab==='pending'||state.tab==='disabled'||state.tab==='levels'?`
           <select onchange="onFilter(this.value)" class="field"><option value="الكل">كل الحالات</option><option value="pending">قيد المراجعة</option><option value="approved">معتمد</option><option value="rejected">مرفوض</option><option value="disabled">معطل</option></select>
         `:''}
-      </div>
+      </div>`:''}
 
-      ${state.loading?`<div class="mt-4 premium-panel p-10 text-center"><div class="h-10 w-10 rounded-full border-[3px] border-slate-200 border-t-blue-600 animate-spin mx-auto"></div><p class="mt-3 text-[12px] font-black text-slate-500">جاري التحميل...</p></div>`:''}
+      ${state.pageMode==='section'&&state.loading?`<div class="mt-4 premium-panel p-10 text-center"><div class="h-10 w-10 rounded-full border-[3px] border-slate-200 border-t-blue-600 animate-spin mx-auto"></div><p class="mt-3 text-[12px] font-black text-slate-500">جاري التحميل...</p></div>`:''}
 
-      <div id="admin-tab-content" class="scroll-mt-24">
+      ${state.pageMode==='section'?`<div id="admin-tab-content" class="scroll-mt-24">
         ${renderCurrentTab()}
-      </div>
+      </div>`:''}
     `}
   </main>
   <div onclick="closeAllMenus()" id="menu-backdrop" class="${Object.keys(state.dropdowns).length?'fixed inset-0 z-30 bg-black/5':''}"></div>
@@ -890,7 +891,7 @@ function renderStats(){
 }
 
 // --- Existing logic preserved ---
-function setTab(t,scrollTarget='content'){if(!canReadTab(t)){showToast('هذا القسم غير متاح ضمن صلاحيات حسابك','error');return;}if(state.tab!==t)state.filter='الكل'; state.tab=t; state.dropdowns={}; state.pendingActions={}; render(); if(t==='orders')loadOrders(); else if(t==='roles')loadAdminUsers(); else if(t==='complaints')loadComplaints(); else if(t==='services')loadServices(); else if(t==='regions')loadRegions(); else if(t==='pricing')loadPricing(); else if(t==='settings')loadSettings(); else if(t==='security')loadAuditLogs(); else if(t==='notifications')loadNotificationHistory(); else if(t==='support')loadSupportViolations(); else if(t==='content')loadContent(); else if(t==='topups')applyTopupFilter(); else if(t==='clients')loadClients(); else if(t==='wallets')render(); else applyFilter();}
+function setTab(t,scrollTarget='content'){if(!canReadTab(t)){showToast('هذا القسم غير متاح ضمن صلاحيات حسابك','error');return;}if(state.tab!==t)state.filter='الكل'; state.tab=t; state.pageMode='section'; state.dropdowns={}; state.pendingActions={}; render(); if(t==='orders')loadOrders(); else if(t==='roles')loadAdminUsers(); else if(t==='complaints')loadComplaints(); else if(t==='services')loadServices(); else if(t==='regions')loadRegions(); else if(t==='pricing')loadPricing(); else if(t==='settings')loadSettings(); else if(t==='security')loadAuditLogs(); else if(t==='notifications')loadNotificationHistory(); else if(t==='support')loadSupportViolations(); else if(t==='content')loadContent(); else if(t==='topups')applyTopupFilter(); else if(t==='clients')loadClients(); else if(t==='wallets')render(); else applyFilter();}
 function onSearch(v){state.search=v; if(state.tab==='orders')applyOrderFilter(); else if(state.tab==='complaints')applyComplaintFilter(); else if(state.tab==='services')applyServicesFilter(); else if(state.tab==='topups')applyTopupFilter(); else if(state.tab==='clients')applyClientFilter(); else applyFilter();}
 function onFilter(v){state.filter=v;applyFilter()} function onFilterTopup(v){state.filterTopup=v;applyTopupFilter()} function onFilterOrder(v){state.filterOrder=v;applyOrderFilter()} function onFilterComplaint(v){state.filterComplaint=v;applyComplaintFilter()}
 const bulkSelectionKeys={fannis:'selectedBulkFanniIds',topups:'selectedBulkTopupIds',clients:'selectedBulkClientPhones',complaints:'selectedBulkComplaintIds',offers:'selectedBulkOfferKeys'};
@@ -980,7 +981,7 @@ async function setBalance(id){const input=document.getElementById('bal-'+id); if
 async function addBalance(id){const input=document.getElementById('bal-'+id); if(!input)return showToast('خانة الرصيد غير موجودة','error'); const amount=input.value; if(amount===''||!Number.isFinite(Number(amount))||Number(amount)<=0){return showToast('اكتب مبلغًا صحيحًا','error');} if(!confirm(`إضافة ${amount} جنيه؟`))return; try{const res=await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/add-balance`],{method:'POST',body:JSON.stringify({amount:Number(amount)})}); showToast(res.message||'تمت الإضافة'); await loadAll();}catch(e){showToast(e.message,'error')}}
 async function approveTopup(id){if(!confirm('تأكيد قبول طلب الشحن؟'))return; try{const res=await tryApi([`/api/admin/topup-requests/${encodeURIComponent(id)}/approve`],{method:'POST',body:JSON.stringify({})}); showToast(res.message||'تم قبول الشحن'); await loadAll();}catch(e){showToast(e.message,'error')}}
 async function rejectTopup(id){if(!confirm('هل تريد رفض طلب الشحن؟'))return; try{await tryApi([`/api/admin/topup-requests/${encodeURIComponent(id)}/reject`],{method:'POST',body:JSON.stringify({})}); showToast('تم رفض الشحن'); await loadAll();}catch(e){showToast(e.message,'error');}}
-function goBack(){if(window.history.length>1){window.history.back();return;}window.location.href='/';}
+function goBack(){if(state.pageMode==='section'){state.pageMode='home';state.dropdowns={};state.pendingActions={};render();return;}window.location.href='/';}
 function goFanni(){window.location.href='/fanni';}
 function logout(){clearToken(); state.fannis=[]; state.filtered=[]; state.topups=[]; state.filteredTopups=[]; state.orders=[]; state.filteredOrders=[]; state.complaints=[]; state.filteredComplaints=[]; state.services=[]; state.filteredServices=[]; state.clients=[]; state.filteredClients=[]; state.servicesLoading=false; state.servicesError=''; state.openServices={}; state.dropdowns={}; state.pendingActions={}; state.errors={fannis:'',topups:'',orders:'',complaints:'',services:'',clients:''}; state.error=''; state.loading=false; state.loadingOrders=false; state.publishingOrders=[]; state.deletingItems=[]; state.adminEmail=''; state.adminPass=''; state.search=''; state.tab='dashboard'; render();}
 async function loadComplaints(){if(!getToken())return; state.loadingComplaints=true; state.errors.complaints=''; render(); try{const data=await tryApi(['/api/admin/complaints'],{method:'GET'}); state.complaints=extractList(data,['complaints','items']); applyComplaintFilter();}catch(e){state.complaints=[]; state.filteredComplaints=[]; state.errors.complaints=e.message||'تعذر تحميل الشكاوى'; render();}finally{state.loadingComplaints=false; if(state.tab==='complaints')render();}}
