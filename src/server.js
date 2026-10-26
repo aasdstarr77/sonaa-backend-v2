@@ -39,6 +39,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
       imgSrc: ["'self'", 'data:', 'https:'],
+      mediaSrc: ["'self'", 'blob:', 'data:'],
       connectSrc: ["'self'", 'https://sonaa-backend-v2.vercel.app'],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
