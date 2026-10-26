@@ -265,6 +265,18 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
 .fanni-wallet-shortcut{background:linear-gradient(145deg,#dbeafe,#eff6ff);border:1px solid #bfdbfe;color:#1e40af;box-shadow:0 3px 0 #bfdbfe,0 5px 9px #1e3a8a10}
 @media(prefers-reduced-motion:reduce){.fanni-summary-details>summary,.fanni-details-content{animation:none;transition:none}}
 
+/* Same polished 3D logout confirmation used by the client dashboard. */
+.logout-confirm-overlay{position:fixed;inset:0;z-index:3000;display:flex;align-items:center;justify-content:center;padding:20px;background:#0b1b3ab8;backdrop-filter:blur(5px);animation:logoutFadeIn .16s ease-out}
+.logout-confirm-card{width:min(100%,390px);border:1px solid #fff;border-radius:26px;padding:24px 20px;background:linear-gradient(145deg,#fff 0%,#f4f8ff 100%);box-shadow:0 8px 0 #cbd8ea,0 24px 60px #02081766,inset 0 2px 3px #fff;text-align:center;animation:logoutCardIn .2s ease-out}
+.logout-confirm-icon{width:64px;height:64px;margin:0 auto 14px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:29px;background:linear-gradient(145deg,#fff1f2,#fecdd3);border:1px solid #fda4af;box-shadow:0 4px 0 #e11d48,0 8px 14px #e11d4824,inset 0 1px 0 #fff}
+.logout-confirm-btn{min-height:46px;border-radius:14px;font-weight:900;border:1px solid transparent;transition:transform .15s,box-shadow .15s}
+.logout-confirm-btn:active{transform:translateY(3px);box-shadow:0 1px 0 #0b1b3a!important}
+.logout-confirm-cancel{color:#1e40af;background:linear-gradient(145deg,#eff6ff,#dbeafe);border-color:#bfdbfe;box-shadow:0 4px 0 #bfdbfe,0 7px 12px #1d4ed814}
+.logout-confirm-yes{color:#fff;background:linear-gradient(145deg,#fb7185,#dc2626 60%,#991b1b);border-color:#fda4af;box-shadow:0 4px 0 #7f1d1d,0 7px 12px #991b1b24}
+@keyframes logoutFadeIn{from{opacity:0}to{opacity:1}}
+@keyframes logoutCardIn{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(prefers-reduced-motion:reduce){.logout-confirm-overlay,.logout-confirm-card{animation:none}.logout-confirm-btn{transition:none}}
+
 </style>
 </head>
 <body class="min-h-screen antialiased">
@@ -589,17 +601,43 @@ function goClient(){
  location.href=location.origin+'/';
 }
 
-function goBack(){if(window.history.length>1){window.history.back();return;}window.location.href='/';}
-function logout(){
+function goBack(){
+ if(currentUser||getToken()){showLogoutConfirmation('back');return;}
+ if(window.history.length>1){window.history.back();return;}
+ window.location.href='/';
+}
+function showLogoutConfirmation(action='logout'){
+ if(document.getElementById('logoutConfirmOverlay'))return;
+ const overlay=document.createElement('div');
+ overlay.id='logoutConfirmOverlay';
+ overlay.className='logout-confirm-overlay';
+ overlay.setAttribute('role','dialog');
+ overlay.setAttribute('aria-modal','true');
+ overlay.setAttribute('aria-labelledby','logoutConfirmTitle');
+ overlay.innerHTML='<div class="logout-confirm-card"><div class="logout-confirm-icon" aria-hidden="true">↪</div><h2 id="logoutConfirmTitle" class="text-xl font-black text-slate-900">تأكيد تسجيل الخروج</h2><p class="mt-3 text-sm leading-6 font-bold text-slate-600">متأكد إنك عايز تسجّل خروج من حسابك؟</p><div class="mt-6 grid grid-cols-2 gap-3"><button type="button" class="logout-confirm-btn logout-confirm-cancel" data-logout-action="cancel">لا، خليك معايا</button><button type="button" class="logout-confirm-btn logout-confirm-yes" data-logout-action="confirm">أيوه، خروج</button></div></div>';
+ document.body.appendChild(overlay);
+ overlay.addEventListener('click',function(e){
+  if(e.target===overlay||e.target.closest('[data-logout-action="cancel"]')){overlay.remove();return;}
+  if(e.target.closest('[data-logout-action="confirm"]')){
+   overlay.remove();
+   performFanniLogout();
+   if(action==='back'){
+    if(window.history.length>1)window.history.back();
+    else window.location.href='/';
+   }
+  }
+ });
+ overlay.querySelector('[data-logout-action="cancel"]').focus();
+}
+function logout(){showLogoutConfirmation();}
+function performFanniLogout(){
  clearAuth();
  currentUser=null;
-
  Object.assign(state,{
   tab:'login',orders:[],filteredOrders:[],myOffers:[],
   walletHistory:[],walletBalance:0,error:'',success:'',
   pendingMsg:'',offerModal:null,loading:false
  });
-
  render();
  toast('تم تسجيل الخروج');
 }
