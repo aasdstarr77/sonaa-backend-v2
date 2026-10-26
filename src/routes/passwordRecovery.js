@@ -285,6 +285,27 @@ router.get('/admin/requests/:id', supportAdminAuth, async (req, res, next) => {
     return res.json({ recovery: safeRequest(item) });
   } catch (e) { return next(e); }
 });
+router.delete('/admin/requests/:id/messages/:messageId', supportAdminAuth, async (req, res, next) => {
+  try {
+    if (!/^[a-f0-9]{24}$/i.test(String(req.params.id || '')) || !/^[a-f0-9]{24}$/i.test(String(req.params.messageId || ''))) {
+      return res.status(400).json({ message: 'معرّف الطلب أو الرسالة غير صحيح.' });
+    }
+    const item = await PasswordRecovery.findOne({
+      _id: req.params.id,
+      accountId: { $ne: null },
+      expiresAt: { $gt: new Date() }
+    });
+    if (!item) return res.status(404).json({ message: 'طلب الاستعادة غير موجود.' });
+    const message = item.messages.id(req.params.messageId);
+    if (!message) return res.status(404).json({ message: 'الرسالة غير موجودة أو تم حذفها بالفعل.' });
+    message.deleteOne();
+    item.lastMessageAt = item.messages.length
+      ? (item.messages[item.messages.length - 1].createdAt || new Date())
+      : item.createdAt;
+    await item.save();
+    return res.json({ message: 'تم حذف الرسالة من محادثة استعادة كلمة المرور.', recovery: safeRequest(item) });
+  } catch (e) { return next(e); }
+});
 router.post('/admin/requests/:id/reply', supportAdminAuth, async (req, res, next) => {
   try {
     const text = clean(req.body?.text);
