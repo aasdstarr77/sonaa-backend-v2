@@ -205,6 +205,32 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
 @keyframes sonaa-logo-splash{0%,100%{transform:translateX(0) scale(1)}22%{transform:translateX(-10px) scale(1.025)}48%{transform:translateX(0) scale(1)}72%{transform:translateX(10px) scale(1.025)}}
 @media(prefers-reduced-motion:reduce){.account-loading-logo{animation:none}}
 
+
+
+/* Technician header: match the client dashboard's white/blue header and action layout. */
+.fanni-app-header{background:linear-gradient(180deg,#fff 0%,#eef4fc 100%)!important;color:#173c6c!important;border-bottom:1px solid #cbd8e9!important;box-shadow:0 5px 0 #dce5f1,0 12px 24px #0b1b3a12,inset 0 1px 0 #fff!important}
+.fanni-app-header .fanni-header-layout{gap:8px!important}
+.fanni-app-header .fanni-header-brand{flex:1 1 155px;min-width:0;gap:8px!important;align-items:center!important}
+.fanni-app-header .brand-mark{width:64px;height:64px;border-radius:16px;background:linear-gradient(145deg,#fff 0%,#e8eff9 100%)!important;border:1px solid #fff!important;box-shadow:0 5px 0 #cbd8ea,0 10px 18px #0b1b3a1c,inset 0 2px 3px #fff!important;overflow:visible!important;flex-shrink:0}
+.fanni-app-header .brand-mark .sonaa-logo-svg{width:58px;height:58px;object-fit:contain;filter:drop-shadow(0 4px 2px #0b1b3a28) drop-shadow(0 9px 7px #0b1b3a18);transform:translateY(-2px)}
+.fanni-app-header h1{color:#173c6c!important;font-size:clamp(1rem,4.5vw,1.35rem)!important;font-weight:900!important;letter-spacing:-.025em;text-shadow:0 1px 0 #fff,0 2px 0 #d2deed,0 4px 7px #0b1b3a18;max-width:100%}
+.fanni-app-header .fanni-header-slogan{color:#173c6c!important;font-size:clamp(.72rem,3vw,.95rem)!important;font-weight:900!important;line-height:1.45;white-space:normal!important;overflow-wrap:anywhere;text-shadow:0 1px 0 #fff,0 2px 0 #dce6f3,0 4px 7px #0b1b3a15;margin-top:5px!important}
+.fanni-app-header .fanni-header-level{background:linear-gradient(145deg,#fff9e9,#f9e7b6)!important;border-color:#e8cf91!important;color:#855b12!important;box-shadow:0 3px 0 #dfc27d,0 5px 9px #92400e12,inset 0 1px 0 #fff!important}
+.fanni-app-header .fanni-header-action-stack{flex:0 1 auto;min-width:0;max-width:100%;gap:6px!important}
+.fanni-app-header .fanni-header-action-row{gap:4px!important;flex-wrap:nowrap;max-width:100%}
+.fanni-app-header .fanni-header-download,.fanni-app-header .fanni-header-notifications,.fanni-app-header .fanni-header-account,.fanni-app-header .fanni-header-logout{min-height:36px!important;max-height:40px;box-sizing:border-box;box-shadow:0 4px 0 #cbd8e9,0 7px 12px #0b1b3a13,inset 0 1px 0 #fff!important;transition:transform .16s,box-shadow .16s,filter .16s}
+.fanni-app-header .fanni-header-download{flex-shrink:0;border-color:#a8d8bb!important;background:linear-gradient(145deg,#f4fff8 0%,#d8f5e3 100%)!important;color:#12633c!important;box-shadow:0 4px 0 #a6d2b5,0 7px 12px #16653416,inset 0 1px 0 #fff!important}
+.fanni-app-header .fanni-header-notifications{border-color:#e8cf91!important;background:linear-gradient(145deg,#fff9e9 0%,#f9e7b6 100%)!important;color:#a16207!important;box-shadow:0 4px 0 #dfc27d,0 7px 12px #92400e18,inset 0 1px 0 #fff!important}
+.fanni-app-header .fanni-header-account{border-color:#b8cdf0!important;background:linear-gradient(145deg,#f5f9ff 0%,#dbe9ff 100%)!important;color:#1d4ed8!important}
+.fanni-app-header .fanni-header-logout{border:1px solid #cbd8e9!important;background:linear-gradient(145deg,#fff 0%,#edf3fc 100%)!important;color:#475569!important}
+.fanni-app-header .fanni-header-subnav{gap:8px!important}
+.fanni-app-header .client-home-main-btn{background:linear-gradient(145deg,#3983f6 0%,#1d4ed8 55%,#173c6c 100%)!important;color:#fff!important;border:1px solid #ffffff45!important;box-shadow:0 4px 0 #123b85,0 8px 14px #0b1b3a25,inset 0 1px 0 #ffffff45!important}
+.fanni-app-header .fanni-header-back{border:1px solid #c4d3e8!important;border-radius:10px!important;background:linear-gradient(145deg,#fff 0%,#edf3fc 100%)!important;color:#1d4ed8!important;box-shadow:0 4px 0 #cbd8e9,0 7px 12px #0b1b3a13,inset 0 1px 0 #fff!important}
+.fanni-app-header .fanni-header-download:active,.fanni-app-header .fanni-header-notifications:active,.fanni-app-header .fanni-header-account:active,.fanni-app-header .fanni-header-logout:active,.fanni-app-header .client-home-main-btn:active,.fanni-app-header .fanni-header-back:active{transform:translateY(3px);filter:brightness(.98);box-shadow:0 1px 0 #cbd8e9,0 3px 6px #0b1b3a12!important}
+@media(min-width:520px){.fanni-app-header .brand-mark{width:84px;height:84px}.fanni-app-header .brand-mark .sonaa-logo-svg{width:76px;height:76px}}
+@media(max-width:420px){.fanni-app-header .fanni-header-layout{gap:6px!important;padding-left:8px!important;padding-right:8px!important}.fanni-app-header .fanni-header-brand{gap:6px!important}.fanni-app-header .brand-mark{width:54px;height:54px;border-radius:13px}.fanni-app-header .brand-mark .sonaa-logo-svg{width:49px;height:49px}.fanni-app-header .fanni-header-action-row{gap:3px!important}.fanni-app-header .fanni-header-download{padding-left:6px!important;padding-right:6px!important;font-size:9px!important}.fanni-app-header .fanni-header-download svg{width:15px;height:15px}.fanni-app-header .fanni-header-notifications{width:32px;height:36px;padding:0!important;font-size:16px!important}.fanni-app-header .fanni-header-account,.fanni-app-header .fanni-header-logout{padding-left:5px!important;padding-right:5px!important;font-size:9px!important}.fanni-app-header .fanni-header-subnav{gap:6px!important}.fanni-app-header .client-home-main-btn,.fanni-app-header .fanni-header-back{padding-left:8px!important;padding-right:8px!important}}
+@media(max-width:350px){.fanni-app-header .fanni-header-layout{align-items:flex-start!important}.fanni-app-header .fanni-header-brand{flex:1 1 120px}.fanni-app-header .fanni-header-action-stack{max-width:58%}.fanni-app-header .fanni-header-download span{font-size:0}.fanni-app-header .fanni-header-download svg{width:18px;height:18px}.fanni-app-header .fanni-header-account,.fanni-app-header .fanni-header-logout{font-size:8px!important;padding-left:4px!important;padding-right:4px!important}}
+@media(prefers-reduced-motion:reduce){.fanni-app-header button,.fanni-app-header a{transition:none!important}}
 </style>
 </head>
 <body class="min-h-screen antialiased">
@@ -723,26 +749,30 @@ function render(){
  if(authenticated && approved && !guidelinesAccepted){document.getElementById('app').innerHTML='<main class="mx-auto max-w-[680px] p-4"><section class="panel p-5 space-y-3"><h1 class="text-xl font-black">أهلًا بيك في صُنّاع – ميثاق التعامل المهني مع العملاء</h1><p class="text-sm leading-7">اقرأ التعليمات التالية ووافق عليها قبل استخدام لوحة الفني.</p><div class="max-h-[55vh] overflow-y-auto rounded-xl border p-4 text-sm leading-7"><p>١. التزم بسعر العرض الذي وافق عليه العميل. أي زيادة تحتاج موافقة صريحة مسجلة داخل المنصة قبل التنفيذ.</p><p>٢. تعامل باحترام وصدق، دون ضغط أو تهديد أو تضليل.</p><p>٣. قبل قبول العرض، الردود المسموحة «نعم»، «لا»، «حسب الاتفاق». ممنوع تبادل بيانات الاتصال أو التحايل على المنصة قبل القبول.</p><p>٤. لا تضغط إنهاء المهمة إلا بعد إنجازها فعلًا.</p><p>٥. احمِ بيانات العميل ولا تستخدمها خارج الطلب.</p><p>٦. يحق للطرفين التقييم بعد الإكمال؛ ممنوع الإكراه على تقييم إيجابي أو التلاعب بالتقييمات.</p><p>٧. المخالفات قد تؤدي إلى مراجعة الطلب أو تعليق الحساب أو إيقافه.</p><p class="font-extrabold">بالضغط على الموافقة، تؤكد أنك قرأت التعليمات وفهمتها وتتعهد بالالتزام بها أثناء استخدام منصة صُنّاع.</p></div><label class="flex gap-2 items-start text-sm font-bold"><input id="guidelinesAcceptedCheck" type="checkbox" class="mt-1"> قرأت التعليمات وأوافق على الالتزام بها.</label><button type="button" onclick="if(!document.getElementById(\'guidelinesAcceptedCheck\')?.checked){toast(\'لازم تحدد الموافقة أولًا.\',\'error\');return;}acceptTechnicianGuidelines()" class="primary-btn w-full h-12 rounded-xl font-extrabold">موافق ثم تأكيد</button></section></main>';return;}
 
  document.getElementById('app').innerHTML=`
- <header class="sticky top-0 z-40 bg-[#0b1b3a] text-white shadow-lg">
-  <div class="fanni-header-main mx-auto max-w-[680px] px-3 py-3 flex flex-wrap items-center gap-3">
-   <button onclick="toggleNotifications()" aria-label="الإشعارات" title="الإشعارات" class="fanni-notification-top-btn">🔔<span>${notificationBadge()}</span></button>
-   <div class="fanni-header-brand flex items-center gap-3 min-w-0 flex-1">
-    <div class="h-[76px] w-[76px] sm:h-24 sm:w-24 rounded-2xl bg-[#F8FAFC] border-2 border-[#14B8A6] flex items-center justify-center shrink-0 shadow-[0_6px_0_#0f766e,0_10px_18px_#02061735,inset_0_2px_0_#ffffff]"><img class="sonaa-logo-svg" src="/images/LOGO_UPLOAD_HERE/logo.png" alt="شعار صُنّاع" width="144" height="144" decoding="async"></div>
-    <div class="min-w-0"><h1 class="font-extrabold text-[24px] sm:text-[28px] leading-tight">${!authenticated?(state.tab==='register'?'تسجيل فني جديد':'تسجيل دخول الفني'):'صُنّاع'}</h1><div class="fanni-brand-tagline text-[14px] sm:text-[17px] font-extrabold text-white mt-1">${authenticated?esc(user?.name||'فني')+' · الرصيد '+esc(balance)+' جنيه':'كل خدمة تبدأ بخطوة'}</div>${authenticated?`<div class="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-amber-200/30 bg-amber-400/15 px-2.5 py-1 text-[10px] font-extrabold text-amber-100"><span>مستواك المهني:</span><span>${esc(user?.level||'مبتدئ')}</span></div>`:''}</div>
+ <header class="app-header fanni-app-header sticky top-0 z-40 backdrop-blur-xl">
+  <div class="fanni-header-layout mx-auto w-full max-w-[680px] px-3 sm:px-4 py-2 flex items-center justify-between gap-2">
+   <div class="fanni-header-brand flex items-center gap-2 min-w-0 flex-1">
+    <div class="brand-mark h-16 w-16 sm:h-[84px] sm:w-[84px] rounded-xl flex items-center justify-center shrink-0"><img class="sonaa-logo-svg" src="/images/LOGO_UPLOAD_HERE/logo.png" alt="شعار صُنّاع" width="120" height="120" decoding="async"></div>
+    <div class="min-w-0 flex-1">
+     <h1 class="font-extrabold text-[16px] leading-tight truncate">${!authenticated?(state.tab==='register'?'تسجيل فني جديد':'تسجيل دخول الفني'):(state.publicContent?.siteName||'صُنّاع')}</h1>
+     <p class="fanni-brand-tagline fanni-header-slogan mt-2 text-sm sm:text-base font-black">${authenticated?esc(user?.name||'فني')+' · الرصيد '+esc(balance)+' جنيه':'كل خدمة تبدأ بخطوة'}</p>
+     ${authenticated?'<div class="fanni-header-level mt-1.5 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-extrabold"><span>مستواك المهني:</span><span>'+esc(user?.level||'مبتدئ')+'</span></div>':''}
+    </div>
    </div>
-   <div class="fanni-header-actions">
-    <div class="fanni-header-controls">
-     ${authenticated?'<button onclick="setTab(\'profile\')" class="h-9 px-2.5 rounded-xl bg-white text-blue-900 text-[10px] sm:text-[11px] font-extrabold shadow-sm">حسابي</button><button onclick="logout()" class="h-9 px-2.5 rounded-xl bg-white/10 text-[10px] sm:text-[11px] font-bold">خروج</button>':''}
+   <div class="fanni-header-action-stack flex flex-col items-end gap-1.5 shrink-0">
+    <div class="fanni-header-action-row flex items-center justify-end gap-1">
+     <a href="https://aasdstarr77.github.io/sonaa-download/" aria-label="تحميل تطبيق صُنّاع" title="تحميل تطبيق صُنّاع" class="fanni-header-download h-9 px-2 sm:px-3 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 inline-flex items-center justify-center gap-1.5 text-[10px] sm:text-[11px] font-extrabold whitespace-nowrap"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg><span>تحميل التطبيق</span></a>
+     <button type="button" onclick="toggleNotifications()" aria-label="الإشعارات" title="الإشعارات" class="fanni-header-notifications relative h-9 w-9 rounded-xl border border-amber-200 bg-amber-50 text-[18px] text-amber-600 shrink-0">🔔${notificationBadge()}</button>
+     ${authenticated?'<button type="button" onclick="setTab(\'profile\')" aria-label="حسابي" class="fanni-header-account h-9 px-2 rounded-xl border border-blue-200 bg-blue-50 text-blue-800 inline-flex items-center justify-center text-[11px] font-extrabold whitespace-nowrap">حسابي</button><button type="button" onclick="logout()" aria-label="خروج" class="fanni-header-logout h-9 px-2 rounded-xl bg-slate-100 text-slate-700 text-[11px] font-extrabold whitespace-nowrap">خروج</button>':''}
+    </div>
+    <div class="fanni-header-subnav flex items-center justify-between gap-2 w-full">
+     <a href="/" aria-label="القائمة الرئيسية" title="القائمة الرئيسية" class="client-home-main-btn h-8 px-3 rounded-lg text-white inline-flex items-center justify-center gap-1 text-[10px] font-extrabold whitespace-nowrap"><span aria-hidden="true">⌂</span><span>القائمة الرئيسية</span></a>
+     <button type="button" onclick="goBack()" aria-label="رجوع" class="fanni-header-back h-8 px-3 rounded-lg inline-flex items-center justify-center text-[10px] font-extrabold whitespace-nowrap">رجوع ←</button>
     </div>
    </div>
   </div>
-  <nav class="fanni-account-nav mx-auto max-w-[680px] px-3 pb-2 flex items-center justify-between gap-2">
-   <button type="button" onclick="goBack()" class="fanni-account-nav-btn fanni-back-btn h-9 px-3 rounded-xl text-[11px] font-extrabold">← رجوع</button>
-   <a href="https://aasdstarr77.github.io/sonaa-download/" aria-label="تحميل تطبيق صُنّاع" title="تحميل تطبيق صُنّاع" class="fanni-account-nav-btn fanni-download-btn h-9 px-3 rounded-xl flex items-center justify-center gap-1.5 text-[10px] sm:text-[11px] font-extrabold"><span aria-hidden="true">⬇</span><span>تحميل التطبيق</span></a>
-   <a href="/" aria-label="القائمة الرئيسية" title="القائمة الرئيسية" class="fanni-account-nav-btn fanni-account-home-btn h-9 px-3 rounded-xl flex items-center justify-center text-[11px] font-extrabold"><span aria-hidden="true">⌂</span><span class="mr-1">القائمة الرئيسية</span></a>
-  </nav>
   ${notificationPanel()}
-  </header>
+ </header>
 
  <main class="mx-auto max-w-[680px] px-3 pb-[160px]">
  ${!authenticated?`
