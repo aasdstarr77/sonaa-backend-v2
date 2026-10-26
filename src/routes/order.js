@@ -114,6 +114,8 @@ function publicOrder(order, options = {}) {
       : { ...order };
 
   const assignedFanniId = data.assignedFanni;
+  data.hasVoiceRecording = Boolean(data.voiceRecordingData);
+  delete data.voiceRecordingData;
 
   if (!includeAddress) delete data.address;
   if (!includeClientName) delete data.clientName;
@@ -227,8 +229,9 @@ const createSchema = Joi.object({
   clientPhone: Joi.string().trim(),
   clientName: Joi.string().trim().max(50).allow(''),
   budget: Joi.string().trim().max(50).allow('').optional(),
-  description: Joi.string().trim().min(10).max(1000),
-  desc: Joi.string().trim().min(10).max(1000).allow('')
+  description: Joi.string().trim().max(1000).allow('').optional(),
+  desc: Joi.string().trim().max(1000).allow('').optional(),
+  voiceRecordingData: Joi.string().max(520000).pattern(/^data:audio\/(?:webm|ogg|mp4|mpeg|wav)(?:;codecs=[a-zA-Z0-9.-]+)?;base64,[A-Za-z0-9+/]+={0,2}$/).allow('').optional()
 }).unknown(false);
 
 function validSN(sn) {
@@ -401,9 +404,10 @@ router.post('/', clientAuth, async (req, res, next) => {
       });
     }
 
-    const safeDescription = sanitizeText(
-      String(value.description || '').trim()
-    );
+    const textDescription = String(value.description || value.desc || '').trim();
+    const voiceRecordingData = String(value.voiceRecordingData || '').trim();
+    if (textDescription.length < 10 && !voiceRecordingData) return res.status(400).json({ message: 'اكتب وصف المشكلة أو سجّل فويس يوضح المشكلة قبل إرسال الطلب.' });
+    const safeDescription = sanitizeText(textDescription);
 
     const safeClientName = sanitizeText(
       String(value.clientName || 'عميل').trim()
@@ -423,6 +427,7 @@ router.post('/', clientAuth, async (req, res, next) => {
           clientPhone,
           budget: value.budget || '',
           description: safeDescription,
+          ...(voiceRecordingData ? { voiceRecordingData } : {}),
           status: 'قيد المراجعة'
         });
 
@@ -587,7 +592,7 @@ router.get('/available', auth(), async (req, res, next) => {
       status: { $in: ACTIVE_STATUSES },
       expiresAt: { $gt: new Date() }
     })
-      .select('-phone -address -clientName')
+      .select('-phone -address -clientName +voiceRecordingData')
       .sort({ createdAt: -1 })
       .lean();
 
@@ -1461,6 +1466,7 @@ router.get('/:sn/assigned-details', auth(), async (req, res, next) => {
         clientName: sanitizeText(order.clientName || ''),
         clientPhone: order.clientPhone,
         description: sanitizeText(order.description || ''),
+        hasVoiceRecording: Boolean(order.voiceRecordingData),
         budget: order.budget || '',
         status: order.status,
         acceptedOfferPrice: order.acceptedOfferPrice,
@@ -1854,6 +1860,7 @@ async function trackOrder(req, res, next) {
   }
 }
 
+router.get('/:sn/voice', auth(), async (req,res,next)=>{try{const sn=String(req.params.sn||'').toUpperCase();if(!validSN(sn))return res.status(400).json({message:'كود الطلب غير صحيح'});const order=await Order.findOne({sn}).select('+voiceRecordingData status service assignedFanni expiresAt').lean();if(!order||!order.voiceRecordingData)return res.status(404).json({message:'لا يوجد تسجيل صوتي لهذا الطلب.'});let permitted=req.user?.role==='admin';if(!permitted&&req.user?.role==='fanni'&&req.user?.status==='معتمد'){const fanni=await Fanni.findOne({_id:req.userId,role:'fanni',status:'معتمد'}).select('specialties technicianGuidelinesAcceptedAt technicianGuidelinesVersion').lean();const assigned=order.status==='تم اختيار فني'&&String(order.assignedFanni)===String(req.userId);const available=ACTIVE_STATUSES.includes(order.status)&&order.expiresAt&&new Date(order.expiresAt)>new Date()&&fanni?.technicianGuidelinesAcceptedAt&&fanni?.technicianGuidelinesVersion&&fanniCanHandleService(fanni?.specialties||[],order.service);permitted=Boolean(assigned||available)}if(!permitted)return res.status(403).json({message:'التسجيل الصوتي غير متاح لهذا الحساب.'});const match=/^data:(audio\/(?:webm|ogg|mp4|mpeg|wav)(?:;codecs=[a-zA-Z0-9.-]+)?);base64,([A-Za-z0-9+/]+={0,2})$/.exec(order.voiceRecordingData);if(!match)return res.status(415).json({message:'صيغة التسجيل الصوتي غير مدعومة.'});const audio=Buffer.from(match[2],'base64');res.set('Content-Type',match[1].split(';')[0]);res.set('Content-Length',String(audio.length));res.set('Cache-Control','private, no-store');return res.send(audio)}catch(err){return next(err)}});
 router.get('/by-sn/:sn', trackOrder);
 router.get('/:sn', trackOrder);
 

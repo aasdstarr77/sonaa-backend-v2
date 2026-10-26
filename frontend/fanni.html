@@ -529,6 +529,7 @@ function clean(s,max=1000){
 function getToken(){
  try{return localStorage.getItem(TOKEN_KEY)||''}catch{return ''}
 }
+async function playOrderVoice(sn,button){let audio=button?.parentElement?.querySelector('audio[data-order-voice]');if(!audio){audio=document.createElement('audio');audio.controls=true;audio.preload='none';audio.dataset.orderVoice='1';audio.className='mt-2 w-full';button?.parentElement?.appendChild(audio)}if(!audio.src){try{button.disabled=true;const response=await fetch('/api/orders/'+encodeURIComponent(sn)+'/voice',{headers:{Authorization:'Bearer '+getToken()}});if(!response.ok)throw Error('تعذر تحميل التسجيل الصوتي.');audio.src=URL.createObjectURL(await response.blob())}catch(e){toast(e.message,'error');return}finally{button.disabled=false}}try{await audio.play()}catch(e){audio.controls=true}}
 
 function getUser(){
  try{return JSON.parse(localStorage.getItem(USER_KEY)||'null')}catch{return null}
@@ -1138,7 +1139,7 @@ function render(){
 
        <div class="rounded-xl border border-slate-100 p-3">
         <div class="text-[10px] font-extrabold text-slate-500 mb-1">وصف الطلب</div>
-        <p class="text-[12px] bg-slate-50 rounded-xl leading-6 break-words">${esc(String(o.description||o.desc||'بدون وصف').slice(0,180))}</p>
+        <p class="text-[12px] bg-slate-50 rounded-xl leading-6 break-words">${esc(String(o.description||o.desc||'بدون وصف').slice(0,180))}</p>${o.hasVoiceRecording?`<button type="button" onclick="playOrderVoice('${esc(sn)}',this)" class="mt-2 rounded-xl bg-blue-700 px-3 py-2 text-[11px] text-white">🎙️ تشغيل التسجيل الصوتي</button>`:''}
        </div>
 
        ${hasSubmittedOffer(sn)

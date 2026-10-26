@@ -534,8 +534,8 @@ const API={
     if(!VALIDATORS.text(payload.area,2,100))throw new Error('اكتب المنطقة أو الحي من حرفين على الأقل.');
     if(!VALIDATORS.text(payload.address,5,250))throw new Error('اكتب العنوان التفصيلي بشكل صحيح.');
     if(!VALIDATORS.phone(payload.phone))throw new Error('رقم التليفون غير صحيح؛ لازم يكون 11 رقم ويبدأ بـ 01.');
-    if(!VALIDATORS.text(payload.description,10,1000))throw new Error('اكتب تفاصيل المشكلة في 10 حروف على الأقل.');
-    validateNoPhoneInCustomerFields(payload);
+    const description=String(payload.description||'').trim(),voiceRecordingData=String(payload.voiceRecordingData||'');if(description.length<10&&!voiceRecordingData)throw new Error('اكتب وصف المشكلة أو سجّل فويس يوضح المشكلة قبل إرسال الطلب.');
+    validateNoPhoneInCustomerFields({...payload,description});
     const data=await this.request('/api/orders',{
       method:'POST',
       headers:{'Content-Type':'application/json',Authorization:'Bearer '+state.accountToken},
@@ -545,7 +545,8 @@ const API={
         area:sanitizeInput(payload.area,100),
         address:sanitizeInput(payload.address,250),
         phone:normalizeDigits(String(payload.phone)).replace(/\D/g,''),
-        description:sanitizeInput(payload.description,1000),
+        description:sanitizeInput(payload.description||'',1000),
+        ...(voiceRecordingData?{voiceRecordingData}:{}),
         budget:sanitizeInput(payload.budget||'',50)
       })
     });
@@ -622,7 +623,7 @@ const API={
 const forceClientRegistration=(new URLSearchParams(window.location.search).get('tab')||'').replace(/[\u200B-\u200D\u2060\uFEFF]/g,'').trim().toLowerCase()==='register';
 let state={
   account:null,accountInitializing:false,accountToken:(()=>{try{return localStorage.getItem('sonaa_client_account_token')||'';}catch{return '';}})(),accountAuthMode:forceClientRegistration?'register':'login',accountLoading:false,accountError:'',myOrders:[],accountOrdersLoading:false,accountOrdersTab:'current',notifications:[],notificationsUnread:0,notificationsOpen:false,
-  tab:'orders',service:'',clientName:'',area:'',address:'',phone:'',budget:'',desc:'',loading:false,sn:null,
+  tab:'orders',service:'',clientName:'',area:'',address:'',phone:'',budget:'',desc:'',voiceBlob:null,voiceUrl:'',voiceRecordingData:'',voiceRecorder:null,voiceChunks:[],voiceRecording:false,loading:false,sn:null,
   trackInput:'',tracked:null,trackError:'',trackLoading:false,acceptingOffer:'',
   ratingStars:5,ratingComment:'',ratingSubmitting:false,
   complaintSn:'',complaintName:'',complaintText:'',complaintLoading:false,
@@ -961,6 +962,7 @@ function render(){
               </label>
               <textarea id="descInput" oninput="onDescInput(this.value)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();document.querySelector('button[onclick="createOrder()"]')?.focus()}" maxlength="1000" placeholder="احكي المشكلة بالتفصيل، واكتب المطلوب من الفني..." class="field min-h-[112px] p-3.5 text-[13px] font-semibold resize-none leading-6">${escHtml(state.desc)}</textarea>
               <p class="mt-1 text-[10px] text-slate-500">ما تكتبش رقم تليفونك داخل التفاصيل؛ رقمك موجود في الخانة المخصصة له.</p>
+              <div class="mt-3 rounded-2xl border border-blue-200 bg-blue-50 p-3 space-y-2"><b class="text-[12px]">🎙️ سجّل وصف المشكلة بصوتك</b><p class="text-[11px]">${state.voiceRecording?'جاري التسجيل...':state.voiceBlob?'التسجيل جاهز':'اكتب وصفًا أو سجّل فويس أو اعمل الاتنين.'}</p>${state.voiceRecording?'<button type="button" onclick="stopVoiceRecording()">إيقاف التسجيل</button>':'<button type="button" onclick="startVoiceRecording()">بدء تسجيل الفويس</button>'}${state.voiceBlob?'<button type="button" onclick="clearVoiceRecording()">حذف التسجيل</button>':''}${state.voiceUrl?`<audio controls src="${escAttr(state.voiceUrl)}" class="mt-2 w-full"></audio>`:''}</div>
             </div>
             ${!state.service?`
             <div class="rounded-2xl border-2 border-amber-300 bg-amber-50 p-4 text-center shadow-sm" role="status" aria-live="polite">
@@ -1372,6 +1374,10 @@ async function loadServices(){
     render();showToast(state.servicesError);log('فشل تحميل الخدمات:',error);
   }
 }
+let voiceStream=null;
+async function startVoiceRecording(){if(state.voiceRecording)return;if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==='undefined')return showToast('تسجيل الصوت غير مدعوم؛ اكتب وصف المشكلة.');try{voiceStream=await navigator.mediaDevices.getUserMedia({audio:true});const recorder=new MediaRecorder(voiceStream);state.voiceChunks=[];state.voiceRecording=true;state.voiceRecorder=recorder;render();recorder.ondataavailable=e=>{if(e.data?.size)state.voiceChunks.push(e.data)};recorder.onstop=async()=>{try{const blob=new Blob(state.voiceChunks,{type:recorder.mimeType||'audio/webm'});if(!blob.size||blob.size>360000)throw Error('التسجيل فارغ أو حجمه كبير؛ سجّل فويس أقصر.');state.voiceBlob=blob;state.voiceRecordingData=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=reject;reader.readAsDataURL(blob)});if(state.voiceUrl)URL.revokeObjectURL(state.voiceUrl);state.voiceUrl=URL.createObjectURL(blob)}catch(e){state.voiceBlob=null;state.voiceRecordingData='';showToast(e.message)}finally{state.voiceRecording=false;state.voiceRecorder=null;voiceStream?.getTracks().forEach(t=>t.stop());voiceStream=null;state.voiceChunks=[];render()}};recorder.start();window.setTimeout(()=>{if(state.voiceRecorder===recorder&&state.voiceRecording)stopVoiceRecording()},30000)}catch(e){voiceStream?.getTracks().forEach(t=>t.stop());voiceStream=null;state.voiceRecording=false;showToast('اسمح باستخدام الميكروفون أو اكتب وصف المشكلة.')}}
+function stopVoiceRecording(){if(state.voiceRecorder&&state.voiceRecorder.state!=='inactive')state.voiceRecorder.stop()}
+function clearVoiceRecording(){if(state.voiceRecording)stopVoiceRecording();if(state.voiceUrl)URL.revokeObjectURL(state.voiceUrl);state.voiceBlob=null;state.voiceUrl='';state.voiceRecordingData='';state.voiceChunks=[];render()}
 async function createOrder(){
   if(!state.account||!state.accountToken){showToast('سجّل دخولك بحساب العميل قبل إرسال الطلب.');render();return;}
   if(state.loading)return;
@@ -1383,15 +1389,14 @@ async function createOrder(){
   if(!VALIDATORS.text(state.area,2,100)){showToast('اكتب المنطقة أو الحي من حرفين على الأقل.');document.getElementById('areaInput')?.focus();return;}
   if(!VALIDATORS.text(state.address,5,250)){showToast('اكتب العنوان بالتفصيل، من فضلك.');document.getElementById('addrInput')?.focus();return;}
   if(!state.phone){showToast('اكتب رقم تليفونك.');document.getElementById('phoneInput')?.focus();return;}
-  if(!state.desc){showToast('اكتب تفاصيل المشكلة.');document.getElementById('descInput')?.focus();return;}
   if(!VALIDATORS.phone(state.phone)){showToast('رقم التليفون غير صحيح؛ لازم يكون 11 رقم ويبدأ بـ 01.');document.getElementById('phoneInput')?.focus();return;}
-  if(!VALIDATORS.text(state.desc,10,1000)){showToast('اكتب تفاصيل المشكلة في 10 حروف على الأقل.');document.getElementById('descInput')?.focus();return;}
+  if(String(state.desc||'').trim().length<10&&!state.voiceRecordingData){showToast('اكتب وصف المشكلة أو سجّل فويس قبل إرسال الطلب.');document.getElementById('descInput')?.focus();return;}if(state.voiceRecording){showToast('استنى لحد ما التسجيل يخلص.');return;}
   try{
     validateNoPhoneInCustomerFields({clientName:state.clientName,area:state.area,address:state.address,description:state.desc,budget:state.budget,complaintText:state.complaintText});
   }catch(error){showToast(error.message);return;}
   state.loading=true;render();
   try{
-    const data=await API.createOrder({clientName:state.clientName,service:state.service,area:state.area,address:state.address,phone:state.phone,budget:state.budget,description:state.desc});
+    const data=await API.createOrder({clientName:state.clientName,service:state.service,area:state.area,address:state.address,phone:state.phone,budget:state.budget,description:state.desc,voiceRecordingData:state.voiceRecordingData});
     state.sn=data.sn;state.loading=false;showToast('تم إنشاء الطلب: '+state.sn,'success');render();
   }catch(error){state.loading=false;showToast(error.message||'تعذر إنشاء الطلب حاليًا.');render();}
 }

@@ -133,6 +133,8 @@ trim: true,
 maxlength: 1000
 },
 
+voiceRecordingData: { type: String, select: false, maxlength: 520000 },
+
 budget: {
 type: String,
 trim: true,
