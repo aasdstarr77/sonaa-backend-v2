@@ -143,6 +143,25 @@ router.post('/admin/:id/reply', supportAdminAuth, async (req, res, next) => {
     return res.json({ message: 'تم إرسال رد الدعم.', supportCase: publicCase(item) });
   } catch (e) { return next(e); }
 });
+router.delete('/admin/:id/messages/:messageId', supportAdminAuth, async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id) || !mongoose.isValidObjectId(req.params.messageId)) {
+      return res.status(400).json({ message: 'معرّف المحادثة أو الرسالة غير صحيح.' });
+    }
+    const item = await SupportCase.findById(req.params.id);
+    if (!item) return res.status(404).json({ message: 'محادثة الدعم غير موجودة.' });
+    const index = item.messages.findIndex(message => String(message._id) === String(req.params.messageId));
+    if (index < 0) return res.status(404).json({ message: 'الرسالة غير موجودة أو تم حذفها بالفعل.' });
+    const removed = item.messages[index];
+    item.messages.splice(index, 1);
+    item.lastMessageAt = item.messages.length
+      ? (item.messages[item.messages.length - 1].createdAt || item.updatedAt || new Date())
+      : item.createdAt;
+    await item.save();
+    return res.json({ message: 'تم حذف الرسالة من محادثة الدعم.', supportCase: publicCase(item), deletedMessageId: String(removed._id) });
+  } catch (e) { return next(e); }
+});
+
 router.patch('/admin/:id/status', supportAdminAuth, async (req, res, next) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: 'معرّف محادثة الدعم غير صحيح.' });
