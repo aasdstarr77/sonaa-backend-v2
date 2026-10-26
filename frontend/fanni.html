@@ -959,6 +959,7 @@ function renderAcceptedClient(o){
   <div class="rounded-xl bg-white border border-emerald-100 p-3"><div class="text-[10px] text-slate-500 mb-1">منطقة الخدمة</div><b class="text-[12px]">${esc(client.area||'غير متاحة')}</b></div>
   <div class="rounded-xl bg-white border border-emerald-100 p-3"><div class="text-[10px] text-slate-500 mb-1">العنوان التفصيلي</div><b class="text-[12px] leading-6 break-words">${esc(client.address||'غير متاح')}</b></div>
   ${client.description?`<div class="rounded-xl bg-white border border-emerald-100 p-3"><div class="text-[10px] text-slate-500 mb-1">وصف الطلب</div><p class="text-[12px] leading-6 break-words">${esc(client.description)}</p></div>`:''}
+  ${o.hasVoiceRecording?`<div class="rounded-xl border border-teal-200 bg-white p-3"><div class="mb-2 text-[12px] font-extrabold text-teal-900">🎙️ تسجيل صوتي من العميل</div><p class="mb-3 text-[11px] leading-5 text-slate-600">استمع لشرح العميل للمشكلة قبل تنفيذ الخدمة.</p><button type="button" onclick="playOrderVoice('${esc(o.orderSn||'')}',this)" class="w-full rounded-xl bg-teal-700 px-4 py-3 text-[12px] font-extrabold text-white">▶️ تشغيل تسجيل العميل</button></div>`:''}
   ${String(client.budget??'').trim()?`<div class="rounded-xl bg-white border border-emerald-100 p-3"><div class="text-[10px] text-slate-500 mb-1">ميزانية العميل</div><b class="text-[12px]">${esc(client.budget)} جنيه</b></div>`:''}
  </section>`;
 }

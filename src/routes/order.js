@@ -685,7 +685,7 @@ router.get('/my-offers', auth(), async (req, res, next) => {
       'offers.fanni': req.userId
     })
       .select(
-        'sn service area address clientName clientPhone description budget status offers assignedFanni acceptedOfferId acceptedOfferPrice commissionRate commissionAmount commissionCharged chatMessages priceChangeRequests'
+        'sn service area address clientName clientPhone description budget status offers assignedFanni acceptedOfferId acceptedOfferPrice commissionRate commissionAmount commissionCharged chatMessages priceChangeRequests +voiceRecordingData'
       )
       .lean();
 
@@ -713,6 +713,7 @@ router.get('/my-offers', auth(), async (req, res, next) => {
           orderStatus: order.status,
           chatMessages: (order.chatMessages || []).filter(m => isAcceptedByThisFanni ? String(m.targetOfferId || '') === String(order.acceptedOfferId || '') : String(m.targetOfferId || '') === String(offer._id)).map(m => ({ senderRole: m.senderRole, text: m.text, targetOfferId: m.targetOfferId || '', createdAt: m.createdAt })),
           service: order.service,
+          hasVoiceRecording: Boolean(order.voiceRecordingData),
           accepted: isAcceptedByThisFanni,
           completed: isCompletedByThisFanni
         };
@@ -1437,7 +1438,7 @@ router.get('/:sn/assigned-details', auth(), async (req, res, next) => {
       });
     }
 
-    const order = await Order.findOne({ sn }).lean();
+    const order = await Order.findOne({ sn }).select('+voiceRecordingData').lean();
 
     if (!order) {
       return res.status(404).json({
