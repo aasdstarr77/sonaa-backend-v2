@@ -16,6 +16,7 @@ const passwordRecoverySchema = new mongoose.Schema({
   phone: { type: String, trim: true, maxlength: 30, required: true },
   subject: { type: String, trim: true, maxlength: 120, default: 'استعادة كلمة المرور' },
   accessTokenHash: { type: String, required: true, select: false },
+  accessTokenEncrypted: { type: String, default: '', select: false },
   status: { type: String, enum: ['بانتظار الدعم', 'قيد التحقق', 'بانتظار رد المستخدم', 'تم التحقق', 'تمت الاستعادة', 'مرفوضة', 'منتهية'], default: 'بانتظار الدعم', index: true },
   verifiedBy: { type: String, default: '' },
   verifiedAt: { type: Date, default: null },
