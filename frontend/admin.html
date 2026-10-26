@@ -568,7 +568,7 @@ state.voiceReviewAudioPlayed = state.voiceReviewAudioPlayed || {};
 state.voiceReviewAudioLoading = state.voiceReviewAudioLoading || {};
 window.adminLoadVoice = async function(sn){
   sn=String(sn||'').trim().toUpperCase();
-  if(!/^SN\\d{6}$/.test(sn)) return;
+  if(!sn) return;
   state.voiceReviewAudioLoading[sn]=true; render();
   try{
     const token=getToken();
