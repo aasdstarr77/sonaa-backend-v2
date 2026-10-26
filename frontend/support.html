@@ -157,8 +157,21 @@ function renderMessages(target,item,adminMode){
  $(target).innerHTML=msgs.length?msgs.map(m=>{
   const mine=adminMode?m.senderRole==='admin':m.senderRole===role;
   const sender=m.senderRole==='admin'?'دعم صُنّاع':m.senderRole==='assistant'?'المساعد الذكي':mine?'أنت':role==='fanni'?'الفني':'العميل';
-  return '<article class="message '+(mine?'mine':adminMode?'admin':'')+'"><div class="meta">'+esc(sender)+' • '+esc(dateLabel(m.createdAt))+'</div><div class="body">'+esc(m.text)+'</div></article>';
+  const removeButton=adminMode&&m._id?'<button type="button" class="btn secondary" style="margin-top:8px;padding:6px 10px;font-size:12px" onclick="deleteSupportMessage(\''+esc(item._id)+'\',\''+esc(m._id)+'\')">مسح الرسالة</button>':'';
+  return '<article class="message '+(mine?'mine':adminMode?'admin':'')+'"><div class="meta">'+esc(sender)+' • '+esc(dateLabel(m.createdAt))+'</div><div class="body">'+esc(m.text)+'</div>'+removeButton+'</article>';
  }).join(''):'<p class="muted">لا توجد رسائل في هذه المحادثة.</p>';
+}
+async function deleteSupportMessage(caseId,messageId){
+ if(role!=='admin'||busy)return;
+ if(!confirm('متأكد إنك عايز تمسح الرسالة دي نهائيًا من محادثة الدعم عند العميل أو الفني؟'))return;
+ busy=true;showError('');
+ try{
+  const data=await request('/admin/'+encodeURIComponent(caseId)+'/messages/'+encodeURIComponent(messageId),{method:'DELETE'});
+  selected=data.supportCase||selected;
+  cases=cases.map(item=>String(item._id)===String(caseId)?selected:item);
+  showNotice(data.message||'تم حذف الرسالة.',true);
+  renderAdmin();
+ }catch(e){showError(e.message||'تعذر حذف الرسالة.')}finally{busy=false}
 }
 function renderOwner(){
  $('case-list').innerHTML=cases.length?cases.map(c=>'<button class="case '+(selected&&String(selected._id)===String(c._id)?'active':'')+'" data-case="'+esc(c._id)+'"><strong>'+esc(c.subject||'استفسار عام')+'</strong><small>'+esc(c.status||'جديدة')+(c.needsHuman?' • تحتاج تدخل الدعم':'')+' • '+esc(dateLabel(c.lastMessageAt||c.createdAt))+'</small></button>').join(''):'<p class="muted">لا توجد محادثات سابقة. ابدأ محادثة جديدة من الأعلى.</p>';
