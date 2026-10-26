@@ -69,6 +69,13 @@
     const key=accountKey(a);
     if(b&&b._sonaaKey!==key){b.remove();b=null;}
     if(hiddenFor===key){if(b)b.remove();return;}
+    // Do not flash the activation button after the browser has already granted notification permission.
+    // Silently sync any existing subscription with the signed-in account.
+    if('Notification'in window&&Notification.permission==='granted'){
+      if(b)b.remove();
+      void existingSubscription(a);
+      return;
+    }
     if(b)return;
     b=document.createElement('button');
     b.id='sonaa-web-push-enable';b._sonaaKey=key;
