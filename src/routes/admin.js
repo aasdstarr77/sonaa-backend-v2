@@ -284,8 +284,16 @@ router.get('/orders', auth('admin'), async (req, res, next) => {
     if (status) { filter.status = status; }
     const parsedLimit = Number.parseInt(req.query.limit, 10);
     const limit = Number.isInteger(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, MAX_LIST_LIMIT) : MAX_LIST_LIMIT;
-    const orders = await Order.find(filter).sort({ createdAt: -1 }).limit(limit).lean();
-    return res.json({ orders, data: orders, items: orders });
+    const [orders, voiceOrders] = await Promise.all([
+      Order.find(filter).sort({ createdAt: -1 }).limit(limit).lean(),
+      Order.find({ ...filter, voiceRecordingData: { $exists: true, $ne: '' } }).select('sn').lean()
+    ]);
+    const voiceOrderSNs = new Set(voiceOrders.map(order => String(order.sn || '').toUpperCase()));
+    const safeOrders = orders.map(order => ({
+      ...order,
+      hasVoiceRecording: voiceOrderSNs.has(String(order.sn || '').toUpperCase())
+    }));
+    return res.json({ orders: safeOrders, data: safeOrders, items: safeOrders });
   } catch (err) { next(err); }
 });
 
