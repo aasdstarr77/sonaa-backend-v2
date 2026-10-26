@@ -170,6 +170,10 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--blue)!im
 .service-choice.selected{background:#0b1b3a;color:white;border-color:#0b1b3a}
 .service-choice.selected .service-icon{background:#ffffff20}
 .service-choice-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:10px}.service-picker-dialog{position:fixed;top:50dvh;left:50vw;translate:-50% -50%;transform:none;z-index:1000;width:min(520px,calc(100vw - 24px));max-height:calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow:auto;overscroll-behavior:contain;border-radius:20px;background:#fff;box-shadow:0 0 0 100vmax rgba(15,23,42,.48),0 24px 70px #0f172a40;animation:none;margin:0}.service-picker-dialog:has(.category-details) .category-tile-grid,.service-picker-dialog:has(.category-details) .service-search-intro{display:none}
+/* Keep service selection in normal page flow so the whole page scrolls */
+.service-picker-dialog{position:relative!important;top:auto!important;left:auto!important;translate:none!important;transform:none!important;z-index:1!important;width:100%!important;max-height:none!important;overflow:visible!important;overscroll-behavior:auto!important;box-shadow:0 8px 22px #0f172a12!important;animation:none!important;margin:10px 0 0!important}
+#serviceList{max-height:none!important;height:auto!important;overflow:visible!important;overscroll-behavior:visible!important}
+
 @media(max-width:380px){.service-choice-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 .animate-fade{animation:fadeIn .2s ease both}
@@ -958,6 +962,13 @@ function render(){
               <textarea id="descInput" oninput="onDescInput(this.value)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();document.querySelector('button[onclick="createOrder()"]')?.focus()}" maxlength="1000" placeholder="احكي المشكلة بالتفصيل، واكتب المطلوب من الفني..." class="field min-h-[112px] p-3.5 text-[13px] font-semibold resize-none leading-6">${escHtml(state.desc)}</textarea>
               <p class="mt-1 text-[10px] text-slate-500">ما تكتبش رقم تليفونك داخل التفاصيل؛ رقمك موجود في الخانة المخصصة له.</p>
             </div>
+            ${!state.service?`
+            <div class="rounded-2xl border-2 border-amber-300 bg-amber-50 p-4 text-center shadow-sm" role="status" aria-live="polite">
+              <div class="text-2xl mb-1" aria-hidden="true">👆</div>
+              <p class="text-[13px] font-extrabold text-amber-950 leading-6">لسه ما اخترتش الخدمة المطلوبة!</p>
+              <p class="mt-1 text-[12px] font-semibold text-amber-900 leading-6">اختار قسم الخدمة من الأيقونات اللي فوق، علشان تظهر لك الخدمات التفصيلية وتقدر تحدد الخدمة المناسبة لطلبك.</p>
+              <button type="button" onclick="toggleService()" class="mt-3 h-10 px-5 rounded-xl bg-amber-600 text-white text-[12px] font-extrabold shadow-md">اختيار الخدمة المطلوبة</button>
+            </div>` : ''}
             <button type="button" onclick="createOrder()" ${state.loading||state.servicesLoading?'disabled':''} class="client-submit-order-btn w-full h-[52px] rounded-xl blue-btn font-extrabold text-[14px] flex items-center justify-center gap-2">
               ${state.loading?'جاري الإرسال...':state.servicesLoading?'جاري تحميل الخدمات...':'إرسال الطلب'}
             </button>
