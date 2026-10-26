@@ -160,9 +160,41 @@ router.post('/login', async (req, res, next) => {
 });
 
 router.get('/me', clientAuth, (req, res) => {
-  return res.json({
+  return res.set('Cache-Control', 'no-store').json({
     client: { id: String(req.client._id), name: req.client.name, phone: req.client.phone, status: req.client.status }
   });
+});
+
+const profileUpdateSchema = Joi.object({
+  name: Joi.string().trim().min(2).max(50).required(),
+  phone: Joi.string().trim().required()
+}).unknown(false);
+
+router.patch('/me', clientAuth, async (req, res, next) => {
+  try {
+    const { error, value } = profileUpdateSchema.validate(req.body || {}, { abortEarly: false });
+    if (error) return res.status(400).json({ message: 'اكتب الاسم ورقم الهاتف بشكل صحيح.' });
+    const name = String(value.name || '').trim();
+    const phone = normalizePhone(value.phone);
+    if (!/^[\p{L}\p{M} .'-]{2,50}$/u.test(name)) {
+      return res.status(400).json({ message: 'الاسم غير صحيح؛ اكتب اسمًا من حرفين على الأقل.' });
+    }
+    if (!phone || !/^01[0-9]{9}$/.test(phone)) {
+      return res.status(400).json({ message: 'رقم الهاتف غير صحيح؛ اكتب 11 رقمًا يبدأ بـ 01.' });
+    }
+    const duplicate = await Client.findOne({ phone, _id: { $ne: req.client._id } }).select('_id');
+    if (duplicate) return res.status(409).json({ message: 'رقم الهاتف مسجل بالفعل في حساب آخر.' });
+    req.client.name = name;
+    req.client.phone = phone;
+    await req.client.save();
+    return res.set('Cache-Control', 'no-store').json({
+      message: 'تم تحديث بيانات حسابك بنجاح.',
+      client: { id: String(req.client._id), name: req.client.name, phone: req.client.phone, status: req.client.status }
+    });
+  } catch (error) {
+    if (error && error.code === 11000) return res.status(409).json({ message: 'رقم الهاتف مسجل بالفعل في حساب آخر.' });
+    return next(error);
+  }
 });
 
 router.post('/orders/claim', clientAuth, async (req, res, next) => {
