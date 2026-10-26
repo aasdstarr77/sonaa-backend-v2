@@ -578,7 +578,7 @@ const API={
     return this.request(url,{method:'GET'});
   }
 };
-const forceClientRegistration=new URLSearchParams(window.location.search).get('tab')==='register';
+const forceClientRegistration=(new URLSearchParams(window.location.search).get('tab')||'').replace(/[\u200B-\u200D\u2060\uFEFF]/g,'').trim().toLowerCase()==='register';
 let state={
   account:null,accountInitializing:false,accountToken:(()=>{try{return localStorage.getItem('sonaa_client_account_token')||'';}catch{return '';}})(),accountAuthMode:forceClientRegistration?'register':'login',accountLoading:false,accountError:'',myOrders:[],accountOrdersLoading:false,accountOrdersTab:'current',notifications:[],notificationsUnread:0,notificationsOpen:false,
   tab:'orders',service:'',clientName:'',area:'',address:'',phone:'',budget:'',desc:'',loading:false,sn:null,
