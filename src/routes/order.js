@@ -475,6 +475,21 @@ router.post('/', clientAuth, async (req, res, next) => {
   }
 });
 
+router.post('/admin/:sn/voice-reviewed', auth('admin'), async (req, res, next) => {
+  try {
+    const sn = String(req.params.sn || '').toUpperCase();
+    if (!validSN(sn)) return res.status(400).json({ message: 'كود الطلب غير صحيح' });
+    const order = await Order.findOne({ sn }).select('+voiceRecordingData status voiceReviewedAt').exec();
+    if (!order) return res.status(404).json({ message: 'الطلب غير موجود' });
+    if (!order.voiceRecordingData) return res.status(409).json({ message: 'الطلب لا يحتوي على تسجيل صوتي.' });
+    if (order.status !== 'قيد المراجعة') return res.status(409).json({ message: 'لا يمكن تغيير مراجعة التسجيل بعد خروج الطلب من المراجعة.' });
+    order.voiceReviewedAt = new Date();
+    order.voiceReviewedBy = String(req.userId || req.user?._id || req.user?.email || 'admin').slice(0, 120);
+    await order.save();
+    return res.json({ message: 'تم تسجيل مراجعة الفويس. يمكنك الآن نشر الطلب بعد مراجعة باقي البيانات.', voiceReviewedAt: order.voiceReviewedAt });
+  } catch (err) { return next(err); }
+});
+
 router.post('/admin/:sn/publish', auth('admin'), async (req, res, next) => {
   try {
     // auth('admin') enforces the dedicated publishOrders permission for this route.
@@ -486,8 +501,12 @@ router.post('/admin/:sn/publish', auth('admin'), async (req, res, next) => {
       });
     }
 
+    const reviewCheck = await Order.findOne({ sn }).select('+voiceRecordingData status voiceReviewedAt').lean();
+    if (!reviewCheck) return res.status(404).json({ message: 'الطلب غير موجود' });
+    if (reviewCheck.status !== 'قيد المراجعة') return res.status(409).json({ message: 'الطلب ليس قيد المراجعة، لذلك لم يتم نشره', status: reviewCheck.status });
+    if (reviewCheck.voiceRecordingData && !reviewCheck.voiceReviewedAt) return res.status(409).json({ message: 'لا يمكن نشر الطلب قبل الاستماع إلى التسجيل الصوتي وتأكيد مراجعته من الإدارة.' });
     const order = await Order.findOneAndUpdate(
-      { sn, status: 'قيد المراجعة' },
+      { sn, status: 'قيد المراجعة', $or: [{ voiceRecordingData: { $exists: false } }, { voiceRecordingData: '' }, { voiceReviewedAt: { $type: 'date' } }] },
       {
         $set: {
           status: 'تم النشر',
@@ -500,9 +519,7 @@ router.post('/admin/:sn/publish', auth('admin'), async (req, res, next) => {
     );
 
     if (!order) {
-      const existing = await Order.findOne({ sn })
-        .select('status')
-        .lean();
+      const existing = await Order.findOne({ sn }).select('status').lean();
 
       if (!existing) {
         return res.status(404).json({
@@ -510,10 +527,11 @@ router.post('/admin/:sn/publish', auth('admin'), async (req, res, next) => {
         });
       }
 
-      return res.status(409).json({
-        message: 'الطلب ليس قيد المراجعة، لذلك لم يتم نشره',
-        status: existing.status
-      });
+      if (existing.status === 'قيد المراجعة') {
+        const stillHasVoice = await Order.findOne({ sn }).select('+voiceRecordingData voiceReviewedAt').lean();
+        if (stillHasVoice?.voiceRecordingData && !stillHasVoice.voiceReviewedAt) return res.status(409).json({ message: 'لا يمكن نشر الطلب قبل الاستماع إلى التسجيل الصوتي وتأكيد مراجعته من الإدارة.' });
+      }
+      return res.status(409).json({ message: 'الطلب ليس قيد المراجعة، لذلك لم يتم نشره', status: existing.status });
     }
 
     // Notify every approved technician whose specialties match; work area is informational only.

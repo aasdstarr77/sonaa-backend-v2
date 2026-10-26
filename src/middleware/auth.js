@@ -30,7 +30,7 @@ const PERMISSION_SECTIONS = {
   dashboard: [/^\/me$/, /^\/counts$/, /^\/reports?(\/|$)/, /^\/stats?(\/|$)/],
   wallet: [/^\/wallet(\/|$)/, /^\/fannis\/[^/]+\/(set-balance|add-balance)$/],
   fannis: [/^\/fannis(\/|$)/],
-  publishOrders: [/^\/admin\/[^/]+\/publish$/],
+  publishOrders: [/^\/admin\/[^/]+\/(publish|voice-reviewed)$/],
   orders: [/^\/orders(\/|$)/],
   complaints: [/^\/complaints(\/|$)/],
   services: [/^\/services(\/|$)/],

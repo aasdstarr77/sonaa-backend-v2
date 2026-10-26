@@ -282,13 +282,17 @@ const Order = require('./models/Order');
 
 app.get('/api/admin/orders', auth('admin'), async (req, res, next) => {
   try {
-    const orders = await Order.find({})
-      .populate('assignedFanni', 'name phone specialties areas')
-      .sort({ createdAt: -1 })
-      .limit(500)
-      .lean();
-
-    return res.json({ orders, data: orders });
+    const [orders, voiceOrders] = await Promise.all([
+      Order.find({})
+        .populate('assignedFanni', 'name phone specialties areas')
+        .sort({ createdAt: -1 })
+        .limit(500)
+        .lean(),
+      Order.find({ voiceRecordingData: { $exists: true, $ne: '' } }).select('sn').lean()
+    ]);
+    const voiceOrderSNs = new Set(voiceOrders.map(order => String(order.sn || '').toUpperCase()));
+    const safeOrders = orders.map(order => ({ ...order, hasVoiceRecording: voiceOrderSNs.has(String(order.sn || '').toUpperCase()) }));
+    return res.json({ orders: safeOrders, data: safeOrders });
   } catch (err) {
     return next(err);
   }
@@ -310,6 +314,12 @@ function sendHtml(res, filename) {
     return res.status(404).send(`الصفحة ${filename} غير موجودة`);
   }
 
+  if (filename === 'admin.html') {
+    return fs.readFile(file, 'utf8', (err, html) => {
+      if (err) return res.status(500).send('تعذر تحميل لوحة الإدارة');
+      return res.type('html').send(html.replace('</body>', '<script src="/admin-audio-review.js" defer></script>\n</body>'));
+    });
+  }
   return res.sendFile(file);
 }
 

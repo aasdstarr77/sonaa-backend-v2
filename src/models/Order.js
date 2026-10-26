@@ -135,6 +135,10 @@ maxlength: 1000
 
 voiceRecordingData: { type: String, select: false, maxlength: 520000 },
 
+// لا يسمح بنشر الطلب الذي يحتوي على تسجيل قبل تأكيد مراجعته من الإدارة.
+voiceReviewedAt: { type: Date, default: null },
+voiceReviewedBy: { type: String, trim: true, maxlength: 120, default: '' },
+
 budget: {
 type: String,
 trim: true,
