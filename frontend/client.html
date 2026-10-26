@@ -177,7 +177,8 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--blue)!im
 @media(max-width:380px){.service-choice-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 .animate-fade{animation:fadeIn .2s ease both}
-@media(max-width:480px){main{padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right))}.client-section-tabs{top:112px}}
+.client-section-tabs{top:var(--sonaa-sticky-header-height,112px)!important;z-index:30!important}
+@media(max-width:480px){main{padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right))}}
   .global-refresh.is-refreshing svg{animation:global-refresh-spin .8s linear infinite}@keyframes global-refresh-spin{to{transform:rotate(360deg)}}
 .global-refresh-float{position:fixed;right:16px;bottom:calc(86px + env(safe-area-inset-bottom));z-index:80;width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#2563eb,#0b1b3a);color:#fff;border:2px solid #fff;box-shadow:0 8px 24px #0b1b3a35;transition:transform .18s,opacity .18s}.global-refresh-float:active{transform:scale(.94)}.global-refresh-float svg{width:23px;height:23px}.global-refresh-float.prelogin-floating{bottom:18px}
 
@@ -1542,5 +1543,34 @@ render();
 
 <script src="/web-push.js" defer></script>
 <script src="/page-visit.js" defer></script>
+<script>
+(function(){
+  let observedHeader=null;
+  let headerResizeObserver=null;
+  function syncStickyTabs(){
+    const header=document.querySelector('#app .app-header');
+    if(!header)return;
+    if(header!==observedHeader){
+      observedHeader=header;
+      if(headerResizeObserver)headerResizeObserver.disconnect();
+      if('ResizeObserver' in window){
+        headerResizeObserver=new ResizeObserver(syncStickyTabs);
+        headerResizeObserver.observe(header);
+      }
+    }
+    const height=Math.ceil(header.getBoundingClientRect().height);
+    if(!height)return;
+    document.documentElement.style.setProperty('--sonaa-sticky-header-height',height+'px');
+    document.querySelectorAll('.client-section-tabs,.fanni-dashboard-tabs').forEach(function(tabs){
+      tabs.style.top=height+'px';
+      tabs.style.zIndex='30';
+    });
+  }
+  const app=document.getElementById('app');
+  if(app)new MutationObserver(syncStickyTabs).observe(app,{childList:true,subtree:true});
+  window.addEventListener('resize',syncStickyTabs,{passive:true});
+  syncStickyTabs();
+})();
+</script>
 </body>
 </html>
