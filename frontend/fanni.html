@@ -471,7 +471,7 @@ async function loadServices(){
 
 let dashboardSpecialtiesCollapsed=true;
 function toggleDashboardSpecialties(){dashboardSpecialtiesCollapsed=!dashboardSpecialtiesCollapsed;render();}
-const forceTechnicianRegistration=new URLSearchParams(window.location.search).get('tab')==='register';
+const forceTechnicianRegistration=(new URLSearchParams(window.location.search).get('tab')||'').replace(/[\u200B-\u200D\u2060\uFEFF]/g,'').trim()==='register';
 let state={
  tab:forceTechnicianRegistration?'register':(getToken()?'myOffers':'login'),
  loginPhone:'',loginPass:'',
