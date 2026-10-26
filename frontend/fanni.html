@@ -277,6 +277,22 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
 @keyframes logoutCardIn{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
 @media(prefers-reduced-motion:reduce){.logout-confirm-overlay,.logout-confirm-card{animation:none}.logout-confirm-btn{transition:none}}
 
+
+.account-top-nav{direction:rtl!important}
+.account-top-nav .account-download-btn{color:#12633c!important;border:1px solid #a8d8bb!important;background:linear-gradient(145deg,#f4fff8 0%,#d8f5e3 100%)!important;box-shadow:0 4px 0 #a6d2b5,0 7px 12px #16653416,inset 0 1px 0 #fff!important}
+.account-top-nav .account-download-btn:active{transform:translateY(2px);box-shadow:0 1px 0 #a6d2b5!important}
+.fanni-login-gate{background:radial-gradient(ellipse at 50% 0%,#dbeafe 0%,#f4f7fb 48%,#eef2f8 100%);max-width:100%!important;margin-top:0!important;padding-top:18px;padding-bottom:24px}
+.fanni-login-gate .account-brand{height:132px;width:132px;border-radius:30px;background:linear-gradient(145deg,#fff 0%,#e8eff9 100%);border:1px solid #fff;box-shadow:0 7px 0 #cbd8ea,0 16px 24px #0b1b3a20,inset 0 2px 3px #fff;transform:perspective(700px) rotateX(3deg);filter:drop-shadow(0 10px 12px #0b1b3a16)}
+.fanni-login-gate .account-brand img{width:118px;height:118px;object-fit:contain;filter:drop-shadow(0 5px 2px #0b1b3a28) drop-shadow(0 12px 10px #0b1b3a16);transform:translateY(-2px)}
+.fanni-login-gate .account-slogan{color:#173c6c!important;font-weight:900;letter-spacing:.1px}
+.fanni-login-gate .account-panel{border:1px solid #d7e2f0!important;border-radius:25px!important;background:linear-gradient(145deg,#fff 0%,#fbfdff 100%)!important;box-shadow:0 5px 0 #dce5f1,0 18px 38px #0b1b3a16,0 3px 9px #0b1b3a08!important}
+.fanni-login-gate .account-tabs{padding:6px!important;background:linear-gradient(145deg,#e6edf7,#f8fbff)!important;border:1px solid #d5e0ef!important;border-radius:17px!important;box-shadow:inset 0 2px 4px #0b1b3a0d,0 3px 0 #dce5f1!important}
+.fanni-login-gate .account-tab{min-height:44px!important;border:1px solid transparent!important;border-radius:11px!important;font-weight:900!important}
+.fanni-login-gate .account-tab.tab-active{border-color:#42628a!important;background:linear-gradient(145deg,#315f99 0%,#173c6c 65%,#102b50 100%)!important;box-shadow:0 4px 0 #0b1b3a,0 7px 12px #0b1b3a2c,inset 0 1px 0 #ffffff40!important;color:#fff!important}
+.fanni-login-gate .account-tab.tab-idle{background:linear-gradient(145deg,#fff,#eaf0f8)!important;border-color:#d5dfed!important;color:#344965!important;box-shadow:0 3px 0 #cbd7e7,0 5px 8px #0b1b3a0d,inset 0 1px 0 #fff!important}
+body:has(.fanni-login-gate) .fanni-app-header,body:has(.fanni-login-gate) nav.fixed.bottom-0{display:none!important}
+@media(max-width:380px){.fanni-login-gate{padding-top:18px;padding-bottom:24px}.fanni-login-gate .account-panel{padding:16px!important}.fanni-login-gate .account-brand{height:108px;width:108px}.fanni-login-gate .account-brand img{height:98px;width:98px}}
+
 </style>
 </head>
 <body class="min-h-screen antialiased">
@@ -841,17 +857,20 @@ function render(){
 
  <main class="mx-auto max-w-[680px] px-3 pb-[160px]">
  ${!authenticated?`
-  <section class="fanni-login-gate mt-5">
-   <div class="fanni-login-hero rounded-2xl p-5 text-center">
-<h2 class="mt-4 text-2xl font-black">صُنّاع</h2><p class="fanni-login-slogan mt-1 text-sm font-black">كل خدمة تبدأ بخطوة</p><p class="mt-2 text-[12px] leading-6">سجّل دخولك أو أنشئ حسابك الفني واستقبل طلبات مناسبة لتخصصك ومناطق عملك.</p>
-   </div>
-
-   <div class="fanni-login-tabs mt-4 flex p-1 bg-white rounded-2xl border shadow-sm">
-    ${[['login','تسجيل الدخول'],['register','حساب فني جديد']].map(t=>`<button onclick="setTab('${t[0]}')" class="flex-1 h-11 rounded-xl text-[12px] font-extrabold ${state.tab===t[0]?'bg-[#0b1b3a] text-white':'text-slate-500'}">${t[1]}</button>`).join('')}
-   </div>
-  </section>
-
-  <section class="fanni-login-panel mt-4 panel p-5 animate-fade">
+  <section class="account-gate fanni-login-gate mt-5 px-4 py-6 flex flex-col items-center">
+   <div class="w-full max-w-[440px]">
+    <nav dir="rtl" class="account-top-nav mb-5 flex items-center justify-between gap-2"><a href="https://aasdstarr77.github.io/sonaa-download/" aria-label="تحميل تطبيق صُنّاع" title="تحميل تطبيق صُنّاع" class="account-nav-btn account-download-btn h-9 w-10 shrink-0 rounded-xl inline-flex items-center justify-center"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg></a><a href="/" aria-label="القائمة الرئيسية" title="القائمة الرئيسية" class="account-nav-btn account-home-btn h-9 px-3 rounded-xl flex items-center justify-center text-[11px] font-extrabold">⌂ القائمة الرئيسية</a><button type="button" onclick="goBack()" class="account-nav-btn h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-700 text-[11px] font-extrabold">← رجوع</button></nav>
+    <div class="text-center mb-6">
+     <div class="account-brand fanni-login-brand brand-mark mx-auto flex items-center justify-center"><img class="sonaa-logo-svg" src="/images/LOGO_UPLOAD_HERE/logo.png" alt="شعار صُنّاع" width="144" height="144" decoding="async"></div>
+     <h1 class="mt-4 text-2xl font-black">${state.tab==='register'?'تسجيل فني جديد':'تسجيل دخول الفني'}</h1>
+     <p class="account-slogan mt-1 text-sm">صُنّاع كل خدمة تبدأ بخطوة</p>
+     <p class="mt-2 text-sm leading-6 text-slate-600">${state.tab==='register'?'أنشئ حسابك الفني وحدد تخصصاتك ومناطق عملك لاستقبال الطلبات المناسبة.':'سجّل دخولك وتابع طلباتك وشغلك واستقبل طلبات العملاء من حسابك.'}</p>
+    </div>
+    <section class="fanni-login-panel account-panel mt-4 panel p-5 animate-fade">
+     <div class="account-tabs fanni-login-tabs grid grid-cols-2 gap-2">
+      <button type="button" data-tab="login" onclick="setTab(this.dataset.tab)" class="account-tab h-10 text-sm font-extrabold ${state.tab==='login'?'tab-active':'tab-idle'}">تسجيل الدخول</button>
+      <button type="button" data-tab="register" onclick="setTab(this.dataset.tab)" class="account-tab h-10 text-sm font-extrabold ${state.tab==='register'?'tab-active':'tab-idle'}">حساب جديد</button>
+     </div>
   ${state.tab==='register'?`
    <h2 class="font-extrabold text-[17px]">تسجيل فني جديد</h2>
    <p class="text-[11px] text-slate-500 mt-1 mb-5">اكتب بياناتك وحدد تخصصاتك ومنطقة العمل اللي تناسبك.</p>
@@ -895,10 +914,13 @@ function render(){
     <div><label class="field-label">رقم التليفون</label><input id="fanniLoginPhone" class="field" type="tel" inputmode="numeric" autocomplete="tel" value="${esc(state.loginPhone)}" oninput="state.loginPhone=this.value.replace(/\\D/g,'').slice(0,11);scheduleTechnicianAutoLogin()" onchange="scheduleTechnicianAutoLogin()" placeholder="01xxxxxxxxx"></div>
     <div><label class="field-label">كلمة السر</label><input id="fanniLoginPassword" type="password" class="field" autocomplete="current-password" value="${esc(state.loginPass)}" oninput="state.loginPass=this.value;scheduleTechnicianAutoLogin()" onchange="scheduleTechnicianAutoLogin()" placeholder="اكتب كلمة السر"></div>
      <p class="text-left -mt-2 mb-2"><a class="text-xs font-bold text-blue-700" href="password.html?role=fanni&mode=recovery">نسيت كلمة المرور؟</a></p>
-    <button onclick="doLogin()" ${state.loading?'disabled':''} class="primary-btn w-full h-12">${state.loading?'جاري تسجيل الدخول...':' تسجيل الدخول'}</button>
+    <button onclick="doLogin()" ${state.loading?'disabled':''} class="primary-btn w-full h-12">${state.loading?'جاري تسجيل الدخول...':'دخول إلى حسابي'}</button>
     ${state.pendingMsg?`<div class="rounded-xl bg-amber-50 border border-amber-200 p-3 text-center text-[12px] font-bold text-amber-800">${esc(state.pendingMsg)}</div>`:''}
     ${state.error?errorBox(state.error):''}
+    ${state.tab==='login'?'<p class="mt-4 text-center text-[10px] leading-5 text-slate-500">كلمة السر لا تشارك مع أي شخص.</p>':''}
    </div>`}
+  </section>
+   </div>
   </section>
  `:`
   <section class="fanni-summary-card mt-4 rounded-2xl p-3 sm:p-4">
