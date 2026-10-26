@@ -303,6 +303,7 @@ body:has(.fanni-login-gate) .fanni-app-header,body:has(.fanni-login-gate) nav.fi
 .fanni-login-gate .account-top-nav .account-nav-btn.account-home-btn{background:linear-gradient(145deg,#eff6ff 0%,#dbeafe 100%)!important;color:#1e40af!important;-webkit-text-fill-color:#1e40af!important;border:1px solid #bfdbfe!important;box-shadow:0 4px 0 #bfdbfe,0 7px 12px #1e3a8a12,inset 0 1px 0 #fff!important}
 @media(max-width:380px){.account-top-nav{gap:5px!important}.account-top-nav .account-nav-btn{padding-inline:8px!important;font-size:10px!important}}
 
+.account-switch-link{width:100%;min-height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:8px 14px;border:1px solid #bfdbfe!important;border-radius:12px!important;background:linear-gradient(145deg,#3983f6 0%,#1d4ed8 55%,#173c6c 100%)!important;color:#fff!important;font-size:14px;font-weight:900;box-shadow:0 4px 0 #123b85,0 7px 12px #1d4ed82e,inset 0 1px 0 #ffffff45!important;transition:transform .16s,box-shadow .16s}.account-switch-link small{font-size:10px;font-weight:700;opacity:.9;line-height:1.3}.account-switch-link:active{transform:translateY(3px);box-shadow:0 1px 0 #123b85!important}@media(prefers-reduced-motion:reduce){.account-switch-link{transition:none}}
 </style>
 </head>
 <body class="min-h-screen antialiased">
@@ -876,10 +877,9 @@ function render(){
      <p class="account-slogan mt-1 text-sm">صُنّاع كل خدمة تبدأ بخطوة</p>
     </div>
     <section class="fanni-login-panel account-panel mt-4 panel p-5 animate-fade">
-     <div class="account-tabs fanni-login-tabs grid grid-cols-2 gap-2">
-      <button type="button" data-tab="login" onclick="setTab(this.dataset.tab)" class="account-tab h-10 text-sm font-extrabold ${state.tab==='login'?'tab-active':'tab-idle'}">تسجيل الدخول</button>
-      <button type="button" data-tab="register" onclick="setTab(this.dataset.tab)" class="account-tab h-10 text-sm font-extrabold ${state.tab==='register'?'tab-active':'tab-idle'}">حساب جديد</button>
-     </div>
+     <div class="account-tabs fanni-login-tabs grid grid-cols-1 gap-2">
+       <button type="button" onclick="setTab(state.tab==='register'?'login':'register')" class="account-switch-link" aria-label="${state.tab==='register'?'تسجيل الدخول':'تسجيل فني جديد'}"><span>${state.tab==='register'?'لتسجيل الدخول':'لتسجيل فني جديد'}</span><small>اضغط هنا</small></button>
+      </div>
   ${state.tab==='register'?`
    <div class="space-y-4">
     <div><label class="field-label">الاسم بالكامل *</label><input class="field" autocomplete="name" value="${esc(state.regName)}" oninput="state.regName=this.value.slice(0,50)" placeholder="الاسم بالكامل"></div>
