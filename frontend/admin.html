@@ -84,6 +84,28 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
 .glass-header button:active,.glass-header a[href="password.html?role=admin&amp;mode=account"]:active,.glass-header a[href="/"]:active{transform:translateY(3px)!important;box-shadow:0 1px 0 #020b20,inset 0 1px 0 #ffffff25!important}
 .glass-header button[onclick="goBack()"]{background:linear-gradient(145deg,#ffffff28,#ffffff0b)!important}
 .glass-header button[onclick="goFanni()"]{background:linear-gradient(145deg,#315b9c,#17366c)!important;border-color:#93c5fd65!important}
+/* Prominent pulsing 3D back button in the admin header */
+.glass-header button[onclick="goBack()"]{
+  position:relative!important;
+  margin-top:7px!important;
+  min-height:36px!important;
+  height:36px!important;
+  padding:0 18px!important;
+  border:1px solid #bfdbfe!important;
+  border-radius:12px!important;
+  background:linear-gradient(145deg,#60a5fa 0%,#2563eb 48%,#1e3a8a 100%)!important;
+  box-shadow:0 5px 0 #172554,0 8px 14px #02061755,inset 0 2px 0 #ffffff75,inset 0 -2px 0 #1e3a8a!important;
+  font-size:13px!important;
+  font-weight:900!important;
+  text-shadow:0 1px 2px #172554!important;
+  animation:adminBackGlow 1.8s ease-in-out infinite;
+}
+@keyframes adminBackGlow{
+  0%,100%{filter:brightness(1);box-shadow:0 5px 0 #172554,0 8px 14px #02061755,inset 0 2px 0 #ffffff75,inset 0 -2px 0 #1e3a8a}
+  50%{filter:brightness(1.28);box-shadow:0 5px 0 #172554,0 0 8px #60a5fa,0 0 17px #3b82f6a8,inset 0 2px 0 #ffffffa0,inset 0 -2px 0 #1e3a8a}
+}
+@media(prefers-reduced-motion:reduce){.glass-header button[onclick="goBack()"]{animation:none!important}}
+
 .glass-header a[href="password.html?role=admin&amp;mode=account"]{background:linear-gradient(145deg,#3b82f6,#1e40af)!important;border-color:#93c5fd!important}
 .glass-header a[href="password.html?role=admin&amp;mode=account"]{position:relative!important;transform:translateY(-1px);border:1px solid #bfdbfe!important;background:linear-gradient(145deg,#60a5fa 0%,#2563eb 52%,#1e3a8a 100%)!important;box-shadow:0 5px 0 #172554,0 8px 14px #02061745,inset 0 2px 0 #ffffff75,inset 0 -2px 0 #1e3a8a!important;text-shadow:0 1px 2px #172554!important}
 .glass-header a[href="/"]{background:linear-gradient(145deg,#0f766e,#115e59)!important;border-color:#5eead4!important}
