@@ -249,6 +249,21 @@ router.get('/counts', auth('admin'), async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.patch('/fannis/:id/password', auth('admin'), async (req, res, next) => {
+  try {
+    if (!validId(req.params.id)) return sendBadId(res);
+    const schema = Joi.object({ newPassword: Joi.string().min(8).max(128).required(), confirmPassword: Joi.string().required() }).required();
+    const { error, value } = schema.validate(req.body || {}, { abortEarly: false, stripUnknown: true });
+    if (error || value.newPassword !== value.confirmPassword) return res.status(400).json({ message: 'كلمة السر يجب ألا تقل عن 8 أحرف، والتأكيد يجب أن يطابقها.' });
+    const fanni = await Fanni.findOne({ _id: req.params.id, role: 'fanni' }).select('+passwordHash');
+    if (!fanni) return res.status(404).json({ message: 'حساب الفني غير موجود.' });
+    fanni.passwordHash = await bcrypt.hash(value.newPassword, 12);
+    await fanni.save();
+    await writeAdminAudit(req, 'تغيير كلمة سر فني', 'fannis', String(fanni._id), 'تغيير كلمة سر الحساب من لوحة الإدارة دون تسجيل كلمة السر');
+    return res.json({ message: 'تم تغيير كلمة سر الفني بنجاح.' });
+  } catch (err) { next(err); }
+});
+
 router.get('/fannis', auth('admin'), async (req, res, next) => {
   try {
     const list = await Fanni.find({ $or: [ { role: 'fanni' }, { role: { $ne: 'admin' }, specialties: { $exists: true, $ne: [] }, adminRole: null } ] }).select('-passwordHash').sort({ createdAt: -1 }).limit(MAX_LIST_LIMIT).lean();
@@ -1511,6 +1526,22 @@ router.get('/support/violations', auth('admin'), async (req, res, next) => {
   try { const logs = await AdminAuditLog.find({ category: 'support' }).sort({ createdAt: -1 }).limit(200).lean(); return res.json({ violations: logs, items: logs }); }
   catch (err) { next(err); }
 });
+router.patch('/clients/:phone/password', auth('admin'), async (req, res, next) => {
+  try {
+    const phone = normalizePhone(String(req.params.phone || '').trim());
+    if (!phone || !/^01[0-9]{9}$/.test(phone)) return res.status(400).json({ message: 'رقم هاتف العميل غير صالح.' });
+    const schema = Joi.object({ newPassword: Joi.string().min(8).max(128).required(), confirmPassword: Joi.string().required() }).required();
+    const { error, value } = schema.validate(req.body || {}, { abortEarly: false, stripUnknown: true });
+    if (error || value.newPassword !== value.confirmPassword) return res.status(400).json({ message: 'كلمة السر يجب ألا تقل عن 8 أحرف، والتأكيد يجب أن يطابقها.' });
+    const client = await Client.findOne({ phone }).select('+passwordHash');
+    if (!client) return res.status(404).json({ message: 'حساب العميل المسجل غير موجود.' });
+    client.passwordHash = await bcrypt.hash(value.newPassword, 12);
+    await client.save();
+    await writeAdminAudit(req, 'تغيير كلمة سر عميل', 'clients', phone, 'تغيير كلمة سر الحساب من لوحة الإدارة دون تسجيل كلمة السر');
+    return res.json({ message: 'تم تغيير كلمة سر العميل بنجاح.' });
+  } catch (err) { next(err); }
+});
+
 router.get('/clients', auth('admin'), async (req, res, next) => {
   try {
     const q = String(req.query.search || '').trim().slice(0, 100);
