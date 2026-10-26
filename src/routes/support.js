@@ -36,6 +36,16 @@ async function createCase(req, res, role) {
   const text = cleanText(req.body?.text);
   const subject = cleanText(req.body?.subject, 120) || 'استفسار عام';
   if (text.length < 1) return res.status(400).json({ message: 'اكتب رسالتك أولًا.' });
+  const existing = await SupportCase.findOne({
+    ...ownerFilter(role, owner._id),
+    status: { $nin: ['تم الحل', 'مغلقة'] }
+  }).sort({ lastMessageAt: -1 });
+  if (existing) {
+    return res.status(200).json({
+      message: 'عندك بالفعل محادثة دعم مفتوحة. تم فتح المحادثة السابقة؛ ابعت رسالتك فيها بدل إنشاء طلب جديد.',
+      supportCase: publicCase(existing), existing: true
+    });
+  }
   const item = await SupportCase.create({
     ...ownerFilter(role, owner._id),
     ownerName: cleanText(owner.name, 100),
