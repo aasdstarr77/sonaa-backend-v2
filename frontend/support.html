@@ -157,7 +157,7 @@ function renderMessages(target,item,adminMode){
  $(target).innerHTML=msgs.length?msgs.map(m=>{
   const mine=adminMode?m.senderRole==='admin':m.senderRole===role;
   const sender=m.senderRole==='admin'?'دعم صُنّاع':m.senderRole==='assistant'?'المساعد الذكي':mine?'أنت':role==='fanni'?'الفني':'العميل';
-  const removeButton=adminMode&&m._id?'<button type="button" class="btn secondary" style="margin-top:8px;padding:6px 10px;font-size:12px" onclick="deleteSupportMessage(&quot;'+esc(item._id)+'&quot;,&quot;'+esc(m._id)+'&quot;)">مسح الرسالة</button>':'';
+  const removeButton=adminMode&&m._id?'<div style="display:flex;justify-content:flex-start;margin-top:10px"><button type="button" style="display:inline-flex!important;align-items:center;gap:6px;background:#b91c1c!important;color:#fff!important;border:1px solid #991b1b!important;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:700;cursor:pointer;visibility:visible!important;opacity:1!important" onclick="deleteSupportMessage(&quot;'+esc(item._id)+'&quot;,&quot;'+esc(m._id)+'&quot;)">🗑 حذف الرسالة</button></div>':'';
   return '<article class="message '+(mine?'mine':adminMode?'admin':'')+'"><div class="meta">'+esc(sender)+' • '+esc(dateLabel(m.createdAt))+'</div><div class="body">'+esc(m.text)+'</div>'+removeButton+'</article>';
  }).join(''):'<p class="muted">لا توجد رسائل في هذه المحادثة.</p>';
 }
