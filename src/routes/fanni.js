@@ -227,33 +227,20 @@ router.get('/me', auth(), requireFanni, async (req, res) => {
 router.patch('/me', auth(), requireFanni, validate(profileUpdateSchema), async (req, res, next) => {
   try {
     const phone = normalizePhone(req.body.phone);
-    if (!phone || !/^01[0-9]{9}$/.test(phone)) {
-      return res.status(400).json({ message: 'رقم الهاتف غير صحيح' });
-    }
-
+    if (!phone || !/^01[0-9]{9}$/.test(phone)) return res.status(400).json({ message: 'رقم الهاتف غير صحيح' });
+    if (req.user.pendingProfileChange?.requestedAt) return res.status(409).json({ message: 'لديك طلب تعديل بيانات قيد مراجعة الإدارة. انتظر القرار قبل إرسال طلب جديد.' });
     const duplicate = await Fanni.findOne({ phone, _id: { $ne: req.user._id } }).select('_id');
-    if (duplicate) {
-      return res.status(409).json({ message: 'رقم الهاتف مسجل بالفعل في حساب آخر' });
-    }
-
+    if (duplicate) return res.status(409).json({ message: 'رقم الهاتف مسجل بالفعل في حساب آخر' });
     const specialties = [...new Set(req.body.specialties.map(value => String(value).trim()).filter(Boolean))];
     const areas = [...new Set(req.body.areas.map(value => String(value).trim()).filter(value => value.length >= 2))];
     if (!specialties.length) return res.status(400).json({ message: 'اختار تخصصًا واحدًا على الأقل' });
     if (!areas.length) return res.status(400).json({ message: 'اكتب منطقة عمل واحدة على الأقل' });
-
-    req.user.phone = phone;
-    req.user.specialties = specialties;
-    req.user.areas = areas;
+    req.user.pendingProfileChange = { phone, specialties, areas, requestedAt: new Date() };
+    req.user.decisions.push({ action: 'طلب تعديل بيانات', reason: 'طلب الفني تغيير بيانات حسابه', date: new Date(), by: String(req.user.name || 'الفني'), byId: req.user._id, meta: { phone, specialties, areas } });
     await req.user.save();
-
-    return res.set('Cache-Control', 'no-store').json({
-      message: 'تم تحديث بيانات حسابك بنجاح',
-      user: req.user.toSafeJSON()
-    });
+    return res.set('Cache-Control', 'no-store').json({ message: 'تم إرسال طلب تعديل بياناتك للإدارة. بيانات حسابك الحالية ستظل كما هي لحين الموافقة.', user: req.user.toSafeJSON(), pendingProfileChange: req.user.pendingProfileChange });
   } catch (err) {
-    if (err && err.code === 11000) {
-      return res.status(409).json({ message: 'رقم الهاتف مسجل بالفعل في حساب آخر' });
-    }
+    if (err && err.code === 11000) return res.status(409).json({ message: 'رقم الهاتف مسجل بالفعل في حساب آخر' });
     next(err);
   }
 });
