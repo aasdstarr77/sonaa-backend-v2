@@ -1469,7 +1469,7 @@ async function saveProfileChanges(){
   if(!updated||typeof updated!=='object')throw new Error('تم الحفظ لكن بيانات الحساب لم تصل من السيرفر. حدّث الصفحة للتأكد.');
   currentUser={...(currentUser||{}),...updated};setAuth(getToken(),currentUser);
   state.editProfileMode=false;state.editSaving=false;state.error='';state.success='';render();
-  toast(result.message||'تم تحديث بيانات حسابك بنجاح');
+  toast(result.message||'تم إرسال طلب تعديل البيانات للإدارة للمراجعة');
  }catch(e){state.editSaving=false;state.error=e.message||'تعذر تحديث البيانات';render();}
 }
 
