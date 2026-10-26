@@ -314,12 +314,6 @@ function sendHtml(res, filename) {
     return res.status(404).send(`الصفحة ${filename} غير موجودة`);
   }
 
-  if (filename === 'admin.html') {
-    return fs.readFile(file, 'utf8', (err, html) => {
-      if (err) return res.status(500).send('تعذر تحميل لوحة الإدارة');
-      return res.type('html').send(html.includes('src="/admin-audio-review.js"') ? html : html.replace('</body>', '<script src="/admin-audio-review.js" defer></script>\n</body>'));
-    });
-  }
   return res.sendFile(file);
 }
 
