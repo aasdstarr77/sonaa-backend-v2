@@ -758,7 +758,7 @@ function notificationPanel(){
 document.addEventListener('click',function(event){var item=event.target.closest('[data-notification-id]');if(item)openNotification(item.getAttribute('data-notification-id'));});
 document.addEventListener('focusout',function(){if(!clientLiveRenderPending||!state.account||!['orders','track'].includes(state.tab))return;setTimeout(function(){if(clientLiveRenderPending&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)){clientLiveRenderPending=false;const scrollY=window.scrollY||window.pageYOffset||0;render();window.scrollTo({top:scrollY,left:0,behavior:'instant'});focusClientPostAction();}},0);});
 function render(){
-  if(forceClientRegistration){renderAccountGate();return;}
+  if(forceClientRegistration&&!state.account){renderAccountGate();return;}
   if(state.accountInitializing&&!state.accountToken){renderAccountGate();return;}
   if(!state.account){
     if(state.accountToken&&state.accountInitializing){
