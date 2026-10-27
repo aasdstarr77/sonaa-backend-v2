@@ -133,7 +133,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
 .stat-card{background:linear-gradient(180deg,#fff 0%,#f8fbff 100%);border:1px solid #e6eefc;border-radius:18px;padding:14px;text-align:center}
 ::-webkit-scrollbar{width:5px;height:5px} ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:99px}
   .global-refresh.is-refreshing svg{animation:global-refresh-spin .8s linear infinite}@keyframes global-refresh-spin{to{transform:rotate(360deg)}}
-body.admin-layout-touch-editor #app button,body.admin-layout-touch-editor #app a,body.admin-layout-touch-editor #app section,body.admin-layout-touch-editor #app article,body.admin-layout-touch-editor #app header,body.admin-layout-touch-editor #app main,body.admin-layout-touch-editor #app form,body.admin-layout-touch-editor #app label,body.admin-layout-touch-editor #app h1,body.admin-layout-touch-editor #app h2,body.admin-layout-touch-editor #app h3,body.admin-layout-touch-editor #app h4,body.admin-layout-touch-editor #app p,body.admin-layout-touch-editor #app img,body.admin-layout-touch-editor #app svg,body.admin-layout-touch-editor #app div,body.admin-layout-touch-editor #app span,body.admin-layout-touch-editor #app input,body.admin-layout-touch-editor #app select,body.admin-layout-touch-editor #app textarea{touch-action:none}body.admin-layout-touch-editor #app #admin-element-drag-toolbar,body.admin-layout-touch-editor #app #admin-element-drag-toolbar *,body.admin-layout-touch-editor #app #admin-drag-toggle,body.admin-layout-touch-editor #app .layout-toolbar,body.admin-layout-touch-editor #app .layout-toolbar *,body.admin-layout-touch-editor #app .layout-item-controls,body.admin-layout-touch-editor #app .layout-item-controls *,body.admin-layout-touch-editor #app .layout-control{touch-action:pan-y}</style>
+body.admin-layout-touch-editor #app [data-admin-layout-selected="1"]{outline:3px solid #f59e0b!important;outline-offset:3px}body.admin-layout-touch-editor #app button,body.admin-layout-touch-editor #app a,body.admin-layout-touch-editor #app section,body.admin-layout-touch-editor #app article,body.admin-layout-touch-editor #app header,body.admin-layout-touch-editor #app main,body.admin-layout-touch-editor #app form,body.admin-layout-touch-editor #app label,body.admin-layout-touch-editor #app h1,body.admin-layout-touch-editor #app h2,body.admin-layout-touch-editor #app h3,body.admin-layout-touch-editor #app h4,body.admin-layout-touch-editor #app p,body.admin-layout-touch-editor #app img,body.admin-layout-touch-editor #app svg,body.admin-layout-touch-editor #app div,body.admin-layout-touch-editor #app span,body.admin-layout-touch-editor #app input,body.admin-layout-touch-editor #app select,body.admin-layout-touch-editor #app textarea{touch-action:none}body.admin-layout-touch-editor #app #admin-element-drag-toolbar,body.admin-layout-touch-editor #app #admin-element-drag-toolbar *,body.admin-layout-touch-editor #app #admin-drag-toggle,body.admin-layout-touch-editor #app .layout-toolbar,body.admin-layout-touch-editor #app .layout-toolbar *,body.admin-layout-touch-editor #app .layout-item-controls,body.admin-layout-touch-editor #app .layout-item-controls *,body.admin-layout-touch-editor #app .layout-control{touch-action:pan-y}</style>
 </head>
 <body class="min-h-screen antialiased">
 <div id="app"></div>
@@ -276,14 +276,41 @@ function applyAdminElementPositions(){
  app.querySelectorAll('*').forEach(el=>{
   if(el.closest('#admin-element-drag-toolbar'))return;
   if(!el.dataset.adminLayoutKey)el.dataset.adminLayoutKey=adminElementKey(el);
-  const pos=state.adminUiLayout?.elements?.[el.dataset.adminLayoutKey];
-  if(pos&&(pos.x!==undefined||pos.y!==undefined))el.style.translate=(Number(pos.x||0))+'px '+(Number(pos.y||0))+'px';
+  const pos=state.adminUiLayout?.elements?.[el.dataset.adminLayoutKey];if(!pos)return;
+  if(pos.x!==undefined||pos.y!==undefined)el.style.translate=Number(pos.x||0)+'px '+Number(pos.y||0)+'px';
+  if(pos.fontSize)el.style.fontSize=Number(pos.fontSize)+'px';
+  if(pos.width){el.style.width=Number(pos.width)+'%';el.style.maxWidth='100%';}
+  if(pos.background)el.style.setProperty('background',pos.background,'important');
+  if(pos.color){el.style.setProperty('color',pos.color,'important');el.querySelectorAll('*').forEach(ch=>{if(!['IMG','VIDEO','CANVAS'].includes(ch.tagName))ch.style.setProperty('color',pos.color,'important')});}
+  if(pos.radius!==undefined)el.style.borderRadius=Number(pos.radius)+'px';
+  if(typeof pos.text==='string'&&!el.children.length&&el.textContent!==pos.text)el.textContent=pos.text;
+  el.style.display=pos.hidden?'none':'';
  });
+}
+let adminSelectedKey='',adminSelectedElement=null;
+function adminSelectedStyle(){return state.adminUiLayout?.elements?.[adminSelectedKey]||{};}
+function setAdminElementStyle(prop,value){
+ if(!adminSelectedKey)return;
+ const all={...(state.adminUiLayout.elements||{})},item={...(all[adminSelectedKey]||{})};
+ if(value===null||value==='')delete item[prop];else item[prop]=value;
+ if(Object.keys(item).length)all[adminSelectedKey]=item;else delete all[adminSelectedKey];
+ state.adminUiLayout={...state.adminUiLayout,elements:all};applyAdminElementPositions();updateAdminEditorControls();
+}
+function selectAdminElement(el){
+ if(adminSelectedElement&&adminSelectedElement!==el)delete adminSelectedElement.dataset.adminLayoutSelected;
+ adminSelectedElement=el;adminSelectedKey=el.dataset.adminLayoutKey||adminElementKey(el);el.dataset.adminLayoutKey=adminSelectedKey;el.dataset.adminLayoutSelected='1';updateAdminEditorControls();
+}
+function updateAdminEditorControls(){
+ const bar=document.getElementById('admin-element-drag-toolbar');if(!bar)return;
+ const s=adminSelectedStyle(),label=bar.querySelector('#admin-editor-selected-label');
+ if(label)label.textContent=adminSelectedElement?(adminSelectedElement.innerText||adminSelectedElement.tagName).trim().slice(0,55):'اضغط مطولًا على عنصر لاختياره وتحريكه';
+ [['font','fontSize',16],['width','width',100],['radius','radius',12],['x','x',0],['y','y',0]].forEach(([id,p,d])=>{const input=bar.querySelector('#admin-editor-'+id),val=bar.querySelector('#admin-editor-'+id+'-val');if(input)input.value=s[p]??d;if(val)val.textContent=(s[p]??d)+(id==='width'?'%':'')});
+ const bg=bar.querySelector('#admin-editor-bg'),color=bar.querySelector('#admin-editor-color'),txt=bar.querySelector('#admin-editor-text');if(bg)bg.value=s.background||'#ffffff';if(color)color.value=s.color||'#0f172a';if(txt){txt.value=adminSelectedElement&&!adminSelectedElement.children.length?(s.text??adminSelectedElement.textContent.trim()).slice(0,200):'';txt.disabled=!!(adminSelectedElement&&adminSelectedElement.children.length)}
 }
 let adminPointerDrag=null,adminSuppressClickUntil=0;
 function renderAdminLayoutDock(){
  const sections=orderedAdminSections();
- let html='<div style="font-size:12px;font-weight:900;margin-bottom:5px">✦ تعديل واجهة صُنّاع مباشرة</div><div style="font-size:10px;color:#cbd5e1;margin-bottom:7px">حرّك الأقسام والأزرار من القائمة، أو اسحبها داخل اللوحة. السحب لا يفتح الزر.</div><div style="max-height:27vh;overflow:auto;border:1px solid #334155;border-radius:10px;padding:5px">';
+ let html='<div style="font-size:13px;font-weight:900;margin-bottom:4px">✦ محرر واجهة صُنّاع</div><div id="admin-editor-selected-label" style="font-size:10px;color:#cbd5e1;margin-bottom:7px">اضغط مطولًا على عنصر لاختياره وتحريكه</div><div class="editor-controls" style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-bottom:8px"><label>حجم الخط <input id="admin-editor-font" type="range" min="10" max="36" value="16"><span id="admin-editor-font-val">16</span></label><label>عرض العنصر <input id="admin-editor-width" type="range" min="30" max="100" value="100"><span id="admin-editor-width-val">100%</span></label><label>الخلفية <input id="admin-editor-bg" type="color" value="#ffffff"></label><label>لون النص <input id="admin-editor-color" type="color" value="#0f172a"></label><label>استدارة <input id="admin-editor-radius" type="range" min="0" max="40" value="12"><span id="admin-editor-radius-val">12</span></label><label>تحريك أفقي <input id="admin-editor-x" type="range" min="-2000" max="2000" value="0"><span id="admin-editor-x-val">0</span></label><label>تحريك رأسي <input id="admin-editor-y" type="range" min="-2000" max="2000" value="0"><span id="admin-editor-y-val">0</span></label><label>تعديل النص <input id="admin-editor-text" type="text" maxlength="200" style="width:140px;color:#0b1b3a;border-radius:7px;padding:5px"></label><button type="button" id="admin-editor-apply-text">تطبيق النص</button><button type="button" id="admin-editor-hide">إخفاء/إظهار</button><button type="button" id="admin-editor-reset">مسح تنسيق العنصر</button></div><div style="font-size:11px;font-weight:900;color:#bfdbfe;margin-bottom:5px">ترتيب أقسام وأزرار الإدارة</div><div style="font-size:10px;color:#cbd5e1;margin-bottom:7px">رتّب الأقسام وغيّر أحجامها من القائمة، أو اسحب عناصر الواجهة بعد ضغطة مطوّلة.</div><div style="max-height:22vh;overflow:auto;border:1px solid #334155;border-radius:10px;padding:5px">';
  sections.forEach((section,si)=>{
   html+='<div style="padding:5px 2px;border-bottom:1px solid #334155"><div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap"><strong style="flex:1;min-width:100px;font-size:11px">'+escHtml(section.icon+' '+section.label)+'</strong><button type="button" class="layout-control" '+(si===0?'disabled':'')+' onclick="moveAdminSection(\''+section.id+'\',-1)">↑</button><button type="button" class="layout-control" '+(si===sections.length-1?'disabled':'')+' onclick="moveAdminSection(\''+section.id+'\',1)">↓</button></div>';
   orderedAdminTabs(section).forEach((tab,ti,arr)=>{
@@ -300,7 +327,11 @@ function ensureAdminElementToolbar(){
  if(!state.layoutEditMode||!isRootAdminUI()){if(bar)bar.remove();return;}
  if(!bar){bar=document.createElement('div');bar.id='admin-element-drag-toolbar';bar.style.cssText='position:fixed;z-index:99999;bottom:0;left:0;right:0;max-height:49vh;overflow:auto;padding:9px 12px calc(10px + env(safe-area-inset-bottom));background:#0b1b3a;color:white;display:block;box-shadow:0 -8px 24px #0b1b3a35;font-family:Cairo,sans-serif';document.body.appendChild(bar);}
  bar.innerHTML=renderAdminLayoutDock();
- bar.querySelector('#admin-drag-save').onclick=saveAdminUiLayout;bar.querySelector('#admin-drag-cancel').onclick=cancelAdminLayoutEdit;
+ ['font','width','bg','color','radius','x','y'].forEach(id=>bar.querySelector('#admin-editor-'+id).addEventListener('input',e=>setAdminElementStyle(({font:'fontSize',width:'width',bg:'background',color:'color',radius:'radius',x:'x',y:'y'})[id],['font','width','radius','x','y'].includes(id)?Number(e.target.value):e.target.value)));
+ bar.querySelector('#admin-editor-apply-text').onclick=()=>{if(!adminSelectedElement)return showToast('اختَر عنصرًا أولًا','error');if(adminSelectedElement.children.length)return showToast('اختَر عنصرًا نصيًا بسيطًا','error');setAdminElementStyle('text',bar.querySelector('#admin-editor-text').value.slice(0,200));};
+ bar.querySelector('#admin-editor-hide').onclick=()=>setAdminElementStyle('hidden',!adminSelectedStyle().hidden);
+ bar.querySelector('#admin-editor-reset').onclick=()=>{if(!adminSelectedKey)return;const all={...(state.adminUiLayout.elements||{})};delete all[adminSelectedKey];state.adminUiLayout={...state.adminUiLayout,elements:all};applyAdminElementPositions();updateAdminEditorControls();};
+ bar.querySelector('#admin-drag-save').onclick=saveAdminUiLayout;bar.querySelector('#admin-drag-cancel').onclick=cancelAdminLayoutEdit;updateAdminEditorControls();
 }
 document.addEventListener('pointerdown',event=>{
  if(event.pointerType==='touch')return;
@@ -309,7 +340,7 @@ document.addEventListener('pointerdown',event=>{
  if(event.pointerType==='mouse'&&!event.shiftKey&&event.target.closest('.section-nav-group,.layout-item-row'))return;
  const el=event.target.closest('button,a,section,article,header,main,form,label,h1,h2,h3,h4,p,img,svg,div,span,input,select,textarea');if(!el||el.id==='app')return;
  event.preventDefault();event.stopImmediatePropagation();
- const key=el.dataset.adminLayoutKey||adminElementKey(el);el.dataset.adminLayoutKey=key;
+ const key=el.dataset.adminLayoutKey||adminElementKey(el);el.dataset.adminLayoutKey=key;selectAdminElement(el);
  const pos=state.adminUiLayout.elements?.[key]||{};
  adminPointerDrag={el,key,pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,baseX:Number(pos.x||0),baseY:Number(pos.y||0),moved:false};
  try{el.setPointerCapture(event.pointerId)}catch(_){}
@@ -328,7 +359,7 @@ function finishAdminPointerDrag(event){if(!adminPointerDrag||event.pointerId!==a
 document.addEventListener('click',event=>{if(Date.now()>adminSuppressClickUntil)return;adminSuppressClickUntil=0;event.preventDefault();event.stopImmediatePropagation();},true);
 document.addEventListener('pointerup',finishAdminPointerDrag,true);document.addEventListener('pointercancel',finishAdminPointerDrag,true);
 let adminTouchDrag=null,adminTouchTimer=null;
-document.addEventListener('touchstart',event=>{if(!state.layoutEditMode||!isRootAdminUI()||event.touches.length!==1||event.target.closest('#admin-element-drag-toolbar,#admin-drag-toggle,.layout-toolbar,.layout-item-controls,.layout-control'))return;const app=document.getElementById('app');if(!app||!app.contains(event.target))return;const el=event.target.closest('button,a,section,article,header,main,form,label,h1,h2,h3,h4,p,img,svg,div,span,input,select,textarea');if(!el||el.id==='app')return;const t=event.touches[0],key=el.dataset.adminLayoutKey||adminElementKey(el),pos=state.adminUiLayout.elements?.[key]||{};el.dataset.adminLayoutKey=key;const d={el,key,startX:t.clientX,startY:t.clientY,lastX:t.clientX,lastY:t.clientY,baseX:Number(pos.x||0),baseY:Number(pos.y||0),active:false,scrollMode:false,moved:false};adminTouchDrag=d;adminTouchTimer=setTimeout(()=>{if(adminTouchDrag!==d)return;d.active=true;el.style.cursor='grabbing'},450);},{capture:true,passive:true});
+document.addEventListener('touchstart',event=>{if(!state.layoutEditMode||!isRootAdminUI()||event.touches.length!==1||event.target.closest('#admin-element-drag-toolbar,#admin-drag-toggle,.layout-toolbar,.layout-item-controls,.layout-control'))return;const app=document.getElementById('app');if(!app||!app.contains(event.target))return;const el=event.target.closest('button,a,section,article,header,main,form,label,h1,h2,h3,h4,p,img,svg,div,span,input,select,textarea');if(!el||el.id==='app')return;const t=event.touches[0],key=el.dataset.adminLayoutKey||adminElementKey(el),pos=state.adminUiLayout.elements?.[key]||{};el.dataset.adminLayoutKey=key;const d={el,key,startX:t.clientX,startY:t.clientY,lastX:t.clientX,lastY:t.clientY,baseX:Number(pos.x||0),baseY:Number(pos.y||0),active:false,scrollMode:false,moved:false};adminTouchDrag=d;adminTouchTimer=setTimeout(()=>{if(adminTouchDrag!==d)return;d.active=true;selectAdminElement(el);el.style.cursor='grabbing'},450);},{capture:true,passive:true});
 document.addEventListener('touchmove',event=>{if(!adminTouchDrag||event.touches.length!==1)return;const t=event.touches[0],d=adminTouchDrag,dx=t.clientX-d.startX,dy=t.clientY-d.startY;if(!d.active){event.preventDefault();if(Math.abs(dx)+Math.abs(dy)>8){d.scrollMode=true;clearTimeout(adminTouchTimer);adminTouchTimer=null;}if(d.scrollMode)window.scrollBy(d.lastX-t.clientX,d.lastY-t.clientY);d.lastX=t.clientX;d.lastY=t.clientY;return;}event.preventDefault();if(Math.abs(dx)+Math.abs(dy)>2)d.moved=true;const x=Math.max(-2000,Math.min(2000,Math.round(d.baseX+dx))),y=Math.max(-2000,Math.min(2000,Math.round(d.baseY+dy)));state.adminUiLayout={...state.adminUiLayout,elements:{...(state.adminUiLayout.elements||{}),[d.key]:{...(state.adminUiLayout.elements?.[d.key]||{}),x,y}}};d.el.style.translate=x+'px '+y+'px';},{capture:true,passive:false});
 function finishAdminTouch(){if(!adminTouchDrag)return;clearTimeout(adminTouchTimer);adminTouchTimer=null;if(adminTouchDrag.active&&adminTouchDrag.moved)adminSuppressClickUntil=Date.now()+700;adminTouchDrag.el.style.cursor='';adminTouchDrag=null;}
 document.addEventListener('touchend',finishAdminTouch,{capture:true,passive:true});document.addEventListener('touchcancel',finishAdminTouch,{capture:true,passive:true});
