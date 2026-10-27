@@ -11,6 +11,7 @@ const Fanni = require('../models/Fanni');
 const Rating = require('../models/Rating');
 const WalletTransaction = require('../models/WalletTransaction');
 const AdminConfig = require('../models/AdminConfig');
+const AdminAuditLog = require('../models/AdminAuditLog');
 const { auth } = require('../middleware/auth');
 const { clientAuth } = require('../middleware/clientAuth');
 const { generateSN } = require('../utils/generateSN');
@@ -22,6 +23,22 @@ const {
 } = require('../config/professions');
 
 const router = express.Router();
+
+async function writeOrderAdminAudit(req, action, target, details) {
+  try {
+    await AdminAuditLog.create({
+      action: String(action || '').slice(0, 100),
+      category: 'orders',
+      target: String(target || '').slice(0, 200),
+      details: String(details || '').slice(0, 1000),
+      adminName: String(req.user?.name || req.user?.phone || req.user?.email || 'admin').slice(0, 120),
+      adminId: String(req.user?._id || req.userId || ''),
+      ip: String(req.ip || '').slice(0, 80)
+    });
+  } catch (err) {
+    console.error('Could not write order admin audit log:', err.message);
+  }
+}
 
 const ACTIVE_STATUSES = ['تم النشر', 'وصلتك عروض'];
 const ORDER_EXPIRY_HOURS = 48;
@@ -491,6 +508,7 @@ router.post('/admin/:sn/voice-reviewed', auth('admin'), async (req, res, next) =
     order.voiceReviewedAt = new Date();
     order.voiceReviewedBy = String(req.userId || req.user?._id || req.user?.email || 'admin').slice(0, 120);
     await order.save();
+    await writeOrderAdminAudit(req, 'تأكيد مراجعة تسجيل صوتي', sn, 'تم تأكيد مراجعة التسجيل الصوتي للطلب قبل النشر');
     return res.json({ message: 'تم تسجيل مراجعة الفويس. يمكنك الآن نشر الطلب بعد مراجعة باقي البيانات.', voiceReviewedAt: order.voiceReviewedAt });
   } catch (err) { return next(err); }
 });
@@ -552,6 +570,7 @@ router.post('/admin/:sn/publish', auth('admin'), async (req, res, next) => {
     }
 
     const safeOrder = publicOrder(order);
+    await writeOrderAdminAudit(req, 'نشر طلب للفنيين', sn, JSON.stringify({ service: order.service, area: order.area, notifiedEligibleTechnicians: eligibleFannis.length }));
 
     return res.json({
       message: 'تم نشر الطلب للفنيين المعتمدين بنجاح',
