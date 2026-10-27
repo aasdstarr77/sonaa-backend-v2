@@ -333,6 +333,32 @@ async function run() {
       assert.equal(r.body.supportCase.needsHuman, true, 'owner follow-up should return the case to the human-support queue');
     });
 
+    await test('admin button layout is shared, persisted, and safely sanitized', async () => {
+      const unauthorized = await request(app).get('/api/admin/layout');
+      assert.equal(unauthorized.status, 401);
+
+      const saved = await request(app).put('/api/admin/layout')
+        .set('Authorization', 'Bearer ' + adminToken)
+        .send({ layout: {
+          sectionOrder: ['platform-admin', 'dashboard', 'unknown-section', 'dashboard'],
+          tabOrder: { dashboard: ['stats', 'orders', 'dashboard', 'not-a-tab'] },
+          tabGroups: { orders: 'dashboard', dashboard: 'invalid-section' },
+          sizes: { orders: 'large', dashboard: 'tiny', stats: 'small', unknown: 'large' }
+        } });
+      assert.equal(saved.status, 200);
+      assert.deepEqual(saved.body.layout.sectionOrder, ['platform-admin', 'dashboard']);
+      assert.deepEqual(saved.body.layout.tabOrder.dashboard, ['stats', 'orders', 'dashboard']);
+      assert.equal(saved.body.layout.tabGroups.orders, 'dashboard');
+      assert.equal(saved.body.layout.tabGroups.dashboard, undefined);
+      assert.equal(saved.body.layout.sizes.orders, 'large');
+      assert.equal(saved.body.layout.sizes.dashboard, undefined);
+      assert.equal(saved.body.layout.sizes.stats, 'small');
+      const loaded = await request(app).get('/api/admin/layout')
+        .set('Authorization', 'Bearer ' + adminToken);
+      assert.equal(loaded.status, 200);
+      assert.deepEqual(loaded.body.layout, saved.body.layout);
+    });
+
     await test('admin API rejects requests without a token', async () => {
       const r = await request(app).get('/api/admin/settings');
       assert.equal(r.status, 401);

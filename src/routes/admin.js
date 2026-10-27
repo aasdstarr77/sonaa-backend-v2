@@ -1420,6 +1420,62 @@ router.delete('/notifications/direct/:id', auth('admin'), async (req, res, next)
   } catch (error) { return next(error); }
 });
 
+const ADMIN_LAYOUT_SECTIONS = {
+  dashboard: ['dashboard', 'stats'],
+  clients: ['clients', 'orders'],
+  technicians: ['fannis', 'pending', 'profileEdits', 'disabled', 'levels', 'offers', 'wallets', 'topups'],
+  'service-management': ['services', 'regions'],
+  'customer-operations': ['complaints', 'support', 'notifications', 'content'],
+  'platform-admin': ['pricing', 'reports', 'pageVisits', 'security', 'settings', 'roles']
+};
+const ADMIN_LAYOUT_TABS = Object.values(ADMIN_LAYOUT_SECTIONS).flat();
+function sanitizeAdminUiLayout(input) {
+  const source = input && typeof input === 'object' && !Array.isArray(input) ? input : {};
+  const sectionOrder = Array.isArray(source.sectionOrder)
+    ? [...new Set(source.sectionOrder.filter(id => Object.prototype.hasOwnProperty.call(ADMIN_LAYOUT_SECTIONS, id)))].slice(0, 6)
+    : [];
+  const tabOrder = {};
+  for (const [sectionId, allowed] of Object.entries(ADMIN_LAYOUT_SECTIONS)) {
+    const proposed = Array.isArray(source.tabOrder?.[sectionId]) ? source.tabOrder[sectionId] : [];
+    tabOrder[sectionId] = [...new Set(proposed.filter(id => ADMIN_LAYOUT_TABS.includes(id)))].slice(0, ADMIN_LAYOUT_TABS.length);
+  }
+  const tabGroups = {};
+  if (source.tabGroups && typeof source.tabGroups === 'object' && !Array.isArray(source.tabGroups)) {
+    for (const tabId of ADMIN_LAYOUT_TABS) {
+      const group = source.tabGroups[tabId];
+      if (Object.prototype.hasOwnProperty.call(ADMIN_LAYOUT_SECTIONS, group)) tabGroups[tabId] = group;
+    }
+  }
+  const sizes = {};
+  if (source.sizes && typeof source.sizes === 'object' && !Array.isArray(source.sizes)) {
+    for (const tabId of ADMIN_LAYOUT_TABS) {
+      if (['small', 'medium', 'large'].includes(source.sizes[tabId])) sizes[tabId] = source.sizes[tabId];
+    }
+  }
+  return { sectionOrder, tabOrder, tabGroups, sizes };
+}
+router.get('/layout', auth('admin'), async (req, res, next) => {
+  try {
+    const config = await getAdminConfig();
+    return res.set('Cache-Control', 'no-store').json({ layout: sanitizeAdminUiLayout(config.adminUiLayout) });
+  } catch (err) { next(err); }
+});
+router.put('/layout', auth('admin'), async (req, res, next) => {
+  try {
+    if (!requireRootAdmin(req, res)) return;
+    const layout = sanitizeAdminUiLayout(req.body?.layout);
+    const config = await getAdminConfig();
+    const before = sanitizeAdminUiLayout(config.adminUiLayout);
+    config.adminUiLayout = layout;
+    config.markModified('adminUiLayout');
+    config.history.push({ key: 'adminUiLayout', before, after: layout, by: adminName(req), byId: String(req.user?._id || ''), reason: 'تعديل ترتيب وأحجام أزرار لوحة الإدارة', createdAt: new Date() });
+    if (config.history.length > 200) config.history = config.history.slice(-200);
+    await config.save();
+    await writeAdminAudit(req, 'تعديل ترتيب وأحجام أزرار لوحة الإدارة', 'settings', 'adminUiLayout', JSON.stringify({ before, after: layout }));
+    return res.json({ message: 'تم حفظ ترتيب وأحجام أزرار لوحة الإدارة لجميع المشرفين', layout });
+  } catch (err) { next(err); }
+});
+
 router.get('/settings', auth('admin'), async (req, res, next) => {
   try { const config = await getAdminConfig(); return res.set('Cache-Control', 'no-store').json({ settings: config.settings }); }
   catch (err) { next(err); }
