@@ -1443,7 +1443,7 @@ function sanitizeAdminUiLayout(input) {
   if (source.tabGroups && typeof source.tabGroups === 'object' && !Array.isArray(source.tabGroups)) {
     for (const tabId of ADMIN_LAYOUT_TABS) {
       const group = source.tabGroups[tabId];
-      if (Object.prototype.hasOwnProperty.call(ADMIN_LAYOUT_SECTIONS, group) && ADMIN_LAYOUT_SECTIONS[group].includes(tabId)) tabGroups[tabId] = group;
+      if (Object.prototype.hasOwnProperty.call(ADMIN_LAYOUT_SECTIONS, group)) tabGroups[tabId] = group;
     }
   }
   const sizes = {};
