@@ -879,6 +879,7 @@ function render(){
         <button type="button" data-client-layout-tab="${t.id}" ${state.clientLayoutEditMode?`draggable="true" ondragstart="startClientTabDrag(event,'${t.id}')" ondragover="allowClientTabDrop(event)" ondrop="dropClientTab(event,'${t.id}')" ondragend="state.clientLayoutDragId='';this.classList.remove('client-tab-dragging')"`:''} onclick="if(!state.clientLayoutEditMode)setTab('${t.id}')" class="${clientTabSizeClass(t.id)} flex-1 h-11 rounded-xl text-[12px] font-extrabold transition-colors ${state.tab===t.id?(t.id==='new'?'bg-gradient-to-l from-amber-300 to-yellow-500 text-amber-950 shadow-sm':'tab-active'):'tab-idle'} ${state.clientLayoutEditMode?'border border-dashed border-blue-300':''}">${state.clientLayoutEditMode?'<span aria-hidden="true" class="ml-1">⠿</span>':''}${t.label}</button>
       `).join('')}
     </div>
+    ${renderClientLayoutEditor()}
     ${state.tab==='new'?`
       ${!state.sn?`
       <div class="mt-4 space-y-3 animate-fade client-new-order">
