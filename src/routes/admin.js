@@ -1538,7 +1538,24 @@ function sanitizeTechnicianUiLayout(input) {
   if (source.sizes && typeof source.sizes === 'object' && !Array.isArray(source.sizes)) {
     for (const tabId of allowedTabs) if (['small', 'medium', 'large'].includes(source.sizes[tabId])) sizes[tabId] = source.sizes[tabId];
   }
-  return { tabOrder, sizes };
+  const elements = {};
+  if (source.elements && typeof source.elements === 'object' && !Array.isArray(source.elements)) {
+    for (const [key, value] of Object.entries(source.elements).slice(0, 150)) {
+      if (!/^[a-zA-Z0-9_-]{1,100}$/.test(key) || !value || typeof value !== 'object' || Array.isArray(value)) continue;
+      const item = {};
+      if (Number.isFinite(value.fontSize) && value.fontSize >= 10 && value.fontSize <= 36) item.fontSize = value.fontSize;
+      if (Number.isFinite(value.width) && value.width >= 30 && value.width <= 100) item.width = value.width;
+      if (typeof value.background === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.background)) item.background = value.background;
+      if (typeof value.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.color)) item.color = value.color;
+      if (Number.isFinite(value.radius) && value.radius >= 0 && value.radius <= 40) item.radius = value.radius;
+      if (Number.isFinite(value.x) && value.x >= -100 && value.x <= 100) item.x = value.x;
+      if (Number.isFinite(value.y) && value.y >= -100 && value.y <= 100) item.y = value.y;
+      if (typeof value.text === 'string') item.text = value.text.slice(0, 200);
+      if (typeof value.hidden === 'boolean') item.hidden = value.hidden;
+      if (Object.keys(item).length) elements[key] = item;
+    }
+  }
+  return { tabOrder, sizes, elements };
 }
 router.get('/technician-layout', async (req, res, next) => {
   try { const config = await getAdminConfig(); return res.set('Cache-Control', 'no-store').json({ layout: sanitizeTechnicianUiLayout(config.technicianUiLayout) }); }
