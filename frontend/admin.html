@@ -287,7 +287,7 @@ function ensureAdminElementToolbar(){
  if(!bar){bar=document.createElement('div');bar.id='admin-element-drag-toolbar';bar.style.cssText='position:fixed;z-index:99999;bottom:0;left:0;right:0;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#0b1b3a;color:white;display:flex;align-items:center;justify-content:space-between;gap:8px;box-shadow:0 -8px 24px #0b1b3a35;font-family:Cairo,sans-serif';bar.innerHTML='<span style="font-size:11px;font-weight:800">✥ اسحب أي عنصر لتغيير مكانه</span><div style="display:flex;gap:6px"><button type="button" id="admin-drag-save" style="background:#10b981;color:#052e24;border-radius:9px;padding:7px 10px;font-size:11px;font-weight:900">حفظ للجميع</button><button type="button" id="admin-drag-cancel" style="background:#334155;color:white;border-radius:9px;padding:7px 10px;font-size:11px;font-weight:900">إلغاء</button></div>';document.body.appendChild(bar);bar.querySelector('#admin-drag-save').onclick=saveAdminUiLayout;bar.querySelector('#admin-drag-cancel').onclick=cancelAdminLayoutEdit;}
 }
 document.addEventListener('pointerdown',event=>{
- if(!state.layoutEditMode||!isRootAdminUI()||event.button!==0||event.target.closest('#admin-element-drag-toolbar,.layout-toolbar,.layout-item-controls,.layout-control,.section-nav-group,.layout-item-row'))return;
+ if(!state.layoutEditMode||!isRootAdminUI()||event.button!==0||event.target.closest('#admin-element-drag-toolbar,#admin-drag-toggle,.layout-toolbar,.layout-item-controls,.layout-control,.section-nav-group,.layout-item-row'))return;
  const app=document.getElementById('app');if(!app||!app.contains(event.target))return;
  const el=event.target.closest('button,a,section,article,header,main,form,label,h1,h2,h3,h4,p,img,svg,div,span,input,select,textarea');if(!el||el.id==='app')return;
  event.preventDefault();event.stopImmediatePropagation();
@@ -375,7 +375,7 @@ function render(){
       <div class="flex flex-col gap-1 shrink-0 items-stretch justify-self-end w-[104px]">
         
         <a href="password.html?role=admin&amp;mode=account" class="h-8 w-full rounded-lg bg-white/10 hover:bg-white/20 border border-white/15 text-[10px] font-black text-white inline-flex items-center justify-center gap-1 no-underline leading-none"><span aria-hidden="true">👤</span><span>حسابي</span></a>
-        ${isRootAdminUI()?'<button type="button" onclick="toggleAdminLayoutEdit()" class="h-8 w-full rounded-lg bg-amber-400 text-slate-900 text-[10px] font-black">'+(state.layoutEditMode?'إيقاف السحب':'✥ سحب العناصر')+'</button>':''}
+        ${isRootAdminUI()?'<button id="admin-drag-toggle" type="button" onclick="toggleAdminLayoutEdit()" class="h-8 w-full rounded-lg bg-amber-400 text-slate-900 text-[10px] font-black">'+(state.layoutEditMode?'إيقاف السحب':'✥ سحب العناصر')+'</button>':''}
         <a href="/" aria-label="القائمة الرئيسية" title="القائمة الرئيسية" class="h-8 w-full rounded-lg bg-white/10 hover:bg-white/15 text-white text-[10px] font-black inline-flex items-center justify-center text-center leading-none">⌂ القائمة الرئيسية</a>
         ${isAuth?'<button onclick="logout()" class="h-8 w-full rounded-lg bg-white/10 flex items-center justify-center text-[11px]">⎋ خروج</button>':''}
       </div>
