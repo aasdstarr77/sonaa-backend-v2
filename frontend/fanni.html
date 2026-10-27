@@ -1073,7 +1073,7 @@ function render(){
     <button onclick="doRegister()" ${state.loading||SERVICES_LOADING?'disabled':''} class="primary-btn w-full h-12">${state.loading?'جاري إنشاء الحساب...':SERVICES_LOADING?'جاري تحميل التخصصات...':'إنشاء حساب فني'}</button>
     ${state.error?errorBox(state.error):''}
    </div>`:`
-   <form class="space-y-4" onsubmit="event.preventDefault(); if(!state.loginSubmitAllowed)return false; state.loginSubmitAllowed=false; doLogin();" onkeydown="if(event.key==='Enter'&&event.target.matches('input')){event.preventDefault();state.loginSubmitAllowed=true;doLogin();}">
+   <form class="space-y-4" onsubmit="event.preventDefault(); if(!state.loginSubmitAllowed)return false; state.loginSubmitAllowed=false; doLogin();" onkeydown="if(event.key==='Enter'&&event.target.matches('input')){event.preventDefault();state.loginSubmitAllowed=false;doLogin();}">
     <div><label class="field-label">رقم التليفون</label><input id="fanniLoginPhone" class="field" type="tel" inputmode="numeric" enterkeyhint="next" autocomplete="tel" value="${esc(state.loginPhone)}" oninput="state.loginPhone=this.value.replace(/\\D/g,'').slice(0,11)" placeholder="01xxxxxxxxx"></div>
     <div><label class="field-label">كلمة السر</label><input id="fanniLoginPassword" type="password" class="field" enterkeyhint="done" autocomplete="current-password" value="${esc(state.loginPass)}" oninput="state.loginPass=this.value" placeholder="اكتب كلمة السر"></div>
      <p class="text-left -mt-2 mb-2"><a class="text-xs font-bold text-blue-700" href="password.html?role=fanni&mode=recovery">نسيت كلمة المرور؟</a></p>
