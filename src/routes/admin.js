@@ -1452,7 +1452,17 @@ function sanitizeAdminUiLayout(input) {
       if (['small', 'medium', 'large'].includes(source.sizes[tabId])) sizes[tabId] = source.sizes[tabId];
     }
   }
-  return { sectionOrder, tabOrder, tabGroups, sizes };
+  const elements = {};
+  if (source.elements && typeof source.elements === 'object' && !Array.isArray(source.elements)) {
+    for (const [key, value] of Object.entries(source.elements).slice(0, 500)) {
+      if (!/^[a-zA-Z0-9_-]{1,100}$/.test(key) || !value || typeof value !== 'object' || Array.isArray(value)) continue;
+      const item = {};
+      if (Number.isFinite(value.x) && value.x >= -2000 && value.x <= 2000) item.x = value.x;
+      if (Number.isFinite(value.y) && value.y >= -2000 && value.y <= 2000) item.y = value.y;
+      if (Object.keys(item).length) elements[key] = item;
+    }
+  }
+  return { sectionOrder, tabOrder, tabGroups, sizes, elements };
 }
 router.get('/layout', auth('admin'), async (req, res, next) => {
   try {
@@ -1499,8 +1509,8 @@ function sanitizeClientUiLayout(input) {
       if (typeof value.background === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.background)) item.background = value.background;
       if (typeof value.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.color)) item.color = value.color;
       if (Number.isFinite(value.radius) && value.radius >= 0 && value.radius <= 40) item.radius = value.radius;
-      if (Number.isFinite(value.x) && value.x >= -100 && value.x <= 100) item.x = value.x;
-      if (Number.isFinite(value.y) && value.y >= -100 && value.y <= 100) item.y = value.y;
+      if (Number.isFinite(value.x) && value.x >= -2000 && value.x <= 2000) item.x = value.x;
+      if (Number.isFinite(value.y) && value.y >= -2000 && value.y <= 2000) item.y = value.y;
       if (typeof value.text === 'string') item.text = value.text.slice(0, 200);
       if (typeof value.hidden === 'boolean') item.hidden = value.hidden;
       if (Object.keys(item).length) elements[key] = item;
@@ -1548,8 +1558,8 @@ function sanitizeTechnicianUiLayout(input) {
       if (typeof value.background === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.background)) item.background = value.background;
       if (typeof value.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.color)) item.color = value.color;
       if (Number.isFinite(value.radius) && value.radius >= 0 && value.radius <= 40) item.radius = value.radius;
-      if (Number.isFinite(value.x) && value.x >= -100 && value.x <= 100) item.x = value.x;
-      if (Number.isFinite(value.y) && value.y >= -100 && value.y <= 100) item.y = value.y;
+      if (Number.isFinite(value.x) && value.x >= -2000 && value.x <= 2000) item.x = value.x;
+      if (Number.isFinite(value.y) && value.y >= -2000 && value.y <= 2000) item.y = value.y;
       if (typeof value.text === 'string') item.text = value.text.slice(0, 200);
       if (typeof value.hidden === 'boolean') item.hidden = value.hidden;
       if (Object.keys(item).length) elements[key] = item;
