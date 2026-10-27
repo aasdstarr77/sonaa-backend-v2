@@ -265,7 +265,7 @@ function orderedAdminSections(){
  const positions=new Map((state.adminUiLayout.sectionOrder||[]).map((id,index)=>[id,index]));
  return ADMIN_SECTIONS.slice().sort((a,b)=>(positions.get(a.id)??999)-(positions.get(b.id)??999));
 }
-function adminTabGroup(tabId){const saved=state.adminUiLayout.tabGroups?.[tabId];if(saved&&ADMIN_SECTIONS.some(section=>section.id===saved&&section.tabs.some(item=>item.id===tabId)))return saved;return ADMIN_SECTIONS.find(section=>section.tabs.some(item=>item.id===tabId))?.id||'dashboard';}
+function adminTabGroup(tabId){const saved=state.adminUiLayout.tabGroups?.[tabId];if(saved&&ADMIN_SECTIONS.some(section=>section.id===saved))return saved;return ADMIN_SECTIONS.find(section=>section.tabs.some(item=>item.id===tabId))?.id||'dashboard';}
 function orderedAdminTabs(section){
  const allTabs=ADMIN_SECTIONS.flatMap(group=>group.tabs).filter(item=>canReadTab(item.id)&&adminTabGroup(item.id)===section.id);
  const saved=Array.isArray(state.adminUiLayout.tabOrder?.[section.id])?state.adminUiLayout.tabOrder[section.id]:[];
@@ -277,21 +277,21 @@ function moveAdminSection(id,direction){const ids=orderedAdminSections().map(x=>
 function moveAdminTab(sectionId,id,direction){const section=ADMIN_SECTIONS.find(x=>x.id===sectionId);if(!section)return;const ids=orderedAdminTabs(section).map(x=>x.id),i=ids.indexOf(id),j=i+direction;if(i<0||j<0||j>=ids.length)return;[ids[i],ids[j]]=[ids[j],ids[i]];state.adminUiLayout.tabOrder={...state.adminUiLayout.tabOrder,[sectionId]:ids};render();}
 function resizeAdminTab(id,direction){const sizes=['small','medium','large'],i=sizes.indexOf(adminTabSize(id));state.adminUiLayout.sizes={...state.adminUiLayout.sizes,[id]:sizes[Math.max(0,Math.min(2,i+direction))]};render();}
 function moveAdminTabToGroup(id,destination){
- if(!ADMIN_SECTIONS.some(section=>section.id===destination&&section.tabs.some(item=>item.id===id)))return;
+ if(!ADMIN_SECTIONS.some(section=>section.id===destination)||!ADMIN_LAYOUT_TABS.includes(id))return;
  const previous=adminTabGroup(id);if(previous===destination)return;
  const oldSection=ADMIN_SECTIONS.find(section=>section.id===previous),newSection=ADMIN_SECTIONS.find(section=>section.id===destination);
  state.adminUiLayout.tabGroups={...state.adminUiLayout.tabGroups,[id]:destination};
  state.adminUiLayout.tabOrder={...state.adminUiLayout.tabOrder,[previous]:orderedAdminTabs(oldSection).map(item=>item.id).filter(tabId=>tabId!==id),[destination]:[...orderedAdminTabs(newSection).map(item=>item.id).filter(tabId=>tabId!==id),id]};
  render();
 }
-function startAdminLayoutDrag(event,type,id){if(!state.layoutEditMode)return;event.dataTransfer?.setData('text/plain',type+':'+id);if(event.dataTransfer)event.dataTransfer.effectAllowed='move';}
+function startAdminLayoutDrag(event,type,id){if(!state.layoutEditMode)return;event.stopPropagation();event.dataTransfer?.setData('text/plain',type+':'+id);if(event.dataTransfer)event.dataTransfer.effectAllowed='move';}
 function allowAdminLayoutDrop(event){if(state.layoutEditMode){event.preventDefault();if(event.dataTransfer)event.dataTransfer.dropEffect='move';}}
 function dropAdminLayout(event,type,targetId,sectionId=''){
  if(!state.layoutEditMode)return;event.preventDefault();event.stopPropagation();const raw=event.dataTransfer?.getData('text/plain')||'',p=raw.indexOf(':'),sourceType=raw.slice(0,p),sourceId=raw.slice(p+1);if(!sourceId||sourceId===targetId&&sourceType===type)return;
  if(sourceType==='section'&&type==='section'){const ids=orderedAdminSections().map(x=>x.id),a=ids.indexOf(sourceId),b=ids.indexOf(targetId);if(a>=0&&b>=0){ids.splice(a,1);ids.splice(b,0,sourceId);state.adminUiLayout.sectionOrder=ids;}}
  else if(sourceType==='tab'&&(type==='tab'||type==='section')){
   const destination=type==='section'?targetId:sectionId;
-  if(!destination||!ADMIN_SECTIONS.some(section=>section.id===destination&&section.tabs.some(item=>item.id===sourceId)))return;
+  if(!destination||!ADMIN_SECTIONS.some(section=>section.id===destination)||!ADMIN_LAYOUT_TABS.includes(sourceId))return;
   const oldGroup=adminTabGroup(sourceId),sourceGroup=ADMIN_SECTIONS.find(section=>section.id===oldGroup),targetGroup=ADMIN_SECTIONS.find(section=>section.id===destination);
   if(!sourceGroup||!targetGroup)return;
   const targetIds=orderedAdminTabs(targetGroup).map(item=>item.id).filter(id=>id!==sourceId);
