@@ -1439,13 +1439,20 @@ function sanitizeAdminUiLayout(input) {
     const proposed = Array.isArray(source.tabOrder?.[sectionId]) ? source.tabOrder[sectionId] : [];
     tabOrder[sectionId] = [...new Set(proposed.filter(id => allowed.includes(id)))].slice(0, allowed.length);
   }
+  const tabGroups = {};
+  if (source.tabGroups && typeof source.tabGroups === 'object' && !Array.isArray(source.tabGroups)) {
+    for (const tabId of ADMIN_LAYOUT_TABS) {
+      const group = source.tabGroups[tabId];
+      if (Object.prototype.hasOwnProperty.call(ADMIN_LAYOUT_SECTIONS, group) && ADMIN_LAYOUT_SECTIONS[group].includes(tabId)) tabGroups[tabId] = group;
+    }
+  }
   const sizes = {};
   if (source.sizes && typeof source.sizes === 'object' && !Array.isArray(source.sizes)) {
     for (const tabId of ADMIN_LAYOUT_TABS) {
       if (['small', 'medium', 'large'].includes(source.sizes[tabId])) sizes[tabId] = source.sizes[tabId];
     }
   }
-  return { sectionOrder, tabOrder, sizes };
+  return { sectionOrder, tabOrder, tabGroups, sizes };
 }
 router.get('/layout', auth('admin'), async (req, res, next) => {
   try {
