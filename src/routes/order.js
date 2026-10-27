@@ -11,6 +11,7 @@ const Fanni = require('../models/Fanni');
 const Rating = require('../models/Rating');
 const WalletTransaction = require('../models/WalletTransaction');
 const AdminConfig = require('../models/AdminConfig');
+const AdminAuditLog = require('../models/AdminAuditLog');
 const { auth } = require('../middleware/auth');
 const { clientAuth } = require('../middleware/clientAuth');
 const { generateSN } = require('../utils/generateSN');
@@ -22,6 +23,22 @@ const {
 } = require('../config/professions');
 
 const router = express.Router();
+
+async function writeOrderAdminAudit(req, action, target, details) {
+  try {
+    await AdminAuditLog.create({
+      action: String(action || '').slice(0, 100),
+      category: 'orders',
+      target: String(target || '').slice(0, 200),
+      details: String(details || '').slice(0, 1000),
+      adminName: String(req.user?.name || req.user?.phone || req.user?.email || 'admin').slice(0, 120),
+      adminId: String(req.user?._id || req.userId || ''),
+      ip: String(req.ip || '').slice(0, 80)
+    });
+  } catch (err) {
+    console.error('Could not write order admin audit log:', err.message);
+  }
+}
 
 const ACTIVE_STATUSES = ['تم النشر', 'وصلتك عروض'];
 const ORDER_EXPIRY_HOURS = 48;
@@ -125,6 +142,11 @@ function publicOrder(order, options = {}) {
   delete data.clientAccount;
   delete data.assignedFanni;
   delete data.assignedFanniPhone;
+  // Platform commission is internal financial data and must never be exposed in client-facing order payloads.
+  delete data.commissionRate;
+  delete data.commissionAmount;
+  delete data.commissionCharged;
+  delete data.commissionChargedAt;
 
   if (
     includeAssignedFanniPhone &&
@@ -486,6 +508,7 @@ router.post('/admin/:sn/voice-reviewed', auth('admin'), async (req, res, next) =
     order.voiceReviewedAt = new Date();
     order.voiceReviewedBy = String(req.userId || req.user?._id || req.user?.email || 'admin').slice(0, 120);
     await order.save();
+    await writeOrderAdminAudit(req, 'تأكيد مراجعة تسجيل صوتي', sn, 'تم تأكيد مراجعة التسجيل الصوتي للطلب قبل النشر');
     return res.json({ message: 'تم تسجيل مراجعة الفويس. يمكنك الآن نشر الطلب بعد مراجعة باقي البيانات.', voiceReviewedAt: order.voiceReviewedAt });
   } catch (err) { return next(err); }
 });
@@ -547,6 +570,7 @@ router.post('/admin/:sn/publish', auth('admin'), async (req, res, next) => {
     }
 
     const safeOrder = publicOrder(order);
+    await writeOrderAdminAudit(req, 'نشر طلب للفنيين', sn, JSON.stringify({ service: order.service, area: order.area, approvedTechniciansScanned: eligibleFannis.length }));
 
     return res.json({
       message: 'تم نشر الطلب للفنيين المعتمدين بنجاح',
@@ -1257,11 +1281,7 @@ router.post('/:sn/accept', async (req, res, next) => {
     notificationOrderId = updatedOrder._id;
 
     responsePayload = {
-      message: 'تم قبول العرض وخصم عمولة المنصة بنجاح',
-      commission: {
-        rate: commissionRate,
-        amount: commissionAmount
-      },
+      message: 'تم قبول العرض بنجاح',
       order: publicOrder(updatedOrder, {
         includeAddress: true,
         includeAssignedFanniPhone: true
@@ -1786,7 +1806,7 @@ router.post('/:sn/price-change/:requestId/decision', async (req, res, next) => {
       link: '/fanni',
       dedupeKey: 'price-change-decision:' + String(order._id) + ':' + String(request._id)
     });
-    return res.json({ message: approved ? 'تمت الموافقة على السعر الجديد وتسجيل تسوية العمولة.' : 'تم رفض تعديل السعر؛ يظل السعر السابق ساريًا.', acceptedOfferPrice: order.acceptedOfferPrice, commissionAmount: order.commissionAmount, commissionRate: order.commissionRate, request });
+    return res.json({ message: approved ? 'تمت الموافقة على السعر الجديد.' : 'تم رفض تعديل السعر؛ يظل السعر السابق ساريًا.', acceptedOfferPrice: order.acceptedOfferPrice, request });
   } catch (err) {
     if (session && session.inTransaction()) { try { await session.abortTransaction(); } catch (_) {} }
     if (err && err.code === 11000) return res.status(409).json({ message: 'تمت معالجة تسوية العمولة بالفعل.' });
@@ -1855,8 +1875,7 @@ async function trackOrder(req, res, next) {
     });
     safe.acceptedOfferId = order.acceptedOfferId ? String(order.acceptedOfferId) : null;
     safe.acceptedOfferPrice = order.acceptedOfferPrice ?? null;
-    safe.commissionRate = order.commissionRate ?? null;
-    safe.commissionAmount = order.commissionAmount ?? null;
+    // Platform commission is internal financial data and must not be returned to clients.
     if (Array.isArray(safe.offers) && order.acceptedOfferId && ['تم اختيار فني', 'تم الانتهاء'].includes(order.status)) safe.offers = safe.offers.map(offer => ({ ...offer, offerStatus: String(offer._id) === String(order.acceptedOfferId) ? 'تم قبول العرض' : 'تم رفض العرض' }));
     safe.chatMessages = (order.chatMessages || []).map(m => ({ senderRole: m.senderRole, text: m.text, targetOfferId: m.targetOfferId || '', createdAt: m.createdAt }));
     safe.priceChangeRequests = (order.priceChangeRequests || []).map(r => ({ _id: String(r._id), oldPrice: r.oldPrice, newPrice: r.newPrice, reason: r.reason, status: r.status, requestedAt: r.requestedAt, decidedAt: r.decidedAt }));

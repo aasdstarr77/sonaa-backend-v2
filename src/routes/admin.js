@@ -223,6 +223,7 @@ router.patch('/complaints/:id', auth('admin'), validate(Joi.object({
     updates.updatedAt = new Date();
     const complaint = await Complaint.findByIdAndUpdate(req.params.id, { $set: updates }, { new: true, runValidators: true }).lean();
     if (!complaint) { return res.status(404).json({ message: 'الشكوى غير موجودة' }); }
+    await writeAdminAudit(req, 'تحديث شكوى', 'complaints', String(complaint._id), JSON.stringify({ sn: complaint.sn, status: complaint.status, statusChanged: hasStatus, hasAdminResponse: Boolean(complaint.adminResponse) }));
     if (complaint.adminResponse && String(complaint.adminResponse).trim()) {
       const order = await Order.findOne({ sn: complaint.sn }).select('_id clientAccount').lean();
       if (order?.clientAccount) await createNotification({
@@ -313,6 +314,7 @@ router.post('/fanni-profile-edits/:id/approve', auth('admin'), async (req, res, 
     fanni.decisions.push(decision(req, 'اعتماد تعديل بيانات', 'اعتماد طلب تعديل بيانات الفني'));
     fanni.decisions[fanni.decisions.length - 1].meta = { before, after: { phone: fanni.phone, specialties: fanni.specialties, areas: fanni.areas } };
     await fanni.save();
+    await writeAdminAudit(req, 'اعتماد تعديل بيانات فني', 'fannis', String(fanni._id), JSON.stringify({ before, after: { phone: fanni.phone, specialties: fanni.specialties, areas: fanni.areas } }));
     await createNotification({ recipientRole: 'fanni', recipientId: fanni._id, type: 'profile_change_approved', title: 'تمت الموافقة على تعديل بياناتك', message: 'وافقت الإدارة على طلب تعديل بيانات حسابك وتم تحديث البيانات.', link: '/fanni', dedupeKey: 'profile-change-approved:' + String(fanni._id) + ':' + Date.now() });
     return res.json({ message: 'تم اعتماد تعديل بيانات الفني بنجاح', fanni: publicFanni(fanni) });
   } catch (err) { next(err); }
@@ -327,6 +329,7 @@ router.post('/fanni-profile-edits/:id/reject', auth('admin'), validate(Joi.objec
     fanni.pendingProfileChange = undefined;
     fanni.decisions.push(decision(req, 'رفض تعديل بيانات', reason));
     await fanni.save();
+    await writeAdminAudit(req, 'رفض تعديل بيانات فني', 'fannis', String(fanni._id), `reason=${reason}`);
     await createNotification({ recipientRole: 'fanni', recipientId: fanni._id, type: 'profile_change_rejected', title: 'لم تتم الموافقة على تعديل بياناتك', message: 'رفضت الإدارة طلب تعديل البيانات. السبب: ' + reason, link: '/fanni', dedupeKey: 'profile-change-rejected:' + String(fanni._id) + ':' + Date.now() });
     return res.json({ message: 'تم رفض طلب تعديل البيانات وإبقاء البيانات الأصلية كما هي' });
   } catch (err) { next(err); }
@@ -361,6 +364,7 @@ router.post('/fannis/:id/approve', auth('admin'), async (req, res, next) => {
     if (fanni.status === 'معتمد') { return res.json({ message: 'الفني معتمد بالفعل', fanni: publicFanni(fanni) }); }
     fanni.status = 'معتمد'; fanni.rejectionReason = undefined; fanni.suspensionReason = undefined; fanni.suspendedAt = undefined;
     fanni.decisions.push(decision(req, 'موافقة')); await fanni.save();
+    await writeAdminAudit(req, 'اعتماد حساب فني', 'fannis', String(fanni._id), `name=${fanni.name}`);
     await createNotification({
       recipientRole: 'fanni', recipientId: fanni._id, type: 'account_approved',
       title: 'تم اعتماد حسابك', message: 'مبروك، الإدارة اعتمدت حسابك وأصبحت تقدر تستخدم خدمات الفني المعتمدة.',
@@ -379,6 +383,7 @@ router.post('/fannis/:id/reject', auth('admin'), validate(Joi.object({ reason: r
     if (fanni.status === 'مرفوض') { return res.json({ message: 'الفني مرفوض بالفعل', fanni: publicFanni(fanni) }); }
     const reason = String(req.body.reason || '').trim();
     fanni.status = 'مرفوض'; fanni.rejectionReason = reason || undefined; fanni.decisions.push(decision(req, 'رفض', reason)); await fanni.save();
+    await writeAdminAudit(req, 'رفض حساب فني', 'fannis', String(fanni._id), `name=${fanni.name}; reason=${reason}`);
     return res.json({ message: 'تم رفض الفني', fanni: publicFanni(fanni) });
   } catch (err) { next(err); }
 });
@@ -391,6 +396,7 @@ router.post('/fannis/:id/disable', auth('admin'), validate(Joi.object({ reason: 
     if (fanni.status === 'معلق') { return res.json({ message: 'حساب الفني معلق بالفعل', fanni: publicFanni(fanni) }); }
     const reason = String(req.body.reason || '').trim();
     fanni.status = 'معلق'; fanni.suspensionReason = reason || undefined; fanni.suspendedAt = new Date(); fanni.decisions.push(decision(req, 'تعليق', reason)); await fanni.save();
+    await writeAdminAudit(req, 'تعليق حساب فني', 'fannis', String(fanni._id), `reason=${reason}`);
     return res.json({ message: 'تم تعليق حساب الفني', fanni: publicFanni(fanni) });
   } catch (err) { next(err); }
 });
@@ -404,6 +410,7 @@ router.post('/fannis/:id/enable', auth('admin'), async (req, res, next) => {
     const previousDecision = [...(fanni.decisions || [])].reverse().find(item => !['تعليق', 'إعادة تفعيل'].includes(item.action));
     if (previousDecision?.action === 'موافقة') { fanni.status = 'معتمد'; } else if (previousDecision?.action === 'رفض') { fanni.status = 'مرفوض'; } else { fanni.status = 'قيد المراجعة'; }
     fanni.suspensionReason = undefined; fanni.suspendedAt = undefined; fanni.decisions.push(decision(req, 'إعادة تفعيل')); await fanni.save();
+    await writeAdminAudit(req, 'إعادة تفعيل حساب فني', 'fannis', String(fanni._id), `status=${fanni.status}`);
     return res.json({ message: 'تمت إعادة تفعيل الحساب', fanni: publicFanni(fanni) });
   } catch (err) { next(err); }
 });
@@ -430,6 +437,7 @@ router.post('/fannis/:id/set-balance', auth('admin'), validate(Joi.object({ amou
       outcome = { fanni: updatedFanni, balance: Number(updatedFanni.walletBalance) };
     });
     if (!outcome) { return res.status(404).json({ message: 'الفني غير موجود' }); }
+    await writeAdminAudit(req, 'تسوية رصيد محفظة فني', 'wallet', String(outcome.fanni._id), `balance=${outcome.balance}; reason=${String(req.body.reason || '').trim()}`);
     return res.json({ message: 'تم تحديث رصيد المحفظة وتسجيل التسوية', balance: outcome.balance, fanni: publicFanni(outcome.fanni) });
   } catch (err) { next(err); } finally { if (session) await session.endSession(); }
 });
@@ -453,6 +461,7 @@ router.post('/fannis/:id/add-balance', auth('admin'), validate(Joi.object({ amou
       outcome = { fanni, balance: Number(fanni.walletBalance) };
     });
     if (!outcome) { return res.status(404).json({ message: 'الفني غير موجود' }); }
+    await writeAdminAudit(req, 'إضافة رصيد لمحفظة فني', 'wallet', String(outcome.fanni._id), `amount=${amount}; balance=${outcome.balance}; reason=${reason}`);
     return res.json({ message: 'تمت إضافة الرصيد وتسجيل الحركة المالية', balance: outcome.balance, fanni: publicFanni(outcome.fanni) });
   } catch (err) { next(err); } finally { if (session) await session.endSession(); }
 });
@@ -487,6 +496,7 @@ router.post('/topup-requests/:id/approve', auth('admin'), async (req, res, next)
       if (!current) { return res.status(404).json({ message: 'طلب الشحن غير موجود' }); }
       return res.status(409).json({ message: 'تمت معالجة طلب الشحن بالفعل أو أنه غير متاح للمراجعة', status: current.status, isCredited: Boolean(current.isCredited) });
     }
+    await writeAdminAudit(req, 'اعتماد طلب شحن محفظة', 'topups', String(outcome.topup._id), `fanniId=${String(outcome.topup.fanni)}; amount=${Number(outcome.topup.amount)}; balance=${outcome.balance}`);
     await createNotification({
       recipientRole: 'fanni', recipientId: outcome.topup.fanni, type: 'topup_approved',
       title: 'تم شحن محفظتك', message: 'تم قبول طلب شحن المحفظة وإضافة ' + outcome.topup.amount + ' جنيه إلى رصيدك.',
@@ -509,6 +519,7 @@ router.post('/topup-requests/:id/reject', auth('admin'), validate(Joi.object({ r
       if (!current) { return res.status(404).json({ message: 'طلب الشحن غير موجود' }); }
       return res.status(409).json({ message: 'تمت معالجة طلب الشحن بالفعل أو أنه غير متاح للمراجعة', status: current.status });
     }
+    await writeAdminAudit(req, 'رفض طلب شحن محفظة', 'topups', String(request._id), `fanniId=${String(request.fanni)}; amount=${Number(request.amount)}; reason=${reason}`);
     await createNotification({
       recipientRole: 'fanni', recipientId: request.fanni, type: 'topup_rejected',
       title: 'تم رفض طلب الشحن', message: 'تم رفض طلب شحن المحفظة. ' + String(request.reviewReason || '').slice(0, 180),
@@ -548,6 +559,7 @@ router.patch('/orders/:sn/correct', auth('admin'), validate(Joi.object({
     order.description = String(req.body.description || '').trim();
     order.budget = String(req.body.budget || '').trim();
     await order.save();
+    await writeAdminAudit(req, 'تصحيح بيانات طلب', 'orders', sn, JSON.stringify({ service: order.service, area: order.area }));
     return res.json({ message: 'تم حفظ تصحيح بيانات الطلب. راجع البيانات ثم انشره عند التأكد.', order });
   } catch (err) { next(err); }
 });
@@ -568,6 +580,7 @@ router.post('/orders/:sn/cancel', auth('admin'), validate(Joi.object({
     order.adminActionAt = new Date();
     order.adminActionBy = adminName(req);
     await order.save();
+    await writeAdminAudit(req, 'إلغاء طلب إداري', 'orders', sn, `reason=${order.adminActionNote}`);
     return res.json({ message: 'تم إلغاء الطلب', order: { sn: order.sn, status: order.status } });
   } catch (err) { next(err); }
 });
@@ -589,6 +602,7 @@ router.post('/orders/:sn/archive', auth('admin'), validate(Joi.object({
     order.adminActionAt = new Date();
     order.adminActionBy = adminName(req);
     await order.save();
+    await writeAdminAudit(req, 'أرشفة طلب', 'orders', sn, `reason=${order.adminActionNote}`);
     return res.json({ message: 'تمت أرشفة الطلب', order: { sn: order.sn, status: order.status } });
   } catch (err) { next(err); }
 });
@@ -642,6 +656,7 @@ router.delete('/orders/:sn', auth('admin'), async (req, res, next) => {
     const summary = { status: String(order.status || ''), hasAssignedFanni, offersCount: Array.isArray(order.offers) ? order.offers.length : 0, commissionCharged: order.commissionCharged === true, hasCommissionTransaction: Boolean(hasCommissionTransaction), hasFinancialOrTechnicianLinks: hasAssignedFanni || hasOffers || hasCommission || hasProtectedStatus };
     const deleted = await Order.deleteOne({ _id: order._id });
     if (deleted.deletedCount !== 1) { return res.status(409).json({ message: 'لم يتم حذف الطلب. حدّث القائمة وحاول مرة أخرى.' }); }
+    await writeAdminAudit(req, 'حذف طلب إداري', 'orders', String(order.sn), JSON.stringify(summary));
     return res.json({ message: summary.hasFinancialOrTechnicianLinks ? 'تم حذف الطلب بعد التأكيد. احتُفظ بسجلات الحركات المالية وطلبات الشحن.' : 'تم حذف الطلب بنجاح.', deleted: 1, sn: order.sn, summary });
   } catch (err) { next(err); }
 });
@@ -655,6 +670,7 @@ router.delete('/clients/:phone/account', auth('admin'), async (req, res, next) =
     const activeOrder = await Order.exists({ clientPhone: phone, status: { $in: ['تم النشر', 'وصلتك عروض', 'تم اختيار فني'] } });
     if (activeOrder) return res.status(409).json({ message: 'لا يمكن حذف الحساب أثناء وجود طلب نشط. تم الحفاظ على الحساب وسجل الطلبات.' });
     await Client.deleteOne({ _id: client._id, phone });
+    await writeAdminAudit(req, 'حذف حساب عميل', 'clients', phone, `clientId=${String(client._id)}; preservedOrderHistory=true`);
     return res.json({ message: 'تم حذف حساب العميل المسجل مع الحفاظ على سجل الطلبات التاريخي.' });
   } catch (err) { next(err); }
 });
@@ -673,6 +689,7 @@ router.delete('/clients/:phone', auth('admin'), async (req, res, next) => {
     if (hasProtectedOrder || hasCommissionTransaction) { return res.status(409).json({ message: 'لا يمكن حذف العميل لأن عنده طلبًا مرتبطًا بفني أو بعملية مالية. لم يتم حذف أي طلب.' }); }
     const result = await Order.deleteMany({ _id: { $in: orderIds }, clientPhone: phone, commissionCharged: { $ne: true }, assignedFanni: { $in: [null, undefined] }, status: { $nin: protectedStatuses } });
     if (result.deletedCount !== orders.length) { return res.status(409).json({ message: 'لم يتم حذف كل الطلبات المتوقعة؛ قد تكون بيانات تغيرت أثناء العملية. راجع الطلبات قبل إعادة المحاولة.', deleted: result.deletedCount }); }
+    await writeAdminAudit(req, 'حذف طلبات عميل', 'clients', phone, `deletedOrders=${result.deletedCount}`);
     return res.json({ message: 'تم حذف طلبات العميل التجريبية بنجاح', deleted: result.deletedCount, phone });
   } catch (err) { next(err); }
 });
@@ -693,6 +710,7 @@ router.delete('/fannis/:id', auth('admin'), async (req, res, next) => {
     const summary = { balance: Number(fanni.walletBalance || 0), topupCount, pendingTopupCount, transactionCount, relatedOrderCount, activeOrderCount };
     const deleted = await Fanni.deleteOne({ _id: fanniId, role: 'fanni' });
     if (deleted.deletedCount !== 1) { return res.status(409).json({ message: 'لم يتم حذف حساب الفني. حدّث القائمة وحاول مرة أخرى.' }); }
+    await writeAdminAudit(req, 'حذف حساب فني', 'fannis', String(fanniId), `name=${fanni.name}; balance=${summary.balance}; transactions=${summary.transactionCount}; orders=${summary.relatedOrderCount}`);
     return res.json({ message: 'تم حذف حساب الفني. احتُفظ بسجلات الطلبات والشحنات والحركات المالية.', deleted: 1, fanniId: String(fanniId), summary });
   } catch (err) { next(err); }
 });
@@ -717,6 +735,7 @@ router.patch('/fannis/:id/level', auth('admin'), async (req, res, next) => {
     fanni.levelHistory.push({ from: oldLevel, to: newLevel, date: new Date(), by: adminName(req), byId: req.user?._id, reason: String(reason||'').slice(0,500) });
     fanni.decisions.push({ action: 'ترقية مستوى', reason: `من ${oldLevel} إلى ${newLevel}. ${String(reason||'').slice(0,400)}`, date: new Date(), by: adminName(req), byId: req.user?._id, meta: { from: oldLevel, to: newLevel } });
     await fanni.save();
+    await writeAdminAudit(req, 'تغيير مستوى فني', 'fannis', String(fanni._id), JSON.stringify({ from: oldLevel, to: newLevel, reason: String(reason || '').slice(0,400) }));
     return res.json({ message: `تمت ترقية المستوى من ${oldLevel} إلى ${newLevel}`, fanni: publicFanni(fanni) });
   } catch(e){ next(e); }
 });
@@ -747,6 +766,7 @@ router.patch('/fannis/:id/badge', auth('admin'), async (req, res, next) => {
       fanni.decisions.push({ action: 'إزالة شارة', reason: `إزالة شارة ${b}`, date: new Date(), by: adminName(req), byId: req.user?._id, meta: { badge: b } });
     }
     await fanni.save();
+    await writeAdminAudit(req, hasBadge && !(act === 'add' || act === '' || act === 'toggle' && !hasBadge) ? 'إزالة شارة فني' : 'إضافة شارة فني', 'fannis', String(fanni._id), `badge=${b}; action=${act}`);
     return res.json({ message: act.includes('add') ? 'تمت إضافة الشارة' : 'تمت إزالة الشارة', fanni: publicFanni(fanni) });
   } catch(e){ next(e); }
 });
@@ -764,6 +784,7 @@ router.patch('/fannis/:id/note', auth('admin'), async (req, res, next) => {
     fanni.adminNotesHistory.push({ note: clean, date: new Date(), by: adminName(req), byId: req.user?._id });
     fanni.decisions.push({ action: 'تعديل ملاحظة', reason: clean.slice(0,500), date: new Date(), by: adminName(req), byId: req.user?._id });
     await fanni.save();
+    await writeAdminAudit(req, 'تعديل ملاحظة فني', 'fannis', String(fanni._id), `noteLength=${clean.length}`);
     return res.json({ message: 'تم حفظ الملاحظة الداخلية', fanni: publicFanni(fanni) });
   } catch(e){ next(e); }
 });
@@ -799,6 +820,7 @@ router.patch('/fannis/:id/limit', auth('admin'), async (req, res, next) => {
     fanni.limits = limits;
     fanni.decisions.push({ action: 'تعديل حد', reason: `حدود: ${JSON.stringify(limits)}`, date: new Date(), by: adminName(req), byId: req.user?._id, meta: limits });
     await fanni.save();
+    await writeAdminAudit(req, 'تعديل حدود استقبال فني', 'fannis', String(fanni._id), JSON.stringify(limits));
     return res.json({ message: 'تم حفظ حدود الاستقبال', fanni: publicFanni(fanni) });
   } catch(e){ next(e); }
 });
@@ -878,6 +900,7 @@ router.delete('/offers/:sn/:idx', auth('admin'), async (req, res, next) => {
       if (order.status === 'تم اختيار فني') order.status = 'وصلتك عروض';
     }
     await order.save();
+    await writeAdminAudit(req, 'حذف عرض فني', 'offers', `${sn}:${idx}`, JSON.stringify({ fanniId: String(removed.fanni || ''), price: removed.price, status: order.status }));
     return res.json({ message: 'تمت إزالة العرض', removed, offers: order.offers });
   } catch(e){ next(e); }
 });
@@ -910,6 +933,7 @@ router.post('/offers/:sn/:idx/reject', auth('admin'), async (req, res, next) => 
       if (order.status === 'تم اختيار فني') order.status = 'وصلتك عروض';
     }
     await order.save();
+    await writeAdminAudit(req, 'رفض عرض فني', 'offers', `${sn}:${idx}`, JSON.stringify({ fanniId: String(offer.fanni || ''), price: offer.price, reason }));
     return res.json({ message: 'تم رفض العرض وإزالته', reason, offers: order.offers });
   } catch(e){ next(e); }
 });
@@ -965,6 +989,7 @@ router.post('/admin-users', auth('admin'), async (req, res, next) => {
     fanni.adminRole = adminRole;
     fanni.decisions.push({ action: previous ? 'تغيير منصب إداري' : 'ترقية إداري', reason: previous ? `من ${previous} إلى ${adminRole}` : `تعيين ${adminRole}`, date: new Date(), by: adminName(req), byId: req.user?._id, meta: { previousRole: previous, newRole: adminRole } });
     await fanni.save();
+    await writeAdminAudit(req, 'تعيين منصب إداري', 'admin-users', String(fanni._id), JSON.stringify({ name: fanni.name, previousRole: previous, newRole: adminRole }));
     return res.status(201).json({ message: `تم تعيين ${fanni.name} بمنصب ${adminRole} مع الاحتفاظ بحساب الفني`, user: publicAdminUser(fanni) });
   } catch (err) { next(err); }
 });
@@ -981,6 +1006,7 @@ router.patch('/admin-users/:id/role', auth('admin'), async (req, res, next) => {
     fanni.adminRole = adminRole;
     fanni.decisions.push({ action: 'تغيير منصب إداري', reason: `من ${previous} إلى ${adminRole}`, date: new Date(), by: adminName(req), byId: req.user?._id, meta: { previousRole: previous, newRole: adminRole } });
     await fanni.save();
+    await writeAdminAudit(req, 'تغيير منصب إداري', 'admin-users', String(fanni._id), JSON.stringify({ previousRole: previous, newRole: adminRole }));
     return res.json({ message: `تم تغيير المنصب إلى ${adminRole}`, user: publicAdminUser(fanni) });
   } catch (err) { next(err); }
 });
@@ -1017,8 +1043,10 @@ router.patch('/admin-users/:id/permissions', auth('admin'), async (req, res, nex
       if (Object.keys(delta).length) overrides[key] = delta;
     }
     fanni.adminPermissions = overrides;
-    fanni.decisions.push({ action: 'تغيير صلاحيات إدارية', reason: 'تحديث الاستثناءات الفردية فوق الصلاحيات الافتراضية للمنصب', date: new Date(), by: adminName(req), byId: req.user?._id, meta: { sections: Object.keys(overrides).filter(key => key !== '__customOverrides') } });
+    const changedSections = Object.keys(overrides).filter(key => key !== '__customOverrides');
+    fanni.decisions.push({ action: 'تغيير صلاحيات إدارية', reason: 'تحديث الاستثناءات الفردية فوق الصلاحيات الافتراضية للمنصب', date: new Date(), by: adminName(req), byId: req.user?._id, meta: { sections: changedSections } });
     await fanni.save();
+    await writeAdminAudit(req, 'تغيير صلاحيات إدارية', 'admin-users', String(fanni._id), JSON.stringify({ role, changedSections }));
     return res.json({ message: 'تم حفظ الصلاحيات المخصصة بنجاح', user: publicAdminUser(fanni) });
   } catch (err) { next(err); }
 });
@@ -1037,6 +1065,7 @@ router.delete('/admin-users/:id', auth('admin'), async (req, res, next) => {
     }
     fanni.decisions.push({ action: 'سحب صلاحية إدارية', reason: `سحب منصب ${previous} مع الاحتفاظ بالحساب`, date: new Date(), by: adminName(req), byId: req.user?._id, meta: { previousRole: previous } });
     await fanni.save();
+    await writeAdminAudit(req, 'سحب صلاحية إدارية', 'admin-users', String(fanni._id), `previousRole=${previous}`);
     return res.json({ message: 'تم سحب الصلاحية الإدارية، وحساب الفني ما زال فعالًا', user: publicAdminUser(fanni) });
   } catch (err) { next(err); }
 });
@@ -1199,6 +1228,7 @@ router.post('/wallet/freeze/:id', auth('admin'), async (req,res,next)=>{
       fanni.decisions.push({ action: 'إلغاء تجميد', reason: r, date: new Date(), by: adminName(req), byId: req.user?._id });
     }
     await fanni.save();
+    await writeAdminAudit(req, act === 'freeze' ? 'تجميد محفظة فني' : 'إلغاء تجميد محفظة فني', 'wallet', String(fanni._id), `name=${fanni.name}; reason=${r}`);
     return res.json({ message: act==='freeze' ? 'تم تجميد المحفظة' : 'تم إلغاء تجميد المحفظة', fanni: publicFanni(fanni) });
   }catch(e){next(e);}
 });
@@ -1215,6 +1245,7 @@ router.post('/clients/:phone/block', auth('admin'), async (req, res, next) => {
     if (client.status === 'معلق') return res.json({ message: 'حساب العميل معلق بالفعل', client: { id: String(client._id), name: client.name, phone: client.phone, status: client.status } });
     client.status = 'معلق';
     await client.save();
+    await writeAdminAudit(req, 'حظر حساب عميل', 'clients', phone, `clientId=${String(client._id)}; reason=${value.reason}`);
     return res.json({ message: 'تم تعليق حساب العميل ومنعه من تسجيل الدخول واستخدام المسارات المحمية. سبب الإجراء: ' + value.reason, client: { id: String(client._id), name: client.name, phone: client.phone, status: client.status } });
   } catch (error) { return next(error); }
 });
@@ -1228,6 +1259,7 @@ router.post('/clients/:phone/unblock', auth('admin'), async (req, res, next) => 
     if (client.status !== 'معلق') return res.json({ message: 'حساب العميل نشط بالفعل', client: { id: String(client._id), name: client.name, phone: client.phone, status: client.status } });
     client.status = 'نشط';
     await client.save();
+    await writeAdminAudit(req, 'إلغاء حظر حساب عميل', 'clients', phone, `clientId=${String(client._id)}`);
     return res.json({ message: 'تمت إعادة تفعيل حساب العميل', client: { id: String(client._id), name: client.name, phone: client.phone, status: client.status } });
   } catch (error) { return next(error); }
 });
@@ -1891,10 +1923,11 @@ router.post('/services', auth('admin'), async (req, res, next) => {
       existingInCategory.categorySortOrder = payload.categorySortOrder;
       existingInCategory.isActive = true;
       await existingInCategory.save();
+      await writeAdminAudit(req, 'إعادة تفعيل خدمة', 'services', String(existingInCategory._id), JSON.stringify({ name: existingInCategory.name, category: existingInCategory.category }));
       return res.json({ ok: true, message: 'تمت إعادة إضافة الخدمة', service: existingInCategory, data: existingInCategory });
     }
     const service = await Service.create(payload);
-    
+    await writeAdminAudit(req, 'إضافة خدمة', 'services', String(service._id), JSON.stringify({ name: service.name, category: service.category, sortOrder: service.sortOrder }));
     return res.status(201).json({ ok: true, message: 'تمت إضافة الخدمة', service, data: service });
   } catch (err) {
     if (err.code === 11000) {
@@ -2195,6 +2228,7 @@ router.patch('/services/:name', auth('admin'), async (req, res, next) => {
       }
     }
 
+    await writeAdminAudit(req, 'تعديل خدمة', 'services', String(serviceDoc._id), JSON.stringify({ before: { name: oldName, category: oldCategory }, after: { name: serviceDoc.name, category: serviceDoc.category, isActive: serviceDoc.isActive, sortOrder: serviceDoc.sortOrder } }));
     return res.json({ ok: true, message: 'تم تعديل الخدمة', service: serviceDoc, data: serviceDoc });
   } catch (err) {
     if (createdNewService && oldNameForRollback) {
@@ -2246,12 +2280,14 @@ router.post('/services/:name/hide', auth('admin'), async (req, res, next) => {
     if (target) {
       target.isActive = false;
       await target.save();
+      await writeAdminAudit(req, 'إخفاء خدمة', 'services', String(target._id), JSON.stringify({ name: target.name, category: target.category }));
       return res.json({ ok: true, message: 'تم إخفاء الخدمة - لن تظهر للعملاء بسبب الدمج في public.js', service: target });
     }
 
     const legacyCat = findCategoryByService(rawParam);
     if (legacyCat) {
       const hidden = await ensureHiddenLegacy(rawParam, legacyCat.label);
+      await writeAdminAudit(req, 'إخفاء خدمة أساسية', 'services', rawParam, JSON.stringify({ category: legacyCat.label }));
       return res.json({ ok: true, message: 'تم إخفاء الخدمة الأساسية - لن تظهر مرة أخرى في قائمة العميل لأن public.js يتحقق من isActive=false', service: hidden });
     }
 
@@ -2311,6 +2347,7 @@ router.post('/services/:name/show', auth('admin'), async (req, res, next) => {
 
     target.isActive = true;
     await target.save();
+    await writeAdminAudit(req, 'إظهار خدمة', 'services', String(target._id), JSON.stringify({ name: target.name, category: target.category }));
     return res.json({ ok: true, message: 'تمت إعادة تفعيل الخدمة', service: target });
   } catch (e) { next(e); }
 });

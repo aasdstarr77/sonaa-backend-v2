@@ -435,11 +435,24 @@ async function run() {
       assert.match(offerRoute, /سبق أن أرسلت عرضًا لهذا الطلب/);
     });
 
-    await test('matching tracking token can retrieve its order', async () => {
+    await test('matching tracking token can retrieve its order without exposing platform commission', async () => {
       const r = await request(app).get('/api/orders/' + orderSN)
         .query({ clientToken: orderClientToken });
       assert.equal(r.status, 200);
       assert.equal(r.body.order.sn, orderSN);
+      assert.equal(Object.prototype.hasOwnProperty.call(r.body.order, 'commissionRate'), false);
+      assert.equal(Object.prototype.hasOwnProperty.call(r.body.order, 'commissionAmount'), false);
+      assert.equal(Object.prototype.hasOwnProperty.call(r.body.order, 'commissionCharged'), false);
+      assert.equal(Object.prototype.hasOwnProperty.call(r.body.order, 'commissionChargedAt'), false);
+      const source = fs.readFileSync(path.join(__dirname, '../routes/order.js'), 'utf8');
+      const acceptStart = source.indexOf("router.post('/:sn/accept'");
+      const acceptEnd = source.indexOf("router.post('/:sn/cancel'", acceptStart);
+      assert.notEqual(acceptStart, -1);
+      assert.notEqual(acceptEnd, -1);
+      const acceptRoute = source.slice(acceptStart, acceptEnd);
+      assert.doesNotMatch(acceptRoute, /responsePayload\s*=\s*\{[\s\S]{0,250}commission\s*:/);
+      assert.match(acceptRoute, /message: 'تم قبول العرض بنجاح'/);
+      assert.match(source, /تمت الموافقة على السعر الجديد\./);
     });
 
     await test('only the order owner can cancel a pending order', async () => {
