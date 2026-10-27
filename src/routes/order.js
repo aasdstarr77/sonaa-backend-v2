@@ -570,7 +570,7 @@ router.post('/admin/:sn/publish', auth('admin'), async (req, res, next) => {
     }
 
     const safeOrder = publicOrder(order);
-    await writeOrderAdminAudit(req, 'نشر طلب للفنيين', sn, JSON.stringify({ service: order.service, area: order.area, notifiedEligibleTechnicians: eligibleFannis.length }));
+    await writeOrderAdminAudit(req, 'نشر طلب للفنيين', sn, JSON.stringify({ service: order.service, area: order.area, approvedTechniciansScanned: eligibleFannis.length }));
 
     return res.json({
       message: 'تم نشر الطلب للفنيين المعتمدين بنجاح',
