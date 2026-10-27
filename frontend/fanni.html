@@ -1071,10 +1071,10 @@ function render(){
      </div>
      <label class="flex items-start gap-2 text-xs font-bold leading-6 text-slate-800"><input type="checkbox" class="mt-1 shrink-0" ${state.regGuidelinesAccepted?'checked':''} onchange="state.regGuidelinesAccepted=this.checked"> قرأت ميثاق التعامل المهني وفهمته وأوافق على الالتزام به.</label>
     </section>
-    <button onclick="doRegister()" ${state.loading||SERVICES_LOADING?'disabled':''} class="primary-btn w-full h-12">${state.loading?'جاري إنشاء الحساب...':SERVICES_LOADING?'جاري تحميل التخصصات...':'إنشاء حساب فني'}</button>
+    <button onclick="doRegister()" ${state.loading||SERVICES_LOADING?'disabled':''} onclick="window.__sonaaFanniLoginIntent=true" class="primary-btn w-full h-12">${state.loading?'جاري إنشاء الحساب...':SERVICES_LOADING?'جاري تحميل التخصصات...':'إنشاء حساب فني'}</button>
     ${state.error?errorBox(state.error):''}
    </div>`:`
-   <form class="space-y-4" onsubmit="event.preventDefault();doLogin()">
+   <form class="space-y-4" onkeydown="if(event.key==='Enter')window.__sonaaFanniLoginIntent=true" onsubmit="event.preventDefault();if(!window.__sonaaFanniLoginIntent)return false;window.__sonaaFanniLoginIntent=false;doLogin()">
     <div><label class="field-label">رقم التليفون</label><input id="fanniLoginPhone" class="field" type="tel" inputmode="numeric" autocomplete="tel" value="${esc(state.loginPhone)}" oninput="state.loginPhone=this.value.replace(/\\D/g,'').slice(0,11)" placeholder="01xxxxxxxxx"></div>
     <div><label class="field-label">كلمة السر</label><input id="fanniLoginPassword" type="password" class="field" autocomplete="current-password" value="${esc(state.loginPass)}" oninput="state.loginPass=this.value" placeholder="اكتب كلمة السر"></div>
      <p class="text-left -mt-2 mb-2"><a class="text-xs font-bold text-blue-700" href="password.html?role=fanni&mode=recovery">نسيت كلمة المرور؟</a></p>
