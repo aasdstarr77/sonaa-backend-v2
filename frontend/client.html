@@ -646,10 +646,10 @@ let state={
   complaintTrackSn:'',complaintTrackName:'',complaintTrackLoading:false,complaintTrackError:'',complaintTrackResults:null,
   showService:false,openCategory:'',searchService:'',
   servicesLoading:true,servicesError:'',servicesLoaded:false,publicContent:{siteName:'صُنّاع',maintenance:false,maintenanceMessage:'',announcement:'',faqs:[]},
-  clientUiLayout:{tabOrder:[],sizes:{}},clientLayoutEditorAvailable:false,clientLayoutEditorChecked:false,clientLayoutEditMode:false,clientLayoutDragId:''
+  clientUiLayout:{tabOrder:[],sizes:{},elements:{}},clientAdminRenderingDashboard:false,clientLayoutEditorAvailable:false,clientLayoutEditorChecked:false,clientLayoutEditMode:false,clientLayoutDragId:''
 };
 const CLIENT_TAB_DEFINITIONS=[{id:'new',label:'طلب جديد'},{id:'orders',label:'طلباتي'},{id:'complaint',label:'شكوى'}];
-function normalizedClientUiLayout(input){const source=input&&typeof input==='object'&&!Array.isArray(input)?input:{};const allowed=CLIENT_TAB_DEFINITIONS.map(item=>item.id);const order=Array.isArray(source.tabOrder)?[...new Set(source.tabOrder.filter(id=>allowed.includes(id)))]:[];allowed.forEach(id=>{if(!order.includes(id))order.push(id)});const sizes={};if(source.sizes&&typeof source.sizes==='object'&&!Array.isArray(source.sizes))allowed.forEach(id=>{if(['small','medium','large'].includes(source.sizes[id]))sizes[id]=source.sizes[id]});return {tabOrder:order,sizes};}
+function normalizedClientUiLayout(input){const source=input&&typeof input==='object'&&!Array.isArray(input)?input:{};const allowed=CLIENT_TAB_DEFINITIONS.map(item=>item.id);const order=Array.isArray(source.tabOrder)?[...new Set(source.tabOrder.filter(id=>allowed.includes(id)))]:[];allowed.forEach(id=>{if(!order.includes(id))order.push(id)});const sizes={};if(source.sizes&&typeof source.sizes==='object'&&!Array.isArray(source.sizes))allowed.forEach(id=>{if(['small','medium','large'].includes(source.sizes[id]))sizes[id]=source.sizes[id]});const elements={};if(source.elements&&typeof source.elements==='object'&&!Array.isArray(source.elements)){for(const [key,value] of Object.entries(source.elements).slice(0,150)){if(!/^[a-zA-Z0-9_-]{1,100}$/.test(key)||!value||typeof value!=='object'||Array.isArray(value))continue;const item={};if(Number.isFinite(value.fontSize)&&value.fontSize>=10&&value.fontSize<=36)item.fontSize=value.fontSize;if(Number.isFinite(value.width)&&value.width>=30&&value.width<=100)item.width=value.width;if(typeof value.background==='string'&&/^#[0-9a-fA-F]{6}$/.test(value.background))item.background=value.background;if(typeof value.color==='string'&&/^#[0-9a-fA-F]{6}$/.test(value.color))item.color=value.color;if(Number.isFinite(value.radius)&&value.radius>=0&&value.radius<=40)item.radius=value.radius;if(typeof value.hidden==='boolean')item.hidden=value.hidden;if(Object.keys(item).length)elements[key]=item;}}return {tabOrder:order,sizes,elements};}
 function clientTabsInLayoutOrder(){const layout=normalizedClientUiLayout(state.clientUiLayout);return layout.tabOrder.map(id=>CLIENT_TAB_DEFINITIONS.find(item=>item.id===id)).filter(Boolean);}
 function clientTabSizeClass(id){return 'client-tab-size-'+(state.clientUiLayout?.sizes?.[id]||'medium');}
 function isClientAdminLayoutMode(){try{return new URLSearchParams(location.search).get('adminLayout')==='1';}catch{return false;}}
@@ -662,7 +662,7 @@ function startClientTabDrag(event,id){if(!state.clientLayoutEditMode){event.prev
 function allowClientTabDrop(event){if(state.clientLayoutEditMode)event.preventDefault();}
 function dropClientTab(event,targetId){if(!state.clientLayoutEditMode)return;event.preventDefault();event.stopPropagation();const sourceId=state.clientLayoutDragId||(event.dataTransfer?.getData('text/plain')||'');const order=clientTabsInLayoutOrder().map(item=>item.id);if(!sourceId||sourceId===targetId||!order.includes(sourceId)||!order.includes(targetId)){state.clientLayoutDragId='';return;}const from=order.indexOf(sourceId);order.splice(from,1);order.splice(order.indexOf(targetId),0,sourceId);state.clientUiLayout=normalizedClientUiLayout({...state.clientUiLayout,tabOrder:order});state.clientLayoutDragId='';render();}
 async function saveClientUiLayout(){const button=document.getElementById('save-client-layout');if(button){button.disabled=true;button.textContent='جاري الحفظ...';}try{const token=localStorage.getItem('admin_token_v3')||'';if(!token)throw new Error('سجّل دخول المدير الرئيسي في لوحة الإدارة أولًا.');const response=await fetch('/api/admin/client-layout',{method:'PUT',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({layout:normalizedClientUiLayout(state.clientUiLayout)})});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.message||'تعذر حفظ الترتيب؛ تأكد من صلاحية المدير الرئيسي.');state.clientUiLayout=normalizedClientUiLayout(data.layout);state.clientLayoutEditMode=false;showToast(data.message||'تم حفظ ترتيب أزرار لوحة العميل للجميع','success');}catch(error){showToast(error.message||'تعذر حفظ ترتيب أزرار العميل.');}finally{render();}}
-function renderClientLayoutEditor(){if(!state.clientLayoutEditorAvailable)return '';if(!state.clientLayoutEditMode)return '<div class="mt-2 flex justify-end"><button type="button" onclick="toggleClientLayoutEdit()" class="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[10px] font-extrabold text-blue-800">↕ ترتيب أزرار العميل</button></div>';return '<div class="client-layout-toolbar"><div class="flex items-start justify-between gap-2"><div><b class="text-[12px]">ترتيب أزرار لوحة العميل</b><p class="mt-1 text-[10px] leading-5">اسحب الزر لمكانه على الكمبيوتر، أو استخدم الأسهم على الموبايل. الترتيب بعد الحفظ هيظهر لكل العملاء.</p></div></div><div class="mt-2">'+clientTabsInLayoutOrder().map((item,index)=>'<div class="client-layout-item"><strong>'+escHtml(item.label)+'</strong><button type="button" aria-label="تحريك '+escAttr(item.label)+' لأعلى" title="لأعلى" '+(index===0?'disabled':'')+' onclick="moveClientTab(\''+item.id+'\',-1)">↑</button><button type="button" aria-label="تحريك '+escAttr(item.label)+' لأسفل" title="لأسفل" '+(index===CLIENT_TAB_DEFINITIONS.length-1?'disabled':'')+' onclick="moveClientTab(\''+item.id+'\',1)">↓</button><select aria-label="حجم زر '+escAttr(item.label)+'" onchange="setClientTabSize(\''+item.id+'\',this.value)"><option value="small" '+(clientTabSizeClass(item.id)==='client-tab-size-small'?'selected':'')+'>صغير</option><option value="medium" '+(clientTabSizeClass(item.id)==='client-tab-size-medium'?'selected':'')+'>متوسط</option><option value="large" '+(clientTabSizeClass(item.id)==='client-tab-size-large'?'selected':'')+'>كبير</option></select></div>').join('')+'</div><div class="mt-3 flex gap-2"><button id="save-client-layout" type="button" onclick="saveClientUiLayout()" class="client-layout-save flex-1">حفظ للجميع</button><button type="button" onclick="cancelClientLayoutEdit()">إلغاء</button></div></div>';}
+function renderClientLayoutEditor(){if(isClientAdminLayoutMode())return '';if(!state.clientLayoutEditorAvailable)return '';if(!state.clientLayoutEditMode)return '<div class="mt-2 flex justify-end"><button type="button" onclick="toggleClientLayoutEdit()" class="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[10px] font-extrabold text-blue-800">↕ ترتيب أزرار العميل</button></div>';return '<div class="client-layout-toolbar"><div class="flex items-start justify-between gap-2"><div><b class="text-[12px]">ترتيب أزرار لوحة العميل</b><p class="mt-1 text-[10px] leading-5">اسحب الزر لمكانه على الكمبيوتر، أو استخدم الأسهم على الموبايل. الترتيب بعد الحفظ هيظهر لكل العملاء.</p></div></div><div class="mt-2">'+clientTabsInLayoutOrder().map((item,index)=>'<div class="client-layout-item"><strong>'+escHtml(item.label)+'</strong><button type="button" aria-label="تحريك '+escAttr(item.label)+' لأعلى" title="لأعلى" '+(index===0?'disabled':'')+' onclick="moveClientTab(\''+item.id+'\',-1)">↑</button><button type="button" aria-label="تحريك '+escAttr(item.label)+' لأسفل" title="لأسفل" '+(index===CLIENT_TAB_DEFINITIONS.length-1?'disabled':'')+' onclick="moveClientTab(\''+item.id+'\',1)">↓</button><select aria-label="حجم زر '+escAttr(item.label)+'" onchange="setClientTabSize(\''+item.id+'\',this.value)"><option value="small" '+(clientTabSizeClass(item.id)==='client-tab-size-small'?'selected':'')+'>صغير</option><option value="medium" '+(clientTabSizeClass(item.id)==='client-tab-size-medium'?'selected':'')+'>متوسط</option><option value="large" '+(clientTabSizeClass(item.id)==='client-tab-size-large'?'selected':'')+'>كبير</option></select></div>').join('')+'</div><div class="mt-3 flex gap-2"><button id="save-client-layout" type="button" onclick="saveClientUiLayout()" class="client-layout-save flex-1">حفظ للجميع</button><button type="button" onclick="cancelClientLayoutEdit()">إلغاء</button></div></div>';}
 function getCat(service){return CATEGORIES.find(c=>c.services.includes(service))||null;}
 function captureScrollPosition(){
   const list=document.getElementById('serviceList');
@@ -833,7 +833,7 @@ document.addEventListener('click',function(event){var item=event.target.closest(
 document.addEventListener('focusout',function(){if(!clientLiveRenderPending||!state.account||!['orders','track'].includes(state.tab))return;setTimeout(function(){if(clientLiveRenderPending&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)){clientLiveRenderPending=false;const scrollY=window.scrollY||window.pageYOffset||0;render();window.scrollTo({top:scrollY,left:0,behavior:'instant'});focusClientPostAction();}},0);});
 function renderClientAdminLayoutPage(){document.getElementById('app').innerHTML='<main class="min-h-screen bg-slate-50 px-3 py-6"><section class="mx-auto max-w-[640px] rounded-2xl border border-blue-100 bg-white p-4 shadow-lg"><div class="mb-3 flex items-center gap-3"><div class="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-700 text-xl text-white">🏠</div><div><h1 class="text-lg font-black text-slate-900">تعديل لوحة العميل</h1><p class="mt-1 text-xs font-bold text-slate-500">رتّب أزرار لوحة العميل وحدّد أحجامها، ثم احفظ التغييرات للجميع.</p></div></div>'+renderClientLayoutEditor()+'</section></main>';}
 function render(){
-  if(isClientAdminLayoutMode()){if(!state.clientLayoutEditorChecked){document.getElementById('app').innerHTML='<main class="min-h-screen flex items-center justify-center bg-slate-50 p-5"><div class="rounded-2xl bg-white p-5 font-bold text-blue-900 shadow">جاري التحقق من صلاحية الأدمن...</div></main>';return;}if(!state.clientLayoutEditorAvailable){document.getElementById('app').innerHTML='<main class="min-h-screen flex items-center justify-center bg-slate-50 p-5"><div class="rounded-2xl bg-white p-5 text-center shadow"><h1 class="font-black text-slate-900">صلاحية غير كافية</h1><p class="mt-2 text-sm text-slate-600">افتح الصفحة من لوحة الأدمن الرئيسي بعد تسجيل الدخول.</p></div></main>';return;}renderClientAdminLayoutPage();return;}
+  if(isClientAdminLayoutMode()&&!state.clientAdminRenderingDashboard){if(!state.clientLayoutEditorChecked){document.getElementById('app').innerHTML='<main class="min-h-screen flex items-center justify-center bg-slate-50 p-5"><div class="rounded-2xl bg-white p-5 font-bold text-blue-900 shadow">جاري التحقق من صلاحية الأدمن...</div></main>';return;}if(!state.clientLayoutEditorAvailable){document.getElementById('app').innerHTML='<main class="min-h-screen flex items-center justify-center bg-slate-50 p-5"><div class="rounded-2xl bg-white p-5 text-center shadow"><h1 class="font-black text-slate-900">صلاحية غير كافية</h1><p class="mt-2 text-sm text-slate-600">افتح الصفحة من لوحة الأدمن الرئيسي بعد تسجيل الدخول.</p></div></main>';return;}state.clientAdminRenderingDashboard=true;state.accountToken='';state.accountInitializing=false;state.account={name:'معاينة لوحة العميل',phone:'',area:'',address:''};state.clientLayoutEditMode=true;}
   if(forceClientRegistration&&!state.account){renderAccountGate();return;}
   if(state.accountInitializing&&!state.accountToken){renderAccountGate();return;}
   if(!state.account){
@@ -1574,6 +1574,119 @@ render();
 </script>
 
 <script>async function handleGlobalRefresh(){let button=document.getElementById('global-refresh');if(globalRefreshInProgress||button?.disabled)return;globalRefreshInProgress=true;if(button){button.disabled=true;button.classList.add('is-refreshing');}try{if(!state.account){await Promise.allSettled([loadServices(),loadPublicContent()]);showToast('تم تحديث البيانات','success');}else{await refreshClientPage();}}finally{globalRefreshInProgress=false;button=document.getElementById('global-refresh');if(button){button.disabled=false;button.classList.remove('is-refreshing');}}}</script>
+
+
+<style>
+body.client-visual-editor{padding-bottom:180px}
+.client-visual-editor #app [data-sonaa-editor-key]{transition:outline-color .12s,box-shadow .12s}
+.client-visual-editor #app [data-sonaa-editor-key]:hover{outline:2px dashed #2563eb!important;outline-offset:2px;cursor:pointer}
+.client-visual-editor #app [data-sonaa-editor-selected="1"]{outline:3px solid #f59e0b!important;outline-offset:3px;box-shadow:0 0 0 5px #f59e0b26!important}
+#client-visual-editor-toolbar{position:fixed;z-index:99999;bottom:0;left:0;right:0;background:#0b1b3a;color:#fff;padding:10px 12px calc(10px + env(safe-area-inset-bottom));box-shadow:0 -8px 28px #0b1b3a38;font-family:Cairo,sans-serif}
+#client-visual-editor-toolbar .editor-controls{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+#client-visual-editor-toolbar label{font-size:11px;font-weight:800;display:flex;align-items:center;gap:5px}
+#client-visual-editor-toolbar input[type=range]{width:90px;accent-color:#60a5fa}
+#client-visual-editor-toolbar input[type=color]{width:32px;height:30px;padding:2px;border:0;border-radius:7px;background:white}
+#client-visual-editor-toolbar button{border:1px solid #ffffff35;border-radius:9px;padding:7px 10px;font-size:11px;font-weight:900}
+#client-visual-editor-toolbar .editor-save{background:#10b981;color:#052e24}
+#client-visual-editor-toolbar .editor-cancel{background:#334155}
+#client-visual-editor-toolbar .editor-reset{background:#7f1d1d}
+</style>
+<script>
+(function(){
+  const preview=()=>{try{return new URLSearchParams(location.search).get('adminLayout')==='1'}catch(_){return false}};
+  if(!preview())return;
+  document.body.classList.add('client-visual-editor');
+  let selected=null, selectedKey='', applying=false;
+  const editableSelector='header,main,section,article,form,.panel,.client-order-panel,.client-new-order,.client-section-tabs,button,a,h1,h2,h3,h4,p,label,.rounded-xl,.rounded-2xl';
+  function stableKey(el){
+    if(el.id)return ('id_'+el.id).replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,100);
+    const parts=[];let node=el;
+    while(node&&node.id!=='app'&&parts.length<5){const cls=[...node.classList].filter(x=>!x.includes(':')&&!x.startsWith('hover:')).slice(0,2).join('_');let index=0;if(node.parentElement)index=[...node.parentElement.children].filter(n=>n.tagName===node.tagName).indexOf(node);parts.unshift(node.tagName.toLowerCase()+(cls?'_'+cls:'')+'_'+Math.max(0,index));node=node.parentElement;}
+    return ('p_'+parts.join('_')).replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,100);
+  }
+  function getLayout(){return state.clientUiLayout||{tabOrder:[],sizes:{},elements:{}}}
+  function applyLayout(){
+    if(applying||!document.getElementById('app'))return;applying=true;
+    try{
+      document.querySelectorAll('#app [data-sonaa-editor-key]').forEach(el=>{
+        const key=el.dataset.sonaaEditorKey,style=getLayout().elements?.[key];if(!style)return;
+        if(style.fontSize)el.style.fontSize=style.fontSize+'px';
+        if(style.width) {el.style.width=style.width+'%';el.style.maxWidth='100%';}
+        if(style.background)el.style.setProperty('background',style.background,'important');
+        if(style.color)el.style.setProperty('color',style.color,'important');
+        if(style.radius!==undefined)el.style.borderRadius=style.radius+'px';
+        if(style.hidden)el.dataset.sonaaEditorHidden='1';else delete el.dataset.sonaaEditorHidden;
+        el.style.display=style.hidden?'none':'';
+      });
+    }finally{applying=false}
+  }
+  function markElements(){
+    document.querySelectorAll('#app '+editableSelector).forEach(el=>{
+      if(el.closest('#client-visual-editor-toolbar'))return;
+      if(!el.dataset.sonaaEditorKey)el.dataset.sonaaEditorKey=stableKey(el);
+    });
+    applyLayout();
+  }
+  function selectedStyle(){return getLayout().elements?.[selectedKey]||{}}
+  function setStyle(prop,value){
+    if(!selectedKey)return;
+    const all={...(getLayout().elements||{})},item={...(all[selectedKey]||{})};
+    if(value===null||value==='')delete item[prop];else item[prop]=value;
+    if(Object.keys(item).length)all[selectedKey]=item;else delete all[selectedKey];
+    state.clientUiLayout=normalizedClientUiLayout({...getLayout(),elements:all});
+    applyLayout();updateToolbar();
+  }
+  function toolbar(){
+    if(document.getElementById('client-visual-editor-toolbar'))return;
+    const bar=document.createElement('div');bar.id='client-visual-editor-toolbar';bar.innerHTML=
+      '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:7px"><div><b style="font-size:13px">✦ تعديل لوحة العميل مباشرة</b><div id="client-editor-selected-label" style="font-size:10px;color:#cbd5e1;margin-top:2px">اضغط على أي عنصر في اللوحة لتعديله</div></div><button type="button" class="editor-cancel" id="client-editor-cancel">إلغاء</button></div>'+
+      '<div class="editor-controls"><label>حجم الخط <input id="client-editor-font" type="range" min="10" max="36" value="16"><span id="client-editor-font-val">16</span></label>'+
+      '<label>عرض العنصر <input id="client-editor-width" type="range" min="30" max="100" value="100"><span id="client-editor-width-val">100%</span></label>'+
+      '<label>الخلفية <input id="client-editor-bg" type="color" value="#ffffff"></label><label>لون النص <input id="client-editor-color" type="color" value="#0f172a"></label>'+
+      '<label>استدارة <input id="client-editor-radius" type="range" min="0" max="40" value="12"><span id="client-editor-radius-val">12</span></label>'+
+      '<button type="button" id="client-editor-hide">إخفاء/إظهار</button><button type="button" class="editor-reset" id="client-editor-reset">مسح تنسيق العنصر</button><button type="button" class="editor-save" id="client-editor-save">حفظ التعديلات للجميع</button></div>'+
+      '<div style="font-size:10px;color:#cbd5e1;margin-top:6px">وضع معاينة آمن: أزرار الطلبات والروابط لا تنفّذ عمليات حقيقية.</div>';
+    document.body.appendChild(bar);
+    ['font','width','bg','color','radius'].forEach(id=>bar.querySelector('#client-editor-'+id).addEventListener('input',e=>{
+      const prop={font:'fontSize',width:'width',bg:'background',color:'color',radius:'radius'}[id];
+      const value=['font','width','radius'].includes(id)?Number(e.target.value):e.target.value;
+      setStyle(prop,value);
+    }));
+    bar.querySelector('#client-editor-hide').onclick=()=>setStyle('hidden',!selectedStyle().hidden);
+    bar.querySelector('#client-editor-reset').onclick=()=>{if(!selectedKey)return;const all={...(getLayout().elements||{})};delete all[selectedKey];state.clientUiLayout=normalizedClientUiLayout({...getLayout(),elements:all});applyLayout();updateToolbar();};
+    bar.querySelector('#client-editor-cancel').onclick=()=>{if(confirm('إلغاء وضع التعديل والرجوع للوحة العميل؟'))location.href='client.html';};
+    bar.querySelector('#client-editor-save').onclick=saveVisualLayout;
+  }
+  function updateToolbar(){
+    const bar=document.getElementById('client-visual-editor-toolbar');if(!bar)return;
+    const style=selectedStyle();
+    const label=selected?(selected.innerText||selected.getAttribute('aria-label')||selected.tagName.toLowerCase()).trim().replace(/\s+/g,' ').slice(0,65):'اضغط على أي عنصر في اللوحة لتعديله';
+    bar.querySelector('#client-editor-selected-label').textContent=label;
+    [['font','fontSize',16],['width','width',100],['radius','radius',12]].forEach(([id,key,def])=>{const input=bar.querySelector('#client-editor-'+id);input.value=style[key]??def;bar.querySelector('#client-editor-'+id+'-val').textContent=(style[key]??def)+(id==='width'?'%':'');});
+    bar.querySelector('#client-editor-bg').value=style.background||'#ffffff';bar.querySelector('#client-editor-color').value=style.color||'#0f172a';
+  }
+  async function saveVisualLayout(){
+    const button=document.getElementById('client-editor-save');button.disabled=true;button.textContent='جاري الحفظ...';
+    try{
+      const token=localStorage.getItem('admin_token_v3')||'';if(!token)throw new Error('جلسة الأدمن غير موجودة؛ ارجع للأدمن وسجّل الدخول.');
+      const response=await fetch('/api/admin/client-layout',{method:'PUT',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({layout:normalizedClientUiLayout(getLayout())})});
+      const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.message||'تعذر حفظ التعديلات.');
+      state.clientUiLayout=normalizedClientUiLayout(data.layout);alert('تم حفظ تعديلات لوحة العميل للجميع.');location.href='client.html';
+    }catch(error){alert(error.message||'تعذر الحفظ.');button.disabled=false;button.textContent='حفظ التعديلات للجميع';}
+  }
+  document.addEventListener('click',function(event){
+    if(event.target.closest('#client-visual-editor-toolbar'))return;
+    if(!document.body.classList.contains('client-visual-editor'))return;
+    const app=document.getElementById('app');if(!app||!app.contains(event.target))return;
+    const el=event.target.closest(editableSelector);if(el){event.preventDefault();event.stopImmediatePropagation();selected=el;selectedKey=el.dataset.sonaaEditorKey||stableKey(el);el.dataset.sonaaEditorSelected='1';document.querySelectorAll('[data-sonaa-editor-selected="1"]').forEach(n=>{if(n!==el)delete n.dataset.sonaaEditorSelected;});updateToolbar();}
+    else {event.preventDefault();event.stopImmediatePropagation();}
+  },true);
+  document.addEventListener('submit',e=>{if(document.body.classList.contains('client-visual-editor')){e.preventDefault();e.stopImmediatePropagation();}},true);
+  document.addEventListener('change',e=>{if(document.body.classList.contains('client-visual-editor')&&!e.target.closest('#client-visual-editor-toolbar')){e.preventDefault();e.stopImmediatePropagation();}},true);
+  toolbar();markElements();
+  new MutationObserver(()=>{markElements();}).observe(document.getElementById('app'),{childList:true,subtree:true});
+})();
+</script>
 
 <script src="/web-push.js" defer></script>
 <script src="/page-visit.js" defer></script>
