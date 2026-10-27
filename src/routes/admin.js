@@ -223,6 +223,7 @@ router.patch('/complaints/:id', auth('admin'), validate(Joi.object({
     updates.updatedAt = new Date();
     const complaint = await Complaint.findByIdAndUpdate(req.params.id, { $set: updates }, { new: true, runValidators: true }).lean();
     if (!complaint) { return res.status(404).json({ message: 'الشكوى غير موجودة' }); }
+    await writeAdminAudit(req, 'تحديث شكوى', 'complaints', String(complaint._id), JSON.stringify({ sn: complaint.sn, status: complaint.status, statusChanged: hasStatus, hasAdminResponse: Boolean(complaint.adminResponse) }));
     if (complaint.adminResponse && String(complaint.adminResponse).trim()) {
       const order = await Order.findOne({ sn: complaint.sn }).select('_id clientAccount').lean();
       if (order?.clientAccount) await createNotification({
@@ -558,7 +559,7 @@ router.patch('/orders/:sn/correct', auth('admin'), validate(Joi.object({
     order.description = String(req.body.description || '').trim();
     order.budget = String(req.body.budget || '').trim();
     await order.save();
-    await writeAdminAudit(req, 'تصحيح بيانات طلب', 'orders', sn, JSON.stringify({ clientPhone: phone, service: order.service, area: order.area }));
+    await writeAdminAudit(req, 'تصحيح بيانات طلب', 'orders', sn, JSON.stringify({ service: order.service, area: order.area }));
     return res.json({ message: 'تم حفظ تصحيح بيانات الطلب. راجع البيانات ثم انشره عند التأكد.', order });
   } catch (err) { next(err); }
 });
@@ -734,6 +735,7 @@ router.patch('/fannis/:id/level', auth('admin'), async (req, res, next) => {
     fanni.levelHistory.push({ from: oldLevel, to: newLevel, date: new Date(), by: adminName(req), byId: req.user?._id, reason: String(reason||'').slice(0,500) });
     fanni.decisions.push({ action: 'ترقية مستوى', reason: `من ${oldLevel} إلى ${newLevel}. ${String(reason||'').slice(0,400)}`, date: new Date(), by: adminName(req), byId: req.user?._id, meta: { from: oldLevel, to: newLevel } });
     await fanni.save();
+    await writeAdminAudit(req, 'تغيير مستوى فني', 'fannis', String(fanni._id), JSON.stringify({ from: oldLevel, to: newLevel, reason: String(reason || '').slice(0,400) }));
     return res.json({ message: `تمت ترقية المستوى من ${oldLevel} إلى ${newLevel}`, fanni: publicFanni(fanni) });
   } catch(e){ next(e); }
 });
@@ -764,6 +766,7 @@ router.patch('/fannis/:id/badge', auth('admin'), async (req, res, next) => {
       fanni.decisions.push({ action: 'إزالة شارة', reason: `إزالة شارة ${b}`, date: new Date(), by: adminName(req), byId: req.user?._id, meta: { badge: b } });
     }
     await fanni.save();
+    await writeAdminAudit(req, hasBadge && !(act === 'add' || act === '' || act === 'toggle' && !hasBadge) ? 'إزالة شارة فني' : 'إضافة شارة فني', 'fannis', String(fanni._id), `badge=${b}; action=${act}`);
     return res.json({ message: act.includes('add') ? 'تمت إضافة الشارة' : 'تمت إزالة الشارة', fanni: publicFanni(fanni) });
   } catch(e){ next(e); }
 });
@@ -781,6 +784,7 @@ router.patch('/fannis/:id/note', auth('admin'), async (req, res, next) => {
     fanni.adminNotesHistory.push({ note: clean, date: new Date(), by: adminName(req), byId: req.user?._id });
     fanni.decisions.push({ action: 'تعديل ملاحظة', reason: clean.slice(0,500), date: new Date(), by: adminName(req), byId: req.user?._id });
     await fanni.save();
+    await writeAdminAudit(req, 'تعديل ملاحظة فني', 'fannis', String(fanni._id), `noteLength=${clean.length}`);
     return res.json({ message: 'تم حفظ الملاحظة الداخلية', fanni: publicFanni(fanni) });
   } catch(e){ next(e); }
 });
@@ -816,6 +820,7 @@ router.patch('/fannis/:id/limit', auth('admin'), async (req, res, next) => {
     fanni.limits = limits;
     fanni.decisions.push({ action: 'تعديل حد', reason: `حدود: ${JSON.stringify(limits)}`, date: new Date(), by: adminName(req), byId: req.user?._id, meta: limits });
     await fanni.save();
+    await writeAdminAudit(req, 'تعديل حدود استقبال فني', 'fannis', String(fanni._id), JSON.stringify(limits));
     return res.json({ message: 'تم حفظ حدود الاستقبال', fanni: publicFanni(fanni) });
   } catch(e){ next(e); }
 });
@@ -895,6 +900,7 @@ router.delete('/offers/:sn/:idx', auth('admin'), async (req, res, next) => {
       if (order.status === 'تم اختيار فني') order.status = 'وصلتك عروض';
     }
     await order.save();
+    await writeAdminAudit(req, 'حذف عرض فني', 'offers', `${sn}:${idx}`, JSON.stringify({ fanniId: String(removed.fanni || ''), price: removed.price, status: order.status }));
     return res.json({ message: 'تمت إزالة العرض', removed, offers: order.offers });
   } catch(e){ next(e); }
 });
@@ -927,6 +933,7 @@ router.post('/offers/:sn/:idx/reject', auth('admin'), async (req, res, next) => 
       if (order.status === 'تم اختيار فني') order.status = 'وصلتك عروض';
     }
     await order.save();
+    await writeAdminAudit(req, 'رفض عرض فني', 'offers', `${sn}:${idx}`, JSON.stringify({ fanniId: String(offer.fanni || ''), price: offer.price, reason }));
     return res.json({ message: 'تم رفض العرض وإزالته', reason, offers: order.offers });
   } catch(e){ next(e); }
 });
