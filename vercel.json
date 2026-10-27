@@ -1,11 +1,16 @@
-
 {
   "version": 2,
   "builds": [
     {
       "src": "src/server.js",
       "use": "@vercel/node",
-      "includeFiles": ["frontend-dist/**", "frontend/**", "public/images/**"]
+      "config": {
+        "includeFiles": [
+          "frontend-dist/**",
+          "frontend/**",
+          "public/images/**"
+        ]
+      }
     }
   ],
   "routes": [
