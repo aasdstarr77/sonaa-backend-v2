@@ -1074,15 +1074,15 @@ function render(){
     <button onclick="doRegister()" ${state.loading||SERVICES_LOADING?'disabled':''} class="primary-btn w-full h-12">${state.loading?'جاري إنشاء الحساب...':SERVICES_LOADING?'جاري تحميل التخصصات...':'إنشاء حساب فني'}</button>
     ${state.error?errorBox(state.error):''}
    </div>`:`
-   <div class="space-y-4">
-    <div><label class="field-label">رقم التليفون</label><input id="fanniLoginPhone" class="field" type="tel" inputmode="numeric" autocomplete="tel" value="${esc(state.loginPhone)}" oninput="state.loginPhone=this.value.replace(/\\D/g,'').slice(0,11)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();doLogin()}" placeholder="01xxxxxxxxx"></div>
-    <div><label class="field-label">كلمة السر</label><input id="fanniLoginPassword" type="password" class="field" autocomplete="current-password" value="${esc(state.loginPass)}" oninput="state.loginPass=this.value" onkeydown="if(event.key===\'Enter\'){event.preventDefault();doLogin()}" placeholder="اكتب كلمة السر"></div>
+   <form class="space-y-4" onsubmit="event.preventDefault();doLogin()">
+    <div><label class="field-label">رقم التليفون</label><input id="fanniLoginPhone" class="field" type="tel" inputmode="numeric" autocomplete="tel" value="${esc(state.loginPhone)}" oninput="state.loginPhone=this.value.replace(/\\D/g,'').slice(0,11)" placeholder="01xxxxxxxxx"></div>
+    <div><label class="field-label">كلمة السر</label><input id="fanniLoginPassword" type="password" class="field" autocomplete="current-password" value="${esc(state.loginPass)}" oninput="state.loginPass=this.value" placeholder="اكتب كلمة السر"></div>
      <p class="text-left -mt-2 mb-2"><a class="text-xs font-bold text-blue-700" href="password.html?role=fanni&mode=recovery">نسيت كلمة المرور؟</a></p>
-    <button onclick="doLogin()" ${state.loading?'disabled':''} class="primary-btn w-full h-12">${state.loading?'جاري تسجيل الدخول...':'دخول إلى حسابي'}</button>
+    <button type="submit" ${state.loading?'disabled':''} class="primary-btn w-full h-12">${state.loading?'جاري تسجيل الدخول...':'دخول إلى حسابي'}</button>
     ${state.pendingMsg?`<div class="rounded-xl bg-amber-50 border border-amber-200 p-3 text-center text-[12px] font-bold text-amber-800">${esc(state.pendingMsg)}</div>`:''}
     ${state.error?errorBox(state.error):''}
     ${state.tab==='login'?'<p class="mt-4 text-center text-[10px] leading-5 text-slate-500">كلمة السر لا تشارك مع أي شخص.</p>':''}
-   </div>`}
+   </form>`}
   </section>
    </div>
   </section>
