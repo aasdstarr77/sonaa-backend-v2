@@ -2228,6 +2228,7 @@ router.patch('/services/:name', auth('admin'), async (req, res, next) => {
       }
     }
 
+    await writeAdminAudit(req, 'تعديل خدمة', 'services', String(serviceDoc._id), JSON.stringify({ before: { name: oldName, category: oldCategory }, after: { name: serviceDoc.name, category: serviceDoc.category, isActive: serviceDoc.isActive, sortOrder: serviceDoc.sortOrder } }));
     return res.json({ ok: true, message: 'تم تعديل الخدمة', service: serviceDoc, data: serviceDoc });
   } catch (err) {
     if (createdNewService && oldNameForRollback) {
