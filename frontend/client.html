@@ -1594,8 +1594,8 @@ body.client-visual-editor{padding-bottom:180px}
 <script>
 (function(){
   const preview=()=>{try{return new URLSearchParams(location.search).get('adminLayout')==='1'}catch(_){return false}};
-  if(!preview())return;
-  document.body.classList.add('client-visual-editor');
+  const editing=preview();
+  if(editing)document.body.classList.add('client-visual-editor');
   let selected=null, selectedKey='', applying=false;
   const editableSelector='header,main,section,article,form,.panel,.client-order-panel,.client-new-order,.client-section-tabs,button,a,h1,h2,h3,h4,p,label,.rounded-xl,.rounded-2xl';
   function stableKey(el){
@@ -1683,7 +1683,7 @@ body.client-visual-editor{padding-bottom:180px}
   },true);
   document.addEventListener('submit',e=>{if(document.body.classList.contains('client-visual-editor')){e.preventDefault();e.stopImmediatePropagation();}},true);
   document.addEventListener('change',e=>{if(document.body.classList.contains('client-visual-editor')&&!e.target.closest('#client-visual-editor-toolbar')){e.preventDefault();e.stopImmediatePropagation();}},true);
-  toolbar();markElements();
+  if(editing)toolbar();markElements();
   new MutationObserver(()=>{markElements();}).observe(document.getElementById('app'),{childList:true,subtree:true});
 })();
 </script>
