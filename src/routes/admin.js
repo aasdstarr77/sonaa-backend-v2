@@ -1501,7 +1501,7 @@ function sanitizeClientUiLayout(input) {
   }
   const elements = {};
   if (source.elements && typeof source.elements === 'object' && !Array.isArray(source.elements)) {
-    for (const [key, value] of Object.entries(source.elements).slice(0, 150)) {
+    for (const [key, value] of Object.entries(source.elements).slice(0, 500)) {
       if (!/^[a-zA-Z0-9_-]{1,100}$/.test(key) || !value || typeof value !== 'object' || Array.isArray(value)) continue;
       const item = {};
       if (Number.isFinite(value.fontSize) && value.fontSize >= 10 && value.fontSize <= 36) item.fontSize = value.fontSize;
@@ -1550,7 +1550,7 @@ function sanitizeTechnicianUiLayout(input) {
   }
   const elements = {};
   if (source.elements && typeof source.elements === 'object' && !Array.isArray(source.elements)) {
-    for (const [key, value] of Object.entries(source.elements).slice(0, 150)) {
+    for (const [key, value] of Object.entries(source.elements).slice(0, 500)) {
       if (!/^[a-zA-Z0-9_-]{1,100}$/.test(key) || !value || typeof value !== 'object' || Array.isArray(value)) continue;
       const item = {};
       if (Number.isFinite(value.fontSize) && value.fontSize >= 10 && value.fontSize <= 36) item.fontSize = value.fontSize;
