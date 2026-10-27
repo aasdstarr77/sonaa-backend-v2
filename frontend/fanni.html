@@ -720,8 +720,10 @@ async function loadServices(){
 let dashboardSpecialtiesCollapsed=true;
 function toggleDashboardSpecialties(){dashboardSpecialtiesCollapsed=!dashboardSpecialtiesCollapsed;render();}
 let forceTechnicianRegistration=(new URLSearchParams(window.location.search).get('tab')||'').replace(/[\u200B-\u200D\u2060\uFEFF]/g,'').trim()==='register';
+// Require an explicit technician login on each fresh page load; do not silently restore a saved browser session.
+if(getToken())clearAuth();
 let state={
- tab:forceTechnicianRegistration?'register':(getToken()?'myOffers':'login'),
+ tab:forceTechnicianRegistration?'register':'login',
  loginPhone:'',loginPass:'',
  regName:'',regPhone:'',regPass:'',regPassConfirm:'',regGuidelinesAccepted:false,
  regSpecialties:[],regAreas:[],regAreaSearch:'',regAreaCustom:'',openSpecialtyCategory:'',
@@ -737,7 +739,6 @@ let state={
 };
 
 let currentUser=getUser();
-if(getToken()) Promise.resolve().then(()=>loadMyOffers());
 
 function isApproved(){
  return String(currentUser?.status||'').trim()==='معتمد';
