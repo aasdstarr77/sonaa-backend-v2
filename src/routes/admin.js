@@ -391,6 +391,7 @@ router.post('/fannis/:id/disable', auth('admin'), validate(Joi.object({ reason: 
     if (fanni.status === 'معلق') { return res.json({ message: 'حساب الفني معلق بالفعل', fanni: publicFanni(fanni) }); }
     const reason = String(req.body.reason || '').trim();
     fanni.status = 'معلق'; fanni.suspensionReason = reason || undefined; fanni.suspendedAt = new Date(); fanni.decisions.push(decision(req, 'تعليق', reason)); await fanni.save();
+    await writeAdminAudit(req, 'تعليق حساب فني', 'fannis', String(fanni._id), `reason=${reason}`);
     return res.json({ message: 'تم تعليق حساب الفني', fanni: publicFanni(fanni) });
   } catch (err) { next(err); }
 });
