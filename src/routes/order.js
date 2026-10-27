@@ -125,6 +125,11 @@ function publicOrder(order, options = {}) {
   delete data.clientAccount;
   delete data.assignedFanni;
   delete data.assignedFanniPhone;
+  // Platform commission is internal financial data and must never be exposed in client-facing order payloads.
+  delete data.commissionRate;
+  delete data.commissionAmount;
+  delete data.commissionCharged;
+  delete data.commissionChargedAt;
 
   if (
     includeAssignedFanniPhone &&
@@ -1257,11 +1262,7 @@ router.post('/:sn/accept', async (req, res, next) => {
     notificationOrderId = updatedOrder._id;
 
     responsePayload = {
-      message: 'تم قبول العرض وخصم عمولة المنصة بنجاح',
-      commission: {
-        rate: commissionRate,
-        amount: commissionAmount
-      },
+      message: 'تم قبول العرض بنجاح',
       order: publicOrder(updatedOrder, {
         includeAddress: true,
         includeAssignedFanniPhone: true
@@ -1786,7 +1787,7 @@ router.post('/:sn/price-change/:requestId/decision', async (req, res, next) => {
       link: '/fanni',
       dedupeKey: 'price-change-decision:' + String(order._id) + ':' + String(request._id)
     });
-    return res.json({ message: approved ? 'تمت الموافقة على السعر الجديد وتسجيل تسوية العمولة.' : 'تم رفض تعديل السعر؛ يظل السعر السابق ساريًا.', acceptedOfferPrice: order.acceptedOfferPrice, request });
+    return res.json({ message: approved ? 'تمت الموافقة على السعر الجديد.' : 'تم رفض تعديل السعر؛ يظل السعر السابق ساريًا.', acceptedOfferPrice: order.acceptedOfferPrice, request });
   } catch (err) {
     if (session && session.inTransaction()) { try { await session.abortTransaction(); } catch (_) {} }
     if (err && err.code === 11000) return res.status(409).json({ message: 'تمت معالجة تسوية العمولة بالفعل.' });
