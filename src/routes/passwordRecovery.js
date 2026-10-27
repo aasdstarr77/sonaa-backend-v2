@@ -19,7 +19,7 @@ const adminSelfAuth = (req, res, next) => auth()(req, res, () => {
 });
 const supportAdminAuth = (req, res, next) => auth()(req, res, () => {
   if (req.user.role !== 'admin' && !req.user.adminRole) return res.status(403).json({ message: 'هذا الإجراء مخصص لحسابات الإدارة.' });
-  const scopedReq = { ...req, path: '/support/recovery', method: req.method };
+  const scopedReq = { ...req, path: '/password-recovery/admin/requests', method: req.method };
   if (!isRootAdmin(req.user) && !canAccessAdmin(req.user, scopedReq)) return res.status(403).json({ message: 'ليست لديك صلاحية إدارة طلبات استعادة الحساب.' });
   return next();
 });

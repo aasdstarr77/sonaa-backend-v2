@@ -6,7 +6,7 @@ const { normalizePhone } = require('../utils/phone');
 
 const ADMIN_ROLES = ['مشرف', 'مشرف أول', 'مدير', 'قراءة فقط'];
 
-const ADMIN_PERMISSION_KEYS = ['dashboard','fannis','orders','publishOrders','complaints','services','clients','topups','wallet','pricing','settings','content','support','regions','offers','notifications','clientsData'];
+const ADMIN_PERMISSION_KEYS = ['dashboard','fannis','orders','publishOrders','voiceReview','passwordRecovery','complaints','services','clients','topups','wallet','pricing','settings','content','support','regions','offers','notifications','clientsData'];
 const ROLE_WRITE_SECTIONS = {
   'قراءة فقط': [],
   'مشرف': ['orders','complaints','support','offers'],
@@ -19,7 +19,7 @@ function defaultAdminPermissions(role) {
     ? new Set(ADMIN_PERMISSION_KEYS)
     : new Set(role === 'مدير' || role === 'مشرف أول'
       ? ADMIN_PERMISSION_KEYS
-      : ['dashboard','fannis','orders','complaints','services','clients','topups','wallet','pricing','content','support','regions','offers','notifications','clientsData']);
+      : ['dashboard','fannis','orders','voiceReview','passwordRecovery','complaints','services','clients','topups','wallet','pricing','content','support','regions','offers','notifications','clientsData']);
   return Object.fromEntries(ADMIN_PERMISSION_KEYS.map(key => [key, {
     read: reads.has(key) || writes.has(key),
     write: writes.has(key)
@@ -30,7 +30,9 @@ const PERMISSION_SECTIONS = {
   dashboard: [/^\/me$/, /^\/counts$/, /^\/reports?(\/|$)/, /^\/stats?(\/|$)/],
   wallet: [/^\/wallet(\/|$)/, /^\/fannis\/[^/]+\/(set-balance|add-balance)$/],
   fannis: [/^\/fannis(\/|$)/],
-  publishOrders: [/^\/admin\/[^/]+\/(publish|voice-reviewed)$/],
+  publishOrders: [/^\/admin\/[^/]+\/publish$/],
+  voiceReview: [/^\/[^/]+\/voice$/, /^\/admin\/[^/]+\/voice-reviewed$/],
+  passwordRecovery: [/^\/password-recovery\/admin\/requests(\/|$)/],
   orders: [/^\/orders(\/|$)/],
   complaints: [/^\/complaints(\/|$)/],
   services: [/^\/services(\/|$)/],
