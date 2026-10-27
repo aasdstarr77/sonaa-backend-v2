@@ -1489,7 +1489,21 @@ function sanitizeClientUiLayout(input) {
       if (['small', 'medium', 'large'].includes(source.sizes[tabId])) sizes[tabId] = source.sizes[tabId];
     }
   }
-  return { tabOrder, sizes };
+  const elements = {};
+  if (source.elements && typeof source.elements === 'object' && !Array.isArray(source.elements)) {
+    for (const [key, value] of Object.entries(source.elements).slice(0, 150)) {
+      if (!/^[a-zA-Z0-9_-]{1,100}$/.test(key) || !value || typeof value !== 'object' || Array.isArray(value)) continue;
+      const item = {};
+      if (Number.isFinite(value.fontSize) && value.fontSize >= 10 && value.fontSize <= 36) item.fontSize = value.fontSize;
+      if (Number.isFinite(value.width) && value.width >= 30 && value.width <= 100) item.width = value.width;
+      if (typeof value.background === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.background)) item.background = value.background;
+      if (typeof value.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.color)) item.color = value.color;
+      if (Number.isFinite(value.radius) && value.radius >= 0 && value.radius <= 40) item.radius = value.radius;
+      if (typeof value.hidden === 'boolean') item.hidden = value.hidden;
+      if (Object.keys(item).length) elements[key] = item;
+    }
+  }
+  return { tabOrder, sizes, elements };
 }
 router.get('/client-layout', async (req, res, next) => {
   try {
