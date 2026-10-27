@@ -1437,7 +1437,7 @@ function sanitizeAdminUiLayout(input) {
   const tabOrder = {};
   for (const [sectionId, allowed] of Object.entries(ADMIN_LAYOUT_SECTIONS)) {
     const proposed = Array.isArray(source.tabOrder?.[sectionId]) ? source.tabOrder[sectionId] : [];
-    tabOrder[sectionId] = [...new Set(proposed.filter(id => allowed.includes(id)))].slice(0, allowed.length);
+    tabOrder[sectionId] = [...new Set(proposed.filter(id => ADMIN_LAYOUT_TABS.includes(id)))].slice(0, ADMIN_LAYOUT_TABS.length);
   }
   const tabGroups = {};
   if (source.tabGroups && typeof source.tabGroups === 'object' && !Array.isArray(source.tabGroups)) {
