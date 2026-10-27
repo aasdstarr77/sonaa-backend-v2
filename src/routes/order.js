@@ -1786,7 +1786,7 @@ router.post('/:sn/price-change/:requestId/decision', async (req, res, next) => {
       link: '/fanni',
       dedupeKey: 'price-change-decision:' + String(order._id) + ':' + String(request._id)
     });
-    return res.json({ message: approved ? 'تمت الموافقة على السعر الجديد وتسجيل تسوية العمولة.' : 'تم رفض تعديل السعر؛ يظل السعر السابق ساريًا.', acceptedOfferPrice: order.acceptedOfferPrice, commissionAmount: order.commissionAmount, commissionRate: order.commissionRate, request });
+    return res.json({ message: approved ? 'تمت الموافقة على السعر الجديد وتسجيل تسوية العمولة.' : 'تم رفض تعديل السعر؛ يظل السعر السابق ساريًا.', acceptedOfferPrice: order.acceptedOfferPrice, request });
   } catch (err) {
     if (session && session.inTransaction()) { try { await session.abortTransaction(); } catch (_) {} }
     if (err && err.code === 11000) return res.status(409).json({ message: 'تمت معالجة تسوية العمولة بالفعل.' });
@@ -1855,8 +1855,7 @@ async function trackOrder(req, res, next) {
     });
     safe.acceptedOfferId = order.acceptedOfferId ? String(order.acceptedOfferId) : null;
     safe.acceptedOfferPrice = order.acceptedOfferPrice ?? null;
-    safe.commissionRate = order.commissionRate ?? null;
-    safe.commissionAmount = order.commissionAmount ?? null;
+    // Platform commission is internal financial data and must not be returned to clients.
     if (Array.isArray(safe.offers) && order.acceptedOfferId && ['تم اختيار فني', 'تم الانتهاء'].includes(order.status)) safe.offers = safe.offers.map(offer => ({ ...offer, offerStatus: String(offer._id) === String(order.acceptedOfferId) ? 'تم قبول العرض' : 'تم رفض العرض' }));
     safe.chatMessages = (order.chatMessages || []).map(m => ({ senderRole: m.senderRole, text: m.text, targetOfferId: m.targetOfferId || '', createdAt: m.createdAt }));
     safe.priceChangeRequests = (order.priceChangeRequests || []).map(r => ({ _id: String(r._id), oldPrice: r.oldPrice, newPrice: r.newPrice, reason: r.reason, status: r.status, requestedAt: r.requestedAt, decidedAt: r.decidedAt }));
