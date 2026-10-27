@@ -69,7 +69,7 @@ input[type=checkbox]{width:18px;height:18px;accent-color:#0d9488;filter:drop-sha
 #notice-area,#error-area{font-weight:800}
 @media(prefers-reduced-motion:reduce){.btn,.field,.case,.card{transition:none}}
 
-</style>
+body.sonaa-standalone-layout-editing *:not(#sonaa-standalone-editor):not(#sonaa-standalone-editor *){touch-action:none}</style>
 </head>
 <body>
 <div class="wrap">
@@ -251,7 +251,7 @@ init();
 </script>
 <script>
 (function(){
- const params=new URLSearchParams(location.search);const editing=params.get('adminLayout')==='1';
+ const params=new URLSearchParams(location.search);const editing=params.get('adminLayout')==='1';if(editing)document.body.classList.add('sonaa-standalone-layout-editing');
  const role=params.get('role')||'client',page=location.pathname.split('/').pop()==='support.html'?'support':'password';
  const token=()=>localStorage.getItem('admin_token_v3')||'';
  const endpoint=role==='admin'?'/api/admin/layout':role==='fanni'?'/api/admin/technician-layout':'/api/admin/client-layout';
