@@ -2,7 +2,7 @@
   "name": "sonaa-backend-v2",
   "version": "2.0.0",
   "main": "src/server.js",
-  "scripts": { "start": "node src/server.js", "test": "node src/tests/runTests.js" },
+  "scripts": { "start": "node src/server.js", "test": "node src/tests/runTests.js", "postinstall": "node scripts/build-frontend.js" },
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",

@@ -4,7 +4,8 @@
   "builds": [
     {
       "src": "src/server.js",
-      "use": "@vercel/node"
+      "use": "@vercel/node",
+      "includeFiles": ["frontend-dist/**", "frontend/**", "public/images/**"]
     }
   ],
   "routes": [
