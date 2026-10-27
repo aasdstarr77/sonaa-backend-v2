@@ -649,7 +649,7 @@ let state={
   clientUiLayout:{tabOrder:[],sizes:{},elements:{}},clientAdminRenderingDashboard:false,clientLayoutEditorAvailable:false,clientLayoutEditorChecked:false,clientLayoutEditMode:false,clientLayoutDragId:''
 };
 const CLIENT_TAB_DEFINITIONS=[{id:'new',label:'طلب جديد'},{id:'orders',label:'طلباتي'},{id:'complaint',label:'شكوى'}];
-function normalizedClientUiLayout(input){const source=input&&typeof input==='object'&&!Array.isArray(input)?input:{};const allowed=CLIENT_TAB_DEFINITIONS.map(item=>item.id);const order=Array.isArray(source.tabOrder)?[...new Set(source.tabOrder.filter(id=>allowed.includes(id)))]:[];allowed.forEach(id=>{if(!order.includes(id))order.push(id)});const sizes={};if(source.sizes&&typeof source.sizes==='object'&&!Array.isArray(source.sizes))allowed.forEach(id=>{if(['small','medium','large'].includes(source.sizes[id]))sizes[id]=source.sizes[id]});const elements={};if(source.elements&&typeof source.elements==='object'&&!Array.isArray(source.elements)){for(const [key,value] of Object.entries(source.elements).slice(0,150)){if(!/^[a-zA-Z0-9_-]{1,100}$/.test(key)||!value||typeof value!=='object'||Array.isArray(value))continue;const item={};if(Number.isFinite(value.fontSize)&&value.fontSize>=10&&value.fontSize<=36)item.fontSize=value.fontSize;if(Number.isFinite(value.width)&&value.width>=30&&value.width<=100)item.width=value.width;if(typeof value.background==='string'&&/^#[0-9a-fA-F]{6}$/.test(value.background))item.background=value.background;if(typeof value.color==='string'&&/^#[0-9a-fA-F]{6}$/.test(value.color))item.color=value.color;if(Number.isFinite(value.radius)&&value.radius>=0&&value.radius<=40)item.radius=value.radius;if(typeof value.hidden==='boolean')item.hidden=value.hidden;if(Object.keys(item).length)elements[key]=item;}}return {tabOrder:order,sizes,elements};}
+function normalizedClientUiLayout(input){const source=input&&typeof input==='object'&&!Array.isArray(input)?input:{};const allowed=CLIENT_TAB_DEFINITIONS.map(item=>item.id);const order=Array.isArray(source.tabOrder)?[...new Set(source.tabOrder.filter(id=>allowed.includes(id)))]:[];allowed.forEach(id=>{if(!order.includes(id))order.push(id)});const sizes={};if(source.sizes&&typeof source.sizes==='object'&&!Array.isArray(source.sizes))allowed.forEach(id=>{if(['small','medium','large'].includes(source.sizes[id]))sizes[id]=source.sizes[id]});const elements={};if(source.elements&&typeof source.elements==='object'&&!Array.isArray(source.elements)){for(const [key,value] of Object.entries(source.elements).slice(0,150)){if(!/^[a-zA-Z0-9_-]{1,100}$/.test(key)||!value||typeof value!=='object'||Array.isArray(value))continue;const item={};if(Number.isFinite(value.fontSize)&&value.fontSize>=10&&value.fontSize<=36)item.fontSize=value.fontSize;if(Number.isFinite(value.width)&&value.width>=30&&value.width<=100)item.width=value.width;if(typeof value.background==='string'&&/^#[0-9a-fA-F]{6}$/.test(value.background))item.background=value.background;if(typeof value.color==='string'&&/^#[0-9a-fA-F]{6}$/.test(value.color))item.color=value.color;if(Number.isFinite(value.radius)&&value.radius>=0&&value.radius<=40)item.radius=value.radius;if(Number.isFinite(value.x)&&value.x>=-100&&value.x<=100)item.x=value.x;if(Number.isFinite(value.y)&&value.y>=-100&&value.y<=100)item.y=value.y;if(typeof value.text==='string')item.text=value.text.slice(0,200);if(typeof value.hidden==='boolean')item.hidden=value.hidden;if(Object.keys(item).length)elements[key]=item;}}return {tabOrder:order,sizes,elements};}
 function clientTabsInLayoutOrder(){const layout=normalizedClientUiLayout(state.clientUiLayout);return layout.tabOrder.map(id=>CLIENT_TAB_DEFINITIONS.find(item=>item.id===id)).filter(Boolean);}
 function clientTabSizeClass(id){return 'client-tab-size-'+(state.clientUiLayout?.sizes?.[id]||'medium');}
 function isClientAdminLayoutMode(){try{return new URLSearchParams(location.search).get('adminLayout')==='1';}catch{return false;}}
@@ -1615,6 +1615,8 @@ body.client-visual-editor{padding-bottom:180px}
         if(style.background)el.style.setProperty('background',style.background,'important');
         if(style.color)el.style.setProperty('color',style.color,'important');
         if(style.radius!==undefined)el.style.borderRadius=style.radius+'px';
+        if(style.x!==undefined||style.y!==undefined)el.style.translate=(style.x||0)+'px '+(style.y||0)+'px';
+        if(typeof style.text==='string'&&el.children.length===0&&el.textContent!==style.text)el.textContent=style.text;
         if(style.hidden)el.dataset.sonaaEditorHidden='1';else delete el.dataset.sonaaEditorHidden;
         el.style.display=style.hidden?'none':'';
       });
@@ -1644,14 +1646,15 @@ body.client-visual-editor{padding-bottom:180px}
       '<label>عرض العنصر <input id="client-editor-width" type="range" min="30" max="100" value="100"><span id="client-editor-width-val">100%</span></label>'+
       '<label>الخلفية <input id="client-editor-bg" type="color" value="#ffffff"></label><label>لون النص <input id="client-editor-color" type="color" value="#0f172a"></label>'+
       '<label>استدارة <input id="client-editor-radius" type="range" min="0" max="40" value="12"><span id="client-editor-radius-val">12</span></label>'+
-      '<button type="button" id="client-editor-hide">إخفاء/إظهار</button><button type="button" class="editor-reset" id="client-editor-reset">مسح تنسيق العنصر</button><button type="button" class="editor-save" id="client-editor-save">حفظ التعديلات للجميع</button></div>'+
+      '<label>تحريك أفقي <input id="client-editor-x" type="range" min="-100" max="100" value="0"><span id="client-editor-x-val">0</span></label><label>تحريك رأسي <input id="client-editor-y" type="range" min="-100" max="100" value="0"><span id="client-editor-y-val">0</span></label><label style="flex:1 1 180px">تعديل النص <input id="client-editor-text" type="text" maxlength="200" placeholder="اختَر عنصرًا نصيًا" style="width:150px;color:#0f172a;border-radius:7px;padding:5px"></label><button type="button" id="client-editor-apply-text">تطبيق النص</button><button type="button" id="client-editor-hide">إخفاء/إظهار</button><button type="button" class="editor-reset" id="client-editor-reset">مسح تنسيق العنصر</button><button type="button" class="editor-save" id="client-editor-save">حفظ التعديلات للجميع</button></div>'+
       '<div style="font-size:10px;color:#cbd5e1;margin-top:6px">وضع معاينة آمن: أزرار الطلبات والروابط لا تنفّذ عمليات حقيقية.</div>';
     document.body.appendChild(bar);
-    ['font','width','bg','color','radius'].forEach(id=>bar.querySelector('#client-editor-'+id).addEventListener('input',e=>{
-      const prop={font:'fontSize',width:'width',bg:'background',color:'color',radius:'radius'}[id];
+    ['font','width','bg','color','radius','x','y'].forEach(id=>bar.querySelector('#client-editor-'+id).addEventListener('input',e=>{
+      const prop={font:'fontSize',width:'width',bg:'background',color:'color',radius:'radius',x:'x',y:'y'}[id];
       const value=['font','width','radius'].includes(id)?Number(e.target.value):e.target.value;
       setStyle(prop,value);
     }));
+    bar.querySelector('#client-editor-apply-text').onclick=()=>{if(!selected)return;if(selected.children.length){alert('تعديل النص متاح للعناصر النصية البسيطة فقط حتى لا يتأثر شكل الأيقونات.');return;}setStyle('text',bar.querySelector('#client-editor-text').value.slice(0,200));};
     bar.querySelector('#client-editor-hide').onclick=()=>setStyle('hidden',!selectedStyle().hidden);
     bar.querySelector('#client-editor-reset').onclick=()=>{if(!selectedKey)return;const all={...(getLayout().elements||{})};delete all[selectedKey];state.clientUiLayout=normalizedClientUiLayout({...getLayout(),elements:all});applyLayout();updateToolbar();};
     bar.querySelector('#client-editor-cancel').onclick=()=>{if(confirm('إلغاء وضع التعديل والرجوع للوحة العميل؟'))location.href='client.html';};
@@ -1662,8 +1665,8 @@ body.client-visual-editor{padding-bottom:180px}
     const style=selectedStyle();
     const label=selected?(selected.innerText||selected.getAttribute('aria-label')||selected.tagName.toLowerCase()).trim().replace(/\s+/g,' ').slice(0,65):'اضغط على أي عنصر في اللوحة لتعديله';
     bar.querySelector('#client-editor-selected-label').textContent=label;
-    [['font','fontSize',16],['width','width',100],['radius','radius',12]].forEach(([id,key,def])=>{const input=bar.querySelector('#client-editor-'+id);input.value=style[key]??def;bar.querySelector('#client-editor-'+id+'-val').textContent=(style[key]??def)+(id==='width'?'%':'');});
-    bar.querySelector('#client-editor-bg').value=style.background||'#ffffff';bar.querySelector('#client-editor-color').value=style.color||'#0f172a';
+    [['font','fontSize',16],['width','width',100],['radius','radius',12],['x','x',0],['y','y',0]].forEach(([id,key,def])=>{const input=bar.querySelector('#client-editor-'+id);input.value=style[key]??def;bar.querySelector('#client-editor-'+id+'-val').textContent=(style[key]??def)+(id==='width'?'%':'');});
+    bar.querySelector('#client-editor-bg').value=style.background||'#ffffff';bar.querySelector('#client-editor-color').value=style.color||'#0f172a';bar.querySelector('#client-editor-text').value=selected&&selected.children.length===0?(style.text??selected.textContent.trim()).slice(0,200):'';bar.querySelector('#client-editor-text').disabled=Boolean(selected&&selected.children.length);
   }
   async function saveVisualLayout(){
     const button=document.getElementById('client-editor-save');button.disabled=true;button.textContent='جاري الحفظ...';
