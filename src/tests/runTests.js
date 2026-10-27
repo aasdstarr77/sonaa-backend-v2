@@ -359,6 +359,40 @@ async function run() {
       assert.deepEqual(loaded.body.layout, saved.body.layout);
     });
 
+    await test('client dashboard layout is public to read, root-admin writable, and sanitized', async () => {
+      const publicRead = await request(app).get('/api/admin/client-layout');
+      assert.equal(publicRead.status, 200);
+      const unauthorizedWrite = await request(app).put('/api/admin/client-layout').send({ layout: { tabOrder: ['complaint'] } });
+      assert.equal(unauthorizedWrite.status, 401);
+      const saved = await request(app).put('/api/admin/client-layout')
+        .set('Authorization', 'Bearer ' + adminToken)
+        .send({ layout: {
+          tabOrder: ['complaint', 'new', 'complaint', 'unknown', 'orders'],
+          sizes: { new: 'large', orders: 'small', complaint: 'tiny', unknown: 'large' }
+        } });
+      assert.equal(saved.status, 200);
+      assert.deepEqual(saved.body.layout.tabOrder, ['complaint', 'new', 'orders']);
+      assert.deepEqual(saved.body.layout.sizes, { new: 'large', orders: 'small' });
+      const loaded = await request(app).get('/api/admin/client-layout');
+      assert.equal(loaded.status, 200);
+      assert.deepEqual(loaded.body.layout, saved.body.layout);
+    });
+
+    await test('technician dashboard layout is public to read, root-admin writable, and sanitized', async () => {
+      const publicRead = await request(app).get('/api/admin/technician-layout');
+      assert.equal(publicRead.status, 200);
+      const unauthorizedWrite = await request(app).put('/api/admin/technician-layout').send({ layout: { tabOrder: ['wallet'] } });
+      assert.equal(unauthorizedWrite.status, 401);
+      const saved = await request(app).put('/api/admin/technician-layout').set('Authorization', 'Bearer ' + adminToken)
+        .send({ layout: { tabOrder: ['wallet', 'available', 'wallet', 'unknown', 'completed', 'myOffers'], sizes: { available: 'large', wallet: 'small', completed: 'tiny', unknown: 'large' } } });
+      assert.equal(saved.status, 200);
+      assert.deepEqual(saved.body.layout.tabOrder, ['wallet', 'available', 'completed', 'myOffers']);
+      assert.deepEqual(saved.body.layout.sizes, { available: 'large', wallet: 'small' });
+      const loaded = await request(app).get('/api/admin/technician-layout');
+      assert.equal(loaded.status, 200);
+      assert.deepEqual(loaded.body.layout, saved.body.layout);
+    });
+
     await test('admin API rejects requests without a token', async () => {
       const r = await request(app).get('/api/admin/settings');
       assert.equal(r.status, 401);

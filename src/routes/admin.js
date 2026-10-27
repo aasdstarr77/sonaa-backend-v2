@@ -1476,6 +1476,73 @@ router.put('/layout', auth('admin'), async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+
+function sanitizeClientUiLayout(input) {
+  const source = input && typeof input === 'object' && !Array.isArray(input) ? input : {};
+  const allowedTabs = ['new', 'orders', 'complaint'];
+  const tabOrder = Array.isArray(source.tabOrder)
+    ? [...new Set(source.tabOrder.filter(id => allowedTabs.includes(id)))]
+    : [];
+  const sizes = {};
+  if (source.sizes && typeof source.sizes === 'object' && !Array.isArray(source.sizes)) {
+    for (const tabId of allowedTabs) {
+      if (['small', 'medium', 'large'].includes(source.sizes[tabId])) sizes[tabId] = source.sizes[tabId];
+    }
+  }
+  return { tabOrder, sizes };
+}
+router.get('/client-layout', async (req, res, next) => {
+  try {
+    const config = await getAdminConfig();
+    return res.set('Cache-Control', 'no-store').json({ layout: sanitizeClientUiLayout(config.clientUiLayout) });
+  } catch (err) { next(err); }
+});
+router.put('/client-layout', auth('admin'), async (req, res, next) => {
+  try {
+    if (!requireRootAdmin(req, res)) return;
+    const layout = sanitizeClientUiLayout(req.body?.layout);
+    const config = await getAdminConfig();
+    const before = sanitizeClientUiLayout(config.clientUiLayout);
+    config.clientUiLayout = layout;
+    config.markModified('clientUiLayout');
+    config.history.push({ key: 'clientUiLayout', before, after: layout, by: adminName(req), byId: String(req.user?._id || ''), reason: 'تعديل ترتيب وأحجام أزرار لوحة العميل', createdAt: new Date() });
+    if (config.history.length > 200) config.history = config.history.slice(-200);
+    await config.save();
+    await writeAdminAudit(req, 'تعديل ترتيب وأحجام أزرار لوحة العميل', 'settings', 'clientUiLayout', JSON.stringify({ before, after: layout }));
+    return res.json({ message: 'تم حفظ ترتيب وأحجام أزرار لوحة العميل لجميع العملاء', layout });
+  } catch (err) { next(err); }
+});
+
+function sanitizeTechnicianUiLayout(input) {
+  const source = input && typeof input === 'object' && !Array.isArray(input) ? input : {};
+  const allowedTabs = ['available', 'myOffers', 'completed', 'wallet'];
+  const tabOrder = Array.isArray(source.tabOrder) ? [...new Set(source.tabOrder.filter(id => allowedTabs.includes(id)))] : [];
+  const sizes = {};
+  if (source.sizes && typeof source.sizes === 'object' && !Array.isArray(source.sizes)) {
+    for (const tabId of allowedTabs) if (['small', 'medium', 'large'].includes(source.sizes[tabId])) sizes[tabId] = source.sizes[tabId];
+  }
+  return { tabOrder, sizes };
+}
+router.get('/technician-layout', async (req, res, next) => {
+  try { const config = await getAdminConfig(); return res.set('Cache-Control', 'no-store').json({ layout: sanitizeTechnicianUiLayout(config.technicianUiLayout) }); }
+  catch (err) { next(err); }
+});
+router.put('/technician-layout', auth('admin'), async (req, res, next) => {
+  try {
+    if (!requireRootAdmin(req, res)) return;
+    const layout = sanitizeTechnicianUiLayout(req.body?.layout);
+    const config = await getAdminConfig();
+    const before = sanitizeTechnicianUiLayout(config.technicianUiLayout);
+    config.technicianUiLayout = layout;
+    config.markModified('technicianUiLayout');
+    config.history.push({ key: 'technicianUiLayout', before, after: layout, by: adminName(req), byId: String(req.user?._id || ''), reason: 'تعديل ترتيب وأحجام أزرار لوحة الفني', createdAt: new Date() });
+    if (config.history.length > 200) config.history = config.history.slice(-200);
+    await config.save();
+    await writeAdminAudit(req, 'تعديل ترتيب وأحجام أزرار لوحة الفني', 'settings', 'technicianUiLayout', JSON.stringify({ before, after: layout }));
+    return res.json({ message: 'تم حفظ ترتيب وأحجام أزرار لوحة الفني لجميع الفنيين', layout });
+  } catch (err) { next(err); }
+});
+
 router.get('/settings', auth('admin'), async (req, res, next) => {
   try { const config = await getAdminConfig(); return res.set('Cache-Control', 'no-store').json({ settings: config.settings }); }
   catch (err) { next(err); }

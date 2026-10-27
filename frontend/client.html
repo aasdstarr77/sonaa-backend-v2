@@ -338,6 +338,21 @@ body #app header.app-header a[href="https://aasdstarr77.github.io/sonaa-download
   box-shadow:0 2px 0 #102858,0 3px 7px rgba(16,40,88,.2),inset 0 1px 0 rgba(255,255,255,.25)!important;
 }
 
+
+/* Shared client dashboard button layout editor: drag on desktop, arrows on touch screens. */
+.client-layout-toolbar{margin:8px 0 0;padding:10px;border:1px dashed #93b4e5;border-radius:14px;background:linear-gradient(145deg,#eff6ff,#fff);color:#173c6c}
+.client-layout-toolbar button,.client-layout-toolbar select{min-height:34px;border:1px solid #cbd8e9;border-radius:9px;background:#fff;padding:5px 9px;font-size:11px;font-weight:800}
+.client-layout-toolbar .client-layout-save{background:linear-gradient(145deg,#2563eb,#173c6c);color:#fff;border-color:#1d4ed8}
+.client-layout-item{display:flex;align-items:center;gap:7px;padding:7px 0;border-top:1px solid #dbeafe}
+.client-layout-item:first-child{border-top:0}
+.client-layout-item strong{flex:1;min-width:0;font-size:11px}
+.client-layout-item select{max-width:104px}
+.client-section-tabs .client-tab-size-small{flex:.72 1 0!important;font-size:10px!important;padding-inline:4px!important}
+.client-section-tabs .client-tab-size-medium{flex:1 1 0!important}
+.client-section-tabs .client-tab-size-large{flex:1.35 1 0!important;font-size:13px!important}
+.client-section-tabs [data-client-layout-tab][draggable="true"]{cursor:grab;touch-action:pan-y}
+.client-section-tabs [data-client-layout-tab].client-tab-dragging{opacity:.45;outline:2px dashed #2563eb;outline-offset:-3px}
+@media(max-width:380px){.client-layout-toolbar{padding:8px}.client-layout-item{gap:4px}.client-layout-item select{max-width:92px}.client-section-tabs .client-tab-size-large{font-size:11px!important}}
 </style>
 </head>
 <body class="min-h-screen antialiased">
@@ -630,8 +645,23 @@ let state={
   complaintSn:'',complaintName:'',complaintText:'',complaintLoading:false,
   complaintTrackSn:'',complaintTrackName:'',complaintTrackLoading:false,complaintTrackError:'',complaintTrackResults:null,
   showService:false,openCategory:'',searchService:'',
-  servicesLoading:true,servicesError:'',servicesLoaded:false,publicContent:{siteName:'صُنّاع',maintenance:false,maintenanceMessage:'',announcement:'',faqs:[]}
+  servicesLoading:true,servicesError:'',servicesLoaded:false,publicContent:{siteName:'صُنّاع',maintenance:false,maintenanceMessage:'',announcement:'',faqs:[]},
+  clientUiLayout:{tabOrder:[],sizes:{}},clientLayoutEditorAvailable:false,clientLayoutEditMode:false,clientLayoutDragId:''
 };
+const CLIENT_TAB_DEFINITIONS=[{id:'new',label:'طلب جديد'},{id:'orders',label:'طلباتي'},{id:'complaint',label:'شكوى'}];
+function normalizedClientUiLayout(input){const source=input&&typeof input==='object'&&!Array.isArray(input)?input:{};const allowed=CLIENT_TAB_DEFINITIONS.map(item=>item.id);const order=Array.isArray(source.tabOrder)?[...new Set(source.tabOrder.filter(id=>allowed.includes(id)))]:[];allowed.forEach(id=>{if(!order.includes(id))order.push(id)});const sizes={};if(source.sizes&&typeof source.sizes==='object'&&!Array.isArray(source.sizes))allowed.forEach(id=>{if(['small','medium','large'].includes(source.sizes[id]))sizes[id]=source.sizes[id]});return {tabOrder:order,sizes};}
+function clientTabsInLayoutOrder(){const layout=normalizedClientUiLayout(state.clientUiLayout);return layout.tabOrder.map(id=>CLIENT_TAB_DEFINITIONS.find(item=>item.id===id)).filter(Boolean);}
+function clientTabSizeClass(id){return 'client-tab-size-'+(state.clientUiLayout?.sizes?.[id]||'medium');}
+async function loadClientUiLayout(){try{const response=await fetch('/api/admin/client-layout',{method:'GET',cache:'no-store'});if(!response.ok)throw new Error('تعذر تحميل ترتيب أزرار العميل');const data=await response.json();state.clientUiLayout=normalizedClientUiLayout(data.layout);try{state.clientLayoutEditorAvailable=!!localStorage.getItem('admin_token_v3');}catch{state.clientLayoutEditorAvailable=false;}}catch(error){log('تعذر تحميل ترتيب لوحة العميل:',error.message);}finally{render();}}
+function toggleClientLayoutEdit(){if(!state.clientLayoutEditorAvailable)return;state.clientLayoutEditMode=!state.clientLayoutEditMode;state.clientLayoutDragId='';render();}
+function cancelClientLayoutEdit(){loadClientUiLayout().then(()=>{state.clientLayoutEditMode=false;render();});}
+function moveClientTab(id,delta){const order=clientTabsInLayoutOrder().map(item=>item.id);const from=order.indexOf(id),to=from+delta;if(from<0||to<0||to>=order.length)return;[order[from],order[to]]=[order[to],order[from]];state.clientUiLayout=normalizedClientUiLayout({...state.clientUiLayout,tabOrder:order});render();}
+function setClientTabSize(id,size){if(!['small','medium','large'].includes(size))return;state.clientUiLayout=normalizedClientUiLayout({...state.clientUiLayout,sizes:{...(state.clientUiLayout.sizes||{}),[id]:size}});render();}
+function startClientTabDrag(event,id){if(!state.clientLayoutEditMode){event.preventDefault();return;}state.clientLayoutDragId=id;if(event.dataTransfer){event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',id);}}
+function allowClientTabDrop(event){if(state.clientLayoutEditMode)event.preventDefault();}
+function dropClientTab(event,targetId){if(!state.clientLayoutEditMode)return;event.preventDefault();event.stopPropagation();const sourceId=state.clientLayoutDragId||(event.dataTransfer?.getData('text/plain')||'');const order=clientTabsInLayoutOrder().map(item=>item.id);if(!sourceId||sourceId===targetId||!order.includes(sourceId)||!order.includes(targetId)){state.clientLayoutDragId='';return;}const from=order.indexOf(sourceId);order.splice(from,1);order.splice(order.indexOf(targetId),0,sourceId);state.clientUiLayout=normalizedClientUiLayout({...state.clientUiLayout,tabOrder:order});state.clientLayoutDragId='';render();}
+async function saveClientUiLayout(){const button=document.getElementById('save-client-layout');if(button){button.disabled=true;button.textContent='جاري الحفظ...';}try{const token=localStorage.getItem('admin_token_v3')||'';if(!token)throw new Error('سجّل دخول المدير الرئيسي في لوحة الإدارة أولًا.');const response=await fetch('/api/admin/client-layout',{method:'PUT',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({layout:normalizedClientUiLayout(state.clientUiLayout)})});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.message||'تعذر حفظ الترتيب؛ تأكد من صلاحية المدير الرئيسي.');state.clientUiLayout=normalizedClientUiLayout(data.layout);state.clientLayoutEditMode=false;showToast(data.message||'تم حفظ ترتيب أزرار لوحة العميل للجميع','success');}catch(error){showToast(error.message||'تعذر حفظ ترتيب أزرار العميل.');}finally{render();}}
+function renderClientLayoutEditor(){if(!state.clientLayoutEditorAvailable)return '';if(!state.clientLayoutEditMode)return '<div class="mt-2 flex justify-end"><button type="button" onclick="toggleClientLayoutEdit()" class="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[10px] font-extrabold text-blue-800">↕ ترتيب أزرار العميل</button></div>';return '<div class="client-layout-toolbar"><div class="flex items-start justify-between gap-2"><div><b class="text-[12px]">ترتيب أزرار لوحة العميل</b><p class="mt-1 text-[10px] leading-5">اسحب الزر لمكانه على الكمبيوتر، أو استخدم الأسهم على الموبايل. الترتيب بعد الحفظ هيظهر لكل العملاء.</p></div></div><div class="mt-2">'+clientTabsInLayoutOrder().map((item,index)=>'<div class="client-layout-item"><strong>'+escHtml(item.label)+'</strong><button type="button" aria-label="تحريك '+escAttr(item.label)+' لأعلى" title="لأعلى" '+(index===0?'disabled':'')+' onclick="moveClientTab(\''+item.id+'\',-1)">↑</button><button type="button" aria-label="تحريك '+escAttr(item.label)+' لأسفل" title="لأسفل" '+(index===CLIENT_TAB_DEFINITIONS.length-1?'disabled':'')+' onclick="moveClientTab(\''+item.id+'\',1)">↓</button><select aria-label="حجم زر '+escAttr(item.label)+'" onchange="setClientTabSize(\''+item.id+'\',this.value)"><option value="small" '+(clientTabSizeClass(item.id)==='client-tab-size-small'?'selected':'')+'>صغير</option><option value="medium" '+(clientTabSizeClass(item.id)==='client-tab-size-medium'?'selected':'')+'>متوسط</option><option value="large" '+(clientTabSizeClass(item.id)==='client-tab-size-large'?'selected':'')+'>كبير</option></select></div>').join('')+'</div><div class="mt-3 flex gap-2"><button id="save-client-layout" type="button" onclick="saveClientUiLayout()" class="client-layout-save flex-1">حفظ للجميع</button><button type="button" onclick="cancelClientLayoutEdit()">إلغاء</button></div></div>';}
 function getCat(service){return CATEGORIES.find(c=>c.services.includes(service))||null;}
 function captureScrollPosition(){
   const list=document.getElementById('serviceList');
@@ -845,8 +875,8 @@ function render(){
   ${renderPublicContent()}
   <main class="mx-auto w-full max-w-[640px] px-3 sm:px-4 pb-[160px] safe-bottom">
     <div class="client-section-tabs sticky top-0 z-40 mt-0 flex p-1 bg-white/95 rounded-[15px] shadow-sm border border-slate-200 gap-1 backdrop-blur-xl">
-      ${[{id:'new',label:'طلب جديد'},{id:'orders',label:'طلباتي'},{id:'complaint',label:'شكوى'}].map(t=>`
-        <button type="button" onclick="setTab('${t.id}')" class="flex-1 h-11 rounded-xl text-[12px] font-extrabold transition-colors ${state.tab===t.id?(t.id==='new'?'bg-gradient-to-l from-amber-300 to-yellow-500 text-amber-950 shadow-sm':'tab-active'):'tab-idle'}">${t.label}</button>
+      ${clientTabsInLayoutOrder().map(t=>`
+        <button type="button" data-client-layout-tab="${t.id}" ${state.clientLayoutEditMode?`draggable="true" ondragstart="startClientTabDrag(event,'${t.id}')" ondragover="allowClientTabDrop(event)" ondrop="dropClientTab(event,'${t.id}')" ondragend="state.clientLayoutDragId='';this.classList.remove('client-tab-dragging')"`:''} onclick="if(!state.clientLayoutEditMode)setTab('${t.id}')" class="${clientTabSizeClass(t.id)} flex-1 h-11 rounded-xl text-[12px] font-extrabold transition-colors ${state.tab===t.id?(t.id==='new'?'bg-gradient-to-l from-amber-300 to-yellow-500 text-amber-950 shadow-sm':'tab-active'):'tab-idle'} ${state.clientLayoutEditMode?'border border-dashed border-blue-300':''}">${state.clientLayoutEditMode?'<span aria-hidden="true" class="ml-1">⠿</span>':''}${t.label}</button>
       `).join('')}
     </div>
     ${state.tab==='new'?`
@@ -1508,7 +1538,7 @@ async function sendComplaint(){
   }catch(error){showToast(error.message||'تعذر إرسال الشكوى حاليًا.');}finally{state.complaintLoading=false;render();}
 }
 document.addEventListener('DOMContentLoaded',()=>{
-  loadServices();loadPublicContent();initializeClientAccount();render();
+  loadClientUiLayout();loadServices();loadPublicContent();initializeClientAccount();render();
   document.addEventListener('click',handleOutsideServiceClick);
   let clientLivePollInFlight=false,clientNotificationPollInFlight=false;
   setInterval(async function(){
