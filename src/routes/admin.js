@@ -1923,10 +1923,11 @@ router.post('/services', auth('admin'), async (req, res, next) => {
       existingInCategory.categorySortOrder = payload.categorySortOrder;
       existingInCategory.isActive = true;
       await existingInCategory.save();
+      await writeAdminAudit(req, 'إعادة تفعيل خدمة', 'services', String(existingInCategory._id), JSON.stringify({ name: existingInCategory.name, category: existingInCategory.category }));
       return res.json({ ok: true, message: 'تمت إعادة إضافة الخدمة', service: existingInCategory, data: existingInCategory });
     }
     const service = await Service.create(payload);
-    
+    await writeAdminAudit(req, 'إضافة خدمة', 'services', String(service._id), JSON.stringify({ name: service.name, category: service.category, sortOrder: service.sortOrder }));
     return res.status(201).json({ ok: true, message: 'تمت إضافة الخدمة', service, data: service });
   } catch (err) {
     if (err.code === 11000) {
@@ -2278,12 +2279,14 @@ router.post('/services/:name/hide', auth('admin'), async (req, res, next) => {
     if (target) {
       target.isActive = false;
       await target.save();
+      await writeAdminAudit(req, 'إخفاء خدمة', 'services', String(target._id), JSON.stringify({ name: target.name, category: target.category }));
       return res.json({ ok: true, message: 'تم إخفاء الخدمة - لن تظهر للعملاء بسبب الدمج في public.js', service: target });
     }
 
     const legacyCat = findCategoryByService(rawParam);
     if (legacyCat) {
       const hidden = await ensureHiddenLegacy(rawParam, legacyCat.label);
+      await writeAdminAudit(req, 'إخفاء خدمة أساسية', 'services', rawParam, JSON.stringify({ category: legacyCat.label }));
       return res.json({ ok: true, message: 'تم إخفاء الخدمة الأساسية - لن تظهر مرة أخرى في قائمة العميل لأن public.js يتحقق من isActive=false', service: hidden });
     }
 
@@ -2343,6 +2346,7 @@ router.post('/services/:name/show', auth('admin'), async (req, res, next) => {
 
     target.isActive = true;
     await target.save();
+    await writeAdminAudit(req, 'إظهار خدمة', 'services', String(target._id), JSON.stringify({ name: target.name, category: target.category }));
     return res.json({ ok: true, message: 'تمت إعادة تفعيل الخدمة', service: target });
   } catch (e) { next(e); }
 });
