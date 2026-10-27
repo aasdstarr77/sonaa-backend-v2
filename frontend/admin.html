@@ -287,7 +287,7 @@ function moveAdminTabToGroup(id,destination){
 function startAdminLayoutDrag(event,type,id){if(!state.layoutEditMode)return;event.dataTransfer?.setData('text/plain',type+':'+id);if(event.dataTransfer)event.dataTransfer.effectAllowed='move';}
 function allowAdminLayoutDrop(event){if(state.layoutEditMode){event.preventDefault();if(event.dataTransfer)event.dataTransfer.dropEffect='move';}}
 function dropAdminLayout(event,type,targetId,sectionId=''){
- if(!state.layoutEditMode)return;event.preventDefault();const raw=event.dataTransfer?.getData('text/plain')||'',p=raw.indexOf(':'),sourceType=raw.slice(0,p),sourceId=raw.slice(p+1);if(!sourceId||sourceId===targetId&&sourceType===type)return;
+ if(!state.layoutEditMode)return;event.preventDefault();event.stopPropagation();const raw=event.dataTransfer?.getData('text/plain')||'',p=raw.indexOf(':'),sourceType=raw.slice(0,p),sourceId=raw.slice(p+1);if(!sourceId||sourceId===targetId&&sourceType===type)return;
  if(sourceType==='section'&&type==='section'){const ids=orderedAdminSections().map(x=>x.id),a=ids.indexOf(sourceId),b=ids.indexOf(targetId);if(a>=0&&b>=0){ids.splice(a,1);ids.splice(b,0,sourceId);state.adminUiLayout.sectionOrder=ids;}}
  else if(sourceType==='tab'&&(type==='tab'||type==='section')){
   const destination=type==='section'?targetId:sectionId;
