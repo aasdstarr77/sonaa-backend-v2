@@ -195,7 +195,7 @@ let state={
   services:[],filteredServices:[],servicesLoading:false,servicesError:'',openServices:{},
   clients:[],filteredClients:[],clientsLoading:false,accountCounts:{technicians:0,verifiedTechnicians:0,clients:0},
   adminUsers:[],adminUsersLoading:false,
-  adminUiLayout:{sectionOrder:[],tabOrder:{},tabGroups:{},sizes:{}},layoutEditMode:false,dragSectionId:'',dragTabId:'',
+  adminUiLayout:{sectionOrder:[],tabOrder:{},tabGroups:{},sizes:{},elements:{}},layoutEditMode:false,dragSectionId:'',dragTabId:'',
   auditLogs:[],auditDate:'',regions:[],regionsLoading:false,regionsError:'',notifications:[],walletTransactions:[],walletSelectedFanniId:'',walletLoading:false,settings:{siteName:'صُنّاع',maintenance:false},
   reports:{},pricing:null,pricingHistory:[],offerFilter:'all',clientSearch:'',content:{announcement:'',faqs:[]},supportQuery:'',supportResults:{orders:[],complaints:[]},supportViolations:[],notificationHistory:[],notificationHistoryLoading:false,
   search:'',filter:'الكل',filterTopup:'الكل',filterOrder:'الكل',filterComplaint:'الكل',filterClient:'الكل',selectedOrderSNs:[],
@@ -259,8 +259,55 @@ function confirmPending(key){
 
 function normalizedAdminUiLayout(input){
  const source=input&&typeof input==='object'?input:{};
- return {sectionOrder:Array.isArray(source.sectionOrder)?source.sectionOrder:[],tabOrder:source.tabOrder&&typeof source.tabOrder==='object'?source.tabOrder:{},tabGroups:source.tabGroups&&typeof source.tabGroups==='object'?source.tabGroups:{},sizes:source.sizes&&typeof source.sizes==='object'?source.sizes:{}};
+ return {sectionOrder:Array.isArray(source.sectionOrder)?source.sectionOrder:[],tabOrder:source.tabOrder&&typeof source.tabOrder==='object'?source.tabOrder:{},tabGroups:source.tabGroups&&typeof source.tabGroups==='object'?source.tabGroups:{},sizes:source.sizes&&typeof source.sizes==='object'?source.sizes:{},elements:source.elements&&typeof source.elements==='object'?source.elements:{}};
 }
+function adminElementKey(el){
+ if(el.id)return ('id_'+el.id).replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,100);
+ const parts=[];let node=el;
+ while(node&&node.id!=='app'&&parts.length<6){
+  const cls=[...node.classList].filter(x=>!x.includes(':')&&!x.startsWith('hover:')).slice(0,2).join('_');
+  const index=node.parentElement?[...node.parentElement.children].filter(n=>n.tagName===node.tagName).indexOf(node):0;
+  parts.unshift(node.tagName.toLowerCase()+(cls?'_'+cls:'')+'_'+Math.max(0,index));node=node.parentElement;
+ }
+ return ('p_'+parts.join('_')).replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,100);
+}
+function applyAdminElementPositions(){
+ const app=document.getElementById('app');if(!app)return;
+ app.querySelectorAll('*').forEach(el=>{
+  if(el.closest('#admin-element-drag-toolbar'))return;
+  if(!el.dataset.adminLayoutKey)el.dataset.adminLayoutKey=adminElementKey(el);
+  const pos=state.adminUiLayout?.elements?.[el.dataset.adminLayoutKey];
+  if(pos&&(pos.x!==undefined||pos.y!==undefined))el.style.translate=(Number(pos.x||0))+'px '+(Number(pos.y||0))+'px';
+ });
+}
+let adminPointerDrag=null;
+function ensureAdminElementToolbar(){
+ let bar=document.getElementById('admin-element-drag-toolbar');
+ if(!state.layoutEditMode||state.pageMode!=='section'||!isRootAdminUI()){if(bar)bar.remove();return;}
+ if(!bar){bar=document.createElement('div');bar.id='admin-element-drag-toolbar';bar.style.cssText='position:fixed;z-index:99999;bottom:0;left:0;right:0;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#0b1b3a;color:white;display:flex;align-items:center;justify-content:space-between;gap:8px;box-shadow:0 -8px 24px #0b1b3a35;font-family:Cairo,sans-serif';bar.innerHTML='<span style="font-size:11px;font-weight:800">✥ اسحب أي عنصر لتغيير مكانه</span><div style="display:flex;gap:6px"><button type="button" id="admin-drag-save" style="background:#10b981;color:#052e24;border-radius:9px;padding:7px 10px;font-size:11px;font-weight:900">حفظ للجميع</button><button type="button" id="admin-drag-cancel" style="background:#334155;color:white;border-radius:9px;padding:7px 10px;font-size:11px;font-weight:900">إلغاء</button></div>';document.body.appendChild(bar);bar.querySelector('#admin-drag-save').onclick=saveAdminUiLayout;bar.querySelector('#admin-drag-cancel').onclick=cancelAdminLayoutEdit;}
+}
+document.addEventListener('pointerdown',event=>{
+ if(!state.layoutEditMode||!isRootAdminUI()||event.button!==0||event.target.closest('#admin-element-drag-toolbar,.layout-toolbar,.layout-item-controls,.layout-control,.section-nav-group,.layout-item-row'))return;
+ const app=document.getElementById('app');if(!app||!app.contains(event.target))return;
+ const el=event.target.closest('button,a,section,article,header,main,form,label,h1,h2,h3,h4,p,img,svg,div,span,input,select,textarea');if(!el||el.id==='app')return;
+ event.preventDefault();event.stopImmediatePropagation();
+ const key=el.dataset.adminLayoutKey||adminElementKey(el);el.dataset.adminLayoutKey=key;
+ const pos=state.adminUiLayout.elements?.[key]||{};
+ adminPointerDrag={el,key,pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,baseX:Number(pos.x||0),baseY:Number(pos.y||0),moved:false};
+ try{el.setPointerCapture(event.pointerId)}catch(_){}
+ el.style.cursor='grabbing';
+},true);
+document.addEventListener('pointermove',event=>{
+ if(!adminPointerDrag||event.pointerId!==adminPointerDrag.pointerId)return;
+ const dx=event.clientX-adminPointerDrag.startX,dy=event.clientY-adminPointerDrag.startY;
+ if(Math.abs(dx)+Math.abs(dy)>2)adminPointerDrag.moved=true;if(!adminPointerDrag.moved)return;
+ event.preventDefault();
+ const x=Math.max(-2000,Math.min(2000,Math.round(adminPointerDrag.baseX+dx))),y=Math.max(-2000,Math.min(2000,Math.round(adminPointerDrag.baseY+dy)));
+ const elements={...(state.adminUiLayout.elements||{}),[adminPointerDrag.key]:{...(state.adminUiLayout.elements?.[adminPointerDrag.key]||{}),x,y}};
+ state.adminUiLayout={...state.adminUiLayout,elements};adminPointerDrag.el.style.translate=x+'px '+y+'px';
+},true);
+function finishAdminPointerDrag(event){if(!adminPointerDrag||event.pointerId!==adminPointerDrag.pointerId)return;adminPointerDrag.el.style.cursor='';try{adminPointerDrag.el.releasePointerCapture(event.pointerId)}catch(_){}adminPointerDrag=null;}
+document.addEventListener('pointerup',finishAdminPointerDrag,true);document.addEventListener('pointercancel',finishAdminPointerDrag,true);
 function orderedAdminSections(){
  const positions=new Map((state.adminUiLayout.sectionOrder||[]).map((id,index)=>[id,index]));
  return ADMIN_SECTIONS.slice().sort((a,b)=>(positions.get(a.id)??999)-(positions.get(b.id)??999));
@@ -328,6 +375,7 @@ function render(){
       <div class="flex flex-col gap-1 shrink-0 items-stretch justify-self-end w-[104px]">
         
         <a href="password.html?role=admin&amp;mode=account" class="h-8 w-full rounded-lg bg-white/10 hover:bg-white/20 border border-white/15 text-[10px] font-black text-white inline-flex items-center justify-center gap-1 no-underline leading-none"><span aria-hidden="true">👤</span><span>حسابي</span></a>
+        ${isRootAdminUI()?'<button type="button" onclick="toggleAdminLayoutEdit()" class="h-8 w-full rounded-lg bg-amber-400 text-slate-900 text-[10px] font-black">'+(state.layoutEditMode?'إيقاف السحب':'✥ سحب العناصر')+'</button>':''}
         <a href="/" aria-label="القائمة الرئيسية" title="القائمة الرئيسية" class="h-8 w-full rounded-lg bg-white/10 hover:bg-white/15 text-white text-[10px] font-black inline-flex items-center justify-center text-center leading-none">⌂ القائمة الرئيسية</a>
         ${isAuth?'<button onclick="logout()" class="h-8 w-full rounded-lg bg-white/10 flex items-center justify-center text-[11px]">⎋ خروج</button>':''}
       </div>
@@ -397,6 +445,8 @@ function render(){
   </main>
   <div onclick="closeAllMenus()" id="menu-backdrop" class="${Object.keys(state.dropdowns).length?'fixed inset-0 z-30 bg-black/5':''}"></div>
   `;
+  applyAdminElementPositions();
+  ensureAdminElementToolbar();
 }
 
 function renderCurrentTab(){
