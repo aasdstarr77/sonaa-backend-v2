@@ -280,11 +280,27 @@ function applyAdminElementPositions(){
   if(pos&&(pos.x!==undefined||pos.y!==undefined))el.style.translate=(Number(pos.x||0))+'px '+(Number(pos.y||0))+'px';
  });
 }
-let adminPointerDrag=null;
+let adminPointerDrag=null,adminSuppressClickUntil=0;
+function renderAdminLayoutDock(){
+ const sections=orderedAdminSections();
+ let html='<div style="font-size:12px;font-weight:900;margin-bottom:5px">✦ تعديل واجهة صُنّاع مباشرة</div><div style="font-size:10px;color:#cbd5e1;margin-bottom:7px">حرّك الأقسام والأزرار من القائمة، أو اسحبها داخل اللوحة. السحب لا يفتح الزر.</div><div style="max-height:27vh;overflow:auto;border:1px solid #334155;border-radius:10px;padding:5px">';
+ sections.forEach((section,si)=>{
+  html+='<div style="padding:5px 2px;border-bottom:1px solid #334155"><div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap"><strong style="flex:1;min-width:100px;font-size:11px">'+escHtml(section.icon+' '+section.label)+'</strong><button type="button" class="layout-control" '+(si===0?'disabled':'')+' onclick="moveAdminSection(\''+section.id+'\',-1)">↑</button><button type="button" class="layout-control" '+(si===sections.length-1?'disabled':'')+' onclick="moveAdminSection(\''+section.id+'\',1)">↓</button></div>';
+  orderedAdminTabs(section).forEach((tab,ti,arr)=>{
+   html+='<div class="layout-item-row" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;padding:4px 0 0 10px"><span style="flex:1;min-width:105px;font-size:10px">'+escHtml(tab.label)+'</span><button type="button" class="layout-control" '+(ti===0?'disabled':'')+' onclick="moveAdminTab(\''+section.id+'\',\''+tab.id+'\',-1)">↑</button><button type="button" class="layout-control" '+(ti===arr.length-1?'disabled':'')+' onclick="moveAdminTab(\''+section.id+'\',\''+tab.id+'\',1)">↓</button><select aria-label="حجم '+escHtml(tab.label)+'" style="max-width:78px;padding:4px;border-radius:7px;color:#0b1b3a;font-size:10px" onchange="setAdminTabSize(\''+tab.id+'\',this.value)"><option value="small" '+(adminTabSize(tab.id)==='small'?'selected':'')+'>صغير</option><option value="medium" '+(adminTabSize(tab.id)==='medium'?'selected':'')+'>متوسط</option><option value="large" '+(adminTabSize(tab.id)==='large'?'selected':'')+'>كبير</option></select></div>';
+  });
+  html+='</div>';
+ });
+ html+='</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px"><a href="password.html?role=admin&mode=account&adminLayout=1" style="background:#1e3a8a;color:white;border-radius:9px;padding:7px 8px;font-size:10px;font-weight:900;text-decoration:none">حساب الأدمن</a><a href="support.html?role=admin&adminLayout=1" style="background:#1e3a8a;color:white;border-radius:9px;padding:7px 8px;font-size:10px;font-weight:900;text-decoration:none">دعم الأدمن</a><button type="button" id="admin-drag-save" style="background:#10b981;color:#052e24;border-radius:9px;padding:7px 10px;font-size:11px;font-weight:900">حفظ للجميع</button><button type="button" id="admin-drag-cancel" style="background:#334155;color:white;border-radius:9px;padding:7px 10px;font-size:11px;font-weight:900">إلغاء</button></div>';
+ return html;
+}
+function setAdminTabSize(id,value){if(!['small','medium','large'].includes(value))return;state.adminUiLayout.sizes={...state.adminUiLayout.sizes,[id]:value};render();}
 function ensureAdminElementToolbar(){
  let bar=document.getElementById('admin-element-drag-toolbar');
  if(!state.layoutEditMode||state.pageMode!=='section'||!isRootAdminUI()){if(bar)bar.remove();return;}
- if(!bar){bar=document.createElement('div');bar.id='admin-element-drag-toolbar';bar.style.cssText='position:fixed;z-index:99999;bottom:0;left:0;right:0;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#0b1b3a;color:white;display:flex;align-items:center;justify-content:space-between;gap:8px;box-shadow:0 -8px 24px #0b1b3a35;font-family:Cairo,sans-serif';bar.innerHTML='<span style="font-size:11px;font-weight:800">✥ اسحب أي عنصر لتغيير مكانه</span><div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end"><a href="password.html?role=admin&mode=account&adminLayout=1" style="background:#1e3a8a;color:white;border-radius:9px;padding:7px 8px;font-size:10px;font-weight:900;text-decoration:none">حساب الأدمن</a><a href="support.html?role=admin&adminLayout=1" style="background:#1e3a8a;color:white;border-radius:9px;padding:7px 8px;font-size:10px;font-weight:900;text-decoration:none">دعم الأدمن</a><button type="button" id="admin-drag-save" style="background:#10b981;color:#052e24;border-radius:9px;padding:7px 10px;font-size:11px;font-weight:900">حفظ للجميع</button><button type="button" id="admin-drag-cancel" style="background:#334155;color:white;border-radius:9px;padding:7px 10px;font-size:11px;font-weight:900">إلغاء</button></div>';document.body.appendChild(bar);bar.querySelector('#admin-drag-save').onclick=saveAdminUiLayout;bar.querySelector('#admin-drag-cancel').onclick=cancelAdminLayoutEdit;}
+ if(!bar){bar=document.createElement('div');bar.id='admin-element-drag-toolbar';bar.style.cssText='position:fixed;z-index:99999;bottom:0;left:0;right:0;max-height:49vh;overflow:auto;padding:9px 12px calc(10px + env(safe-area-inset-bottom));background:#0b1b3a;color:white;display:block;box-shadow:0 -8px 24px #0b1b3a35;font-family:Cairo,sans-serif';document.body.appendChild(bar);}
+ bar.innerHTML=renderAdminLayoutDock();
+ bar.querySelector('#admin-drag-save').onclick=saveAdminUiLayout;bar.querySelector('#admin-drag-cancel').onclick=cancelAdminLayoutEdit;
 }
 document.addEventListener('pointerdown',event=>{
  if(!state.layoutEditMode||!isRootAdminUI()||event.button!==0||event.target.closest('#admin-element-drag-toolbar,#admin-drag-toggle,.layout-toolbar,.layout-item-controls,.layout-control'))return;
@@ -307,7 +323,8 @@ document.addEventListener('pointermove',event=>{
  const elements={...(state.adminUiLayout.elements||{}),[adminPointerDrag.key]:{...(state.adminUiLayout.elements?.[adminPointerDrag.key]||{}),x,y}};
  state.adminUiLayout={...state.adminUiLayout,elements};adminPointerDrag.el.style.translate=x+'px '+y+'px';
 },true);
-function finishAdminPointerDrag(event){if(!adminPointerDrag||event.pointerId!==adminPointerDrag.pointerId)return;adminPointerDrag.el.style.cursor='';try{adminPointerDrag.el.releasePointerCapture(event.pointerId)}catch(_){}adminPointerDrag=null;}
+function finishAdminPointerDrag(event){if(!adminPointerDrag||event.pointerId!==adminPointerDrag.pointerId)return;if(adminPointerDrag.moved)adminSuppressClickUntil=Date.now()+700;adminPointerDrag.el.style.cursor='';try{adminPointerDrag.el.releasePointerCapture(event.pointerId)}catch(_){}adminPointerDrag=null;}
+document.addEventListener('click',event=>{if(Date.now()>adminSuppressClickUntil)return;adminSuppressClickUntil=0;event.preventDefault();event.stopImmediatePropagation();},true);
 document.addEventListener('pointerup',finishAdminPointerDrag,true);document.addEventListener('pointercancel',finishAdminPointerDrag,true);
 function orderedAdminSections(){
  const positions=new Map((state.adminUiLayout.sectionOrder||[]).map((id,index)=>[id,index]));

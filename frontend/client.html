@@ -1678,7 +1678,7 @@ body.client-visual-editor{padding-bottom:180px}
       state.clientUiLayout=normalizedClientUiLayout(data.layout);alert('تم حفظ تعديلات لوحة العميل للجميع.');location.href='client.html';
     }catch(error){alert(error.message||'تعذر الحفظ.');button.disabled=false;button.textContent='حفظ التعديلات للجميع';}
   }
-  let pointerDrag=null;
+  let pointerDrag=null,clientSuppressClickUntil=0;
   function selectForEditing(el){
     if(selected&&selected!==el)delete selected.dataset.sonaaEditorSelected;
     selected=el;selectedKey=el.dataset.sonaaEditorKey||stableKey(el);el.dataset.sonaaEditorSelected='1';updateToolbar();
@@ -1699,7 +1699,8 @@ body.client-visual-editor{padding-bottom:180px}
     if(!pointerDrag.moved)return;
     event.preventDefault();setStyle('x',Math.max(-2000,Math.min(2000,Math.round(pointerDrag.baseX+dx))));setStyle('y',Math.max(-2000,Math.min(2000,Math.round(pointerDrag.baseY+dy))));
   },true);
-  function finishPointerDrag(event){if(!pointerDrag||event.pointerId!==pointerDrag.pointerId)return;pointerDrag.el.style.cursor='';try{pointerDrag.el.releasePointerCapture(event.pointerId)}catch(_){}pointerDrag=null;}
+  function finishPointerDrag(event){if(!pointerDrag||event.pointerId!==pointerDrag.pointerId)return;if(pointerDrag.moved)clientSuppressClickUntil=Date.now()+700;pointerDrag.el.style.cursor='';try{pointerDrag.el.releasePointerCapture(event.pointerId)}catch(_){}pointerDrag=null;}
+  document.addEventListener('click',function(event){if(Date.now()>clientSuppressClickUntil)return;clientSuppressClickUntil=0;event.preventDefault();event.stopImmediatePropagation()},true);
   document.addEventListener('pointerup',finishPointerDrag,true);document.addEventListener('pointercancel',finishPointerDrag,true);
   document.addEventListener('click',function(event){
     if(event.target.closest('#client-visual-editor-toolbar'))return;
