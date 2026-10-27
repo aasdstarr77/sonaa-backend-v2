@@ -1597,7 +1597,7 @@ body.client-visual-editor{padding-bottom:180px}
   const editing=preview();
   if(editing)document.body.classList.add('client-visual-editor');
   let selected=null, selectedKey='', applying=false;
-  const editableSelector='header,main,section,article,form,.panel,.client-order-panel,.client-new-order,.client-section-tabs,button,a,h1,h2,h3,h4,p,label,.rounded-xl,.rounded-2xl';
+  const editableSelector='header,main,section,article,form,input,select,textarea,img,svg,.panel,.client-order-panel,.client-new-order,.client-section-tabs,button,a,h1,h2,h3,h4,p,label,.rounded-xl,.rounded-2xl';
   function stableKey(el){
     if(el.id)return ('id_'+el.id).replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,100);
     const parts=[];let node=el;
