@@ -276,6 +276,14 @@ function adminTabSize(id){return ['small','medium','large'].includes(state.admin
 function moveAdminSection(id,direction){const ids=orderedAdminSections().map(x=>x.id),i=ids.indexOf(id),j=i+direction;if(i<0||j<0||j>=ids.length)return;[ids[i],ids[j]]=[ids[j],ids[i]];state.adminUiLayout.sectionOrder=ids;render();}
 function moveAdminTab(sectionId,id,direction){const section=ADMIN_SECTIONS.find(x=>x.id===sectionId);if(!section)return;const ids=orderedAdminTabs(section).map(x=>x.id),i=ids.indexOf(id),j=i+direction;if(i<0||j<0||j>=ids.length)return;[ids[i],ids[j]]=[ids[j],ids[i]];state.adminUiLayout.tabOrder={...state.adminUiLayout.tabOrder,[sectionId]:ids};render();}
 function resizeAdminTab(id,direction){const sizes=['small','medium','large'],i=sizes.indexOf(adminTabSize(id));state.adminUiLayout.sizes={...state.adminUiLayout.sizes,[id]:sizes[Math.max(0,Math.min(2,i+direction))]};render();}
+function moveAdminTabToGroup(id,destination){
+ if(!ADMIN_SECTIONS.some(section=>section.id===destination&&section.tabs.some(item=>item.id===id)))return;
+ const previous=adminTabGroup(id);if(previous===destination)return;
+ const oldSection=ADMIN_SECTIONS.find(section=>section.id===previous),newSection=ADMIN_SECTIONS.find(section=>section.id===destination);
+ state.adminUiLayout.tabGroups={...state.adminUiLayout.tabGroups,[id]:destination};
+ state.adminUiLayout.tabOrder={...state.adminUiLayout.tabOrder,[previous]:orderedAdminTabs(oldSection).map(item=>item.id).filter(tabId=>tabId!==id),[destination]:[...orderedAdminTabs(newSection).map(item=>item.id).filter(tabId=>tabId!==id),id]};
+ render();
+}
 function startAdminLayoutDrag(event,type,id){if(!state.layoutEditMode)return;event.dataTransfer?.setData('text/plain',type+':'+id);if(event.dataTransfer)event.dataTransfer.effectAllowed='move';}
 function allowAdminLayoutDrop(event){if(state.layoutEditMode){event.preventDefault();if(event.dataTransfer)event.dataTransfer.dropEffect='move';}}
 function dropAdminLayout(event,type,targetId,sectionId=''){
@@ -358,7 +366,7 @@ function render(){
                     <button type="button" onclick="setTab('${item.id}')" class="section-nav-btn size-${adminTabSize(item.id)} ${state.tab===item.id?'active':''}">
                       <span class="section-nav-label">${escHtml(item.label)}</span><span class="section-nav-count" aria-label="عدد الحالات التي تحتاج تدخل">${escHtml(String(Math.max(0,Number(typeof item.count==='function'?item.count():item.count)||0)))}</span>
                     </button>
-                    ${state.layoutEditMode?'<div class="layout-item-controls"><button type="button" class="layout-control" onclick="event.stopPropagation();moveAdminTab(\''+section.id+'\',\''+item.id+'\',-1)" aria-label="تحريك الزر لأعلى">↑</button><button type="button" class="layout-control" onclick="event.stopPropagation();moveAdminTab(\''+section.id+'\',\''+item.id+'\',1)" aria-label="تحريك الزر لأسفل">↓</button><button type="button" class="layout-control" onclick="event.stopPropagation();resizeAdminTab(\''+item.id+'\',-1)" aria-label="تصغير الزر">A−</button><button type="button" class="layout-control" onclick="event.stopPropagation();resizeAdminTab(\''+item.id+'\',1)" aria-label="تكبير الزر">A+</button></div>':''}
+                    ${state.layoutEditMode?'<div class="layout-item-controls"><button type="button" class="layout-control" onclick="event.stopPropagation();moveAdminTab(\''+section.id+'\',\''+item.id+'\',-1)" aria-label="تحريك الزر لأعلى">↑</button><button type="button" class="layout-control" onclick="event.stopPropagation();moveAdminTab(\''+section.id+'\',\''+item.id+'\',1)" aria-label="تحريك الزر لأسفل">↓</button><button type="button" class="layout-control" onclick="event.stopPropagation();resizeAdminTab(\''+item.id+'\',-1)" aria-label="تصغير الزر">A−</button><button type="button" class="layout-control" onclick="event.stopPropagation();resizeAdminTab(\''+item.id+'\',1)" aria-label="تكبير الزر">A+</button><select class="layout-control" aria-label="نقل الزر إلى مجموعة" onchange="moveAdminTabToGroup(\\''+item.id+'\\',this.value)"><option value="">نقل إلى...</option>'+ADMIN_SECTIONS.filter(group=>group.id!==section.id).map(group=>'<option value="'+group.id+'">'+escHtml(group.label)+'</option>').join('')+'</select></div>':''}
                   </div>
                 `).join('')}
                 ${section.id==='customer-operations'?'<a href="password.html?role=admin&amp;mode=support" class="section-nav-btn inline-flex items-center justify-center gap-2 no-underline"><span aria-hidden="true">🔐</span><span class="section-nav-label">طلبات استعادة كلمة المرور</span><span id="sonaa-recovery-count" class="section-nav-count" aria-label="عدد طلبات استعادة كلمة المرور">!</span></a>':''}
