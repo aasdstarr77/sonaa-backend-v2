@@ -1613,9 +1613,9 @@ body.client-visual-editor{padding-bottom:180px}
         if(style.fontSize)el.style.fontSize=style.fontSize+'px';
         if(style.width) {el.style.width=style.width+'%';el.style.maxWidth='100%';}
         if(style.background)el.style.setProperty('background',style.background,'important');
-        if(style.color)el.style.setProperty('color',style.color,'important');
+        if(style.color){el.style.setProperty('color',style.color,'important');el.querySelectorAll('*').forEach(child=>{if(!['IMG','VIDEO','CANVAS'].includes(child.tagName))child.style.setProperty('color',style.color,'important');});}
         if(style.radius!==undefined)el.style.borderRadius=style.radius+'px';
-        if(style.x!==undefined||style.y!==undefined)el.style.translate=(style.x||0)+'px '+(style.y||0)+'px';
+        if(style.x!==undefined||style.y!==undefined)el.style.setProperty('transform','translate('+Number(style.x||0)+'px, '+Number(style.y||0)+'px)');
         if(typeof style.text==='string'&&el.children.length===0&&el.textContent!==style.text)el.textContent=style.text;
         if(style.hidden)el.dataset.sonaaEditorHidden='1';else delete el.dataset.sonaaEditorHidden;
         el.style.display=style.hidden?'none':'';
@@ -1651,7 +1651,7 @@ body.client-visual-editor{padding-bottom:180px}
     document.body.appendChild(bar);
     ['font','width','bg','color','radius','x','y'].forEach(id=>bar.querySelector('#client-editor-'+id).addEventListener('input',e=>{
       const prop={font:'fontSize',width:'width',bg:'background',color:'color',radius:'radius',x:'x',y:'y'}[id];
-      const value=['font','width','radius'].includes(id)?Number(e.target.value):e.target.value;
+      const value=['font','width','radius','x','y'].includes(id)?Number(e.target.value):e.target.value;
       setStyle(prop,value);
     }));
     bar.querySelector('#client-editor-apply-text').onclick=()=>{if(!selected)return;if(selected.children.length){alert('تعديل النص متاح للعناصر النصية البسيطة فقط حتى لا يتأثر شكل الأيقونات.');return;}setStyle('text',bar.querySelector('#client-editor-text').value.slice(0,200));};
