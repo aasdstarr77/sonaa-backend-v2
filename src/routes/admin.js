@@ -1499,6 +1499,9 @@ function sanitizeClientUiLayout(input) {
       if (typeof value.background === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.background)) item.background = value.background;
       if (typeof value.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.color)) item.color = value.color;
       if (Number.isFinite(value.radius) && value.radius >= 0 && value.radius <= 40) item.radius = value.radius;
+      if (Number.isFinite(value.x) && value.x >= -100 && value.x <= 100) item.x = value.x;
+      if (Number.isFinite(value.y) && value.y >= -100 && value.y <= 100) item.y = value.y;
+      if (typeof value.text === 'string') item.text = value.text.slice(0, 200);
       if (typeof value.hidden === 'boolean') item.hidden = value.hidden;
       if (Object.keys(item).length) elements[key] = item;
     }
