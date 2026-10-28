@@ -1600,10 +1600,11 @@ render();
 
 <style>
 body.client-visual-editor{padding-bottom:180px}
-.client-visual-editor #app [data-sonaa-editor-key]{transition:outline-color .12s,box-shadow .12s;touch-action:none;cursor:grab}
+.client-visual-editor #app [data-sonaa-editor-key]{transition:outline-color .12s,box-shadow .12s;touch-action:pan-y;cursor:grab}
 .client-visual-editor #app [data-sonaa-editor-key]:hover{outline:2px dashed #2563eb!important;outline-offset:2px;cursor:pointer}
 .client-visual-editor #app [data-sonaa-editor-selected="1"]{outline:3px solid #f59e0b!important;outline-offset:3px;box-shadow:0 0 0 5px #f59e0b26!important}
 #client-visual-editor-toolbar{position:fixed;z-index:99999;bottom:0;left:0;right:0;background:#0b1b3a;color:#fff;padding:10px 12px calc(10px + env(safe-area-inset-bottom));box-shadow:0 -8px 28px #0b1b3a38;font-family:Cairo,sans-serif}
+#client-visual-editor-toolbar.editor-collapsed>*:not(#client-editor-collapse-row){display:none!important}
 #client-visual-editor-toolbar .editor-controls{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
 #client-visual-editor-toolbar label{font-size:11px;font-weight:800;display:flex;align-items:center;gap:5px}
 #client-visual-editor-toolbar input[type=range]{width:90px;accent-color:#60a5fa}
@@ -1670,7 +1671,7 @@ body.client-visual-editor{padding-bottom:180px}
       '<label>استدارة <input id="client-editor-radius" type="range" min="0" max="40" value="12"><span id="client-editor-radius-val">12</span></label>'+
       '<label>تحريك أفقي <input id="client-editor-x" type="range" min="-2000" max="2000" value="0"><span id="client-editor-x-val">0</span></label><label>تحريك رأسي <input id="client-editor-y" type="range" min="-2000" max="2000" value="0"><span id="client-editor-y-val">0</span></label><label style="flex:1 1 180px">تعديل النص <input id="client-editor-text" type="text" maxlength="200" placeholder="اختَر عنصرًا نصيًا" style="width:150px;color:#0f172a;border-radius:7px;padding:5px"></label><button type="button" id="client-editor-apply-text">تطبيق النص</button><button type="button" id="client-editor-hide">إخفاء/إظهار</button><button type="button" class="editor-reset" id="client-editor-reset">مسح تنسيق العنصر</button><button type="button" class="editor-save" id="client-editor-save">حفظ التعديلات للجميع</button></div>'+
       '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px"><b style="flex-basis:100%;font-size:11px;color:#bfdbfe">صفحات العميل</b><button type="button" id="client-editor-dashboard">لوحة العميل</button><button type="button" id="client-editor-new">طلب جديد</button><button type="button" id="client-editor-orders">طلباتي</button><button type="button" id="client-editor-track">تتبع الطلبات</button><button type="button" id="client-editor-complaint">الشكاوى ومتابعتها</button><button type="button" id="client-editor-login">تسجيل دخول العميل</button><button type="button" id="client-editor-register">تسجيل عميل جديد</button><button type="button" id="client-editor-account">حساب العميل</button><button type="button" id="client-editor-support">دعم العميل</button></div><div style="font-size:10px;color:#cbd5e1;margin-top:6px">وضع معاينة آمن: لا يتم إرسال طلبات أو إنشاء حسابات من أدوات التعديل.</div>';
-    document.body.appendChild(bar);
+    const collapseRow=document.createElement('div');collapseRow.id='client-editor-collapse-row';collapseRow.style.cssText='display:flex;justify-content:flex-start;margin-bottom:8px';collapseRow.innerHTML='<button type="button" id="client-editor-collapse" class="editor-cancel" aria-expanded="true">طي لوحة المحرر ▲</button>';bar.prepend(collapseRow);collapseRow.querySelector('button').onclick=()=>{const collapsed=bar.classList.toggle('editor-collapsed');collapseRow.querySelector('button').textContent=collapsed?'فتح لوحة المحرر ▼':'طي لوحة المحرر ▲';collapseRow.querySelector('button').setAttribute('aria-expanded',String(!collapsed));};document.body.appendChild(bar);
     ['font','width','bg','color','radius','x','y'].forEach(id=>bar.querySelector('#client-editor-'+id).addEventListener('input',e=>{
       const prop={font:'fontSize',width:'width',bg:'background',color:'color',radius:'radius',x:'x',y:'y'}[id];
       const value=['font','width','radius','x','y'].includes(id)?Number(e.target.value):e.target.value;
