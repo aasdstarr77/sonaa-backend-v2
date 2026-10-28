@@ -135,18 +135,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
   .global-refresh.is-refreshing svg{animation:global-refresh-spin .8s linear infinite}@keyframes global-refresh-spin{to{transform:rotate(360deg)}}
 #admin-element-drag-toolbar.editor-collapsed>*:not(#admin-editor-collapse-row){display:none!important}#admin-element-drag-toolbar{max-height:60vh;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}#admin-element-drag-toolbar .editor-controls{display:flex;gap:7px;flex-wrap:wrap;align-items:center}#admin-element-drag-toolbar label{font-size:11px;font-weight:800;display:flex;align-items:center;gap:5px}#admin-element-drag-toolbar input[type=range]{width:90px;accent-color:#60a5fa}#admin-element-drag-toolbar input[type=color]{width:32px;height:30px;padding:2px;border:0;border-radius:7px;background:white}#admin-element-drag-toolbar button{border:1px solid #ffffff35;border-radius:9px;padding:7px 10px;font-size:11px;font-weight:900}#admin-element-drag-toolbar .editor-save{background:#10b981;color:#052e24}#admin-element-drag-toolbar .editor-cancel{background:#334155;color:white}#admin-element-drag-toolbar .editor-reset{background:#7f1d1d;color:white}body.admin-layout-touch-editor #app [data-admin-layout-selected="1"]{outline:3px solid #f59e0b!important;outline-offset:3px}body.admin-layout-touch-editor #app button,body.admin-layout-touch-editor #app a,body.admin-layout-touch-editor #app section,body.admin-layout-touch-editor #app article,body.admin-layout-touch-editor #app header,body.admin-layout-touch-editor #app main,body.admin-layout-touch-editor #app form,body.admin-layout-touch-editor #app label,body.admin-layout-touch-editor #app h1,body.admin-layout-touch-editor #app h2,body.admin-layout-touch-editor #app h3,body.admin-layout-touch-editor #app h4,body.admin-layout-touch-editor #app p,body.admin-layout-touch-editor #app img,body.admin-layout-touch-editor #app svg,body.admin-layout-touch-editor #app div,body.admin-layout-touch-editor #app span,body.admin-layout-touch-editor #app input,body.admin-layout-touch-editor #app select,body.admin-layout-touch-editor #app textarea{touch-action:pan-y}body.admin-layout-touch-editor #app #admin-element-drag-toolbar,body.admin-layout-touch-editor #app #admin-element-drag-toolbar *,body.admin-layout-touch-editor #app #admin-drag-toggle,body.admin-layout-touch-editor #app .layout-toolbar,body.admin-layout-touch-editor #app .layout-toolbar *,body.admin-layout-touch-editor #app .layout-item-controls,body.admin-layout-touch-editor #app .layout-item-controls *,body.admin-layout-touch-editor #app .layout-control{touch-action:pan-y}</style>
 
-<style id="sonaa-editor-compact-controls">
-/* Compact editing workspace: preserve the canvas and make controls precise. */
-.sonaa-unified-editor-panel{max-height:26vh!important;overflow-y:auto!important;overscroll-behavior:contain!important;padding:6px 8px calc(6px + env(safe-area-inset-bottom))!important;gap:4px!important}
-.sonaa-unified-editor-panel .editor-controls{gap:4px!important}
-.sonaa-unified-editor-panel label{gap:3px!important;font-size:10px!important}
-.sonaa-unified-editor-panel input[type=range]{width:58px!important}
-.sonaa-unified-editor-panel button{padding:5px 7px!important;font-size:10px!important;min-height:28px}
-.sonaa-unified-editor-panel #client-editor-collapse-row,.sonaa-unified-editor-panel #fanni-editor-collapse-row,.sonaa-unified-editor-panel #admin-editor-collapse-row,.sonaa-unified-editor-panel #sonaa-standalone-collapse-row{margin-bottom:4px!important}
-.sonaa-editor-nudge{display:flex;align-items:center;gap:4px;flex-wrap:wrap;padding:4px 0;border-top:1px solid #ffffff24;margin-top:4px}
-.sonaa-editor-nudge button{min-width:30px;min-height:30px;background:#1e40af;color:#fff;border-radius:7px;font-weight:900}
-.sonaa-editor-nudge .sonaa-size-btn{background:#0f766e}
-</style>
+
 </head>
 <body class="min-h-screen antialiased">
 <div id="app"></div>
@@ -518,10 +507,10 @@ function dropAdminLayout(event,type,targetId,sectionId=''){
 }
 async function loadAdminUiLayout(){if(!getToken())return;try{const data=await tryApi(['/api/admin/layout'],{method:'GET'});state.adminUiLayout=normalizedAdminUiLayout(data.layout);}catch(error){console.warn('تعذر تحميل ترتيب أزرار الإدارة:',error.message);}}
 async function saveAdminUiLayout(){if(!isRootAdminUI())return showToast('تعديل ترتيب الأزرار متاح للمدير الرئيسي فقط','error');const button=document.getElementById('save-admin-layout');if(button){button.disabled=true;button.textContent='جاري الحفظ...';}try{const data=await tryApi(['/api/admin/layout'],{method:'PUT',body:JSON.stringify({layout:state.adminUiLayout})});state.adminUiLayout=normalizedAdminUiLayout(data.layout);state.layoutEditMode=false;showToast(data.message||'تم حفظ الترتيب لجميع المشرفين','success');}catch(error){showToast(error.message||'تعذر حفظ الترتيب','error');}finally{render();}}
-function toggleAdminLayoutEdit(){if(!isRootAdminUI())return showToast('تعديل ترتيب الأزرار متاح للمدير الرئيسي فقط','error');state.layoutEditMode=!state.layoutEditMode;render();}
+function toggleAdminLayoutEdit(){state.layoutEditMode=false;render();}
 function cancelAdminLayoutEdit(){state.layoutEditMode=false;loadAdminUiLayout().finally(()=>render());}
 function render(){
-  if(new URLSearchParams(location.search).get('adminLayout')==='1'&&isRootAdminUI())state.layoutEditMode=true;
+  state.layoutEditMode=false;
   adminSiblingIndexCache=new WeakMap();
   document.body.classList.toggle('admin-layout-touch-editor',!!state.layoutEditMode);
   if(!getToken()){renderLogin();return;}
@@ -573,7 +562,7 @@ function render(){
           <h2 class="text-[12px] font-black text-slate-700">مركز التحكم</h2>
           <span class="text-[10px] text-slate-500">6 أقسام رئيسية</span>
         </div>
-        ${isRootAdminUI()?'<div class="layout-toolbar"><strong class="text-[11px]">ترتيب وأحجام أزرار الإدارة</strong><div class="flex gap-2 flex-wrap">'+(state.layoutEditMode?'<button id="save-admin-layout" type="button" class="primary-pill pill-btn" onclick="saveAdminUiLayout()">حفظ الترتيب</button><button type="button" class="soft-btn pill-btn" onclick="cancelAdminLayoutEdit()">إلغاء</button>':'<button type="button" class="primary-pill pill-btn" onclick="toggleAdminLayoutEdit()">✥ ترتيب الأزرار</button>')+'</div></div>':''}
+        ${isRootAdminUI()?'<div class="layout-toolbar"><strong class="text-[11px]">ترتيب وأحجام أزرار الإدارة</strong><div class="flex gap-2 flex-wrap">'+(state.layoutEditMode?'<button id="save-admin-layout" type="button" class="primary-pill pill-btn" onclick="saveAdminUiLayout()">حفظ الترتيب</button><button type="button" class="soft-btn pill-btn" onclick="cancelAdminLayoutEdit()">إلغاء</button>':'<button type="button" class="primary-pill pill-btn" onclick="toggleAdminLayoutEdit()"></button>')+'</div></div>':''}
         <div class="section-nav ${state.layoutEditMode?'layout-editing':''}" aria-label="كل أدوات لوحة الإدارة">
           ${orderedAdminSections().filter(section=>section.tabs.some(item=>canReadTab(item.id))).map(section=>`
             <section class="section-nav-group" ${state.layoutEditMode?'draggable="true" ondragstart="startAdminLayoutDrag(event,\'section\',\''+section.id+'\')" ondragover="allowAdminLayoutDrop(event)" ondrop="dropAdminLayout(event,\'section\',\''+section.id+'\')"':''}>
@@ -1473,57 +1462,10 @@ if(getToken()){ loadAll(); } else { renderLogin(); }
 <script src="/page-visit.js" defer></script>
 
 
-<script id="sonaa-editor-precision-controls">
-(function(){
- const toolbarId="admin-element-drag-toolbar",p="admin-editor";
- function attach(){
-  const bar=document.getElementById(toolbarId);if(!bar||bar.querySelector('.sonaa-editor-nudge'))return;
-  const row=document.createElement('div');row.className='sonaa-editor-nudge';row.setAttribute('aria-label','تحكم دقيق في العنصر المحدد');
-  row.innerHTML='<span style="font-size:10px;font-weight:800;color:#dbeafe">تحريك دقيق</span><button type="button" data-move="up" aria-label="تحريك لأعلى">↑</button><button type="button" data-move="left" aria-label="تحريك لليسار">←</button><button type="button" data-move="down" aria-label="تحريك لأسفل">↓</button><button type="button" data-move="right" aria-label="تحريك لليمين">→</button><span style="font-size:10px;font-weight:800;color:#dbeafe">الحجم</span><button type="button" class="sonaa-size-btn" data-size="down" aria-label="تصغير العنصر">−</button><button type="button" class="sonaa-size-btn" data-size="up" aria-label="تكبير العنصر">+</button>';
-  bar.appendChild(row);
-  row.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.move){const axis=['left','right'].includes(b.dataset.move)?'x':'y',el=bar.querySelector('#'+p+'-'+axis);if(!el)return;const dir={left:-1,right:1,up:-1,down:1}[b.dataset.move];el.value=Math.max(Number(el.min),Math.min(Number(el.max),Number(el.value||0)+dir*2));el.dispatchEvent(new Event('input',{bubbles:true}));}else if(b.dataset.size){const el=bar.querySelector('#'+p+'-width');if(el){el.value=Math.max(Number(el.min),Math.min(Number(el.max),Number(el.value||100)+(b.dataset.size==='up'?3:-3)));el.dispatchEvent(new Event('input',{bubbles:true}));}}});
- }
- const mo=new MutationObserver(attach);mo.observe(document.documentElement,{childList:true,subtree:true});attach();
-})();
-</script>
+
 
 <!-- Sonaa responsive viewport preview for visual layout editors -->
-<script>
-(function(){
-  try {
-    const params=new URLSearchParams(location.search);
-    if((params.get('adminLayout')!=='1'&&!location.pathname.endsWith('/admin.html')) || params.get('editorPreviewFrame')==='1') return;
-    const css=document.createElement('style');
-    css.textContent='#sonaa-viewport-preview-launch{position:fixed;z-index:2147483000;left:12px;bottom:14px;border:0;border-radius:12px;padding:12px 15px;background:#0a2342;color:#fff;font:800 13px system-ui;box-shadow:0 5px 20px #0004;cursor:pointer}#sonaa-viewport-preview{position:fixed;inset:0;z-index:2147483001;background:#0a1020ed;display:none;align-items:center;justify-content:center;padding:12px;box-sizing:border-box}#sonaa-viewport-preview.open{display:flex}#sonaa-viewport-preview .svp-shell{height:100%;width:100%;display:flex;flex-direction:column;align-items:center;gap:8px;min-height:0}#sonaa-viewport-preview .svp-tools{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;color:white;font:700 12px system-ui}#sonaa-viewport-preview button{border:0;border-radius:8px;padding:8px 12px;font-weight:800;cursor:pointer}#sonaa-viewport-preview .svp-stage{flex:1;min-height:0;width:100%;display:flex;justify-content:center;align-items:stretch}#sonaa-viewport-preview iframe{height:100%;width:100%;max-width:100%;border:0;border-radius:12px;background:white;box-shadow:0 8px 30px #0005}#sonaa-viewport-preview.mobile .svp-stage iframe{width:min(390px,100%);border:5px solid #111827;border-radius:26px}';
-    document.head.appendChild(css);
-    const launch=document.createElement('button');launch.id='sonaa-viewport-preview-launch';launch.type='button';launch.textContent='📱 معاينة الموبايل / الكمبيوتر';
-    document.body.appendChild(launch);
-    launch.style.display='none';
-    const dockPreviewLaunch=()=>{
-      const panel=document.querySelector('#admin-element-drag-toolbar,#client-visual-editor-toolbar,#fanni-visual-editor-toolbar,#sonaa-standalone-editor');
-      if(!panel){launch.style.display='none';return;}
-      const row=panel.querySelector('#admin-editor-collapse-row,#client-editor-collapse-row,#fanni-editor-collapse-row,#sonaa-standalone-collapse-row')||panel;
-      if(launch.parentElement!==row)row.appendChild(launch);
-      launch.style.cssText='position:static;inset:auto;z-index:auto;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;margin:0 6px;padding:6px 9px;border:1px solid #60a5fa;border-radius:9px;background:#1d4ed8;color:#fff;font:800 10px Cairo,sans-serif;box-shadow:0 3px 0 #102858;cursor:pointer;white-space:normal;max-width:190px';
-      launch.title='معاينة الموبايل والكمبيوتر من داخل لوحة التعديل';
-    };
-    dockPreviewLaunch();
-    new MutationObserver(dockPreviewLaunch).observe(document.documentElement,{childList:true,subtree:true});
-const overlay=document.createElement('div');overlay.id='sonaa-viewport-preview';overlay.innerHTML='<div class="svp-shell"><div class="svp-tools"><strong>معاينة فعلية حسب عرض الشاشة</strong><button type="button" data-view="mobile">موبايل 390px</button><button type="button" data-view="desktop">كمبيوتر</button><button type="button" data-close>إغلاق المعاينة ✕</button></div><div class="svp-stage"><iframe title="معاينة استجابة الصفحة" loading="lazy"></iframe></div></div>';
-    document.body.appendChild(overlay);
-    const frame=overlay.querySelector('iframe');
-    const url=new URL(location.href);
-    url.searchParams.set('adminLayout','1');
-    url.searchParams.set('editorPreviewFrame','1');
-    url.searchParams.set('editorViewport','mobile');
-    function setView(view){overlay.classList.toggle('mobile',view==='mobile');overlay.querySelectorAll('[data-view]').forEach(b=>{b.style.background=b.dataset.view===view?'#1eb5a6':'#e2e8f0';b.style.color=b.dataset.view===view?'#062b35':'#0f172a'});frame.style.width=view==='mobile'?'min(390px, 100%)':'100%';const target=new URL(url.href);target.searchParams.set('adminLayout','1');target.searchParams.set('editorPreviewFrame','1');target.searchParams.set('editorViewport',view);if(frame.src&&new URL(frame.src).searchParams.get('editorViewport')!==view)frame.src=target.href;}
-    launch.addEventListener('click',()=>{if(!frame.src)frame.src=url.href;overlay.classList.add('open');setView('mobile');});
-    overlay.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));
-    overlay.querySelector('[data-close]').addEventListener('click',()=>overlay.classList.remove('open'));
-    document.addEventListener('keydown',e=>{if(e.key==='Escape')overlay.classList.remove('open');});
-  } catch(e) { console.warn('Sonaa viewport preview unavailable',e); }
-})();
-</script>
+
 
 </body>
 </html>
