@@ -1658,10 +1658,34 @@ body.client-visual-editor{padding-bottom:180px}
       });
     }finally{applying=false}
   }
+  function elementFingerprint(el){
+    const parts=[];let node=el;
+    while(node&&node.id!=='app'&&parts.length<12){
+      const cls=[...node.classList].filter(x=>!x.includes(':')&&!x.startsWith('hover:')).sort().slice(0,4).join('.');
+      const siblings=node.parentElement?[...node.parentElement.children].filter(n=>n.tagName===node.tagName):[];
+      parts.unshift(node.tagName.toLowerCase()+(node.id?'#'+node.id:'')+(cls?'.'+cls:'')+'['+Math.max(0,siblings.indexOf(node))+']');
+      node=node.parentElement;
+    }
+    return parts.join('/');
+  }
+  function keyHash(value){
+    let hash=2166136261;
+    for(let i=0;i<value.length;i++){hash^=value.charCodeAt(i);hash=Math.imul(hash,16777619);}
+    return (hash>>>0).toString(36);
+  }
   function markElements(){
+    const seen=new Set();
     document.querySelectorAll('#app '+editableSelector).forEach(el=>{
       if(el.closest('#client-visual-editor-toolbar'))return;
-      if(!el.dataset.sonaaEditorKey)el.dataset.sonaaEditorKey=stableKey(el);
+      let key=el.dataset.sonaaEditorKey||stableKey(el);
+      if(seen.has(key)){
+        const base=key.slice(0,76);
+        key=base+'_u'+keyHash(elementFingerprint(el));
+        let suffix=1;
+        while(seen.has(key)){key=base+'_u'+keyHash(elementFingerprint(el))+'_'+suffix++;}
+        el.dataset.sonaaEditorKey=key;
+      }else if(!el.dataset.sonaaEditorKey){el.dataset.sonaaEditorKey=key;}
+      seen.add(key);
     });
     applyLayout();
   }
