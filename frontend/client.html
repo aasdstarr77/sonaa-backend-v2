@@ -1643,9 +1643,26 @@ body.client-visual-editor{padding-bottom:180px}
   function getLayout(){return state.clientUiLayout||{tabOrder:[],sizes:{},elements:{}}}
   const editorViewport=()=> 'shared';
   const responsiveStyle=item=>item;
-  function saveResponsiveStyle(item,prop,value){if(value===null||value==='')delete item[prop];else item[prop]=value;return item;}
+  function saveResponsiveStyle(item,prop,value){if(value===null||value===''){delete item[prop];if(prop==='x')delete item.xPercent;if(prop==='y')delete item.yPercent;}else{item[prop]=value;if(prop==='x')item.xPercent=Number(value)/14.4;if(prop==='y')item.yPercent=Number(value)/9;}return editorContainerMeta(item,selected);}
   function clearResponsiveStyle(item){Object.keys(item).forEach(k=>delete item[k]);return item;}
-  function applyLayout(){
+  function applyEditorPosition(el,pos){
+ const parent=el&&el.parentElement;
+ const rect=parent?parent.getBoundingClientRect():{width:window.innerWidth,height:window.innerHeight};
+ const xPercent=Number.isFinite(pos.xPercent)?pos.xPercent:Number(pos.x||0)/14.4;
+ const yPercent=Number.isFinite(pos.yPercent)?pos.yPercent:Number(pos.y||0)/9;
+ // Individual translate keeps existing transform/3D effects intact; offsets scale with the real parent container.
+ el.style.translate=(Math.max(1,rect.width)*xPercent/100)+'px '+(Math.max(1,rect.height)*yPercent/100)+'px';
+ if(pos.wPercent!==undefined){el.style.width=pos.wPercent+'%';el.style.maxWidth='100%';}
+ if(pos.hPercent!==undefined)el.style.height=pos.hPercent+'%';
+ if(pos.zIndex!==undefined)el.style.zIndex=String(pos.zIndex);
+}
+function editorContainerMeta(item,el){
+ const parent=el&&el.parentElement;
+ if(!parent)return item;
+ const id=String(parent.id||parent.dataset.adminLayoutKey||parent.dataset.sonaaEditorKey||parent.dataset.fanniEditorKey||parent.dataset.sonaaStandaloneKey||parent.tagName||'container').replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,100);
+ item.containerId=id||'container';item.anchor=item.anchor||'top-left';return item;
+}
+function applyLayout(){
     if(applying||!document.getElementById('app'))return;applying=true;
     try{
       document.querySelectorAll('#app [data-sonaa-editor-key]').forEach(el=>{
@@ -1656,13 +1673,14 @@ body.client-visual-editor{padding-bottom:180px}
         if(style.color){el.style.setProperty('color',style.color,'important');el.querySelectorAll('*').forEach(child=>{if(!['IMG','VIDEO','CANVAS'].includes(child.tagName))child.style.setProperty('color',style.color,'important');});}
         if(style.radius!==undefined)el.style.borderRadius=style.radius+'px';
         if(style.scale!==undefined)el.style.scale=String(style.scale);
-        if(style.x!==undefined||style.y!==undefined)el.style.setProperty('translate',Number(style.x||0)/14.4+'vw '+Number(style.y||0)/9+'vh');
+        if(style.xPercent!==undefined||style.yPercent!==undefined||style.x!==undefined||style.y!==undefined)applyEditorPosition(el,style);
         if(typeof style.text==='string'&&el.children.length===0&&el.textContent!==style.text)el.textContent=style.text;
         if(style.hidden)el.dataset.sonaaEditorHidden='1';else delete el.dataset.sonaaEditorHidden;
         el.style.display=style.hidden?'none':'';
       });
     }finally{applying=false}
   }
+  window.addEventListener('resize',()=>requestAnimationFrame(applyLayout),{passive:true});
   function elementFingerprint(el){
     const parts=[];let node=el;
     while(node&&node.id!=='app'&&parts.length<12){
@@ -1768,14 +1786,14 @@ body.client-visual-editor{padding-bottom:180px}
     const dx=event.clientX-pointerDrag.startX,dy=event.clientY-pointerDrag.startY;
     if(Math.abs(dx)+Math.abs(dy)>2)pointerDrag.moved=true;
     if(!pointerDrag.moved)return;
-    event.preventDefault();setStyle('x',Math.max(-2000,Math.min(2000,Math.round(pointerDrag.baseX+dx*1440/Math.max(1,window.innerWidth)))));setStyle('y',Math.max(-2000,Math.min(2000,Math.round(pointerDrag.baseY+dy*900/Math.max(1,window.innerHeight)))));
+    event.preventDefault();setStyle('x',Math.max(-2000,Math.min(2000,Math.round(pointerDrag.baseX+dx*1440/Math.max(1,(pointerDrag.el.parentElement||document.documentElement).getBoundingClientRect().width)))));setStyle('y',Math.max(-2000,Math.min(2000,Math.round(pointerDrag.baseY+dy*900/Math.max(1,(pointerDrag.el.parentElement||document.documentElement).getBoundingClientRect().height)))));
   },true);
   function finishPointerDrag(event){if(!pointerDrag||event.pointerId!==pointerDrag.pointerId)return;if(pointerDrag.moved)clientSuppressClickUntil=Date.now()+700;pointerDrag.el.style.cursor='';try{pointerDrag.el.releasePointerCapture(event.pointerId)}catch(_){}pointerDrag=null;}
   document.addEventListener('click',function(event){if(Date.now()>clientSuppressClickUntil)return;clientSuppressClickUntil=0;event.preventDefault();event.stopImmediatePropagation()},true);
   document.addEventListener('pointerup',finishPointerDrag,true);document.addEventListener('pointercancel',finishPointerDrag,true);
    let clientTouchDrag=null,clientTouchTimer=null;
    document.addEventListener('touchstart',function(event){if(!editing||event.touches.length!==1||event.target.closest('#client-visual-editor-toolbar'))return;const app=document.getElementById('app');if(!app||!app.contains(event.target))return;const el=event.target.closest(editableSelector);if(!el)return;const t=event.touches[0];const d={el,startX:t.clientX,startY:t.clientY,lastX:t.clientX,lastY:t.clientY,active:false,scrollMode:false,moved:false,baseX:0,baseY:0};clientTouchDrag=d;clientTouchTimer=setTimeout(()=>{if(clientTouchDrag!==d)return;selectForEditing(el);const st=selectedStyle();d.baseX=Number(st.x||0);d.baseY=Number(st.y||0);d.active=true;el.style.cursor='grabbing';},450);},{capture:true,passive:true});
-   document.addEventListener('touchmove',function(event){if(!clientTouchDrag||event.touches.length!==1)return;const t=event.touches[0],d=clientTouchDrag,dx=t.clientX-d.startX,dy=t.clientY-d.startY;if(!d.active){if(Math.abs(dx)+Math.abs(dy)>8){d.scrollMode=true;clearTimeout(clientTouchTimer);clientTouchTimer=null;}d.lastX=t.clientX;d.lastY=t.clientY;return;}event.preventDefault();if(Math.abs(dx)+Math.abs(dy)>2)d.moved=true;setStyle('x',Math.max(-2000,Math.min(2000,Math.round(d.baseX+dx*1440/Math.max(1,window.innerWidth)))));setStyle('y',Math.max(-2000,Math.min(2000,Math.round(d.baseY+dy*900/Math.max(1,window.innerHeight)))));},{capture:true,passive:false});
+   document.addEventListener('touchmove',function(event){if(!clientTouchDrag||event.touches.length!==1)return;const t=event.touches[0],d=clientTouchDrag,dx=t.clientX-d.startX,dy=t.clientY-d.startY;if(!d.active){if(Math.abs(dx)+Math.abs(dy)>8){d.scrollMode=true;clearTimeout(clientTouchTimer);clientTouchTimer=null;}d.lastX=t.clientX;d.lastY=t.clientY;return;}event.preventDefault();if(Math.abs(dx)+Math.abs(dy)>2)d.moved=true;setStyle('x',Math.max(-2000,Math.min(2000,Math.round(d.baseX+dx*1440/Math.max(1,(d.el.parentElement||document.documentElement).getBoundingClientRect().width)))));setStyle('y',Math.max(-2000,Math.min(2000,Math.round(d.baseY+dy*900/Math.max(1,(d.el.parentElement||document.documentElement).getBoundingClientRect().height)))));},{capture:true,passive:false});
    function finishClientTouch(){if(!clientTouchDrag)return;clearTimeout(clientTouchTimer);clientTouchTimer=null;if(clientTouchDrag.active&&clientTouchDrag.moved)clientSuppressClickUntil=Date.now()+700;clientTouchDrag.el.style.cursor='';clientTouchDrag=null;}
    document.addEventListener('touchend',finishClientTouch,{capture:true,passive:true});document.addEventListener('touchcancel',finishClientTouch,{capture:true,passive:true});
   document.addEventListener('click',function(event){
