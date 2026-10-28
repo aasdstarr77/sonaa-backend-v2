@@ -1466,6 +1466,7 @@ function sanitizeAdminUiLayout(input) {
       if (Number.isFinite(value.radius) && value.radius >= 0 && value.radius <= 40) item.radius = value.radius;
       if (typeof value.text === 'string') item.text = value.text.slice(0, 200);
       if (typeof value.hidden === 'boolean') item.hidden = value.hidden;
+      if (typeof value.threeD === 'boolean') item.threeD = value.threeD;
       if (Number.isFinite(value.scale) && value.scale >= 0.5 && value.scale <= 2) item.scale = value.scale;
       const mobile = {};
       if (value.mobile && typeof value.mobile === 'object' && !Array.isArray(value.mobile)) {
@@ -1478,6 +1479,7 @@ function sanitizeAdminUiLayout(input) {
         if (Number.isFinite(value.mobile.radius) && value.mobile.radius >= 0 && value.mobile.radius <= 40) mobile.radius = value.mobile.radius;
         if (typeof value.mobile.text === 'string') mobile.text = value.mobile.text.slice(0, 200);
         if (typeof value.mobile.hidden === 'boolean') mobile.hidden = value.mobile.hidden;
+        if (typeof value.mobile.threeD === 'boolean') mobile.threeD = value.mobile.threeD;
         if (Number.isFinite(value.mobile.scale) && value.mobile.scale >= 0.5 && value.mobile.scale <= 2) mobile.scale = value.mobile.scale;
       }
       if (Object.keys(mobile).length) item.mobile = mobile;
@@ -1535,6 +1537,7 @@ function sanitizeClientUiLayout(input) {
       if (Number.isFinite(value.y) && value.y >= -2000 && value.y <= 2000) item.y = value.y;
       if (typeof value.text === 'string') item.text = value.text.slice(0, 200);
       if (typeof value.hidden === 'boolean') item.hidden = value.hidden;
+      if (typeof value.threeD === 'boolean') item.threeD = value.threeD;
       if (Number.isFinite(value.scale) && value.scale >= 0.5 && value.scale <= 2) item.scale = value.scale;
       const mobile = {};
       if (value.mobile && typeof value.mobile === 'object' && !Array.isArray(value.mobile)) {
@@ -1549,6 +1552,7 @@ function sanitizeClientUiLayout(input) {
         if (Number.isFinite(mv.scale) && mv.scale >= 0.5 && mv.scale <= 2) mobile.scale = mv.scale;
         if (typeof mv.text === 'string') mobile.text = mv.text.slice(0, 200);
         if (typeof mv.hidden === 'boolean') mobile.hidden = mv.hidden;
+        if (typeof mv.threeD === 'boolean') mobile.threeD = mv.threeD;
       }
       if (Object.keys(mobile).length) item.mobile = mobile;
       if (Object.keys(item).length) elements[key] = item;
@@ -1600,6 +1604,7 @@ function sanitizeTechnicianUiLayout(input) {
       if (Number.isFinite(value.y) && value.y >= -2000 && value.y <= 2000) item.y = value.y;
       if (typeof value.text === 'string') item.text = value.text.slice(0, 200);
       if (typeof value.hidden === 'boolean') item.hidden = value.hidden;
+      if (typeof value.threeD === 'boolean') item.threeD = value.threeD;
       if (Number.isFinite(value.scale) && value.scale >= 0.5 && value.scale <= 2) item.scale = value.scale;
       const mobile = {};
       if (value.mobile && typeof value.mobile === 'object' && !Array.isArray(value.mobile)) {
@@ -1614,6 +1619,7 @@ function sanitizeTechnicianUiLayout(input) {
         if (Number.isFinite(mv.scale) && mv.scale >= 0.5 && mv.scale <= 2) mobile.scale = mv.scale;
         if (typeof mv.text === 'string') mobile.text = mv.text.slice(0, 200);
         if (typeof mv.hidden === 'boolean') mobile.hidden = mv.hidden;
+        if (typeof mv.threeD === 'boolean') mobile.threeD = mv.threeD;
       }
       if (Object.keys(mobile).length) item.mobile = mobile;
       if (Object.keys(item).length) elements[key] = item;

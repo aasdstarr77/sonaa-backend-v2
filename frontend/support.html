@@ -272,7 +272,7 @@ init();
  let layout={},drag=null,ready=false,selectedKey='';
  const rootPrefix='standalone_'+page+'_'+role+'_';
  const editorViewport=()=>new URLSearchParams(location.search).get('editorViewport')==='mobile'?'mobile':'desktop';
- const responsiveStyle=item=>editorViewport()==='mobile'?{...item,...(item.mobile||{})}:item;
+ const responsiveStyle=item=>{if(editorViewport()!=='mobile')return item;const m=item.mobile||{},out={...item,...m};['x','y','width','fontSize','scale'].forEach(k=>{if(!(k in m))delete out[k]});return out;};
  function saveResponsiveStyle(item,prop,value){if(editorViewport()==='mobile'){const m={...(item.mobile||{})};if(value===null||value==='')delete m[prop];else m[prop]=value;if(Object.keys(m).length)item.mobile=m;else delete item.mobile;}else{if(value===null||value==='')delete item[prop];else item[prop]=value;}return item;}
  function keyFor(el){
   if(el.id)return (rootPrefix+'id_'+el.id).replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,100);
