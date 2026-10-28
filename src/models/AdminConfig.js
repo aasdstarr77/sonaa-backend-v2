@@ -37,6 +37,11 @@ const adminConfigSchema = new mongoose.Schema({
       createdAt: { type: Date, default: Date.now }
     }]
   },
+  adminUiLayout: { type: Object, default: {} },
+  clientUiLayout: { type: Object, default: {} },
+  fanniUiLayout: { type: Object, default: {} },
+  passwordUiLayout: { type: Object, default: {} },
+  supportUiLayout: { type: Object, default: {} },
   history: { type: [historySchema], default: [] }
 
 }, { timestamps: true, versionKey: false });
