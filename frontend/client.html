@@ -1727,18 +1727,20 @@ body.client-visual-editor{padding-bottom:180px}
   document.addEventListener('pointerup',finishPointerDrag,true);document.addEventListener('pointercancel',finishPointerDrag,true);
    let clientTouchDrag=null,clientTouchTimer=null;
    document.addEventListener('touchstart',function(event){if(!editing||event.touches.length!==1||event.target.closest('#client-visual-editor-toolbar'))return;const app=document.getElementById('app');if(!app||!app.contains(event.target))return;const el=event.target.closest(editableSelector);if(!el)return;const t=event.touches[0];const d={el,startX:t.clientX,startY:t.clientY,lastX:t.clientX,lastY:t.clientY,active:false,scrollMode:false,moved:false,baseX:0,baseY:0};clientTouchDrag=d;clientTouchTimer=setTimeout(()=>{if(clientTouchDrag!==d)return;selectForEditing(el);const st=selectedStyle();d.baseX=Number(st.x||0);d.baseY=Number(st.y||0);d.active=true;el.style.cursor='grabbing';},450);},{capture:true,passive:true});
-   document.addEventListener('touchmove',function(event){if(!clientTouchDrag||event.touches.length!==1)return;const t=event.touches[0],d=clientTouchDrag,dx=t.clientX-d.startX,dy=t.clientY-d.startY;if(!d.active){event.preventDefault();if(Math.abs(dx)+Math.abs(dy)>8){d.scrollMode=true;clearTimeout(clientTouchTimer);clientTouchTimer=null;}if(d.scrollMode)window.scrollBy(d.lastX-t.clientX,d.lastY-t.clientY);d.lastX=t.clientX;d.lastY=t.clientY;return;}event.preventDefault();if(Math.abs(dx)+Math.abs(dy)>2)d.moved=true;setStyle('x',Math.max(-2000,Math.min(2000,Math.round(d.baseX+dx))));setStyle('y',Math.max(-2000,Math.min(2000,Math.round(d.baseY+dy))));},{capture:true,passive:false});
+   document.addEventListener('touchmove',function(event){if(!clientTouchDrag||event.touches.length!==1)return;const t=event.touches[0],d=clientTouchDrag,dx=t.clientX-d.startX,dy=t.clientY-d.startY;if(!d.active){if(Math.abs(dx)+Math.abs(dy)>8){d.scrollMode=true;clearTimeout(clientTouchTimer);clientTouchTimer=null;}d.lastX=t.clientX;d.lastY=t.clientY;return;}event.preventDefault();if(Math.abs(dx)+Math.abs(dy)>2)d.moved=true;setStyle('x',Math.max(-2000,Math.min(2000,Math.round(d.baseX+dx))));setStyle('y',Math.max(-2000,Math.min(2000,Math.round(d.baseY+dy))));},{capture:true,passive:false});
    function finishClientTouch(){if(!clientTouchDrag)return;clearTimeout(clientTouchTimer);clientTouchTimer=null;if(clientTouchDrag.active&&clientTouchDrag.moved)clientSuppressClickUntil=Date.now()+700;clientTouchDrag.el.style.cursor='';clientTouchDrag=null;}
    document.addEventListener('touchend',finishClientTouch,{capture:true,passive:true});document.addEventListener('touchcancel',finishClientTouch,{capture:true,passive:true});
   document.addEventListener('click',function(event){
     if(event.target.closest('#client-visual-editor-toolbar'))return;
     if(!document.body.classList.contains('client-visual-editor'))return;
     const app=document.getElementById('app');if(!app||!app.contains(event.target))return;
+    /* Keep the preview interactive: buttons and form controls work normally. Use long-press to select them for styling. */
+    if(event.target.closest('button,input,select,textarea,label,form'))return;
     const el=event.target.closest(editableSelector);if(el){event.preventDefault();event.stopImmediatePropagation();selected=el;selectedKey=el.dataset.sonaaEditorKey||stableKey(el);el.dataset.sonaaEditorSelected='1';document.querySelectorAll('[data-sonaa-editor-selected="1"]').forEach(n=>{if(n!==el)delete n.dataset.sonaaEditorSelected;});updateToolbar();}
     else {event.preventDefault();event.stopImmediatePropagation();}
   },true);
   document.addEventListener('submit',e=>{if(document.body.classList.contains('client-visual-editor')){e.preventDefault();e.stopImmediatePropagation();}},true);
-  document.addEventListener('change',e=>{if(document.body.classList.contains('client-visual-editor')&&!e.target.closest('#client-visual-editor-toolbar')){e.preventDefault();e.stopImmediatePropagation();}},true);
+  document.addEventListener('change',e=>{if(document.body.classList.contains('client-visual-editor')&&!e.target.closest('#client-visual-editor-toolbar')&&!e.target.closest('input,select,textarea')){e.preventDefault();e.stopImmediatePropagation();}},true);
   if(editing)toolbar();markElements();
   new MutationObserver(()=>{markElements();}).observe(document.getElementById('app'),{childList:true,subtree:true});
 })();
