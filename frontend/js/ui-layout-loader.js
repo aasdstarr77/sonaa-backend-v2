@@ -86,10 +86,6 @@
     }
     console.warn('[Sonaa editor] Section not found:', section);
   }
-  window.addEventListener('message', function (event) {
-    if (!event.data || event.data.action !== 'openSection') return;
-    openSection(event.data.section);
-  });
   function assignEditorIds() {
     var prefix = page + '-';
     document.querySelectorAll('[id]').forEach(function (el) {
