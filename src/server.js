@@ -89,12 +89,16 @@ const frontendPath = possibleFrontendPaths.find(
   p => fs.existsSync(p) && fs.statSync(p).isDirectory()
 ) || __dirname;
 
-// Serve repository frontend files at /frontend/* even when frontend-dist is selected above.
-// Vercel includes frontend/** in src/server.js deployment files.
-app.use('/frontend', express.static(path.join(__dirname, '..', 'frontend'), {
+// Serve the editor and other repository frontend files from an explicit absolute path.
+// The explicit sendFile route is a fallback if static middleware does not resolve the file.
+const repositoryFrontendPath = path.join(__dirname, '../frontend');
+app.use('/frontend', express.static(repositoryFrontendPath, {
   index: false,
   dotfiles: 'ignore'
 }));
+app.get('/frontend/editor.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/editor.html'));
+});
 
 app.use(express.static(frontendPath, {
   index: false,
