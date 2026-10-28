@@ -319,7 +319,7 @@ function render(){
           <h2 class="text-[12px] font-black text-slate-700">مركز التحكم</h2>
           <span class="text-[10px] text-slate-500">6 أقسام رئيسية</span>
         </div>
-        ${isRootAdminUI()?'<div class="layout-toolbar"><strong class="text-[11px]">ترتيب وأحجام أزرار الإدارة</strong><div class="flex gap-2 flex-wrap">'+(state.layoutEditMode?'<button id="save-admin-layout" type="button" class="primary-pill pill-btn" onclick="saveAdminUiLayout()">حفظ الترتيب</button><button type="button" class="soft-btn pill-btn" onclick="cancelAdminLayoutEdit()">إلغاء</button>':'<button type="button" class="primary-pill pill-btn" onclick="toggleAdminLayoutEdit()">✥ ترتيب الأزرار</button>')+'</div></div>':''}
+        ${isRootAdminUI()?'<div class="layout-toolbar"><strong class="text-[11px]">ترتيب وأحجام أزرار الإدارة</strong><div class="flex gap-2 flex-wrap">'+(state.layoutEditMode?'<button id="save-admin-layout" type="button" class="primary-pill pill-btn" onclick="saveAdminUiLayout()">حفظ الترتيب</button><button type="button" class="soft-btn pill-btn" onclick="cancelAdminLayoutEdit()">إلغاء</button>':'<button type="button" class="primary-pill pill-btn" onclick="toggleAdminLayoutEdit()"></button>')+'</div></div>':''}
         <div class="section-nav ${state.layoutEditMode?'layout-editing':''}" aria-label="كل أدوات لوحة الإدارة">
           ${orderedAdminSections().filter(section=>section.tabs.some(item=>canReadTab(item.id))).map(section=>`
             <section class="section-nav-group" ${state.layoutEditMode?'draggable="true" ondragstart="startAdminLayoutDrag(event,\'section\',\''+section.id+'\')" ondragover="allowAdminLayoutDrop(event)" ondrop="dropAdminLayout(event,\'section\',\''+section.id+'\')"':''}>
