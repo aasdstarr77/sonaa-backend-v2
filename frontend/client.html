@@ -414,36 +414,15 @@ body #app header.app-header a[href="https://aasdstarr77.github.io/sonaa-download
   transform:translateY(2px)!important;
   box-shadow:0 2px 0 #102858,0 3px 7px rgba(16,40,88,.2),inset 0 1px 0 rgba(255,255,255,.25)!important;
 }
-
-
-/* Shared client dashboard button layout editor: drag on desktop, arrows on touch screens. */
-.client-layout-toolbar{margin:8px 0 0;padding:10px;border:1px dashed #93b4e5;border-radius:14px;background:linear-gradient(145deg,#eff6ff,#fff);color:#173c6c}
-.client-layout-toolbar button,.client-layout-toolbar select{min-height:34px;border:1px solid #cbd8e9;border-radius:9px;background:#fff;padding:5px 9px;font-size:11px;font-weight:800}
-.client-layout-toolbar .client-layout-save{background:linear-gradient(145deg,#2563eb,#173c6c);color:#fff;border-color:#1d4ed8}
-.client-layout-item{display:flex;align-items:center;gap:7px;padding:7px 0;border-top:1px solid #dbeafe}
-.client-layout-item:first-child{border-top:0}
-.client-layout-item strong{flex:1;min-width:0;font-size:11px}
-.client-layout-item select{max-width:104px}
 .client-section-tabs .client-tab-size-small{flex:.72 1 0!important;font-size:10px!important;padding-inline:4px!important}
 .client-section-tabs .client-tab-size-medium{flex:1 1 0!important}
 .client-section-tabs .client-tab-size-large{flex:1.35 1 0!important;font-size:13px!important}
 .client-section-tabs [data-client-layout-tab][draggable="true"]{cursor:grab;touch-action:pan-y}
 .client-section-tabs [data-client-layout-tab].client-tab-dragging{opacity:.45;outline:2px dashed #2563eb;outline-offset:-3px}
-@media(max-width:380px){.client-layout-toolbar{padding:8px}.client-layout-item{gap:4px}.client-layout-item select{max-width:92px}.client-section-tabs .client-tab-size-large{font-size:11px!important}}
+@media(max-width:380px){.client-section-tabs .client-tab-size-large{font-size:11px!important}}
 </style>
 
-<style id="sonaa-editor-compact-controls">
-/* Compact editing workspace: preserve the canvas and make controls precise. */
-.sonaa-unified-editor-panel{max-height:26vh!important;overflow-y:auto!important;overscroll-behavior:contain!important;padding:6px 8px calc(6px + env(safe-area-inset-bottom))!important;gap:4px!important}
-.sonaa-unified-editor-panel .editor-controls{gap:4px!important}
-.sonaa-unified-editor-panel label{gap:3px!important;font-size:10px!important}
-.sonaa-unified-editor-panel input[type=range]{width:58px!important}
-.sonaa-unified-editor-panel button{padding:5px 7px!important;font-size:10px!important;min-height:28px}
-.sonaa-unified-editor-panel #client-editor-collapse-row,.sonaa-unified-editor-panel #fanni-editor-collapse-row,.sonaa-unified-editor-panel #admin-editor-collapse-row,.sonaa-unified-editor-panel #sonaa-standalone-collapse-row{margin-bottom:4px!important}
-.sonaa-editor-nudge{display:flex;align-items:center;gap:4px;flex-wrap:wrap;padding:4px 0;border-top:1px solid #ffffff24;margin-top:4px}
-.sonaa-editor-nudge button{min-width:30px;min-height:30px;background:#1e40af;color:#fff;border-radius:7px;font-weight:900}
-.sonaa-editor-nudge .sonaa-size-btn{background:#0f766e}
-</style>
+
 </head>
 <body class="min-h-screen antialiased">
 <div id="app"></div>
@@ -737,7 +716,7 @@ let state={
   complaintTrackSn:'',complaintTrackName:'',complaintTrackLoading:false,complaintTrackError:'',complaintTrackResults:null,
   showService:false,openCategory:'',searchService:'',
   servicesLoading:true,servicesError:'',servicesLoaded:false,publicContent:{siteName:'صُنّاع',maintenance:false,maintenanceMessage:'',announcement:'',faqs:[]},
-  clientUiLayout:{tabOrder:[],sizes:{},elements:{}},clientAdminRenderingDashboard:false,clientAdminAuthPreview:false,clientLayoutEditorAvailable:false,clientLayoutEditorChecked:false,clientLayoutEditMode:false,clientLayoutDragId:''
+  clientUiLayout:{tabOrder:[],sizes:{},elements:{}},clientAdminRenderingDashboard:false,clientAdminAuthPreview:false,clientLayoutEditorAvailable:false,clientLayoutEditorChecked:true,clientLayoutEditMode:false,clientLayoutDragId:''
 };
 const CLIENT_TAB_DEFINITIONS=[{id:'new',label:'طلب جديد'},{id:'orders',label:'طلباتي'},{id:'complaint',label:'شكوى'}];
 function normalizedClientUiLayout(input){const source=input&&typeof input==='object'&&!Array.isArray(input)?input:{};const allowed=CLIENT_TAB_DEFINITIONS.map(item=>item.id);const order=Array.isArray(source.tabOrder)?[...new Set(source.tabOrder.filter(id=>allowed.includes(id)))]:[];allowed.forEach(id=>{if(!order.includes(id))order.push(id)});const sizes={};if(source.sizes&&typeof source.sizes==='object'&&!Array.isArray(source.sizes))allowed.forEach(id=>{if(['small','medium','large'].includes(source.sizes[id]))sizes[id]=source.sizes[id]});const elements={};if(source.elements&&typeof source.elements==='object'&&!Array.isArray(source.elements)){for(const [key,value] of Object.entries(source.elements).slice(0,500)){if(!/^[a-zA-Z0-9_-]{1,100}$/.test(key)||!value||typeof value!=='object'||Array.isArray(value))continue;const item={};if(Number.isFinite(value.fontSize)&&value.fontSize>=10&&value.fontSize<=36)item.fontSize=value.fontSize;if(Number.isFinite(value.width)&&value.width>=30&&value.width<=100)item.width=value.width;if(typeof value.background==='string'&&/^#[0-9a-fA-F]{6}$/.test(value.background))item.background=value.background;if(['solid','glossy'].includes(value.backgroundFinish))item.backgroundFinish=value.backgroundFinish;if(typeof value.activeBackground==='string'&&/^#[0-9a-fA-F]{6}$/.test(value.activeBackground))item.activeBackground=value.activeBackground;if(typeof value.color==='string'&&/^#[0-9a-fA-F]{6}$/.test(value.color))item.color=value.color;if(Number.isFinite(value.radius)&&value.radius>=0&&value.radius<=40)item.radius=value.radius;if(Number.isFinite(value.scale)&&value.scale>=0.5&&value.scale<=2)item.scale=value.scale;if(Number.isFinite(value.x)&&value.x>=-2000&&value.x<=2000)item.x=value.x;if(Number.isFinite(value.y)&&value.y>=-2000&&value.y<=2000)item.y=value.y;if(Number.isFinite(value.scale)&&value.scale>=0.5&&value.scale<=2)item.scale=value.scale;if(typeof value.text==='string')item.text=value.text.slice(0,200);if(typeof value.hidden==='boolean')item.hidden=value.hidden;if(typeof value.threeD==='boolean')item.threeD=value.threeD;const mobile={};if(value.mobile&&typeof value.mobile==='object'&&!Array.isArray(value.mobile)){const mv=value.mobile;if(Number.isFinite(mv.fontSize)&&mv.fontSize>=10&&mv.fontSize<=36)mobile.fontSize=mv.fontSize;if(Number.isFinite(mv.width)&&mv.width>=30&&mv.width<=100)mobile.width=mv.width;if(typeof mv.background==='string'&&/^#[0-9a-fA-F]{6}$/.test(mv.background))mobile.background=mv.background;if(typeof mv.color==='string'&&/^#[0-9a-fA-F]{6}$/.test(mv.color))mobile.color=mv.color;if(Number.isFinite(mv.radius)&&mv.radius>=0&&mv.radius<=40)mobile.radius=mv.radius;if(Number.isFinite(mv.scale)&&mv.scale>=0.5&&mv.scale<=2)mobile.scale=mv.scale;if(Number.isFinite(mv.x)&&mv.x>=-2000&&mv.x<=2000)mobile.x=mv.x;if(Number.isFinite(mv.y)&&mv.y>=-2000&&mv.y<=2000)mobile.y=mv.y;if(Number.isFinite(mv.scale)&&mv.scale>=0.5&&mv.scale<=2)mobile.scale=mv.scale;if(typeof mv.text==='string')mobile.text=mv.text.slice(0,200);if(typeof mv.hidden==='boolean')mobile.hidden=mv.hidden;if(typeof mv.threeD==='boolean')mobile.threeD=mv.threeD;}if(Object.keys(mobile).length)item.mobile=mobile;if(Object.keys(item).length)elements[key]=item;}}return {tabOrder:order,sizes,elements};}
@@ -1660,24 +1639,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 render();
 </script>
 
-<script>async function handleGlobalRefresh(){let button=document.getElementById('global-refresh');if(globalRefreshInProgress||button?.disabled)return;globalRefreshInProgress=true;if(button){button.disabled=true;button.classList.add('is-refreshing');}try{if(!state.account){await Promise.allSettled([loadServices(),loadPublicContent()]);showToast('تم تحديث البيانات','success');}else{await refreshClientPage();}}finally{globalRefreshInProgress=false;button=document.getElementById('global-refresh');if(button){button.disabled=false;button.classList.remove('is-refreshing');}}}</script>
-
-
-<style>
-body.client-visual-editor{padding-bottom:180px}
-.client-visual-editor #app [data-sonaa-editor-key]{transition:outline-color .12s,box-shadow .12s;touch-action:pan-y;cursor:grab}
-.client-visual-editor #app [data-sonaa-editor-key]:hover{outline:2px dashed #2563eb!important;outline-offset:2px;cursor:pointer}
-.client-visual-editor #app [data-sonaa-editor-selected="1"]{outline:3px solid #f59e0b!important;outline-offset:3px;box-shadow:0 0 0 5px #f59e0b26!important}
-#client-visual-editor-toolbar{position:fixed;z-index:99999;bottom:0;left:0;right:0;max-height:60vh;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;background:#0b1b3a;color:#fff;padding:10px 12px calc(10px + env(safe-area-inset-bottom));box-shadow:0 -8px 28px #0b1b3a38;font-family:Cairo,sans-serif}
-#client-visual-editor-toolbar.editor-collapsed>*:not(#client-editor-collapse-row){display:none!important}
-#client-visual-editor-toolbar .editor-controls{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
-#client-visual-editor-toolbar label{font-size:11px;font-weight:800;display:flex;align-items:center;gap:5px}
-#client-visual-editor-toolbar input[type=range]{width:90px;accent-color:#60a5fa}
-#client-visual-editor-toolbar input[type=color]{width:32px;height:30px;padding:2px;border:0;border-radius:7px;background:white}
-#client-visual-editor-toolbar button{border:1px solid #ffffff35;border-radius:9px;padding:7px 10px;font-size:11px;font-weight:900}
-#client-visual-editor-toolbar .editor-save{background:#10b981;color:#052e24}
-#client-visual-editor-toolbar .editor-cancel{background:#334155}
-#client-visual-editor-toolbar .editor-reset{background:#7f1d1d}
+<script>async function handleGlobalRefresh(){let button=document.getElementById('global-refresh');if(globalRefreshInProgress||button?.disabled)return;globalRefreshInProgress=true;if(button){button.disabled=true;button.classList.add('is-refreshing');}try{if(!state.account){await Promise.allSettled([loadServices(),loadPublicContent()]);showToast('تم تحديث البيانات','success');}else{await refreshClientPage();}}finally{globalRefreshInProgress=false;button=document.getElementById('global-refresh');if(button){button.disabled=false;button.classList.remove('is-refreshing');}}}
 
 
 /* Align the customer's inner dashboard controls and order section with the technician dashboard. */
