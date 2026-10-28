@@ -655,11 +655,20 @@ async function api(path,options={}){
  if(token)headers.Authorization='Bearer '+token;
 
  let response;
+ const timeoutMs=Number(options.timeoutMs)||0;
+ const fetchOptions={...options};
+ delete fetchOptions.timeoutMs;
+ const controller=timeoutMs&&typeof AbortController!=='undefined'?new AbortController():null;
+ let timeoutId=null;
+ if(controller)timeoutId=setTimeout(()=>controller.abort(),timeoutMs);
 
  try{
-  response=await fetch(buildUrl(path),{...options,headers,credentials:'omit',mode:'cors'});
+  response=await fetch(buildUrl(path),{...fetchOptions,...(controller?{signal:controller.signal}:{}),headers,credentials:'omit',mode:'cors'});
  }catch(e){
+  if(controller&&controller.signal.aborted)throw new Error('السيرفر لم يرد خلال 15 ثانية. جرّب مرة أخرى؛ لو تكررت المشكلة سنحتاج فحص استجابة تسجيل دخول الفني في السيرفر.');
   throw new Error('تعذر الاتصال بالسيرفر. تحقق من الإنترنت ورابط الباك إند.');
+ }finally{
+  if(timeoutId!==null)clearTimeout(timeoutId);
  }
 
  const raw=await response.text();
@@ -692,7 +701,7 @@ const apiPost=(path,body)=>api(path,{method:'POST',body:JSON.stringify(body)});
 
 const API={
  register:p=>apiPost('/api/fanni/register',p),
- login:p=>apiPost('/api/fanni/login',p),
+ login:p=>api('/api/fanni/login',{method:'POST',body:JSON.stringify(p),timeoutMs:15000}),
  profile:()=>apiGet('/api/fanni/me'),
  updateProfile:p=>api('/api/fanni/me',{method:'PATCH',body:JSON.stringify(p)}),
  available:()=>apiGet('/api/orders/available'),
