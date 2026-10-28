@@ -169,8 +169,7 @@ async function refresh(){
  }catch(e){if(!cases.length)showError(e.message)}finally{pollBusy=false}
 }
 function init(){
- const editorPreview=new URLSearchParams(location.search).get('legacyEditorDisabled')==='1';
- const authenticated=!!token()||editorPreview;
+ const authenticated=!!token();
  $('back-btn').addEventListener('click',()=>{if(role==='fanni')location.href='fanni.html';else if(role==='admin')location.href='admin.html';else location.href='client.html'});
  $('login-link').href=role==='fanni'?'fanni.html':role==='admin'?'admin.html':'client.html';
  if(!['client','fanni','admin'].includes(role)||!authenticated){$('login-needed').classList.remove('hidden');return}
