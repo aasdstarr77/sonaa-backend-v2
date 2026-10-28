@@ -1603,7 +1603,7 @@ body.client-visual-editor{padding-bottom:180px}
 .client-visual-editor #app [data-sonaa-editor-key]{transition:outline-color .12s,box-shadow .12s;touch-action:pan-y;cursor:grab}
 .client-visual-editor #app [data-sonaa-editor-key]:hover{outline:2px dashed #2563eb!important;outline-offset:2px;cursor:pointer}
 .client-visual-editor #app [data-sonaa-editor-selected="1"]{outline:3px solid #f59e0b!important;outline-offset:3px;box-shadow:0 0 0 5px #f59e0b26!important}
-#client-visual-editor-toolbar{position:fixed;z-index:99999;bottom:0;left:0;right:0;background:#0b1b3a;color:#fff;padding:10px 12px calc(10px + env(safe-area-inset-bottom));box-shadow:0 -8px 28px #0b1b3a38;font-family:Cairo,sans-serif}
+#client-visual-editor-toolbar{position:fixed;z-index:99999;bottom:0;left:0;right:0;max-height:60vh;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;background:#0b1b3a;color:#fff;padding:10px 12px calc(10px + env(safe-area-inset-bottom));box-shadow:0 -8px 28px #0b1b3a38;font-family:Cairo,sans-serif}
 #client-visual-editor-toolbar.editor-collapsed>*:not(#client-editor-collapse-row){display:none!important}
 #client-visual-editor-toolbar .editor-controls{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
 #client-visual-editor-toolbar label{font-size:11px;font-weight:800;display:flex;align-items:center;gap:5px}
@@ -1663,7 +1663,7 @@ body.client-visual-editor{padding-bottom:180px}
   }
   function toolbar(){
     if(document.getElementById('client-visual-editor-toolbar'))return;
-    const bar=document.createElement('div');bar.id='client-visual-editor-toolbar';bar.innerHTML=
+    const bar=document.createElement('div');bar.id='client-visual-editor-toolbar';bar.classList.add('sonaa-unified-editor-panel');bar.innerHTML=
       '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:7px"><div><b style="font-size:13px">✦ تعديل واجهة صُنّاع مباشرة</b><div id="client-editor-selected-label" style="font-size:10px;color:#cbd5e1;margin-top:2px">اضغط على أي عنصر في اللوحة لتعديله</div></div><button type="button" class="editor-cancel" id="client-editor-cancel">إلغاء</button></div>'+
       '<div class="editor-controls"><label>حجم الخط <input id="client-editor-font" type="range" min="10" max="36" value="16"><span id="client-editor-font-val">16</span></label>'+
       '<label>عرض العنصر <input id="client-editor-width" type="range" min="30" max="100" value="100"><span id="client-editor-width-val">100%</span></label>'+
