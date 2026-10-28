@@ -5,7 +5,7 @@
     '/admin.html': 'admin', '/client.html': 'client', '/fanni.html': 'fanni',
     '/password.html': 'password', '/support.html': 'support'
   };
-  var page = pageMap[location.pathname.replace(/\\/+$/, '')] || location.pathname.split('/').pop().replace(/\\.html$/, '');
+  var page = pageMap[location.pathname.replace(/\/+$/, '')] || location.pathname.split('/').pop().replace(/\.html$/, '');
   if (!/^(admin|client|fanni|password|support)$/.test(page)) return;
   var styleId = 'sonaa-ui-layout-style';
   function getToken() {
