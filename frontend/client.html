@@ -1750,8 +1750,10 @@ body.client-visual-editor{padding-bottom:180px}
     if(!document.body.classList.contains('client-visual-editor'))return;
     const app=document.getElementById('app');if(!app||!app.contains(event.target))return;
     /* Keep the preview interactive: buttons and form controls work normally. Use long-press to select them for styling. */
-    if(event.target.closest('button,input,select,textarea,label,form'))return;
-    const el=event.target.closest(editableSelector);if(el){event.preventDefault();event.stopImmediatePropagation();selected=el;selectedKey=el.dataset.sonaaEditorKey||stableKey(el);el.dataset.sonaaEditorSelected='1';document.querySelectorAll('[data-sonaa-editor-selected="1"]').forEach(n=>{if(n!==el)delete n.dataset.sonaaEditorSelected;});updateToolbar();}
+    const interactive=event.target.closest('button,a');
+    if(interactive){const el=interactive.closest(editableSelector)||interactive;event.preventDefault();event.stopImmediatePropagation();selectForEditing(el);document.querySelectorAll('[data-sonaa-editor-selected="1"]').forEach(n=>{if(n!==el)delete n.dataset.sonaaEditorSelected;});return;}
+    if(event.target.closest('input,select,textarea,label,form'))return;
+    const el=event.target.closest(editableSelector);if(el){event.preventDefault();event.stopImmediatePropagation();selectForEditing(el);document.querySelectorAll('[data-sonaa-editor-selected="1"]').forEach(n=>{if(n!==el)delete n.dataset.sonaaEditorSelected;});}
     else {event.preventDefault();event.stopImmediatePropagation();}
   },true);
   document.addEventListener('submit',e=>{if(document.body.classList.contains('client-visual-editor')){e.preventDefault();e.stopImmediatePropagation();}},true);

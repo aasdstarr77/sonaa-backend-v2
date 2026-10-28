@@ -389,6 +389,7 @@ document.addEventListener('pointermove',event=>{
  const elements={...(state.adminUiLayout.elements||{}),[adminPointerDrag.key]:{...(state.adminUiLayout.elements?.[adminPointerDrag.key]||{}),x,y}};
  state.adminUiLayout={...state.adminUiLayout,elements};adminPointerDrag.el.style.translate=x+'px '+y+'px';
 },true);
+document.addEventListener('click',event=>{if(!state.layoutEditMode||!isRootAdminUI()||event.target.closest('#admin-element-drag-toolbar,#admin-drag-toggle,.layout-toolbar,.layout-item-controls,.layout-control'))return;const app=document.getElementById('app');if(!app?.contains(event.target))return;const interactive=event.target.closest('button,a');if(!interactive)return;event.preventDefault();event.stopImmediatePropagation();selectAdminElement(interactive);},true);
 function finishAdminPointerDrag(event){if(!adminPointerDrag||event.pointerId!==adminPointerDrag.pointerId)return;if(adminPointerDrag.moved)adminSuppressClickUntil=Date.now()+700;adminPointerDrag.el.style.cursor='';try{adminPointerDrag.el.releasePointerCapture(event.pointerId)}catch(_){}adminPointerDrag=null;}
 document.addEventListener('click',event=>{if(Date.now()>adminSuppressClickUntil)return;adminSuppressClickUntil=0;event.preventDefault();event.stopImmediatePropagation();},true);
 document.addEventListener('pointerup',finishAdminPointerDrag,true);document.addEventListener('pointercancel',finishAdminPointerDrag,true);
