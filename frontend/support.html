@@ -321,5 +321,32 @@ init();
 })();
 </script>
 
+
+<!-- Sonaa responsive viewport preview for visual layout editors -->
+<script>
+(function(){
+  try {
+    const params=new URLSearchParams(location.search);
+    if(params.get('adminLayout')!=='1' || params.get('editorPreviewFrame')==='1') return;
+    const css=document.createElement('style');
+    css.textContent='#sonaa-viewport-preview-launch{position:fixed;z-index:2147483000;left:12px;bottom:14px;border:0;border-radius:12px;padding:12px 15px;background:#0a2342;color:#fff;font:800 13px system-ui;box-shadow:0 5px 20px #0004;cursor:pointer}#sonaa-viewport-preview{position:fixed;inset:0;z-index:2147483001;background:#0a1020ed;display:none;align-items:center;justify-content:center;padding:12px;box-sizing:border-box}#sonaa-viewport-preview.open{display:flex}#sonaa-viewport-preview .svp-shell{height:100%;width:100%;display:flex;flex-direction:column;align-items:center;gap:8px;min-height:0}#sonaa-viewport-preview .svp-tools{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;color:white;font:700 12px system-ui}#sonaa-viewport-preview button{border:0;border-radius:8px;padding:8px 12px;font-weight:800;cursor:pointer}#sonaa-viewport-preview .svp-stage{flex:1;min-height:0;width:100%;display:flex;justify-content:center;align-items:stretch}#sonaa-viewport-preview iframe{height:100%;width:100%;max-width:100%;border:0;border-radius:12px;background:white;box-shadow:0 8px 30px #0005}#sonaa-viewport-preview.mobile .svp-stage iframe{width:min(390px,100%);border:5px solid #111827;border-radius:26px}';
+    document.head.appendChild(css);
+    const launch=document.createElement('button');launch.id='sonaa-viewport-preview-launch';launch.type='button';launch.textContent='📱 معاينة الموبايل / الكمبيوتر';
+    document.body.appendChild(launch);
+    const overlay=document.createElement('div');overlay.id='sonaa-viewport-preview';overlay.innerHTML='<div class="svp-shell"><div class="svp-tools"><strong>معاينة فعلية حسب عرض الشاشة</strong><button type="button" data-view="mobile">موبايل 390px</button><button type="button" data-view="desktop">كمبيوتر</button><button type="button" data-close>إغلاق المعاينة ✕</button></div><div class="svp-stage"><iframe title="معاينة استجابة الصفحة" loading="lazy"></iframe></div></div>';
+    document.body.appendChild(overlay);
+    const frame=overlay.querySelector('iframe');
+    const url=new URL(location.href);
+    url.searchParams.delete('adminLayout');
+    url.searchParams.set('editorPreviewFrame','1');
+    function setView(view){overlay.classList.toggle('mobile',view==='mobile');overlay.querySelectorAll('[data-view]').forEach(b=>{b.style.background=b.dataset.view===view?'#1eb5a6':'#e2e8f0';b.style.color=b.dataset.view===view?'#062b35':'#0f172a'});frame.style.width=view==='mobile'?'min(390px, 100%)':'100%';}
+    launch.addEventListener('click',()=>{if(!frame.src)frame.src=url.href;overlay.classList.add('open');setView('mobile');});
+    overlay.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));
+    overlay.querySelector('[data-close]').addEventListener('click',()=>overlay.classList.remove('open'));
+    document.addEventListener('keydown',e=>{if(e.key==='Escape')overlay.classList.remove('open');});
+  } catch(e) { console.warn('Sonaa viewport preview unavailable',e); }
+})();
+</script>
+
 </body>
 </html>
