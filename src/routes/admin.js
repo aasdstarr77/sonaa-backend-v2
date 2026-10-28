@@ -1481,6 +1481,13 @@ function sanitizeAdminUiLayout(input) {
       if (value.mobile && typeof value.mobile === 'object' && !Array.isArray(value.mobile)) {
         if (Number.isFinite(value.mobile.x) && value.mobile.x >= -2000 && value.mobile.x <= 2000) mobile.x = value.mobile.x;
         if (Number.isFinite(value.mobile.y) && value.mobile.y >= -2000 && value.mobile.y <= 2000) mobile.y = value.mobile.y;
+        if (typeof value.mobile.containerId === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(value.mobile.containerId)) mobile.containerId = value.mobile.containerId;
+        if (['top-left', 'top-right', 'bottom-left', 'bottom-right', 'center'].includes(value.mobile.anchor)) mobile.anchor = value.mobile.anchor;
+        if (Number.isFinite(value.mobile.xPercent) && value.mobile.xPercent >= -200 && value.mobile.xPercent <= 200) mobile.xPercent = value.mobile.xPercent;
+        if (Number.isFinite(value.mobile.yPercent) && value.mobile.yPercent >= -200 && value.mobile.yPercent <= 200) mobile.yPercent = value.mobile.yPercent;
+        if (Number.isFinite(value.mobile.wPercent) && value.mobile.wPercent >= 0 && value.mobile.wPercent <= 100) mobile.wPercent = value.mobile.wPercent;
+        if (Number.isFinite(value.mobile.hPercent) && value.mobile.hPercent >= 0 && value.mobile.hPercent <= 100) mobile.hPercent = value.mobile.hPercent;
+        if (Number.isInteger(value.mobile.zIndex) && value.mobile.zIndex >= 0 && value.mobile.zIndex <= 999999) mobile.zIndex = value.mobile.zIndex;
         if (Number.isFinite(value.mobile.fontSize) && value.mobile.fontSize >= 10 && value.mobile.fontSize <= 36) mobile.fontSize = value.mobile.fontSize;
         if (Number.isFinite(value.mobile.width) && value.mobile.width >= 30 && value.mobile.width <= 100) mobile.width = value.mobile.width;
         if (typeof value.mobile.background === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.mobile.background)) mobile.background = value.mobile.background;
@@ -1497,6 +1504,46 @@ function sanitizeAdminUiLayout(input) {
   }
   return { sectionOrder, tabOrder, tabGroups, sizes, elements };
 }
+const UI_LAYOUT_FIELDS = {
+  admin: 'adminUiLayout',
+  client: 'clientUiLayout',
+  fanni: 'fanniUiLayout',
+  password: 'passwordUiLayout',
+  support: 'supportUiLayout'
+};
+const uiLayoutPageSchema = Joi.string().valid('admin', 'client', 'fanni', 'password', 'support');
+router.get('/ui-layout/:page', auth('admin'), async (req, res, next) => {
+  try {
+    const { error, value: page } = uiLayoutPageSchema.validate(String(req.params.page || '').trim());
+    if (error) return res.status(400).json({ message: 'اسم الصفحة غير مسموح به' });
+    const config = await getAdminConfig();
+    const field = UI_LAYOUT_FIELDS[page];
+    const layout = sanitizeAdminUiLayout(config.get(field) || {});
+    return res.set('Cache-Control', 'no-store').json({ page, layout });
+  } catch (err) { next(err); }
+});
+router.put('/ui-layout/:page', auth('admin'), async (req, res, next) => {
+  try {
+    const { error, value: page } = uiLayoutPageSchema.validate(String(req.params.page || '').trim());
+    if (error) return res.status(400).json({ message: 'اسم الصفحة غير مسموح به' });
+    const bodySchema = Joi.object({ layout: Joi.object().unknown(true).required() }).required();
+    const checked = bodySchema.validate(req.body || {}, { abortEarly: false, stripUnknown: false });
+    if (checked.error) return res.status(400).json({ message: 'بيانات تخطيط الصفحة غير صالحة' });
+    const field = UI_LAYOUT_FIELDS[page];
+    const config = await getAdminConfig();
+    const before = sanitizeAdminUiLayout(config.get(field) || {});
+    const layout = sanitizeAdminUiLayout(checked.value.layout);
+    config.set(field, layout);
+    config.history.push({
+      key: field, before, after: layout, by: adminName(req),
+      byId: String(req.user?._id || ''), reason: 'حفظ تخطيط واجهة ' + page, createdAt: new Date()
+    });
+    if (config.history.length > 200) config.history = config.history.slice(-200);
+    await config.save();
+    await writeAdminAudit(req, 'حفظ تخطيط واجهة', 'ui-layout', page, JSON.stringify({ elementCount: Object.keys(layout.elements || {}).length }));
+    return res.set('Cache-Control', 'no-store').json({ message: 'تم حفظ تخطيط الصفحة', page, layout });
+  } catch (err) { next(err); }
+});
 router.get('/settings', auth('admin'), async (req, res, next) => {
   try { const config = await getAdminConfig(); return res.set('Cache-Control', 'no-store').json({ settings: config.settings }); }
   catch (err) { next(err); }
