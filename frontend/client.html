@@ -810,12 +810,12 @@ async function openAccountOrder(sn,jumpToChat=false){
   finally{state.trackLoading=false;render();if(jumpToChat){const chat=document.getElementById('client-accepted-chat-'+String(sn).replace(/[^a-zA-Z0-9_-]/g,''));if(chat)chat.scrollIntoView({behavior:'smooth',block:'center'});else showToast('المحادثة تظهر بعد قبول العرض.');}}
 }
 function renderOrders(){
-  var h='<div class="mt-4 space-y-3"><div class="panel p-4 flex items-center justify-between gap-3"><div><h3 class="font-extrabold text-[15px]">طلباتي</h3><p class="mt-1 text-[11px] text-slate-500">تابع كل طلباتك من هنا.</p></div></div>';
+  var h='<div class="client-orders-content mt-4 space-y-3"><div class="client-orders-summary panel p-4 flex items-center justify-between gap-3"><div><h3 class="font-extrabold text-[15px]">طلباتي</h3><p class="mt-1 text-[11px] text-slate-500">تابع كل طلباتك من هنا.</p></div></div>';
   const closedStatuses=['تم الانتهاء','منتهي','ملغي','مؤرشف','منتهي - اعتذار'];
   const currentOrders=state.myOrders.filter(o=>!closedStatuses.includes(String(o.status||'')));
   const previousOrders=state.myOrders.filter(o=>closedStatuses.includes(String(o.status||'')));
   const visibleOrders=state.accountOrdersTab==='previous'?previousOrders:currentOrders;
-  h+='<div class="grid grid-cols-2 gap-2 p-1 rounded-xl bg-slate-100"><button type="button" onclick="state.accountOrdersTab=\'current\';render()" class="h-10 rounded-lg text-xs font-extrabold '+(state.accountOrdersTab==='current'?'tab-active':'text-slate-600')+'">طلبات جارية ('+currentOrders.length+')</button><button type="button" onclick="state.accountOrdersTab=\'previous\';render()" class="h-10 rounded-lg text-xs font-extrabold '+(state.accountOrdersTab==='previous'?'tab-active':'text-slate-600')+'">طلبات سابقة ('+previousOrders.length+')</button></div>';
+  h+='<div class="client-orders-status-tabs grid grid-cols-2 gap-2 p-1 rounded-xl"><button type="button" onclick="state.accountOrdersTab=\\'current\\';render()" class="client-orders-status-tab h-10 rounded-lg text-xs font-extrabold '+(state.accountOrdersTab==='current'?'tab-active':'tab-idle')+'">طلبات جارية ('+currentOrders.length+')</button><button type="button" onclick="state.accountOrdersTab=\\'previous\\';render()" class="client-orders-status-tab h-10 rounded-lg text-xs font-extrabold '+(state.accountOrdersTab==='previous'?'tab-active':'tab-idle')+'">طلبات سابقة ('+previousOrders.length+')</button></div>';render()" class="h-10 rounded-lg text-xs font-extrabold '+(state.accountOrdersTab==='current'?'tab-active':'text-slate-600')+'">طلبات جارية ('+currentOrders.length+')</button><button type="button" onclick="state.accountOrdersTab=\'previous\';render()" class="h-10 rounded-lg text-xs font-extrabold '+(state.accountOrdersTab==='previous'?'tab-active':'text-slate-600')+'">طلبات سابقة ('+previousOrders.length+')</button></div>';
   if(state.accountOrdersLoading)return h+'<div class="panel p-8 text-center text-sm font-bold text-slate-500">جاري تحميل طلباتك...</div></div>';
   if(!visibleOrders.length)return h+'<div class="panel p-8 text-center"><div class="text-3xl">📝</div><p class="mt-3 font-extrabold text-sm">'+(state.accountOrdersTab==='previous'?'لا توجد طلبات سابقة.':'لا توجد طلبات جارية.')+'</p><button type="button" onclick="setTab(\'new\')" class="mt-4 h-11 px-5 rounded-xl blue-btn text-xs font-extrabold">إنشاء طلب جديد</button></div></div>';
   h+='<div class="space-y-3">';
@@ -914,7 +914,7 @@ function render(){
   <main class="mx-auto w-full max-w-[640px] px-3 sm:px-4 pb-[160px] safe-bottom">
     <div class="client-section-tabs sticky top-0 z-40 mt-0 flex p-1 bg-white/95 rounded-[15px] shadow-sm border border-slate-200 gap-1 backdrop-blur-xl">
       ${clientTabsInLayoutOrder().map(t=>`
-        <button type="button" data-client-layout-tab="${t.id}" ${state.clientLayoutEditMode?`draggable="true" ondragstart="startClientTabDrag(event,'${t.id}')" ondragover="allowClientTabDrop(event)" ondrop="dropClientTab(event,'${t.id}')" ondragend="state.clientLayoutDragId='';this.classList.remove('client-tab-dragging')"`:''} onclick="if(!state.clientLayoutEditMode)setTab('${t.id}')" class="${clientTabSizeClass(t.id)} flex-1 h-11 rounded-xl text-[12px] font-extrabold transition-colors ${state.tab===t.id?(t.id==='new'?'bg-gradient-to-l from-amber-300 to-yellow-500 text-amber-950 shadow-sm':'tab-active'):'tab-idle'} ${state.clientLayoutEditMode?'border border-dashed border-blue-300':''}">${state.clientLayoutEditMode?'<span aria-hidden="true" class="ml-1">⠿</span>':''}${t.label}</button>
+        <button type="button" data-client-layout-tab="${t.id}" ${state.clientLayoutEditMode?`draggable="true" ondragstart="startClientTabDrag(event,'${t.id}')" ondragover="allowClientTabDrop(event)" ondrop="dropClientTab(event,'${t.id}')" ondragend="state.clientLayoutDragId='';this.classList.remove('client-tab-dragging')"`:''} onclick="if(!state.clientLayoutEditMode)setTab('${t.id}')" class="${clientTabSizeClass(t.id)} flex-1 h-11 rounded-xl text-[12px] font-extrabold transition-colors ${state.tab===t.id?'tab-active':'tab-idle'} ${state.clientLayoutEditMode?'border border-dashed border-blue-300':''}">${state.clientLayoutEditMode?'<span aria-hidden="true" class="ml-1">⠿</span>':''}${t.label}</button>
       `).join('')}
     </div>
     ${renderClientLayoutEditor()}
@@ -1626,6 +1626,52 @@ body.client-visual-editor{padding-bottom:180px}
 #client-visual-editor-toolbar .editor-save{background:#10b981;color:#052e24}
 #client-visual-editor-toolbar .editor-cancel{background:#334155}
 #client-visual-editor-toolbar .editor-reset{background:#7f1d1d}
+
+
+/* Align the customer's inner dashboard controls and order section with the technician dashboard. */
+#app .client-section-tabs{
+ background:linear-gradient(145deg,#e6edf7 0%,#f8fbff 100%)!important;
+ border:1px solid #d5e0ef!important;border-radius:17px!important;
+ box-shadow:inset 0 2px 4px #0b1b3a0d,0 4px 0 #dce5f1,0 8px 18px #0b1b3a0a!important;
+}
+#app .client-section-tabs button{
+ min-height:44px!important;border:1px solid #d5dfed!important;border-radius:11px!important;
+ background:linear-gradient(145deg,#fff 0%,#eaf0f8 100%)!important;
+ color:#344965!important;-webkit-text-fill-color:#344965!important;
+ box-shadow:0 3px 0 #cbd7e7,0 5px 8px #0b1b3a0d,inset 0 1px 0 #fff!important;
+}
+#app .client-section-tabs button.tab-active{
+ border-color:#42628a!important;background:linear-gradient(145deg,#315f99 0%,#173c6c 65%,#102b50 100%)!important;
+ color:#fff!important;-webkit-text-fill-color:#fff!important;
+ box-shadow:0 4px 0 #0b1b3a,0 7px 12px #0b1b3a2c,inset 0 1px 0 #ffffff40!important;transform:translateY(-1px);
+}
+#app .client-section-tabs button:active{transform:translateY(2px)}
+#app .client-orders-content{gap:12px!important}
+#app .client-orders-summary{
+ position:relative;overflow:hidden;border:1px solid #d5e0ef!important;border-radius:20px!important;
+ background:linear-gradient(145deg,#fff 0%,#f4f8ff 100%)!important;
+ box-shadow:0 5px 0 #dce5f1,0 12px 26px #0b1b3a12,inset 0 1px 0 #fff!important;padding:17px!important;
+}
+#app .client-orders-summary:before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:linear-gradient(180deg,#60a5fa,#1d4ed8,#173c6c)}
+#app .client-orders-summary h3{color:#173c6c!important;font-size:17px!important;font-weight:900!important}
+#app .client-orders-summary p{color:#526781!important;font-size:12px!important;font-weight:700!important;margin-top:5px!important}
+#app .client-orders-status-tabs{
+ background:linear-gradient(145deg,#e6edf7,#f8fbff)!important;border:1px solid #d5e0ef!important;
+ border-radius:16px!important;box-shadow:inset 0 2px 4px #0b1b3a0d,0 3px 0 #dce5f1!important;padding:6px!important;gap:8px!important;
+}
+#app .client-orders-status-tabs .client-orders-status-tab{
+ min-height:44px!important;border:1px solid #d5dfed!important;border-radius:11px!important;
+ background:linear-gradient(145deg,#fff,#eaf0f8)!important;color:#344965!important;
+ box-shadow:0 3px 0 #cbd7e7,0 5px 8px #0b1b3a0d,inset 0 1px 0 #fff!important;
+}
+#app .client-orders-status-tabs .client-orders-status-tab.tab-active{
+ border-color:#42628a!important;background:linear-gradient(145deg,#315f99 0%,#173c6c 65%,#102b50 100%)!important;
+ color:#fff!important;box-shadow:0 4px 0 #0b1b3a,0 7px 12px #0b1b3a2c,inset 0 1px 0 #ffffff40!important;
+}
+#app .client-orders-content .order-card,#app .client-orders-content .panel{
+ border-color:#d5e0ef!important;border-radius:18px!important;
+ box-shadow:0 4px 0 #dce5f1,0 10px 20px #0b1b3a0e,inset 0 1px 0 #fff!important;
+}
 
 /* Visual parity with the technician dashboard: shared blue/white palette, raised 3D controls and consistent sizing. */
 #app .app-header{
