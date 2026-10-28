@@ -37,10 +37,8 @@ const adminConfigSchema = new mongoose.Schema({
       createdAt: { type: Date, default: Date.now }
     }]
   },
-  history: { type: [historySchema], default: [] },
-  adminUiLayout: { type: mongoose.Schema.Types.Mixed, default: () => ({}) },
-  clientUiLayout: { type: mongoose.Schema.Types.Mixed, default: () => ({}) },
-  technicianUiLayout: { type: mongoose.Schema.Types.Mixed, default: () => ({}) }
+  history: { type: [historySchema], default: [] }
+
 }, { timestamps: true, versionKey: false });
 
 module.exports = mongoose.models.AdminConfig || mongoose.model('AdminConfig', adminConfigSchema);
