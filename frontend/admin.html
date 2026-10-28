@@ -321,8 +321,11 @@ function applyAdminElementPositions(){
 }
 let adminSelectedKey='',adminSelectedElement=null;
 function adminSelectedStyle(){return state.adminUiLayout?.elements?.[adminSelectedKey]||{};}
+const adminEditorHistory=[];let adminEditorHistoryAt=0;
+function rememberAdminEditorStep(){const now=Date.now();if(now-adminEditorHistoryAt<450)return;adminEditorHistoryAt=now;adminEditorHistory.push(JSON.parse(JSON.stringify(state.adminUiLayout||{})));if(adminEditorHistory.length>40)adminEditorHistory.shift();}
+function undoAdminEditorStep(){const previous=adminEditorHistory.pop();if(!previous||!Object.keys(previous).length)return showToast('مفيش خطوة سابقة للتراجع عنها','error');state.adminUiLayout=previous;applyAdminElementPositions();updateAdminEditorControls();}
 function setAdminElementStyle(prop,value){
- if(!adminSelectedKey)return;
+ if(!adminSelectedKey)return;rememberAdminEditorStep();
  const all={...(state.adminUiLayout.elements||{})},item={...(all[adminSelectedKey]||{})};
  if(value===null||value==='')delete item[prop];else item[prop]=value;
  if(Object.keys(item).length)all[adminSelectedKey]=item;else delete all[adminSelectedKey];
@@ -360,7 +363,7 @@ function ensureAdminElementToolbar(){
  if(!bar){bar=document.createElement('div');bar.id='admin-element-drag-toolbar';bar.classList.add('sonaa-unified-editor-panel');bar.style.cssText='position:fixed;z-index:99999;bottom:0;left:0;right:0;max-height:60vh;overflow-y:auto;overscroll-behavior:contain;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#0b1b3a;color:white;display:block;box-shadow:0 -8px 28px #0b1b3a38;font-family:Cairo,sans-serif';document.body.appendChild(bar);}
  bar.innerHTML=renderAdminLayoutDock();
  bar.classList.add('sonaa-unified-editor-panel');
- if(!bar.querySelector('#admin-editor-collapse-row')){const row=document.createElement('div');row.id='admin-editor-collapse-row';row.style.cssText='display:flex;justify-content:flex-start;margin-bottom:8px';row.innerHTML='<button type="button" id="admin-editor-collapse" aria-expanded="true" style="background:#1d4ed8;color:white;border-radius:9px;padding:7px 12px;font-weight:900">طي لوحة المحرر ▲</button>';bar.prepend(row);row.querySelector('button').onclick=()=>{const collapsed=bar.classList.toggle('editor-collapsed');row.querySelector('button').textContent=collapsed?'فتح لوحة المحرر ▼':'طي لوحة المحرر ▲';row.querySelector('button').setAttribute('aria-expanded',String(!collapsed));};}
+ if(!bar.querySelector('#admin-editor-collapse-row')){const row=document.createElement('div');row.id='admin-editor-collapse-row';row.style.cssText='display:flex;justify-content:flex-start;margin-bottom:8px';row.innerHTML='<button type="button" id="admin-editor-undo" style="margin-left:auto;background:#334155;color:white;border-radius:9px;padding:7px 12px;font-weight:900">↶ أندو</button><button type="button" id="admin-editor-collapse" aria-expanded="true" style="background:#1d4ed8;color:white;border-radius:9px;padding:7px 12px;font-weight:900">طي لوحة المحرر ▲</button>';bar.prepend(row);row.querySelector('#admin-editor-undo').onclick=undoAdminEditorStep;row.querySelector('#admin-editor-collapse').onclick=()=>{const collapsed=bar.classList.toggle('editor-collapsed');row.querySelector('button').textContent=collapsed?'فتح لوحة المحرر ▼':'طي لوحة المحرر ▲';row.querySelector('button').setAttribute('aria-expanded',String(!collapsed));};}
  bar.classList.remove('editor-collapsed');
  ['font','width','bg','color','radius','x','y'].forEach(id=>{const input=bar.querySelector('#admin-editor-'+id);if(input)input.addEventListener('input',e=>setAdminElementStyle(({font:'fontSize',width:'width',bg:'background',color:'color',radius:'radius',x:'x',y:'y'})[id],['font','width','radius','x','y'].includes(id)?Number(e.target.value):e.target.value));});
  bar.querySelector('#admin-editor-apply-text').onclick=()=>{if(!adminSelectedElement)return showToast('اختَر عنصرًا أولًا','error');if(adminSelectedElement.children.length)return showToast('اختَر عنصرًا نصيًا بسيطًا','error');setAdminElementStyle('text',bar.querySelector('#admin-editor-text').value.slice(0,200));};
