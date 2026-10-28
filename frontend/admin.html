@@ -319,6 +319,7 @@ function applyAdminElementPositions(){
   if(pos.background)el.style.setProperty('background',pos.background,'important');
   if(pos.color){el.style.setProperty('color',pos.color,'important');el.querySelectorAll('*').forEach(ch=>{if(!['IMG','VIDEO','CANVAS'].includes(ch.tagName))ch.style.setProperty('color',pos.color,'important')});}
   if(pos.radius!==undefined)el.style.borderRadius=Number(pos.radius)+'px';
+  if(pos.scale!==undefined)el.style.scale=String(pos.scale);
   if(typeof pos.text==='string'&&!el.children.length&&el.textContent!==pos.text)el.textContent=pos.text;
   el.style.display=pos.hidden?'none':'';
  });
