@@ -89,6 +89,13 @@ const frontendPath = possibleFrontendPaths.find(
   p => fs.existsSync(p) && fs.statSync(p).isDirectory()
 ) || __dirname;
 
+// Serve repository frontend files at /frontend/* even when frontend-dist is selected above.
+// Vercel includes frontend/** in src/server.js deployment files.
+app.use('/frontend', express.static(path.join(__dirname, '..', 'frontend'), {
+  index: false,
+  dotfiles: 'ignore'
+}));
+
 app.use(express.static(frontendPath, {
   index: false,
   dotfiles: 'ignore'
