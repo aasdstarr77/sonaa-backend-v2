@@ -1469,6 +1469,7 @@ function sanitizeAdminUiLayout(input) {
       if (Number.isFinite(value.fontSize) && value.fontSize >= 10 && value.fontSize <= 36) item.fontSize = value.fontSize;
       if (Number.isFinite(value.width) && value.width >= 30 && value.width <= 100) item.width = value.width;
       if (typeof value.background === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.background)) item.background = value.background;
+      if (typeof value.activeBackground === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.activeBackground)) item.activeBackground = value.activeBackground;
       if (typeof value.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.color)) item.color = value.color;
       if (Number.isFinite(value.radius) && value.radius >= 0 && value.radius <= 40) item.radius = value.radius;
       if (typeof value.text === 'string') item.text = value.text.slice(0, 200);
@@ -1538,6 +1539,7 @@ function sanitizeClientUiLayout(input) {
       if (Number.isFinite(value.fontSize) && value.fontSize >= 10 && value.fontSize <= 36) item.fontSize = value.fontSize;
       if (Number.isFinite(value.width) && value.width >= 30 && value.width <= 100) item.width = value.width;
       if (typeof value.background === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.background)) item.background = value.background;
+      if (typeof value.activeBackground === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.activeBackground)) item.activeBackground = value.activeBackground;
       if (typeof value.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.color)) item.color = value.color;
       if (Number.isFinite(value.radius) && value.radius >= 0 && value.radius <= 40) item.radius = value.radius;
       if (Number.isFinite(value.x) && value.x >= -2000 && value.x <= 2000) item.x = value.x;
@@ -1612,6 +1614,7 @@ function sanitizeTechnicianUiLayout(input) {
       if (Number.isFinite(value.fontSize) && value.fontSize >= 10 && value.fontSize <= 36) item.fontSize = value.fontSize;
       if (Number.isFinite(value.width) && value.width >= 30 && value.width <= 100) item.width = value.width;
       if (typeof value.background === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.background)) item.background = value.background;
+      if (typeof value.activeBackground === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.activeBackground)) item.activeBackground = value.activeBackground;
       if (typeof value.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.color)) item.color = value.color;
       if (Number.isFinite(value.radius) && value.radius >= 0 && value.radius <= 40) item.radius = value.radius;
       if (Number.isFinite(value.x) && value.x >= -2000 && value.x <= 2000) item.x = value.x;
