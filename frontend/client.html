@@ -83,6 +83,43 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--blue)!im
   .app-header>div:first-child{flex-wrap:nowrap}
   .app-header>div:first-child>div:last-child{flex:0 0 290px;width:290px}
 }
+/* Keep the customer dashboard header balanced on phones: brand first, full-width controls below. */
+@media(max-width:519px){
+  .app-header>div:first-child{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    justify-content:stretch!important;
+    align-items:stretch!important;
+    gap:10px!important
+  }
+  .app-header>div:first-child>div:first-child{
+    width:100%!important;
+    min-width:0!important;
+    flex:none!important
+  }
+  .app-header>div:first-child>div:last-child{
+    width:100%!important;
+    min-width:0!important;
+    flex:none!important;
+    align-items:stretch!important;
+    justify-self:stretch!important
+  }
+  .app-header>div:first-child>div:last-child>div:first-child{
+    width:100%!important;
+    grid-template-columns:repeat(3,minmax(0,1fr))!important
+  }
+  .app-header>div:first-child>div:last-child>div:first-child>*{
+    min-width:0!important;
+    max-width:100%;
+    white-space:normal
+  }
+  .app-header>div:first-child>div:last-child>div:first-child>a:first-child{
+    grid-column:1/-1!important
+  }
+  .app-header>div:first-child>div:last-child>a:last-child{
+    width:100%!important
+  }
+}
 .primary-btn{background:linear-gradient(135deg,var(--navy),var(--navy2));color:white}
 .blue-btn{background:var(--blue);color:white}
 .blue-btn:hover{background:var(--blue-dark)}
