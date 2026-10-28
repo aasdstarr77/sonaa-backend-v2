@@ -52,10 +52,10 @@
 const API='/api/admin/ui-layout/';
 const pages={admin:{title:'لوحة الإدارة',url:'/admin.html'},client:{title:'صفحة العميل',url:'/client.html'},fanni:{title:'صفحة الفني',url:'/fanni.html'},password:{title:'الحساب وكلمة المرور',url:'/password.html'},support:{title:'الدعم',url:'/support.html'}};
 const subPages={
- 'client:login':'login','client:register':'register','client:my-orders':'my-orders','client:new-order':'new-order','client:complaint-form':'complaint-form','client:profile':'profile',
- 'fanni:login':'login','fanni:register':'register','fanni:my-orders':'my-orders','fanni:profile':'profile','fanni:wallet':'wallet','fanni:notifications':'notifications',
- 'admin:dashboard':'dashboard','admin:orders':'orders','admin:technicians':'technicians','admin:clients':'clients','admin:support':'support','admin:password-recovery':'password-recovery',
- 'password:profile':'profile','password:change-password':'change-password','support:my-cases':'my-cases','support:new-case':'new-case'
+ 'client:login':'login','client:register':'register','client:my-orders':'orders','client:new-order':'new','client:complaint-form':'complaint','client:profile':'profile',
+ 'fanni:login':'login','fanni:register':'register','fanni:my-orders':'myOffers','fanni:profile':'profile','fanni:wallet':'wallet','fanni:notifications':'notifications',
+ 'admin:dashboard':'dashboard','admin:orders':'orders','admin:technicians':'fannis','admin:clients':'clients','admin:support':'support','admin:password-recovery':'__passwordRecovery',
+ 'password:profile':'profile','password:change-password':'changePassword','support:my-cases':'main','support:new-case':'new-title'
 };
 const $=id=>document.getElementById(id);
 const frame=$('preview'),pageSelect=$('page');
