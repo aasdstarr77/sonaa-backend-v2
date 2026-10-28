@@ -745,39 +745,16 @@ function clientTabsInLayoutOrder(){const layout=normalizedClientUiLayout(state.c
 function clientTabSizeClass(id){return 'client-tab-size-'+(state.clientUiLayout?.sizes?.[id]||'medium');}
 function isClientAdminLayoutMode(){return false;}
 // Keep layout-editor API requests bounded so a stalled request cannot hold the page in loading state.
-async function loadClientUiLayout(){
- const editorMode=isClientAdminLayoutMode();
- if(editorMode){
-  const params=new URLSearchParams(location.search),requestedTab=params.get('tab');
-  if(['new','orders','complaint','track'].includes(requestedTab))state.tab=requestedTab;
-  // The editor is a preview UI; the server still enforces root-admin permission on every save.
-  state.clientLayoutEditorAvailable=true;
-  state.clientLayoutEditorChecked=true;
-  render();
- }
- const timedFetch=async(url,options={})=>{const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),8000);try{return await fetch(url,{...options,signal:controller.signal,cache:'no-store'});}finally{clearTimeout(timer);}};
- try{
-  const response=await timedFetch('/api/admin/client-layout');
-  if(!response.ok)throw new Error('تعذر تحميل ترتيب أزرار العميل');
-  const data=await response.json();state.clientUiLayout=normalizedClientUiLayout(data.layout);
- }catch(error){log('تعذر تحميل ترتيب لوحة العميل:',error.name==='AbortError'?'انتهت مهلة تحميل التخطيط':error.message);}
- state.clientLayoutEditorChecked=true;
- render();
-}
-function toggleClientLayoutEdit(){if(!state.clientLayoutEditorAvailable)return;state.clientLayoutEditMode=!state.clientLayoutEditMode;state.clientLayoutDragId='';render();}
-function cancelClientLayoutEdit(){loadClientUiLayout().then(()=>{state.clientLayoutEditMode=false;render();});}
-function moveClientTab(id,delta){const order=clientTabsInLayoutOrder().map(item=>item.id);const from=order.indexOf(id),to=from+delta;if(from<0||to<0||to>=order.length)return;[order[from],order[to]]=[order[to],order[from]];state.clientUiLayout=normalizedClientUiLayout({...state.clientUiLayout,tabOrder:order});render();}
-function setClientTabSize(id,size){if(!['small','medium','large'].includes(size))return;state.clientUiLayout=normalizedClientUiLayout({...state.clientUiLayout,sizes:{...(state.clientUiLayout.sizes||{}),[id]:size}});render();}
-function startClientTabDrag(event,id){if(!state.clientLayoutEditMode){event.preventDefault();return;}state.clientLayoutDragId=id;if(event.dataTransfer){event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',id);}}
-function allowClientTabDrop(event){if(state.clientLayoutEditMode)event.preventDefault();}
-function dropClientTab(event,targetId){if(!state.clientLayoutEditMode)return;event.preventDefault();event.stopPropagation();const sourceId=state.clientLayoutDragId||(event.dataTransfer?.getData('text/plain')||'');const order=clientTabsInLayoutOrder().map(item=>item.id);if(!sourceId||sourceId===targetId||!order.includes(sourceId)||!order.includes(targetId)){state.clientLayoutDragId='';return;}const from=order.indexOf(sourceId);order.splice(from,1);order.splice(order.indexOf(targetId),0,sourceId);state.clientUiLayout=normalizedClientUiLayout({...state.clientUiLayout,tabOrder:order});state.clientLayoutDragId='';render();}
-async function saveClientUiLayout(){const button=document.getElementById('save-client-layout');if(button){button.disabled=true;button.textContent='جاري الحفظ...';}try{const token=localStorage.getItem('admin_token_v3')||'';if(!token)throw new Error('سجّل دخول المدير الرئيسي في لوحة الإدارة أولًا.');const response=await fetch('/api/admin/client-layout',{method:'PUT',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({layout:normalizedClientUiLayout(state.clientUiLayout)})});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.message||'تعذر حفظ الترتيب؛ تأكد من صلاحية المدير الرئيسي.');state.clientUiLayout=normalizedClientUiLayout(data.layout);state.clientLayoutEditMode=false;showToast(data.message||'تم حفظ ترتيب أزرار لوحة العميل للجميع','success');}catch(error){showToast(error.message||'تعذر حفظ ترتيب أزرار العميل.');}finally{render();}}
-function renderClientLayoutEditor(){if(isClientAdminLayoutMode())return '';if(!state.clientLayoutEditorAvailable)return '';if(!state.clientLayoutEditMode)return '<div class="mt-2 flex justify-end"><button type="button" onclick="toggleClientLayoutEdit()" class="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[10px] font-extrabold text-blue-800">↕ ترتيب أزرار العميل</button></div>';return '<div class="client-layout-toolbar"><div class="flex items-start justify-between gap-2"><div><b class="text-[12px]">ترتيب أزرار لوحة العميل</b><p class="mt-1 text-[10px] leading-5">اسحب الزر لمكانه على الكمبيوتر، أو استخدم الأسهم على الموبايل. الترتيب بعد الحفظ هيظهر لكل العملاء.</p></div></div><div class="mt-2">'+clientTabsInLayoutOrder().map((item,index)=>'<div class="client-layout-item"><strong>'+escHtml(item.label)+'</strong><button type="button" aria-label="تحريك '+escAttr(item.label)+' لأعلى" title="لأعلى" '+(index===0?'disabled':'')+' onclick="moveClientTab(\''+item.id+'\',-1)">↑</button><button type="button" aria-label="تحريك '+escAttr(item.label)+' لأسفل" title="لأسفل" '+(index===CLIENT_TAB_DEFINITIONS.length-1?'disabled':'')+' onclick="moveClientTab(\''+item.id+'\',1)">↓</button><select aria-label="حجم زر '+escAttr(item.label)+'" onchange="setClientTabSize(\''+item.id+'\',this.value)"><option value="small" '+(clientTabSizeClass(item.id)==='client-tab-size-small'?'selected':'')+'>صغير</option><option value="medium" '+(clientTabSizeClass(item.id)==='client-tab-size-medium'?'selected':'')+'>متوسط</option><option value="large" '+(clientTabSizeClass(item.id)==='client-tab-size-large'?'selected':'')+'>كبير</option></select></div>').join('')+'</div><div class="mt-3 flex gap-2"><button id="save-client-layout" type="button" onclick="saveClientUiLayout()" class="client-layout-save flex-1">حفظ للجميع</button><button type="button" onclick="cancelClientLayoutEdit()">إلغاء</button></div></div>';}
-function getCat(service){return CATEGORIES.find(c=>c.services.includes(service))||null;}
-function captureScrollPosition(){
-  const list=document.getElementById('serviceList');
-  return {pageY:window.scrollY||window.pageYOffset||0,listTop:list?list.scrollTop:0};
-}
+async function loadClientUiLayout(){state.clientUiLayout=normalizedClientUiLayout({});state.clientLayoutEditorAvailable=false;state.clientLayoutEditorChecked=true;state.clientLayoutEditMode=false;}
+function toggleClientLayoutEdit(){}
+function cancelClientLayoutEdit(){}
+function moveClientTab(){}
+function setClientTabSize(){}
+function startClientTabDrag(){}
+function allowClientTabDrop(){}
+function dropClientTab(){}
+function saveClientUiLayout(){}
+function {return '';}
 function restoreScrollPosition(position){
   if(!position)return;
   const list=document.getElementById('serviceList');
@@ -941,7 +918,7 @@ function notificationPanel(){
 }
 document.addEventListener('click',function(event){var item=event.target.closest('[data-notification-id]');if(item)openNotification(item.getAttribute('data-notification-id'));});
 document.addEventListener('focusout',function(){if(!clientLiveRenderPending||!state.account||!['orders','track'].includes(state.tab))return;setTimeout(function(){if(clientLiveRenderPending&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)){clientLiveRenderPending=false;const scrollY=window.scrollY||window.pageYOffset||0;render();window.scrollTo({top:scrollY,left:0,behavior:'instant'});focusClientPostAction();}},0);});
-function renderClientAdminLayoutPage(){document.getElementById('app').innerHTML='<main class="min-h-screen bg-slate-50 px-3 py-6"><section class="mx-auto max-w-[640px] rounded-2xl border border-blue-100 bg-white p-4 shadow-lg"><div class="mb-3 flex items-center gap-3"><div class="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-700 text-xl text-white">🏠</div><div><h1 class="text-lg font-black text-slate-900">تعديل لوحة العميل</h1><p class="mt-1 text-xs font-bold text-slate-500">رتّب أزرار لوحة العميل وحدّد أحجامها، ثم احفظ التغييرات للجميع.</p></div></div>'+renderClientLayoutEditor()+'</section></main>';}
+function renderClientAdminLayoutPage(){document.getElementById('app').innerHTML='<main class="min-h-screen bg-slate-50 px-3 py-6"><section class="mx-auto max-w-[640px] rounded-2xl border border-blue-100 bg-white p-4 shadow-lg"><div class="mb-3 flex items-center gap-3"><div class="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-700 text-xl text-white">🏠</div><div><h1 class="text-lg font-black text-slate-900">تعديل لوحة العميل</h1><p class="mt-1 text-xs font-bold text-slate-500">رتّب أزرار لوحة العميل وحدّد أحجامها، ثم احفظ التغييرات للجميع.</p></div></div>'++'</section></main>';}
 function render(){
   if(isClientAdminLayoutMode()&&!state.clientAdminRenderingDashboard){if(!state.clientLayoutEditorChecked){document.getElementById('app').innerHTML='<main class="min-h-screen flex items-center justify-center bg-slate-50 p-5"><div class="rounded-2xl bg-white p-5 font-bold text-blue-900 shadow">جاري التحقق من صلاحية الأدمن...</div></main>';return;}if(!state.clientLayoutEditorAvailable){document.getElementById('app').innerHTML='<main class="min-h-screen flex items-center justify-center bg-slate-50 p-5"><div class="rounded-2xl bg-white p-5 text-center shadow"><h1 class="font-black text-slate-900">صلاحية غير كافية</h1><p class="mt-2 text-sm text-slate-600">افتح الصفحة من لوحة الأدمن الرئيسي بعد تسجيل الدخول.</p></div></main>';return;}state.clientAdminRenderingDashboard=true;state.accountToken='';state.accountInitializing=false;const clientAdminView=new URLSearchParams(location.search).get('view')||'dashboard';if(['login','register'].includes(clientAdminView)){state.account=null;state.accountAuthMode=clientAdminView;state.clientAdminAuthPreview=true;}else{state.account={name:'معاينة لوحة العميل',phone:'',area:'',address:''};state.clientLayoutEditMode=true;}}
   if((forceClientRegistration||state.clientAdminAuthPreview)&&!state.account){renderAccountGate();return;}
@@ -992,7 +969,7 @@ function render(){
         <button type="button" data-client-layout-tab="${t.id}" ${state.clientLayoutEditMode?`draggable="true" ondragstart="startClientTabDrag(event,'${t.id}')" ondragover="allowClientTabDrop(event)" ondrop="dropClientTab(event,'${t.id}')" ondragend="state.clientLayoutDragId='';this.classList.remove('client-tab-dragging')"`:''} onclick="if(!state.clientLayoutEditMode)setTab('${t.id}')" class="${clientTabSizeClass(t.id)} flex-1 h-11 rounded-xl text-[12px] font-extrabold transition-colors ${state.tab===t.id?'tab-active':'tab-idle'} ${state.clientLayoutEditMode?'border border-dashed border-blue-300':''}">${state.clientLayoutEditMode?'<span aria-hidden="true" class="ml-1">⠿</span>':''}${t.label}</button>
       `).join('')}
     </div>
-    ${renderClientLayoutEditor()}
+    ${}
     ${state.tab==='new'?`
       ${!state.sn?`
       <div class="mt-4 space-y-3 animate-fade client-new-order">
