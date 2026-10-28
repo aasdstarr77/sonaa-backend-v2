@@ -516,10 +516,7 @@ function dropAdminLayout(event,type,targetId,sectionId=''){
  }
  state.dragSectionId='';state.dragTabId='';render();
 }
-async function loadAdminUiLayout(){if(!getToken())return;try{const data=await tryApi(['/api/admin/layout'],{method:'GET'});state.adminUiLayout=normalizedAdminUiLayout(data.layout);}catch(error){console.warn('تعذر تحميل ترتيب أزرار الإدارة:',error.message);}}
-async function saveAdminUiLayout(){if(!isRootAdminUI())return showToast('تعديل ترتيب الأزرار متاح للمدير الرئيسي فقط','error');const button=document.getElementById('save-admin-layout');if(button){button.disabled=true;button.textContent='جاري الحفظ...';}try{const data=await tryApi(['/api/admin/layout'],{method:'PUT',body:JSON.stringify({layout:state.adminUiLayout})});state.adminUiLayout=normalizedAdminUiLayout(data.layout);state.layoutEditMode=false;showToast(data.message||'تم حفظ الترتيب لجميع المشرفين','success');}catch(error){showToast(error.message||'تعذر حفظ الترتيب','error');}finally{render();}}
-function toggleAdminLayoutEdit(){if(!isRootAdminUI())return showToast('تعديل ترتيب الأزرار متاح للمدير الرئيسي فقط','error');state.layoutEditMode=!state.layoutEditMode;render();}
-function cancelAdminLayoutEdit(){state.layoutEditMode=false;loadAdminUiLayout().finally(()=>render());}
+async function loadAdminUiLayout(){} async function saveAdminUiLayout(){} function toggleAdminLayoutEdit(){} function cancelAdminLayoutEdit(){}
 function render(){
   state.layoutEditMode=false;
   adminSiblingIndexCache=new WeakMap();
