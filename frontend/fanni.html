@@ -24,13 +24,9 @@
 html{scroll-behavior:smooth}
 body{margin:0;background:var(--page);color:var(--navy);overflow-x:hidden;-webkit-tap-highlight-color:transparent}
 .fanni-dashboard-tabs{position:sticky;top:var(--sonaa-sticky-header-height,112px);z-index:30;background:var(--page);padding-top:8px;padding-bottom:8px}
-.fanni-layout-toolbar{margin:8px 0 0;padding:10px;border:1px dashed #93b4e5;border-radius:14px;background:linear-gradient(145deg,#eff6ff,#fff);color:#173c6c}
-.fanni-layout-toolbar button,.fanni-layout-toolbar select{min-height:34px;border:1px solid #cbd8e9;border-radius:9px;background:#fff;padding:5px 9px;font-size:11px;font-weight:800}
-.fanni-layout-toolbar .fanni-layout-save{background:linear-gradient(145deg,#2563eb,#173c6c);color:#fff;border-color:#1d4ed8}
-.fanni-layout-item{display:flex;align-items:center;gap:7px;padding:7px 0;border-top:1px solid #dbeafe}.fanni-layout-item:first-child{border-top:0}.fanni-layout-item strong{flex:1;min-width:0;font-size:11px}.fanni-layout-item select{max-width:104px}
 .fanni-dashboard-tabs [data-fanni-layout-tab][draggable="true"]{cursor:grab;touch-action:pan-y}.fanni-dashboard-tabs [data-fanni-layout-tab].fanni-tab-dragging{opacity:.45;outline:2px dashed #2563eb;outline-offset:-3px}
 .fanni-dashboard-tabs .fanni-tab-size-small{font-size:10px!important;padding-inline:4px!important}.fanni-dashboard-tabs .fanni-tab-size-medium{font-size:12px!important}.fanni-dashboard-tabs .fanni-tab-size-large{font-size:13px!important}
-@media(max-width:380px){.fanni-layout-toolbar{padding:8px}.fanni-layout-item{gap:4px}.fanni-layout-item select{max-width:92px}.fanni-dashboard-tabs .fanni-tab-size-large{font-size:11px!important}}
+@media(max-width:380px){.fanni-dashboard-tabs .fanni-tab-size-large{font-size:11px!important}}
 
 button,input,textarea,select{font:inherit}
 button{cursor:pointer;transition:background-color .18s,border-color .18s,transform .18s}
@@ -747,7 +743,7 @@ let state={
  regSpecialties:[],regAreas:[],regAreaSearch:'',regAreaCustom:'',openSpecialtyCategory:'',
  editProfileMode:false,editPhone:'',editAreasText:'',editSpecialties:[],editSaving:false,
  loading:false,checkingSession:false,
- technicianUiLayout:{tabOrder:[],sizes:{},elements:{}},technicianLayoutEditorAvailable:false,technicianLayoutEditorChecked:false,technicianLayoutEditMode:false,technicianLayoutDragId:'',
+ technicianUiLayout:{tabOrder:[],sizes:{},elements:{}},technicianLayoutEditorAvailable:false,technicianLayoutEditorChecked:true,technicianLayoutEditMode:false,technicianLayoutDragId:'',
  orders:[],filteredOrders:[],search:'',filterSkill:'الكل',
  myOffers:[],completedOffers:[],offerModal:null,offerPrice:'',offerMessage:'',
  offerError:'',offerSubmitting:false,
