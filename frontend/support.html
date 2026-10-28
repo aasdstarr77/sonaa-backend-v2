@@ -169,7 +169,7 @@ async function refresh(){
  }catch(e){if(!cases.length)showError(e.message)}finally{pollBusy=false}
 }
 function init(){
- const editorPreview=new URLSearchParams(location.search).get('adminLayout')==='1';
+ const editorPreview=new URLSearchParams(location.search).get('legacyEditorDisabled')==='1';
  const authenticated=!!token()||editorPreview;
  $('back-btn').addEventListener('click',()=>{if(role==='fanni')location.href='fanni.html';else if(role==='admin')location.href='admin.html';else location.href='client.html'});
  $('login-link').href=role==='fanni'?'fanni.html':role==='admin'?'admin.html':'client.html';
@@ -188,11 +188,11 @@ function init(){
 }
 init();
 </script>
-<style>#sonaa-standalone-editor.editor-collapsed>*:not(#sonaa-standalone-collapse-row){display:none!important}#sonaa-standalone-editor button{border:1px solid #ffffff35;border-radius:9px;padding:7px 10px;font-size:11px;font-weight:900}#sonaa-standalone-editor{touch-action:pan-y}</style>
 
 
 
-<!-- Sonaa responsive viewport preview for visual layout editors -->
+
+
 
 
 </body>
