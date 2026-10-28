@@ -1644,6 +1644,7 @@ body.client-visual-editor{padding-bottom:180px}
   const editorViewport=()=>new URLSearchParams(location.search).get('editorViewport')==='mobile'?'mobile':'desktop';
   const responsiveStyle=item=>editorViewport()==='mobile'?{...item,...(item.mobile||{})}:item;
   function saveResponsiveStyle(item,prop,value){if(editorViewport()==='mobile'){const m={...(item.mobile||{})};if(value===null||value==='')delete m[prop];else m[prop]=value;if(Object.keys(m).length)item.mobile=m;else delete item.mobile;}else{if(value===null||value==='')delete item[prop];else item[prop]=value;}return item;}
+  function clearResponsiveStyle(item){if(editorViewport()==='mobile')delete item.mobile;else Object.keys(item).forEach(k=>{if(k!=='mobile')delete item[k];});return item;}
   function applyLayout(){
     if(applying||!document.getElementById('app'))return;applying=true;
     try{
@@ -1724,7 +1725,7 @@ body.client-visual-editor{padding-bottom:180px}
     bar.querySelector('#client-editor-dashboard').onclick=()=>location.href='client.html?adminLayout=1';bar.querySelector('#client-editor-new').onclick=()=>location.href='client.html?adminLayout=1&tab=new';bar.querySelector('#client-editor-orders').onclick=()=>location.href='client.html?adminLayout=1&tab=orders';bar.querySelector('#client-editor-track').onclick=()=>location.href='client.html?adminLayout=1&tab=track';bar.querySelector('#client-editor-complaint').onclick=()=>location.href='client.html?adminLayout=1&tab=complaint';bar.querySelector('#client-editor-login').onclick=()=>location.href='client.html?adminLayout=1&view=login';bar.querySelector('#client-editor-register').onclick=()=>location.href='client.html?adminLayout=1&view=register';bar.querySelector('#client-editor-account').onclick=()=>location.href='password.html?role=client&mode=account&adminLayout=1';bar.querySelector('#client-editor-support').onclick=()=>location.href='support.html?role=client&adminLayout=1';
     bar.querySelector('#client-editor-apply-text').onclick=()=>{if(!selected)return;if(selected.children.length){alert('تعديل النص متاح للعناصر النصية البسيطة فقط حتى لا يتأثر شكل الأيقونات.');return;}setStyle('text',bar.querySelector('#client-editor-text').value.slice(0,200));};
     bar.querySelector('#client-editor-hide').onclick=()=>setStyle('hidden',!selectedStyle().hidden);
-    bar.querySelector('#client-editor-reset').onclick=()=>{if(!selectedKey)return;const all={...(getLayout().elements||{})};delete all[selectedKey];state.clientUiLayout=normalizedClientUiLayout({...getLayout(),elements:all});applyLayout();updateToolbar();};
+    bar.querySelector('#client-editor-reset').onclick=()=>{if(!selectedKey)return;const all={...(getLayout().elements||{})},item=clearResponsiveStyle({...((all[selectedKey])||{})});if(Object.keys(item).length)all[selectedKey]=item;else delete all[selectedKey];state.clientUiLayout=normalizedClientUiLayout({...getLayout(),elements:all});applyLayout();updateToolbar();};
     bar.querySelector('#client-editor-cancel').onclick=()=>{if(confirm('إلغاء وضع التعديل والرجوع للوحة العميل؟'))location.href='client.html';};
     bar.querySelector('#client-editor-save').onclick=saveVisualLayout;
   }

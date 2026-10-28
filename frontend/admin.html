@@ -303,6 +303,7 @@ function adminElementKey(el){
 const adminEditorViewport=()=>new URLSearchParams(location.search).get('editorViewport')==='mobile'?'mobile':'desktop';
 function adminResponsiveStyle(item){return adminEditorViewport()==='mobile'?{...item,...(item.mobile||{})}:item;}
 function adminSaveResponsiveStyle(item,prop,value){if(adminEditorViewport()==='mobile'){const m={...(item.mobile||{})};if(value===null||value==='')delete m[prop];else m[prop]=value;if(Object.keys(m).length)item.mobile=m;else delete item.mobile;}else{if(value===null||value==='')delete item[prop];else item[prop]=value;}return item;}
+function adminClearResponsiveStyle(item){if(adminEditorViewport()==='mobile')delete item.mobile;else Object.keys(item).forEach(k=>{if(k!=='mobile')delete item[k];});return item;}
 function switchAdminEditorViewport(view){const u=new URL(location.href);u.searchParams.set('adminLayout','1');u.searchParams.set('editorViewport',view);location.href=u.href;}
 function applyAdminElementPositions(){
  const app=document.getElementById('app');if(!app)return;
@@ -372,7 +373,7 @@ function ensureAdminElementToolbar(){
  ['font','width','bg','color','radius','x','y'].forEach(id=>{const input=bar.querySelector('#admin-editor-'+id);if(input)input.addEventListener('input',e=>setAdminElementStyle(({font:'fontSize',width:'width',bg:'background',color:'color',radius:'radius',x:'x',y:'y'})[id],['font','width','radius','x','y'].includes(id)?Number(e.target.value):e.target.value));});
  bar.querySelector('#admin-editor-apply-text').onclick=()=>{if(!adminSelectedElement)return showToast('اختَر عنصرًا أولًا','error');if(adminSelectedElement.children.length)return showToast('اختَر عنصرًا نصيًا بسيطًا','error');setAdminElementStyle('text',bar.querySelector('#admin-editor-text').value.slice(0,200));};
  bar.querySelector('#admin-editor-hide').onclick=()=>setAdminElementStyle('hidden',!adminSelectedStyle().hidden);
- bar.querySelector('#admin-editor-reset').onclick=()=>{if(!adminSelectedKey)return;const all={...(state.adminUiLayout.elements||{})};delete all[adminSelectedKey];state.adminUiLayout={...state.adminUiLayout,elements:all};adminSelectedKey='';adminSelectedElement=null;render();};
+ bar.querySelector('#admin-editor-reset').onclick=()=>{if(!adminSelectedKey)return;const all={...(state.adminUiLayout.elements||{})},item=adminClearResponsiveStyle({...((all[adminSelectedKey])||{})});if(Object.keys(item).length)all[adminSelectedKey]=item;else delete all[adminSelectedKey];state.adminUiLayout={...state.adminUiLayout,elements:all};adminSelectedKey='';adminSelectedElement=null;render();};
  bar.querySelector('#admin-editor-dashboard').onclick=()=>{state.tab='dashboard';render()};bar.querySelector('#admin-editor-account').onclick=()=>location.href='password.html?role=admin&mode=account&adminLayout=1';bar.querySelector('#admin-editor-support').onclick=()=>location.href='support.html?role=admin&adminLayout=1';bar.querySelector('#admin-drag-save').onclick=saveAdminUiLayout;['desktop','mobile'].forEach(view=>{const btn=bar.querySelector('#admin-editor-viewport-'+view);if(btn){btn.style.cssText='border:0;border-radius:8px;padding:6px 10px;font-weight:800;background:'+(adminEditorViewport()===view?'#1eb5a6':'#e2e8f0')+';color:'+(adminEditorViewport()===view?'#062b35':'#0f172a');btn.onclick=()=>switchAdminEditorViewport(view);}});bar.querySelector('#admin-drag-cancel').onclick=cancelAdminLayoutEdit;bar.querySelector('#admin-drag-cancel-top').onclick=cancelAdminLayoutEdit;updateAdminEditorControls();
 }
 document.addEventListener('pointerdown',event=>{
@@ -382,7 +383,7 @@ document.addEventListener('pointerdown',event=>{
  if(event.pointerType==='mouse'&&!event.shiftKey&&event.target.closest('.section-nav-group,.layout-item-row'))return;
  const el=event.target.closest('button,a,section,article,header,main,form,label,h1,h2,h3,h4,p,img,svg,div,span,input,select,textarea');if(!el||el.id==='app')return;
  const key=el.dataset.adminLayoutKey||adminElementKey(el);el.dataset.adminLayoutKey=key;selectAdminElement(el);
- const pos=state.adminUiLayout.elements?.[key]||{};
+ const pos=adminResponsiveStyle(state.adminUiLayout.elements?.[key]||{});
  adminPointerDrag={el,key,pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,baseX:Number(pos.x||0),baseY:Number(pos.y||0),moved:false};
  try{el.setPointerCapture(event.pointerId)}catch(_){}
  el.style.cursor='grabbing';
