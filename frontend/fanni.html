@@ -459,6 +459,9 @@ body:has(.fanni-login-gate) .fanni-app-header,body:has(.fanni-login-gate) nav.fi
 <div id="toast" class="fixed bottom-[88px] left-3 right-3 z-[200] pointer-events-none"></div>
 
 <script>
+(function(){try{if(new URLSearchParams(location.search).get('adminLayout')!=='1')return;function report(kind,error){var raw=String(error&&((error.stack)||(error.message))||error||'Unknown error').slice(0,1400);console.error('[Sonaa layout editor '+kind+']',error);var show=function(){var app=document.getElementById('app');if(!app)return;var safe=raw.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');app.innerHTML='<main dir="rtl" style="min-height:100vh;padding:24px;background:#f8fafc;color:#0f172a;font-family:system-ui,sans-serif"><section style="max-width:760px;margin:8vh auto;background:white;border:1px solid #fecaca;border-radius:18px;padding:22px;box-shadow:0 8px 30px #0f172a12"><h1 style="font-size:20px;font-weight:900;color:#b91c1c">تعذر فتح محرر التعديل</h1><p style="margin:10px 0;color:#475569">ظهر خطأ أثناء تشغيل محرر اللوحة. ابعت صورة الرسالة دي للدعم.</p><pre style="direction:ltr;text-align:left;white-space:pre-wrap;overflow-wrap:anywhere;background:#f1f5f9;border-radius:10px;padding:12px;font-size:12px">'+safe+'</pre></section></main>';};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',show,{once:true});else show();}window.addEventListener('error',function(e){report('runtime',e.error||e.message);});window.addEventListener('unhandledrejection',function(e){report('promise',e.reason);});}catch(e){console.error(e);}})();
+</script>
+<script>
 'use strict';
 
 const BASE_URL='https://sonaa-backend-v2.vercel.app';
