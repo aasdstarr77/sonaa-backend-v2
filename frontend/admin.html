@@ -261,22 +261,41 @@ function normalizedAdminUiLayout(input){
  const source=input&&typeof input==='object'?input:{};
  return {sectionOrder:Array.isArray(source.sectionOrder)?source.sectionOrder:[],tabOrder:source.tabOrder&&typeof source.tabOrder==='object'?source.tabOrder:{},tabGroups:source.tabGroups&&typeof source.tabGroups==='object'?source.tabGroups:{},sizes:source.sizes&&typeof source.sizes==='object'?source.sizes:{},elements:source.elements&&typeof source.elements==='object'?source.elements:{}};
 }
+const adminElementKeyCache=new WeakMap();
+let adminSiblingIndexCache=new WeakMap();
+function adminSiblingIndex(el){
+ const parent=el?.parentElement;if(!parent)return 0;
+ let indexMap=adminSiblingIndexCache.get(parent);
+ if(!indexMap){
+  indexMap=new Map();const counts=new Map();
+  for(const child of parent.children){const tag=child.tagName;const index=counts.get(tag)||0;indexMap.set(child,index);counts.set(tag,index+1);}
+  adminSiblingIndexCache.set(parent,indexMap);
+ }
+ return indexMap.get(el)||0;
+}
 function adminElementKey(el){
- if(el.id)return ('id_'+el.id).replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,100);
+ if(!el)return '';
+ if(el.dataset?.adminLayoutKey)return el.dataset.adminLayoutKey;
+ const cached=adminElementKeyCache.get(el);if(cached)return cached;
+ if(el.id){const key=('id_'+el.id).replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,100);adminElementKeyCache.set(el,key);return key;}
  const parts=[];let node=el;
  while(node&&node.id!=='app'&&parts.length<6){
   const cls=[...node.classList].filter(x=>!x.includes(':')&&!x.startsWith('hover:')).slice(0,2).join('_');
-  const index=node.parentElement?[...node.parentElement.children].filter(n=>n.tagName===node.tagName).indexOf(node):0;
+  const index=adminSiblingIndex(node);
   parts.unshift(node.tagName.toLowerCase()+(cls?'_'+cls:'')+'_'+Math.max(0,index));node=node.parentElement;
  }
- return ('p_'+parts.join('_')).replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,100);
+ const key=('p_'+parts.join('_')).replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,100);
+ adminElementKeyCache.set(el,key);return key;
 }
 function applyAdminElementPositions(){
  const app=document.getElementById('app');if(!app)return;
+ const savedElements=state.adminUiLayout?.elements||{};
+ if(!Object.keys(savedElements).length)return;
  app.querySelectorAll('*').forEach(el=>{
   if(el.closest('#admin-element-drag-toolbar'))return;
-  if(!el.dataset.adminLayoutKey)el.dataset.adminLayoutKey=adminElementKey(el);
-  const pos=state.adminUiLayout?.elements?.[el.dataset.adminLayoutKey];if(!pos)return;
+  const key=el.dataset.adminLayoutKey||adminElementKey(el);
+  const pos=savedElements[key];if(!pos)return;
+  el.dataset.adminLayoutKey=key;
   if(pos.x!==undefined||pos.y!==undefined)el.style.translate=Number(pos.x||0)+'px '+Number(pos.y||0)+'px';
   if(pos.fontSize)el.style.fontSize=Number(pos.fontSize)+'px';
   if(pos.width){el.style.width=Number(pos.width)+'%';el.style.maxWidth='100%';}
@@ -327,19 +346,18 @@ function ensureAdminElementToolbar(){
  if(!state.layoutEditMode||!isRootAdminUI()){if(bar)bar.remove();return;}
  if(!bar){bar=document.createElement('div');bar.id='admin-element-drag-toolbar';bar.style.cssText='position:fixed;z-index:99999;bottom:0;left:0;right:0;max-height:60vh;overflow-y:auto;overscroll-behavior:contain;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#0b1b3a;color:white;display:block;box-shadow:0 -8px 28px #0b1b3a38;font-family:Cairo,sans-serif';document.body.appendChild(bar);}
  bar.innerHTML=renderAdminLayoutDock();
- ['font','width','bg','color','radius','x','y'].forEach(id=>bar.querySelector('#admin-editor-'+id).addEventListener('input',e=>setAdminElementStyle(({font:'fontSize',width:'width',bg:'background',color:'color',radius:'radius',x:'x',y:'y'})[id],['font','width','radius','x','y'].includes(id)?Number(e.target.value):e.target.value)));
+ ['font','width','bg','color','radius','x','y'].forEach(id=>{const input=bar.querySelector('#admin-editor-'+id);if(input)input.addEventListener('input',e=>setAdminElementStyle(({font:'fontSize',width:'width',bg:'background',color:'color',radius:'radius',x:'x',y:'y'})[id],['font','width','radius','x','y'].includes(id)?Number(e.target.value):e.target.value));});
  bar.querySelector('#admin-editor-apply-text').onclick=()=>{if(!adminSelectedElement)return showToast('اختَر عنصرًا أولًا','error');if(adminSelectedElement.children.length)return showToast('اختَر عنصرًا نصيًا بسيطًا','error');setAdminElementStyle('text',bar.querySelector('#admin-editor-text').value.slice(0,200));};
  bar.querySelector('#admin-editor-hide').onclick=()=>setAdminElementStyle('hidden',!adminSelectedStyle().hidden);
- bar.querySelector('#admin-editor-reset').onclick=()=>{if(!adminSelectedKey)return;const all={...(state.adminUiLayout.elements||{})};delete all[adminSelectedKey];state.adminUiLayout={...state.adminUiLayout,elements:all};applyAdminElementPositions();updateAdminEditorControls();};
+ bar.querySelector('#admin-editor-reset').onclick=()=>{if(!adminSelectedKey)return;const all={...(state.adminUiLayout.elements||{})};delete all[adminSelectedKey];state.adminUiLayout={...state.adminUiLayout,elements:all};adminSelectedKey='';adminSelectedElement=null;render();};
  bar.querySelector('#admin-editor-dashboard').onclick=()=>{state.tab='dashboard';render()};bar.querySelector('#admin-editor-account').onclick=()=>location.href='password.html?role=admin&mode=account&adminLayout=1';bar.querySelector('#admin-editor-support').onclick=()=>location.href='support.html?role=admin&adminLayout=1';bar.querySelector('#admin-drag-save').onclick=saveAdminUiLayout;bar.querySelector('#admin-drag-cancel').onclick=cancelAdminLayoutEdit;bar.querySelector('#admin-drag-cancel-top').onclick=cancelAdminLayoutEdit;updateAdminEditorControls();
 }
 document.addEventListener('pointerdown',event=>{
  if(event.pointerType==='touch')return;
- if(!state.layoutEditMode||!isRootAdminUI()||event.button!==0||event.target.closest('#admin-element-drag-toolbar,#admin-drag-toggle,.layout-toolbar,.layout-item-controls,.layout-control'))return;
+ if(!state.layoutEditMode||!isRootAdminUI()||event.button!==0||event.target.closest('#admin-element-drag-toolbar,#admin-drag-toggle,.layout-toolbar,.layout-item-controls,.layout-control,#admin-drag-save,#admin-drag-cancel,#admin-drag-cancel-top,[onclick*="toggleAdminLayoutEdit"]'))return;
  const app=document.getElementById('app');if(!app||!app.contains(event.target))return;
  if(event.pointerType==='mouse'&&!event.shiftKey&&event.target.closest('.section-nav-group,.layout-item-row'))return;
  const el=event.target.closest('button,a,section,article,header,main,form,label,h1,h2,h3,h4,p,img,svg,div,span,input,select,textarea');if(!el||el.id==='app')return;
- event.preventDefault();event.stopImmediatePropagation();
  const key=el.dataset.adminLayoutKey||adminElementKey(el);el.dataset.adminLayoutKey=key;selectAdminElement(el);
  const pos=state.adminUiLayout.elements?.[key]||{};
  adminPointerDrag={el,key,pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,baseX:Number(pos.x||0),baseY:Number(pos.y||0),moved:false};
@@ -410,6 +428,7 @@ async function saveAdminUiLayout(){if(!isRootAdminUI())return showToast('تعد�
 function toggleAdminLayoutEdit(){if(!isRootAdminUI())return showToast('تعديل ترتيب الأزرار متاح للمدير الرئيسي فقط','error');state.layoutEditMode=!state.layoutEditMode;render();}
 function cancelAdminLayoutEdit(){state.layoutEditMode=false;loadAdminUiLayout().finally(()=>render());}
 function render(){
+  adminSiblingIndexCache=new WeakMap();
   document.body.classList.toggle('admin-layout-touch-editor',!!state.layoutEditMode);
   if(!getToken()){renderLogin();return;}
   if(!canReadTab(state.tab)){const first=ADMIN_SECTIONS.flatMap(section=>section.tabs).find(item=>canReadTab(item.id));state.tab=first?.id||'dashboard';}

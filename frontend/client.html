@@ -657,7 +657,24 @@ function clientTabsInLayoutOrder(){const layout=normalizedClientUiLayout(state.c
 function clientTabSizeClass(id){return 'client-tab-size-'+(state.clientUiLayout?.sizes?.[id]||'medium');}
 function isClientAdminLayoutMode(){try{return new URLSearchParams(location.search).get('adminLayout')==='1';}catch{return false;}}
 // Keep layout-editor API requests bounded so a stalled request cannot hold the page in loading state.
-async function loadClientUiLayout(){if(isClientAdminLayoutMode()){state.clientLayoutEditorAvailable=true;state.clientLayoutEditorChecked=true;render();}const timedFetch=async(url,options={})=>{const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),8000);try{return await fetch(url,{...options,signal:controller.signal,cache:'no-store'});}finally{clearTimeout(timer);}};try{const response=await timedFetch('/api/admin/client-layout');if(!response.ok)throw new Error('تعذر تحميل ترتيب أزرار العميل');const data=await response.json();state.clientUiLayout=normalizedClientUiLayout(data.layout);}catch(error){log('تعذر تحميل ترتيب لوحة العميل:',error.name==='AbortError'?'انتهت مهلة تحميل التخطيط':error.message);}try{if(isClientAdminLayoutMode()){const params=new URLSearchParams(location.search);const requestedTab=params.get('tab');if(['new','orders','complaint','track'].includes(requestedTab))state.tab=requestedTab;const token=localStorage.getItem('admin_token_v3')||'';if(token){const check=await timedFetch('/api/admin/me',{headers:{Authorization:'Bearer '+token}});if(check.ok){const admin=await check.json();state.clientLayoutEditorAvailable=admin.adminRoleLabel==='أدمن رئيسي';}}}}catch(error){log('تعذر التحقق من صلاحية تعديل لوحة العميل:',error.name==='AbortError'?'انتهت مهلة التحقق':error.message);state.clientLayoutEditorAvailable=false;}finally{state.clientLayoutEditorChecked=true;render();}}
+async function loadClientUiLayout(){
+ const editorMode=isClientAdminLayoutMode();
+ if(editorMode){state.clientLayoutEditorAvailable=false;state.clientLayoutEditorChecked=false;render();}
+ const timedFetch=async(url,options={})=>{const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),8000);try{return await fetch(url,{...options,signal:controller.signal,cache:'no-store'});}finally{clearTimeout(timer);}};
+ const layoutTask=(async()=>{try{const response=await timedFetch('/api/admin/client-layout');if(!response.ok)throw new Error('تعذر تحميل ترتيب أزرار العميل');const data=await response.json();state.clientUiLayout=normalizedClientUiLayout(data.layout);}catch(error){log('تعذر تحميل ترتيب لوحة العميل:',error.name==='AbortError'?'انتهت مهلة تحميل التخطيط':error.message);}})();
+ if(editorMode){
+  try{
+   const params=new URLSearchParams(location.search),requestedTab=params.get('tab');
+   if(['new','orders','complaint','track'].includes(requestedTab))state.tab=requestedTab;
+   const token=localStorage.getItem('admin_token_v3')||'';
+   if(!token)throw new Error('سجّل دخول المدير الرئيسي في لوحة الإدارة أولًا.');
+   const check=await timedFetch('/api/admin/me',{headers:{Authorization:'Bearer '+token}});
+   if(!check.ok)throw new Error('انتهت صلاحية جلسة الأدمن أو تعذر التحقق منها.');
+   const admin=await check.json();state.clientLayoutEditorAvailable=admin.adminRoleLabel==='أدمن رئيسي';
+  }catch(error){log('تعذر التحقق من صلاحية تعديل لوحة العميل:',error.name==='AbortError'?'انتهت مهلة التحقق':error.message);state.clientLayoutEditorAvailable=false;}
+ }
+ await layoutTask;state.clientLayoutEditorChecked=true;render();
+}
 function toggleClientLayoutEdit(){if(!state.clientLayoutEditorAvailable)return;state.clientLayoutEditMode=!state.clientLayoutEditMode;state.clientLayoutDragId='';render();}
 function cancelClientLayoutEdit(){loadClientUiLayout().then(()=>{state.clientLayoutEditMode=false;render();});}
 function moveClientTab(id,delta){const order=clientTabsInLayoutOrder().map(item=>item.id);const from=order.indexOf(id),to=from+delta;if(from<0||to<0||to>=order.length)return;[order[from],order[to]]=[order[to],order[from]];state.clientUiLayout=normalizedClientUiLayout({...state.clientUiLayout,tabOrder:order});render();}
@@ -1762,6 +1779,7 @@ body.client-visual-editor{padding-bottom:180px}
 <script id="sonaa-editor-dock-guides">
 (function(){
  'use strict';
+ if(new URLSearchParams(location.search).get('adminLayout')!=='1')return;
  const toolbarIds=['admin-element-drag-toolbar','fanni-visual-editor-toolbar','client-visual-editor-toolbar','sonaa-standalone-editor'];
  const style=document.createElement('style');
  style.textContent=`
