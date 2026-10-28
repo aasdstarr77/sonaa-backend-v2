@@ -149,7 +149,8 @@ function sendSubPage(){
  const val=$('subPage').value;if(!val)return;
  const pair=val.split(':');const targetPage=pair[0];if(pageSelect.value!==targetPage){pageSelect.value=targetPage;return loadPage().then(sendSubPage)}
  const section=subPages[val];if(!section)return;
- try{frame.contentWindow.postMessage({action:'openSection',section:section},'*');status('تم إرسال أمر فتح القسم: '+section+' إلى المعاينة.')}catch(e){status('تعذر فتح القسم: '+e.message)}
+ const send=function(){try{frame.contentWindow.postMessage({action:'openSection',section:section},'*');status('تم إرسال أمر فتح القسم: '+section+' إلى المعاينة.')}catch(e){status('تعذر فتح القسم: '+e.message)}};
+ try{if(frame.contentDocument&&frame.contentDocument.readyState==='complete')send();else frame.addEventListener('load',send,{once:true})}catch(e){frame.addEventListener('load',send,{once:true})}
 }
 $('openSubPage').addEventListener('click',sendSubPage);
 $('page').addEventListener('change',loadPage);
