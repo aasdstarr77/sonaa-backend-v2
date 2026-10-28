@@ -834,47 +834,16 @@ function performFanniLogout(){
 const TECHNICIAN_TAB_DEFINITIONS=[{id:'available',label:'طلبات متاحة'},{id:'myOffers',label:'طلبات جارية'},{id:'completed',label:'المهام المكتملة'},{id:'wallet',label:'محفظتي'}];
 function normalizedTechnicianUiLayout(input){const source=input&&typeof input==='object'&&!Array.isArray(input)?input:{};const allowed=TECHNICIAN_TAB_DEFINITIONS.map(item=>item.id);const order=Array.isArray(source.tabOrder)?[...new Set(source.tabOrder.filter(id=>allowed.includes(id)))]:[];allowed.forEach(id=>{if(!order.includes(id))order.push(id)});const sizes={};if(source.sizes&&typeof source.sizes==='object'&&!Array.isArray(source.sizes))allowed.forEach(id=>{if(['small','medium','large'].includes(source.sizes[id]))sizes[id]=source.sizes[id]});const elements={};if(source.elements&&typeof source.elements==='object'&&!Array.isArray(source.elements)){for(const [key,value] of Object.entries(source.elements).slice(0,500)){if(!/^[a-zA-Z0-9_-]{1,100}$/.test(key)||!value||typeof value!=='object'||Array.isArray(value))continue;const item={};if(Number.isFinite(value.fontSize)&&value.fontSize>=10&&value.fontSize<=36)item.fontSize=value.fontSize;if(Number.isFinite(value.width)&&value.width>=30&&value.width<=100)item.width=value.width;if(typeof value.background==='string'&&/^#[0-9a-fA-F]{6}$/.test(value.background))item.background=value.background;if(['solid','glossy'].includes(value.backgroundFinish))item.backgroundFinish=value.backgroundFinish;if(typeof value.activeBackground==='string'&&/^#[0-9a-fA-F]{6}$/.test(value.activeBackground))item.activeBackground=value.activeBackground;if(typeof value.color==='string'&&/^#[0-9a-fA-F]{6}$/.test(value.color))item.color=value.color;if(Number.isFinite(value.radius)&&value.radius>=0&&value.radius<=40)item.radius=value.radius;if(Number.isFinite(value.scale)&&value.scale>=0.5&&value.scale<=2)item.scale=value.scale;if(Number.isFinite(value.x)&&value.x>=-2000&&value.x<=2000)item.x=value.x;if(Number.isFinite(value.y)&&value.y>=-2000&&value.y<=2000)item.y=value.y;if(Number.isFinite(value.scale)&&value.scale>=0.5&&value.scale<=2)item.scale=value.scale;if(typeof value.text==='string')item.text=value.text.slice(0,200);if(typeof value.hidden==='boolean')item.hidden=value.hidden;if(typeof value.threeD==='boolean')item.threeD=value.threeD;const mobile={};if(value.mobile&&typeof value.mobile==='object'&&!Array.isArray(value.mobile)){const mv=value.mobile;if(Number.isFinite(mv.fontSize)&&mv.fontSize>=10&&mv.fontSize<=36)mobile.fontSize=mv.fontSize;if(Number.isFinite(mv.width)&&mv.width>=30&&mv.width<=100)mobile.width=mv.width;if(typeof mv.background==='string'&&/^#[0-9a-fA-F]{6}$/.test(mv.background))mobile.background=mv.background;if(typeof mv.color==='string'&&/^#[0-9a-fA-F]{6}$/.test(mv.color))mobile.color=mv.color;if(Number.isFinite(mv.radius)&&mv.radius>=0&&mv.radius<=40)mobile.radius=mv.radius;if(Number.isFinite(mv.scale)&&mv.scale>=0.5&&mv.scale<=2)mobile.scale=mv.scale;if(Number.isFinite(mv.x)&&mv.x>=-2000&&mv.x<=2000)mobile.x=mv.x;if(Number.isFinite(mv.y)&&mv.y>=-2000&&mv.y<=2000)mobile.y=mv.y;if(Number.isFinite(mv.scale)&&mv.scale>=0.5&&mv.scale<=2)mobile.scale=mv.scale;if(typeof mv.text==='string')mobile.text=mv.text.slice(0,200);if(typeof mv.hidden==='boolean')mobile.hidden=mv.hidden;if(typeof mv.threeD==='boolean')mobile.threeD=mv.threeD;}if(Object.keys(mobile).length)item.mobile=mobile;if(Object.keys(item).length)elements[key]=item;}}return {tabOrder:order,sizes,elements};}
 function technicianTabsInLayoutOrder(){return normalizedTechnicianUiLayout(state.technicianUiLayout).tabOrder.map(id=>TECHNICIAN_TAB_DEFINITIONS.find(item=>item.id===id)).filter(Boolean);}
-async function loadTechnicianUiLayout(){
- const params=new URLSearchParams(location.search),editorMode=false;
- if(editorMode){
-  const requestedTab=params.get('tab');
-  if(['available','myOffers','completed','wallet','register'].includes(requestedTab))state.tab=requestedTab;
-  // The editor is a preview UI; the server still enforces root-admin permission on every save.
-  state.technicianLayoutEditorAvailable=true;
-  state.technicianLayoutEditorChecked=true;
-  render();
- }
- const timedFetch=async(url,options={})=>{const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),8000);try{return await fetch(url,{...options,signal:controller.signal,cache:'no-store'});}finally{clearTimeout(timer);}};
- try{
-  const response=await timedFetch('/api/admin/technician-layout');
-  if(!response.ok)throw Error('تعذر تحميل ترتيب أزرار الفني');
-  const data=await response.json();state.technicianUiLayout=normalizedTechnicianUiLayout(data.layout);
- }catch(error){log('تعذر تحميل ترتيب لوحة الفني:',error.name==='AbortError'?'انتهت مهلة تحميل التخطيط':error.message);}
- state.technicianLayoutEditorChecked=true;
- render();
-}
-function toggleTechnicianLayoutEdit(){if(!state.technicianLayoutEditorAvailable)return;state.technicianLayoutEditMode=!state.technicianLayoutEditMode;state.technicianLayoutDragId='';render();}
-function cancelTechnicianLayoutEdit(){loadTechnicianUiLayout().then(()=>{state.technicianLayoutEditMode=false;render();});}
-function moveTechnicianTab(id,delta){const order=technicianTabsInLayoutOrder().map(item=>item.id),from=order.indexOf(id),to=from+delta;if(from<0||to<0||to>=order.length)return;[order[from],order[to]]=[order[to],order[from]];state.technicianUiLayout=normalizedTechnicianUiLayout({...state.technicianUiLayout,tabOrder:order});render();}
-function setTechnicianTabSize(id,size){if(!['small','medium','large'].includes(size))return;state.technicianUiLayout=normalizedTechnicianUiLayout({...state.technicianUiLayout,sizes:{...(state.technicianUiLayout?.sizes||{}),[id]:size}});render();}
-function startTechnicianTabDrag(event,id){if(!state.technicianLayoutEditMode){event.preventDefault();return;}state.technicianLayoutDragId=id;if(event.dataTransfer){event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',id);}}
-function allowTechnicianTabDrop(event){if(state.technicianLayoutEditMode)event.preventDefault();}
-function dropTechnicianTab(event,targetId){if(!state.technicianLayoutEditMode)return;event.preventDefault();event.stopPropagation();const sourceId=state.technicianLayoutDragId||(event.dataTransfer?.getData('text/plain')||''),order=technicianTabsInLayoutOrder().map(item=>item.id);if(!sourceId||sourceId===targetId||!order.includes(sourceId)||!order.includes(targetId)){state.technicianLayoutDragId='';return;}const from=order.indexOf(sourceId);order.splice(from,1);order.splice(order.indexOf(targetId),0,sourceId);state.technicianUiLayout=normalizedTechnicianUiLayout({...state.technicianUiLayout,tabOrder:order});state.technicianLayoutDragId='';render();}
-async function saveTechnicianUiLayout(){const button=document.getElementById('save-technician-layout');if(button){button.disabled=true;button.textContent='جاري الحفظ...';}try{const token=localStorage.getItem('admin_token_v3')||'';if(!token)throw Error('سجّل دخول المدير الرئيسي في لوحة الإدارة أولًا.');const response=await fetch('/api/admin/technician-layout',{method:'PUT',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({layout:normalizedTechnicianUiLayout(state.technicianUiLayout)})}),data=await response.json().catch(()=>({}));if(!response.ok)throw Error(data.message||'تعذر حفظ الترتيب؛ تأكد من صلاحية المدير الرئيسي.');state.technicianUiLayout=normalizedTechnicianUiLayout(data.layout);state.technicianLayoutEditMode=false;toast(data.message||'تم حفظ ترتيب أزرار لوحة الفني للجميع.');}catch(error){toast(error.message||'تعذر حفظ ترتيب أزرار الفني.','error');}finally{render();}}
-function renderTechnicianLayoutEditor(){if(!state.technicianLayoutEditorAvailable)return '';if(!state.technicianLayoutEditMode)return '<div class="mt-2 flex justify-end"><button type="button" onclick="toggleTechnicianLayoutEdit()" class="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[10px] font-extrabold text-blue-800">↕ ترتيب أزرار الفني</button></div>';return '<div class="fanni-layout-toolbar"><b class="text-[12px]">ترتيب أزرار لوحة الفني</b><p class="mt-1 text-[10px] leading-5">اسحب الزر على الكمبيوتر أو استخدم الأسهم على الموبايل؛ الترتيب بعد الحفظ يظهر لكل الفنيين.</p><div class="mt-2">'+technicianTabsInLayoutOrder().map((item,index)=>'<div class="fanni-layout-item"><strong>'+esc(item.label)+'</strong><button type="button" '+(index===0?'disabled':'')+' onclick="moveTechnicianTab(\''+item.id+'\',-1)">↑</button><button type="button" '+(index===TECHNICIAN_TAB_DEFINITIONS.length-1?'disabled':'')+' onclick="moveTechnicianTab(\''+item.id+'\',1)">↓</button><select aria-label="حجم زر '+esc(item.label)+'" onchange="setTechnicianTabSize(\''+item.id+'\',this.value)"><option value="small" '+(state.technicianUiLayout?.sizes?.[item.id]==='small'?'selected':'')+'>صغير</option><option value="medium" '+(!state.technicianUiLayout?.sizes?.[item.id]||state.technicianUiLayout?.sizes?.[item.id]==='medium'?'selected':'')+'>متوسط</option><option value="large" '+(state.technicianUiLayout?.sizes?.[item.id]==='large'?'selected':'')+'>كبير</option></select></div>').join('')+'</div><div class="mt-3 flex gap-2"><button id="save-technician-layout" type="button" onclick="saveTechnicianUiLayout()" class="fanni-layout-save flex-1">حفظ للجميع</button><button type="button" onclick="cancelTechnicianLayoutEdit()">إلغاء</button></div></div>';}
-
-function setTab(tab){
- state.tab=tab;
- state.error='';
- state.success='';
- state.pendingMsg='';
- render();
-
- if(tab==='available')loadOrders();
-if(tab==='myOffers'||tab==='completed')loadMyOffers();
- if(tab==='wallet'){loadWalletHistory();loadWalletTransferNumbers();}
- if(tab==='profile')loadProfile();
-}
+async function loadTechnicianUiLayout(){state.technicianUiLayout=normalizedTechnicianUiLayout({});state.technicianLayoutEditorAvailable=false;state.technicianLayoutEditorChecked=true;state.technicianLayoutEditMode=false;}
+function toggleTechnicianLayoutEdit(){}
+function cancelTechnicianLayoutEdit(){}
+function moveTechnicianTab(){}
+function setTechnicianTabSize(){}
+function startTechnicianTabDrag(){}
+function allowTechnicianTabDrop(){}
+function dropTechnicianTab(){}
+function saveTechnicianUiLayout(){}
+function {return '';}
 
 function toggleSpecialtyCategory(label){
  state.openSpecialtyCategory=state.openSpecialtyCategory===label?'':label;
@@ -1165,7 +1134,7 @@ function render(){
    </details>
   </section>
 
-  <section class="fanni-dashboard-tabs mt-4"><div class="grid grid-cols-4 gap-2">${technicianTabsInLayoutOrder().map(t=>{const info={available:['📋','طلبات متاحه',state.filteredOrders.length],myOffers:['💼','طلبات جاريه',state.myOffers.length],completed:['🏁','المهام المكتملة',state.completedOffers.length],wallet:['💳','محفظتي','']}[t.id];return `<button type="button" data-fanni-layout-tab="${t.id}" ${state.technicianLayoutEditMode?`draggable="true" ondragstart="startTechnicianTabDrag(event,'${t.id}')" ondragover="allowTechnicianTabDrop(event)" ondrop="dropTechnicianTab(event,'${t.id}')" ondragend="state.technicianLayoutDragId='';this.classList.remove('fanni-tab-dragging')"`:''} onclick="if(!state.technicianLayoutEditMode)setTab('${t.id}')" class="fanni-tab-size-${state.technicianUiLayout?.sizes?.[t.id]||'medium'} rounded-2xl border p-2 flex flex-col items-center justify-center gap-1.5 min-h-[76px] ${state.tab===t.id?'bg-blue-50 border-blue-300 text-blue-800':'bg-white border-slate-200 text-slate-600'} ${state.technicianLayoutEditMode?'border-dashed border-blue-300':''}">${state.technicianLayoutEditMode?'<span aria-hidden="true">⠿</span>':''}<span>${info[0]}</span><span class="text-[10px] font-extrabold">${info[1]}</span>${info[2]!==''?`<span class="text-[9px] rounded-full bg-white border px-2">${info[2]}</span>`:''}</button>`}).join('')}</div>${renderTechnicianLayoutEditor()}</section>
+  <section class="fanni-dashboard-tabs mt-4"><div class="grid grid-cols-4 gap-2">${technicianTabsInLayoutOrder().map(t=>{const info={available:['📋','طلبات متاحه',state.filteredOrders.length],myOffers:['💼','طلبات جاريه',state.myOffers.length],completed:['🏁','المهام المكتملة',state.completedOffers.length],wallet:['💳','محفظتي','']}[t.id];return `<button type="button" data-fanni-layout-tab="${t.id}" ${state.technicianLayoutEditMode?`draggable="true" ondragstart="startTechnicianTabDrag(event,'${t.id}')" ondragover="allowTechnicianTabDrop(event)" ondrop="dropTechnicianTab(event,'${t.id}')" ondragend="state.technicianLayoutDragId='';this.classList.remove('fanni-tab-dragging')"`:''} onclick="if(!state.technicianLayoutEditMode)setTab('${t.id}')" class="fanni-tab-size-${state.technicianUiLayout?.sizes?.[t.id]||'medium'} rounded-2xl border p-2 flex flex-col items-center justify-center gap-1.5 min-h-[76px] ${state.tab===t.id?'bg-blue-50 border-blue-300 text-blue-800':'bg-white border-slate-200 text-slate-600'} ${state.technicianLayoutEditMode?'border-dashed border-blue-300':''}">${state.technicianLayoutEditMode?'<span aria-hidden="true">⠿</span>':''}<span>${info[0]}</span><span class="text-[10px] font-extrabold">${info[1]}</span>${info[2]!==''?`<span class="text-[9px] rounded-full bg-white border px-2">${info[2]}</span>`:''}</button>`}).join('')}</div>${}</section>
 
   ${state.tab==='available'?`
    <section class="mt-4 space-y-3">
