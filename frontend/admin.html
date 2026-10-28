@@ -323,12 +323,19 @@ function editorContainerMeta(item,el){
  item.containerId=id||'container';item.anchor=item.anchor||'top-left';return item;
 }
 
+function sonaaEditorColorFor3D(el){
+ if(!el)return '#2563eb';
+ const value=window.getComputedStyle(el).backgroundColor||'';
+ const m=value.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)/i);
+ if(m&&!(m[4]!==undefined&&Number(m[4])<0.05))return '#'+[m[1],m[2],m[3]].map(v=>Number(v).toString(16).padStart(2,'0')).join('');
+ return el.matches('button,a,[role="button"],input[type="button"],input[type="submit"],.btn,[class*="btn"]')?'#2563eb':'#f8fafc';
+}
 function sonaaEditorApplySurface(el,style){
  if(!el||!style)return;
  const cssId='sonaa-editor-button-state-css';
  if(!document.getElementById(cssId)){
   const css=document.createElement('style');css.id=cssId;
-  css.textContent='button[data-sonaa-editor-colored="1"]:active,a[data-sonaa-editor-colored="1"]:active,[role="button"][data-sonaa-editor-colored="1"]:active,input[type="button"][data-sonaa-editor-colored="1"]:active,input[type="submit"][data-sonaa-editor-colored="1"]:active{filter:brightness(.76) saturate(1.16)!important}button[data-sonaa-editor-colored="1"],a[data-sonaa-editor-colored="1"],[role="button"][data-sonaa-editor-colored="1"]{transition:filter .12s ease,transform .12s ease}';
+  css.textContent='button[data-sonaa-editor-colored="1"]:hover,a[data-sonaa-editor-colored="1"]:hover,[role="button"][data-sonaa-editor-colored="1"]:hover,input[type="button"][data-sonaa-editor-colored="1"]:hover,input[type="submit"][data-sonaa-editor-colored="1"]:hover{filter:brightness(1.1) saturate(1.08)!important}button[data-sonaa-editor-colored="1"]:active,a[data-sonaa-editor-colored="1"]:active,[role="button"][data-sonaa-editor-colored="1"]:active,input[type="button"][data-sonaa-editor-colored="1"]:active,input[type="submit"][data-sonaa-editor-colored="1"]:active{filter:brightness(.66) saturate(1.2)!important}button[data-sonaa-editor-colored="1"].active,a[data-sonaa-editor-colored="1"].active,[role="button"][data-sonaa-editor-colored="1"].active,button[data-sonaa-editor-colored="1"][aria-pressed="true"],button[data-sonaa-editor-colored="1"][aria-selected="true"]{filter:brightness(.88) saturate(1.12)!important}button[data-sonaa-editor-colored="1"],a[data-sonaa-editor-colored="1"],[role="button"][data-sonaa-editor-colored="1"]{transition:filter .12s ease,transform .12s ease}';
   document.head.appendChild(css);
  }
  if(!el.dataset.sonaaEditorOriginalBg){
@@ -386,7 +393,7 @@ function rememberAdminEditorStep(){const now=Date.now();if(now-adminEditorHistor
 function undoAdminEditorStep(){const previous=adminEditorHistory.pop();if(!previous||!Object.keys(previous).length)return showToast('مفيش خطوة سابقة للتراجع عنها','error');state.adminUiLayout=previous;applyAdminElementPositions();updateAdminEditorControls();}
 function setAdminElementStyle(prop,value){
  if(!adminSelectedKey)return;rememberAdminEditorStep();
- const all={...(state.adminUiLayout.elements||{})},item=adminSaveResponsiveStyle({...((all[adminSelectedKey])||{})},prop,value);
+ const all={...(state.adminUiLayout.elements||{})},source={...((all[adminSelectedKey])||{})};if(prop==='threeD'&&value===true&&!source.background)source.background=sonaaEditorColorFor3D(adminSelectedElement);const item=adminSaveResponsiveStyle(source,prop,value);
  if(Object.keys(item).length)all[adminSelectedKey]=item;else delete all[adminSelectedKey];
  state.adminUiLayout={...state.adminUiLayout,elements:all};applyAdminElementPositions();updateAdminEditorControls();
 }
@@ -1486,8 +1493,18 @@ if(getToken()){ loadAll(); } else { renderLogin(); }
     document.head.appendChild(css);
     const launch=document.createElement('button');launch.id='sonaa-viewport-preview-launch';launch.type='button';launch.textContent='📱 معاينة الموبايل / الكمبيوتر';
     document.body.appendChild(launch);
-    if(location.pathname.endsWith('/admin.html')&&params.get('adminLayout')!=='1'){const syncPreviewButton=()=>{launch.style.display=document.body.classList.contains('admin-layout-touch-editor')?'':'none';};syncPreviewButton();new MutationObserver(syncPreviewButton).observe(document.body,{attributes:true,attributeFilter:['class']});}
-    const overlay=document.createElement('div');overlay.id='sonaa-viewport-preview';overlay.innerHTML='<div class="svp-shell"><div class="svp-tools"><strong>معاينة فعلية حسب عرض الشاشة</strong><button type="button" data-view="mobile">موبايل 390px</button><button type="button" data-view="desktop">كمبيوتر</button><button type="button" data-close>إغلاق المعاينة ✕</button></div><div class="svp-stage"><iframe title="معاينة استجابة الصفحة" loading="lazy"></iframe></div></div>';
+    launch.style.display='none';
+    const dockPreviewLaunch=()=>{
+      const panel=document.querySelector('#admin-element-drag-toolbar,#client-visual-editor-toolbar,#fanni-visual-editor-toolbar,#sonaa-standalone-editor');
+      if(!panel){launch.style.display='none';return;}
+      const row=panel.querySelector('#admin-editor-collapse-row,#client-editor-collapse-row,#fanni-editor-collapse-row,#sonaa-standalone-collapse-row')||panel;
+      if(launch.parentElement!==row)row.appendChild(launch);
+      launch.style.cssText='position:static;inset:auto;z-index:auto;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;margin:0 6px;padding:6px 9px;border:1px solid #60a5fa;border-radius:9px;background:#1d4ed8;color:#fff;font:800 10px Cairo,sans-serif;box-shadow:0 3px 0 #102858;cursor:pointer;white-space:normal;max-width:190px';
+      launch.title='معاينة الموبايل والكمبيوتر من داخل لوحة التعديل';
+    };
+    dockPreviewLaunch();
+    new MutationObserver(dockPreviewLaunch).observe(document.documentElement,{childList:true,subtree:true});
+const overlay=document.createElement('div');overlay.id='sonaa-viewport-preview';overlay.innerHTML='<div class="svp-shell"><div class="svp-tools"><strong>معاينة فعلية حسب عرض الشاشة</strong><button type="button" data-view="mobile">موبايل 390px</button><button type="button" data-view="desktop">كمبيوتر</button><button type="button" data-close>إغلاق المعاينة ✕</button></div><div class="svp-stage"><iframe title="معاينة استجابة الصفحة" loading="lazy"></iframe></div></div>';
     document.body.appendChild(overlay);
     const frame=overlay.querySelector('iframe');
     const url=new URL(location.href);
