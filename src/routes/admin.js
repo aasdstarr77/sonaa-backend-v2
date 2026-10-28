@@ -1459,11 +1459,25 @@ function sanitizeAdminUiLayout(input) {
       const item = {};
       if (Number.isFinite(value.x) && value.x >= -2000 && value.x <= 2000) item.x = value.x;
       if (Number.isFinite(value.y) && value.y >= -2000 && value.y <= 2000) item.y = value.y;
+      if (Number.isFinite(value.fontSize) && value.fontSize >= 10 && value.fontSize <= 36) item.fontSize = value.fontSize;
+      if (Number.isFinite(value.width) && value.width >= 30 && value.width <= 100) item.width = value.width;
+      if (typeof value.background === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.background)) item.background = value.background;
+      if (typeof value.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.color)) item.color = value.color;
+      if (Number.isFinite(value.radius) && value.radius >= 0 && value.radius <= 40) item.radius = value.radius;
+      if (typeof value.text === 'string') item.text = value.text.slice(0, 200);
+      if (typeof value.hidden === 'boolean') item.hidden = value.hidden;
       if (Number.isFinite(value.scale) && value.scale >= 0.5 && value.scale <= 2) item.scale = value.scale;
       const mobile = {};
       if (value.mobile && typeof value.mobile === 'object' && !Array.isArray(value.mobile)) {
         if (Number.isFinite(value.mobile.x) && value.mobile.x >= -2000 && value.mobile.x <= 2000) mobile.x = value.mobile.x;
         if (Number.isFinite(value.mobile.y) && value.mobile.y >= -2000 && value.mobile.y <= 2000) mobile.y = value.mobile.y;
+        if (Number.isFinite(value.mobile.fontSize) && value.mobile.fontSize >= 10 && value.mobile.fontSize <= 36) mobile.fontSize = value.mobile.fontSize;
+        if (Number.isFinite(value.mobile.width) && value.mobile.width >= 30 && value.mobile.width <= 100) mobile.width = value.mobile.width;
+        if (typeof value.mobile.background === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.mobile.background)) mobile.background = value.mobile.background;
+        if (typeof value.mobile.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.mobile.color)) mobile.color = value.mobile.color;
+        if (Number.isFinite(value.mobile.radius) && value.mobile.radius >= 0 && value.mobile.radius <= 40) mobile.radius = value.mobile.radius;
+        if (typeof value.mobile.text === 'string') mobile.text = value.mobile.text.slice(0, 200);
+        if (typeof value.mobile.hidden === 'boolean') mobile.hidden = value.mobile.hidden;
         if (Number.isFinite(value.mobile.scale) && value.mobile.scale >= 0.5 && value.mobile.scale <= 2) mobile.scale = value.mobile.scale;
       }
       if (Object.keys(mobile).length) item.mobile = mobile;
