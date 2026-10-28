@@ -259,13 +259,13 @@ function render(){
       <div class="admin-header-title min-w-0 text-right self-start">
         <h1 class="font-black text-[14px] leading-5">صُنّاع | لوحة الإدارة</h1>
         ${isAuth&&currentAdminRoleLabel()?'<div class="mt-0.5 text-[10px] text-blue-100 font-bold"><span>المنصب الإداري:</span><span>'+escHtml(currentAdminRoleLabel())+'</span></div>':''}
-        ${isAuth?'<button id="openVisualEditorBtn" type="button" onclick="window.open(\'/frontend/editor.html\', \'_blank\')" style="background:#7C3AED;color:white;padding:8px 16px;border-radius:8px;font-size:11px;font-weight:800;margin-top:6px;">🎨 تحرير الواجهة</button>':''}
         <button type="button" onclick="goBack()" class="mt-1 h-6 px-3 rounded-lg border border-white/20 bg-white/10 text-white text-[11px] font-extrabold">← رجوع</button>
       </div>
       <div class="admin-logo-frame h-[84px] w-[84px] justify-self-center rounded-2xl bg-[#F8FAFC] border-2 border-[#14B8A6] flex items-center justify-center shadow-lg overflow-hidden">
         <img class="sonaa-logo-svg admin-header-logo h-full w-full object-contain" src="/images/LOGO_UPLOAD_HERE/logo.png" alt="شعار صُنّاع" width="120" height="120" decoding="async">
       </div>
       <div class="flex flex-col gap-1 shrink-0 items-stretch justify-self-end w-[104px]">
+        ${isAuth?'<button id="openVisualEditorBtn" type="button" onclick="window.open(&#39;/frontend/editor.html&#39;, &#39;_blank&#39;)" style="background:#7C3AED;color:white;padding:8px 6px;border-radius:8px;font-size:10px;font-weight:800;margin-bottom:3px;">🎨 تحرير الواجهة</button>':''}
         
         <a href="password.html?role=admin&amp;mode=account" class="h-8 w-full rounded-lg bg-white/10 hover:bg-white/20 border border-white/15 text-[10px] font-black text-white inline-flex items-center justify-center gap-1 no-underline leading-none"><span aria-hidden="true">👤</span><span>حسابي</span></a>
         
