@@ -414,20 +414,43 @@ body #app header.app-header a[href="https://aasdstarr77.github.io/sonaa-download
   transform:translateY(2px)!important;
   box-shadow:0 2px 0 #102858,0 3px 7px rgba(16,40,88,.2),inset 0 1px 0 rgba(255,255,255,.25)!important;
 }
+
+
+/* Shared client dashboard button layout editor: drag on desktop, arrows on touch screens. */
+.client-layout-toolbar{margin:8px 0 0;padding:10px;border:1px dashed #93b4e5;border-radius:14px;background:linear-gradient(145deg,#eff6ff,#fff);color:#173c6c}
+.client-layout-toolbar button,.client-layout-toolbar select{min-height:34px;border:1px solid #cbd8e9;border-radius:9px;background:#fff;padding:5px 9px;font-size:11px;font-weight:800}
+.client-layout-toolbar .client-layout-save{background:linear-gradient(145deg,#2563eb,#173c6c);color:#fff;border-color:#1d4ed8}
+.client-layout-item{display:flex;align-items:center;gap:7px;padding:7px 0;border-top:1px solid #dbeafe}
+.client-layout-item:first-child{border-top:0}
+.client-layout-item strong{flex:1;min-width:0;font-size:11px}
+.client-layout-item select{max-width:104px}
 .client-section-tabs .client-tab-size-small{flex:.72 1 0!important;font-size:10px!important;padding-inline:4px!important}
 .client-section-tabs .client-tab-size-medium{flex:1 1 0!important}
 .client-section-tabs .client-tab-size-large{flex:1.35 1 0!important;font-size:13px!important}
 .client-section-tabs [data-client-layout-tab][draggable="true"]{cursor:grab;touch-action:pan-y}
 .client-section-tabs [data-client-layout-tab].client-tab-dragging{opacity:.45;outline:2px dashed #2563eb;outline-offset:-3px}
-@media(max-width:380px){.client-section-tabs .client-tab-size-large{font-size:11px!important}}
+@media(max-width:380px){.client-layout-toolbar{padding:8px}.client-layout-item{gap:4px}.client-layout-item select{max-width:92px}.client-section-tabs .client-tab-size-large{font-size:11px!important}}
 </style>
 
-
+<style id="sonaa-editor-compact-controls">
+/* Compact editing workspace: preserve the canvas and make controls precise. */
+.sonaa-unified-editor-panel{max-height:26vh!important;overflow-y:auto!important;overscroll-behavior:contain!important;padding:6px 8px calc(6px + env(safe-area-inset-bottom))!important;gap:4px!important}
+.sonaa-unified-editor-panel .editor-controls{gap:4px!important}
+.sonaa-unified-editor-panel label{gap:3px!important;font-size:10px!important}
+.sonaa-unified-editor-panel input[type=range]{width:58px!important}
+.sonaa-unified-editor-panel button{padding:5px 7px!important;font-size:10px!important;min-height:28px}
+.sonaa-unified-editor-panel #client-editor-collapse-row,.sonaa-unified-editor-panel #fanni-editor-collapse-row,.sonaa-unified-editor-panel #admin-editor-collapse-row,.sonaa-unified-editor-panel #sonaa-standalone-collapse-row{margin-bottom:4px!important}
+.sonaa-editor-nudge{display:flex;align-items:center;gap:4px;flex-wrap:wrap;padding:4px 0;border-top:1px solid #ffffff24;margin-top:4px}
+.sonaa-editor-nudge button{min-width:30px;min-height:30px;background:#1e40af;color:#fff;border-radius:7px;font-weight:900}
+.sonaa-editor-nudge .sonaa-size-btn{background:#0f766e}
+</style>
 </head>
 <body class="min-h-screen antialiased">
 <div id="app"></div>
 <div id="toast" class="fixed bottom-[88px] left-3 right-3 z-[200] pointer-events-none"></div>
-
+<script>
+(function(){try{if(new URLSearchParams(location.search).get('adminLayout')!=='1')return;function report(kind,error){var raw=String(error&&((error.stack)||(error.message))||error||'Unknown error').slice(0,1400);console.error('[Sonaa layout editor '+kind+']',error);var show=function(){var app=document.getElementById('app');if(!app)return;var safe=raw.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');app.innerHTML='<main dir="rtl" style="min-height:100vh;padding:24px;background:#f8fafc;color:#0f172a;font-family:system-ui,sans-serif"><section style="max-width:760px;margin:8vh auto;background:white;border:1px solid #fecaca;border-radius:18px;padding:22px;box-shadow:0 8px 30px #0f172a12"><h1 style="font-size:20px;font-weight:900;color:#b91c1c">تعذر فتح محرر التعديل</h1><p style="margin:10px 0;color:#475569">ظهر خطأ أثناء تشغيل محرر اللوحة. ابعت صورة الرسالة دي للدعم.</p><pre style="direction:ltr;text-align:left;white-space:pre-wrap;overflow-wrap:anywhere;background:#f1f5f9;border-radius:10px;padding:12px;font-size:12px">'+safe+'</pre></section></main>';};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',show,{once:true});else show();}window.addEventListener('error',function(e){report('runtime',e.error||e.message);});window.addEventListener('unhandledrejection',function(e){report('promise',e.reason);});}catch(e){console.error(e);}})();
+</script>
 <script>
 'use strict';
 let globalRefreshInProgress=false;
@@ -716,23 +739,47 @@ let state={
   complaintTrackSn:'',complaintTrackName:'',complaintTrackLoading:false,complaintTrackError:'',complaintTrackResults:null,
   showService:false,openCategory:'',searchService:'',
   servicesLoading:true,servicesError:'',servicesLoaded:false,publicContent:{siteName:'صُنّاع',maintenance:false,maintenanceMessage:'',announcement:'',faqs:[]},
-  clientUiLayout:{tabOrder:[],sizes:{},elements:{}},clientAdminRenderingDashboard:false,clientAdminAuthPreview:false,clientLayoutEditorAvailable:false,clientLayoutEditorChecked:true,clientLayoutEditMode:false,clientLayoutDragId:''
+  clientUiLayout:{tabOrder:[],sizes:{},elements:{}},clientAdminRenderingDashboard:false,clientAdminAuthPreview:false,clientLayoutEditorAvailable:false,clientLayoutEditorChecked:false,clientLayoutEditMode:false,clientLayoutDragId:''
 };
 const CLIENT_TAB_DEFINITIONS=[{id:'new',label:'طلب جديد'},{id:'orders',label:'طلباتي'},{id:'complaint',label:'شكوى'}];
 function normalizedClientUiLayout(input){const source=input&&typeof input==='object'&&!Array.isArray(input)?input:{};const allowed=CLIENT_TAB_DEFINITIONS.map(item=>item.id);const order=Array.isArray(source.tabOrder)?[...new Set(source.tabOrder.filter(id=>allowed.includes(id)))]:[];allowed.forEach(id=>{if(!order.includes(id))order.push(id)});const sizes={};if(source.sizes&&typeof source.sizes==='object'&&!Array.isArray(source.sizes))allowed.forEach(id=>{if(['small','medium','large'].includes(source.sizes[id]))sizes[id]=source.sizes[id]});const elements={};if(source.elements&&typeof source.elements==='object'&&!Array.isArray(source.elements)){for(const [key,value] of Object.entries(source.elements).slice(0,500)){if(!/^[a-zA-Z0-9_-]{1,100}$/.test(key)||!value||typeof value!=='object'||Array.isArray(value))continue;const item={};if(Number.isFinite(value.fontSize)&&value.fontSize>=10&&value.fontSize<=36)item.fontSize=value.fontSize;if(Number.isFinite(value.width)&&value.width>=30&&value.width<=100)item.width=value.width;if(typeof value.background==='string'&&/^#[0-9a-fA-F]{6}$/.test(value.background))item.background=value.background;if(['solid','glossy'].includes(value.backgroundFinish))item.backgroundFinish=value.backgroundFinish;if(typeof value.activeBackground==='string'&&/^#[0-9a-fA-F]{6}$/.test(value.activeBackground))item.activeBackground=value.activeBackground;if(typeof value.color==='string'&&/^#[0-9a-fA-F]{6}$/.test(value.color))item.color=value.color;if(Number.isFinite(value.radius)&&value.radius>=0&&value.radius<=40)item.radius=value.radius;if(Number.isFinite(value.scale)&&value.scale>=0.5&&value.scale<=2)item.scale=value.scale;if(Number.isFinite(value.x)&&value.x>=-2000&&value.x<=2000)item.x=value.x;if(Number.isFinite(value.y)&&value.y>=-2000&&value.y<=2000)item.y=value.y;if(Number.isFinite(value.scale)&&value.scale>=0.5&&value.scale<=2)item.scale=value.scale;if(typeof value.text==='string')item.text=value.text.slice(0,200);if(typeof value.hidden==='boolean')item.hidden=value.hidden;if(typeof value.threeD==='boolean')item.threeD=value.threeD;const mobile={};if(value.mobile&&typeof value.mobile==='object'&&!Array.isArray(value.mobile)){const mv=value.mobile;if(Number.isFinite(mv.fontSize)&&mv.fontSize>=10&&mv.fontSize<=36)mobile.fontSize=mv.fontSize;if(Number.isFinite(mv.width)&&mv.width>=30&&mv.width<=100)mobile.width=mv.width;if(typeof mv.background==='string'&&/^#[0-9a-fA-F]{6}$/.test(mv.background))mobile.background=mv.background;if(typeof mv.color==='string'&&/^#[0-9a-fA-F]{6}$/.test(mv.color))mobile.color=mv.color;if(Number.isFinite(mv.radius)&&mv.radius>=0&&mv.radius<=40)mobile.radius=mv.radius;if(Number.isFinite(mv.scale)&&mv.scale>=0.5&&mv.scale<=2)mobile.scale=mv.scale;if(Number.isFinite(mv.x)&&mv.x>=-2000&&mv.x<=2000)mobile.x=mv.x;if(Number.isFinite(mv.y)&&mv.y>=-2000&&mv.y<=2000)mobile.y=mv.y;if(Number.isFinite(mv.scale)&&mv.scale>=0.5&&mv.scale<=2)mobile.scale=mv.scale;if(typeof mv.text==='string')mobile.text=mv.text.slice(0,200);if(typeof mv.hidden==='boolean')mobile.hidden=mv.hidden;if(typeof mv.threeD==='boolean')mobile.threeD=mv.threeD;}if(Object.keys(mobile).length)item.mobile=mobile;if(Object.keys(item).length)elements[key]=item;}}return {tabOrder:order,sizes,elements};}
-function clientTabsInLayoutOrder(){return CLIENT_TAB_DEFINITIONS;}
+function clientTabsInLayoutOrder(){const layout=normalizedClientUiLayout(state.clientUiLayout);return layout.tabOrder.map(id=>CLIENT_TAB_DEFINITIONS.find(item=>item.id===id)).filter(Boolean);}
 function clientTabSizeClass(id){return 'client-tab-size-'+(state.clientUiLayout?.sizes?.[id]||'medium');}
-function isClientAdminLayoutMode(){return false;}
+function isClientAdminLayoutMode(){try{return new URLSearchParams(location.search).get('adminLayout')==='1';}catch{return false;}}
 // Keep layout-editor API requests bounded so a stalled request cannot hold the page in loading state.
-async function loadClientUiLayout(){state.clientUiLayout=normalizedClientUiLayout({});state.clientLayoutEditorAvailable=false;state.clientLayoutEditorChecked=true;state.clientLayoutEditMode=false;}
-function toggleClientLayoutEdit(){}
-function cancelClientLayoutEdit(){}
-function moveClientTab(){}
-function setClientTabSize(){}
-function startClientTabDrag(){}
-function allowClientTabDrop(){}
-function dropClientTab(){}
-function saveClientUiLayout(){}
+async function loadClientUiLayout(){
+ const editorMode=isClientAdminLayoutMode();
+ if(editorMode){
+  const params=new URLSearchParams(location.search),requestedTab=params.get('tab');
+  if(['new','orders','complaint','track'].includes(requestedTab))state.tab=requestedTab;
+  // The editor is a preview UI; the server still enforces root-admin permission on every save.
+  state.clientLayoutEditorAvailable=true;
+  state.clientLayoutEditorChecked=true;
+  render();
+ }
+ const timedFetch=async(url,options={})=>{const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),8000);try{return await fetch(url,{...options,signal:controller.signal,cache:'no-store'});}finally{clearTimeout(timer);}};
+ try{
+  const response=await timedFetch('/api/admin/client-layout');
+  if(!response.ok)throw new Error('تعذر تحميل ترتيب أزرار العميل');
+  const data=await response.json();state.clientUiLayout=normalizedClientUiLayout(data.layout);
+ }catch(error){log('تعذر تحميل ترتيب لوحة العميل:',error.name==='AbortError'?'انتهت مهلة تحميل التخطيط':error.message);}
+ state.clientLayoutEditorChecked=true;
+ render();
+}
+function toggleClientLayoutEdit(){if(!state.clientLayoutEditorAvailable)return;state.clientLayoutEditMode=!state.clientLayoutEditMode;state.clientLayoutDragId='';render();}
+function cancelClientLayoutEdit(){loadClientUiLayout().then(()=>{state.clientLayoutEditMode=false;render();});}
+function moveClientTab(id,delta){const order=clientTabsInLayoutOrder().map(item=>item.id);const from=order.indexOf(id),to=from+delta;if(from<0||to<0||to>=order.length)return;[order[from],order[to]]=[order[to],order[from]];state.clientUiLayout=normalizedClientUiLayout({...state.clientUiLayout,tabOrder:order});render();}
+function setClientTabSize(id,size){if(!['small','medium','large'].includes(size))return;state.clientUiLayout=normalizedClientUiLayout({...state.clientUiLayout,sizes:{...(state.clientUiLayout.sizes||{}),[id]:size}});render();}
+function startClientTabDrag(event,id){if(!state.clientLayoutEditMode){event.preventDefault();return;}state.clientLayoutDragId=id;if(event.dataTransfer){event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',id);}}
+function allowClientTabDrop(event){if(state.clientLayoutEditMode)event.preventDefault();}
+function dropClientTab(event,targetId){if(!state.clientLayoutEditMode)return;event.preventDefault();event.stopPropagation();const sourceId=state.clientLayoutDragId||(event.dataTransfer?.getData('text/plain')||'');const order=clientTabsInLayoutOrder().map(item=>item.id);if(!sourceId||sourceId===targetId||!order.includes(sourceId)||!order.includes(targetId)){state.clientLayoutDragId='';return;}const from=order.indexOf(sourceId);order.splice(from,1);order.splice(order.indexOf(targetId),0,sourceId);state.clientUiLayout=normalizedClientUiLayout({...state.clientUiLayout,tabOrder:order});state.clientLayoutDragId='';render();}
+async function saveClientUiLayout(){const button=document.getElementById('save-client-layout');if(button){button.disabled=true;button.textContent='جاري الحفظ...';}try{const token=localStorage.getItem('admin_token_v3')||'';if(!token)throw new Error('سجّل دخول المدير الرئيسي في لوحة الإدارة أولًا.');const response=await fetch('/api/admin/client-layout',{method:'PUT',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({layout:normalizedClientUiLayout(state.clientUiLayout)})});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.message||'تعذر حفظ الترتيب؛ تأكد من صلاحية المدير الرئيسي.');state.clientUiLayout=normalizedClientUiLayout(data.layout);state.clientLayoutEditMode=false;showToast(data.message||'تم حفظ ترتيب أزرار لوحة العميل للجميع','success');}catch(error){showToast(error.message||'تعذر حفظ ترتيب أزرار العميل.');}finally{render();}}
+function renderClientLayoutEditor(){if(isClientAdminLayoutMode())return '';if(!state.clientLayoutEditorAvailable)return '';if(!state.clientLayoutEditMode)return '<div class="mt-2 flex justify-end"><button type="button" onclick="toggleClientLayoutEdit()" class="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[10px] font-extrabold text-blue-800">↕ ترتيب أزرار العميل</button></div>';return '<div class="client-layout-toolbar"><div class="flex items-start justify-between gap-2"><div><b class="text-[12px]">ترتيب أزرار لوحة العميل</b><p class="mt-1 text-[10px] leading-5">اسحب الزر لمكانه على الكمبيوتر، أو استخدم الأسهم على الموبايل. الترتيب بعد الحفظ هيظهر لكل العملاء.</p></div></div><div class="mt-2">'+clientTabsInLayoutOrder().map((item,index)=>'<div class="client-layout-item"><strong>'+escHtml(item.label)+'</strong><button type="button" aria-label="تحريك '+escAttr(item.label)+' لأعلى" title="لأعلى" '+(index===0?'disabled':'')+' onclick="moveClientTab(\''+item.id+'\',-1)">↑</button><button type="button" aria-label="تحريك '+escAttr(item.label)+' لأسفل" title="لأسفل" '+(index===CLIENT_TAB_DEFINITIONS.length-1?'disabled':'')+' onclick="moveClientTab(\''+item.id+'\',1)">↓</button><select aria-label="حجم زر '+escAttr(item.label)+'" onchange="setClientTabSize(\''+item.id+'\',this.value)"><option value="small" '+(clientTabSizeClass(item.id)==='client-tab-size-small'?'selected':'')+'>صغير</option><option value="medium" '+(clientTabSizeClass(item.id)==='client-tab-size-medium'?'selected':'')+'>متوسط</option><option value="large" '+(clientTabSizeClass(item.id)==='client-tab-size-large'?'selected':'')+'>كبير</option></select></div>').join('')+'</div><div class="mt-3 flex gap-2"><button id="save-client-layout" type="button" onclick="saveClientUiLayout()" class="client-layout-save flex-1">حفظ للجميع</button><button type="button" onclick="cancelClientLayoutEdit()">إلغاء</button></div></div>';}
+function getCat(service){return CATEGORIES.find(c=>c.services.includes(service))||null;}
+function captureScrollPosition(){
+  const list=document.getElementById('serviceList');
+  return {pageY:window.scrollY||window.pageYOffset||0,listTop:list?list.scrollTop:0};
+}
 function restoreScrollPosition(position){
   if(!position)return;
   const list=document.getElementById('serviceList');
@@ -896,7 +943,7 @@ function notificationPanel(){
 }
 document.addEventListener('click',function(event){var item=event.target.closest('[data-notification-id]');if(item)openNotification(item.getAttribute('data-notification-id'));});
 document.addEventListener('focusout',function(){if(!clientLiveRenderPending||!state.account||!['orders','track'].includes(state.tab))return;setTimeout(function(){if(clientLiveRenderPending&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)){clientLiveRenderPending=false;const scrollY=window.scrollY||window.pageYOffset||0;render();window.scrollTo({top:scrollY,left:0,behavior:'instant'});focusClientPostAction();}},0);});
-function renderClientAdminLayoutPage(){document.getElementById('app').innerHTML='<main class="min-h-screen bg-slate-50 px-3 py-6"><section class="mx-auto max-w-[640px] rounded-2xl border border-blue-100 bg-white p-4 shadow-lg"><div class="mb-3 flex items-center gap-3"><div class="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-700 text-xl text-white">🏠</div><div><h1 class="text-lg font-black text-slate-900">تعديل لوحة العميل</h1><p class="mt-1 text-xs font-bold text-slate-500">رتّب أزرار لوحة العميل وحدّد أحجامها، ثم احفظ التغييرات للجميع.</p></div></div>'++'</section></main>';}
+function renderClientAdminLayoutPage(){document.getElementById('app').innerHTML='<main class="min-h-screen bg-slate-50 px-3 py-6"><section class="mx-auto max-w-[640px] rounded-2xl border border-blue-100 bg-white p-4 shadow-lg"><div class="mb-3 flex items-center gap-3"><div class="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-700 text-xl text-white">🏠</div><div><h1 class="text-lg font-black text-slate-900">تعديل لوحة العميل</h1><p class="mt-1 text-xs font-bold text-slate-500">رتّب أزرار لوحة العميل وحدّد أحجامها، ثم احفظ التغييرات للجميع.</p></div></div>'+renderClientLayoutEditor()+'</section></main>';}
 function render(){
   if(isClientAdminLayoutMode()&&!state.clientAdminRenderingDashboard){if(!state.clientLayoutEditorChecked){document.getElementById('app').innerHTML='<main class="min-h-screen flex items-center justify-center bg-slate-50 p-5"><div class="rounded-2xl bg-white p-5 font-bold text-blue-900 shadow">جاري التحقق من صلاحية الأدمن...</div></main>';return;}if(!state.clientLayoutEditorAvailable){document.getElementById('app').innerHTML='<main class="min-h-screen flex items-center justify-center bg-slate-50 p-5"><div class="rounded-2xl bg-white p-5 text-center shadow"><h1 class="font-black text-slate-900">صلاحية غير كافية</h1><p class="mt-2 text-sm text-slate-600">افتح الصفحة من لوحة الأدمن الرئيسي بعد تسجيل الدخول.</p></div></main>';return;}state.clientAdminRenderingDashboard=true;state.accountToken='';state.accountInitializing=false;const clientAdminView=new URLSearchParams(location.search).get('view')||'dashboard';if(['login','register'].includes(clientAdminView)){state.account=null;state.accountAuthMode=clientAdminView;state.clientAdminAuthPreview=true;}else{state.account={name:'معاينة لوحة العميل',phone:'',area:'',address:''};state.clientLayoutEditMode=true;}}
   if((forceClientRegistration||state.clientAdminAuthPreview)&&!state.account){renderAccountGate();return;}
@@ -947,7 +994,7 @@ function render(){
         <button type="button" data-client-layout-tab="${t.id}" ${state.clientLayoutEditMode?`draggable="true" ondragstart="startClientTabDrag(event,'${t.id}')" ondragover="allowClientTabDrop(event)" ondrop="dropClientTab(event,'${t.id}')" ondragend="state.clientLayoutDragId='';this.classList.remove('client-tab-dragging')"`:''} onclick="if(!state.clientLayoutEditMode)setTab('${t.id}')" class="${clientTabSizeClass(t.id)} flex-1 h-11 rounded-xl text-[12px] font-extrabold transition-colors ${state.tab===t.id?'tab-active':'tab-idle'} ${state.clientLayoutEditMode?'border border-dashed border-blue-300':''}">${state.clientLayoutEditMode?'<span aria-hidden="true" class="ml-1">⠿</span>':''}${t.label}</button>
       `).join('')}
     </div>
-    ${}
+    ${renderClientLayoutEditor()}
     ${state.tab==='new'?`
       ${!state.sn?`
       <div class="mt-4 space-y-3 animate-fade client-new-order">
@@ -1638,7 +1685,24 @@ document.addEventListener('DOMContentLoaded',()=>{
 render();
 </script>
 
-<script>async function handleGlobalRefresh(){let button=document.getElementById('global-refresh');if(globalRefreshInProgress||button?.disabled)return;globalRefreshInProgress=true;if(button){button.disabled=true;button.classList.add('is-refreshing');}try{if(!state.account){await Promise.allSettled([loadServices(),loadPublicContent()]);showToast('تم تحديث البيانات','success');}else{await refreshClientPage();}}finally{globalRefreshInProgress=false;button=document.getElementById('global-refresh');if(button){button.disabled=false;button.classList.remove('is-refreshing');}}}
+<script>async function handleGlobalRefresh(){let button=document.getElementById('global-refresh');if(globalRefreshInProgress||button?.disabled)return;globalRefreshInProgress=true;if(button){button.disabled=true;button.classList.add('is-refreshing');}try{if(!state.account){await Promise.allSettled([loadServices(),loadPublicContent()]);showToast('تم تحديث البيانات','success');}else{await refreshClientPage();}}finally{globalRefreshInProgress=false;button=document.getElementById('global-refresh');if(button){button.disabled=false;button.classList.remove('is-refreshing');}}}</script>
+
+
+<style>
+body.client-visual-editor{padding-bottom:180px}
+.client-visual-editor #app [data-sonaa-editor-key]{transition:outline-color .12s,box-shadow .12s;touch-action:pan-y;cursor:grab}
+.client-visual-editor #app [data-sonaa-editor-key]:hover{outline:2px dashed #2563eb!important;outline-offset:2px;cursor:pointer}
+.client-visual-editor #app [data-sonaa-editor-selected="1"]{outline:3px solid #f59e0b!important;outline-offset:3px;box-shadow:0 0 0 5px #f59e0b26!important}
+#client-visual-editor-toolbar{position:fixed;z-index:99999;bottom:0;left:0;right:0;max-height:60vh;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;background:#0b1b3a;color:#fff;padding:10px 12px calc(10px + env(safe-area-inset-bottom));box-shadow:0 -8px 28px #0b1b3a38;font-family:Cairo,sans-serif}
+#client-visual-editor-toolbar.editor-collapsed>*:not(#client-editor-collapse-row){display:none!important}
+#client-visual-editor-toolbar .editor-controls{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+#client-visual-editor-toolbar label{font-size:11px;font-weight:800;display:flex;align-items:center;gap:5px}
+#client-visual-editor-toolbar input[type=range]{width:90px;accent-color:#60a5fa}
+#client-visual-editor-toolbar input[type=color]{width:32px;height:30px;padding:2px;border:0;border-radius:7px;background:white}
+#client-visual-editor-toolbar button{border:1px solid #ffffff35;border-radius:9px;padding:7px 10px;font-size:11px;font-weight:900}
+#client-visual-editor-toolbar .editor-save{background:#10b981;color:#052e24}
+#client-visual-editor-toolbar .editor-cancel{background:#334155}
+#client-visual-editor-toolbar .editor-reset{background:#7f1d1d}
 
 
 /* Align the customer's inner dashboard controls and order section with the technician dashboard. */
@@ -1786,7 +1850,241 @@ render();
 }
 
 </style>
+<script>
+(function(){
+  const preview=()=>{try{return new URLSearchParams(location.search).get('adminLayout')==='1'}catch(_){return false}};
+  const editing=preview();
+  if(editing)document.body.classList.add('client-visual-editor');
+  let selected=null, selectedKey='', applying=false;
+  const editableSelector='header,main,section,article,form,input,select,textarea,img,svg,div,span,.panel,.client-order-panel,.client-new-order,.client-section-tabs,button,a,h1,h2,h3,h4,p,label,.rounded-xl,.rounded-2xl';
+  function stableKey(el){
+    if(el.id)return ('id_'+el.id).replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,100);
+    const parts=[];let node=el;
+    while(node&&node.id!=='app'&&parts.length<5){const cls=[...node.classList].filter(x=>!x.includes(':')&&!x.startsWith('hover:')).slice(0,2).join('_');let index=0;if(node.parentElement)index=[...node.parentElement.children].filter(n=>n.tagName===node.tagName).indexOf(node);parts.unshift(node.tagName.toLowerCase()+(cls?'_'+cls:'')+'_'+Math.max(0,index));node=node.parentElement;}
+    return ('p_'+parts.join('_')).replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,100);
+  }
+  function getLayout(){return state.clientUiLayout||{tabOrder:[],sizes:{},elements:{}}}
+  const editorViewport=()=> 'shared';
+  const responsiveStyle=item=>item;
+  function saveResponsiveStyle(item,prop,value){if(value===null||value===''){delete item[prop];if(prop==='x')delete item.xPercent;if(prop==='y')delete item.yPercent;}else{item[prop]=value;if(prop==='x')item.xPercent=Number(value)/14.4;if(prop==='y')item.yPercent=Number(value)/9;}return editorContainerMeta(item,selected);}
+  function clearResponsiveStyle(item){Object.keys(item).forEach(k=>delete item[k]);return item;}
+  function applyEditorPosition(el,pos){
+ const parent=el&&el.parentElement;
+ const rect=parent?parent.getBoundingClientRect():{width:window.innerWidth,height:window.innerHeight};
+ const xPercent=Number.isFinite(pos.xPercent)?pos.xPercent:Number(pos.x||0)/14.4;
+ const yPercent=Number.isFinite(pos.yPercent)?pos.yPercent:Number(pos.y||0)/9;
+ // Individual translate keeps existing transform/3D effects intact; offsets scale with the real parent container.
+ el.style.translate=(Math.max(1,rect.width)*xPercent/100)+'px '+(Math.max(1,rect.height)*yPercent/100)+'px';
+ if(pos.wPercent!==undefined){el.style.width=pos.wPercent+'%';el.style.maxWidth='100%';}
+ if(pos.hPercent!==undefined)el.style.height=pos.hPercent+'%';
+ if(pos.zIndex!==undefined)el.style.zIndex=String(pos.zIndex);
+}
+function editorContainerMeta(item,el){
+ const parent=el&&el.parentElement;
+ if(!parent)return item;
+ const id=String(parent.id||parent.dataset.adminLayoutKey||parent.dataset.sonaaEditorKey||parent.dataset.fanniEditorKey||parent.dataset.sonaaStandaloneKey||parent.tagName||'container').replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,100);
+ item.containerId=id||'container';item.anchor=item.anchor||'top-left';return item;
+}
 
+function sonaaEditorColorFor3D(el){
+ if(!el)return '#2563eb';
+ const value=window.getComputedStyle(el).backgroundColor||'';
+ const m=value.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)/i);
+ if(m&&!(m[4]!==undefined&&Number(m[4])<0.05))return '#'+[m[1],m[2],m[3]].map(v=>Number(v).toString(16).padStart(2,'0')).join('');
+ return el.matches('button,a,[role="button"],input[type="button"],input[type="submit"],.btn,[class*="btn"]')?'#2563eb':'#f8fafc';
+}
+function sonaaEditorApplySurface(el,style){
+ if(!el||!style)return;
+ const cssId='sonaa-editor-button-state-css';
+ if(!document.getElementById(cssId)){
+  const css=document.createElement('style');css.id=cssId;
+  css.textContent='[data-sonaa-editor-surface="1"][data-sonaa-editor-finish="glossy"]{background:linear-gradient(135deg,var(--sonaa-editor-dark) 0%,var(--sonaa-editor-base-bg) 28%,var(--sonaa-editor-light) 52%,var(--sonaa-editor-base-bg) 76%,var(--sonaa-editor-dark) 100%)!important}[data-sonaa-editor-surface="1"][data-sonaa-editor-finish="solid"]{background:var(--sonaa-editor-base-bg)!important}[data-sonaa-editor-surface="1"][data-sonaa-editor-3d="1"]{box-shadow:0 4px 0 var(--sonaa-editor-dark),0 7px 12px color-mix(in srgb,var(--sonaa-editor-base-bg) 28%,transparent),inset 0 1px 0 #ffffff85!important}[data-sonaa-editor-has-active-bg="1"]:is(:active,.active,[aria-pressed="true"],[aria-selected="true"]):not([data-sonaa-editor-3d="1"]){background:var(--sonaa-editor-active-bg)!important;filter:none!important}[data-sonaa-editor-has-active-bg="1"][data-sonaa-editor-3d="1"][data-sonaa-editor-finish="glossy"]:is(:active,.active,[aria-pressed="true"],[aria-selected="true"]){background:linear-gradient(135deg,var(--sonaa-editor-active-dark) 0%,var(--sonaa-editor-active-bg) 28%,var(--sonaa-editor-active-light) 52%,var(--sonaa-editor-active-bg) 76%,var(--sonaa-editor-active-dark) 100%)!important;box-shadow:0 2px 0 var(--sonaa-editor-active-dark),0 4px 8px color-mix(in srgb,var(--sonaa-editor-active-bg) 28%,transparent),inset 0 1px 0 #ffffff70!important;filter:none!important;transform:translateY(2px)}[data-sonaa-editor-has-active-bg="1"][data-sonaa-editor-3d="1"][data-sonaa-editor-finish="solid"]:is(:active,.active,[aria-pressed="true"],[aria-selected="true"]){background:var(--sonaa-editor-active-bg)!important;box-shadow:0 2px 0 var(--sonaa-editor-active-dark),0 4px 8px color-mix(in srgb,var(--sonaa-editor-active-bg) 28%,transparent),inset 0 1px 0 #ffffff70!important;filter:none!important;transform:translateY(2px)}button[data-sonaa-editor-colored="1"]:hover,a[data-sonaa-editor-colored="1"]:hover,[role="button"][data-sonaa-editor-colored="1"]:hover,input[type="button"][data-sonaa-editor-colored="1"]:hover,input[type="submit"][data-sonaa-editor-colored="1"]:hover{filter:brightness(1.1) saturate(1.08)!important}button[data-sonaa-editor-colored="1"]:active,a[data-sonaa-editor-colored="1"]:active,[role="button"][data-sonaa-editor-colored="1"]:active,input[type="button"][data-sonaa-editor-colored="1"]:active,input[type="submit"][data-sonaa-editor-colored="1"]:active{filter:brightness(.66) saturate(1.2)!important}button[data-sonaa-editor-colored="1"].active,a[data-sonaa-editor-colored="1"].active,[role="button"][data-sonaa-editor-colored="1"].active,button[data-sonaa-editor-colored="1"][aria-pressed="true"],button[data-sonaa-editor-colored="1"][aria-selected="true"]{filter:brightness(.88) saturate(1.12)!important}button[data-sonaa-editor-colored="1"],a[data-sonaa-editor-colored="1"],[role="button"][data-sonaa-editor-colored="1"]{transition:filter .12s ease,transform .12s ease}';
+  document.head.appendChild(css);
+ }
+ if(!el.dataset.sonaaEditorOriginalBg){
+  const computed=window.getComputedStyle(el).backgroundColor||'';
+  const m=computed.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)/i);
+  if(m&&!(m[4]!==undefined&&Number(m[4])===0))el.dataset.sonaaEditorOriginalBg='#'+[m[1],m[2],m[3]].map(v=>Number(v).toString(16).padStart(2,'0')).join('');
+ }
+ const isInteractive=el.matches('button,a,[role="button"],input[type="button"],input[type="submit"]');
+ const validHex=value=>typeof value==='string'&&/^#[0-9a-f]{6}$/i.test(value);
+ const configured=validHex(style.background),activeConfigured=validHex(style.activeBackground);
+ const useSurface=configured||style.threeD===true||activeConfigured;
+ if(useSurface){
+  const c=configured?style.background:(el.dataset.sonaaEditorOriginalBg||(isInteractive?'#2563eb':'#f8fafc'));
+  el.dataset.sonaaEditorSurface='1';el.style.setProperty('--sonaa-editor-base-bg',c);el.dataset.sonaaEditorFinish=style.backgroundFinish==='solid'?'solid':'glossy';
+  const rgb=parseInt(c.slice(1),16),channels=[(rgb>>16)&255,(rgb>>8)&255,rgb&255];
+  el.style.setProperty('--sonaa-editor-light','#'+channels.map(v=>Math.min(255,Math.round(v+(255-v)*.24)).toString(16).padStart(2,'0')).join(''));
+  el.style.setProperty('--sonaa-editor-dark','#'+channels.map(v=>Math.round(v*.62).toString(16).padStart(2,'0')).join(''));
+  if(style.threeD===true)el.dataset.sonaaEditor3d='1';else delete el.dataset.sonaaEditor3d;
+  if(activeConfigured&&isInteractive){
+   const argb=parseInt(style.activeBackground.slice(1),16),ac=[(argb>>16)&255,(argb>>8)&255,argb&255];
+   el.dataset.sonaaEditorHasActiveBg='1';el.style.setProperty('--sonaa-editor-active-bg',style.activeBackground);
+   el.style.setProperty('--sonaa-editor-active-light','#'+ac.map(v=>Math.min(255,Math.round(v+(255-v)*.24)).toString(16).padStart(2,'0')).join(''));
+   el.style.setProperty('--sonaa-editor-active-dark','#'+ac.map(v=>Math.round(v*.62).toString(16).padStart(2,'0')).join(''));
+  }else{
+   delete el.dataset.sonaaEditorHasActiveBg;
+   ['--sonaa-editor-active-bg','--sonaa-editor-active-light','--sonaa-editor-active-dark'].forEach(prop=>el.style.removeProperty(prop));
+  }
+  if(isInteractive)el.dataset.sonaaEditorColored='1';
+  if(style.threeD===true&&(el.tagName==='BUTTON'||el.tagName==='A'))el.style.setProperty('border-bottom-color',el.style.getPropertyValue('--sonaa-editor-dark'),'important');
+ }else{
+  delete el.dataset.sonaaEditorSurface;delete el.dataset.sonaaEditorFinish;delete el.dataset.sonaaEditor3d;delete el.dataset.sonaaEditorHasActiveBg;delete el.dataset.sonaaEditorColored;
+  ['--sonaa-editor-base-bg','--sonaa-editor-light','--sonaa-editor-dark','--sonaa-editor-active-bg','--sonaa-editor-active-light','--sonaa-editor-active-dark'].forEach(prop=>el.style.removeProperty(prop));
+ }
+ if(style.threeD===false)el.style.setProperty('box-shadow','none','important');
+}
+
+function applyLayout(){
+    if(applying||!document.getElementById('app'))return;applying=true;
+    try{
+      document.querySelectorAll('#app [data-sonaa-editor-key]').forEach(el=>{
+        const key=el.dataset.sonaaEditorKey,base=getLayout().elements?.[key];if(!base)return;const style=responsiveStyle(base);
+        if(style.fontSize)el.style.fontSize=style.fontSize+'px';
+        if(style.width) {el.style.width=style.width+'%';el.style.maxWidth='100%';}
+        sonaaEditorApplySurface(el,style); if(style.color){el.style.setProperty('color',style.color,'important');el.querySelectorAll('*').forEach(child=>{if(!['IMG','VIDEO','CANVAS'].includes(child.tagName))child.style.setProperty('color',style.color,'important');});}
+        if(style.radius!==undefined)el.style.borderRadius=style.radius+'px';
+        if(style.scale!==undefined)el.style.scale=String(style.scale);
+        if(style.xPercent!==undefined||style.yPercent!==undefined||style.x!==undefined||style.y!==undefined)applyEditorPosition(el,style);
+        if(typeof style.text==='string'&&el.children.length===0&&el.textContent!==style.text)el.textContent=style.text;
+        if(style.hidden)el.dataset.sonaaEditorHidden='1';else delete el.dataset.sonaaEditorHidden;
+        el.style.display=style.hidden?'none':'';
+      });
+    }finally{applying=false}
+  }
+  window.addEventListener('resize',()=>requestAnimationFrame(applyLayout),{passive:true});
+  function elementFingerprint(el){
+    const parts=[];let node=el;
+    while(node&&node.id!=='app'&&parts.length<12){
+      const cls=[...node.classList].filter(x=>!x.includes(':')&&!x.startsWith('hover:')).sort().slice(0,4).join('.');
+      const siblings=node.parentElement?[...node.parentElement.children].filter(n=>n.tagName===node.tagName):[];
+      parts.unshift(node.tagName.toLowerCase()+(node.id?'#'+node.id:'')+(cls?'.'+cls:'')+'['+Math.max(0,siblings.indexOf(node))+']');
+      node=node.parentElement;
+    }
+    return parts.join('/');
+  }
+  function keyHash(value){
+    let hash=2166136261;
+    for(let i=0;i<value.length;i++){hash^=value.charCodeAt(i);hash=Math.imul(hash,16777619);}
+    return (hash>>>0).toString(36);
+  }
+  function markElements(){
+    const seen=new Set();
+    document.querySelectorAll('#app '+editableSelector).forEach(el=>{
+      if(el.closest('#client-visual-editor-toolbar'))return;
+      let key=el.dataset.sonaaEditorKey||stableKey(el);
+      if(seen.has(key)){
+        const base=key.slice(0,76);
+        key=base+'_u'+keyHash(elementFingerprint(el));
+        let suffix=1;
+        while(seen.has(key)){key=base+'_u'+keyHash(elementFingerprint(el))+'_'+suffix++;}
+        el.dataset.sonaaEditorKey=key;
+      }else if(!el.dataset.sonaaEditorKey){el.dataset.sonaaEditorKey=key;}
+      seen.add(key);
+    });
+    applyLayout();
+  }
+  function selectedStyle(){return responsiveStyle(getLayout().elements?.[selectedKey]||{})}
+  const clientEditorHistory=[];let clientEditorHistoryAt=0;
+  function rememberClientEditorStep(){const now=Date.now();if(now-clientEditorHistoryAt<450)return;clientEditorHistoryAt=now;clientEditorHistory.push(JSON.parse(JSON.stringify(getLayout())));if(clientEditorHistory.length>40)clientEditorHistory.shift();}
+  function undoClientEditorStep(){const previous=clientEditorHistory.pop();if(!previous){alert('مفيش خطوة سابقة للتراجع عنها.');return;}state.clientUiLayout=normalizedClientUiLayout(previous);applyLayout();updateToolbar();}
+  function setStyle(prop,value){
+    if(!selectedKey)return;rememberClientEditorStep();
+    const all={...(getLayout().elements||{})},source={...((all[selectedKey])||{})};if(prop==='threeD'&&value===true&&!source.background)source.background=sonaaEditorColorFor3D(selected);const item=saveResponsiveStyle(source,prop,value);
+    if(Object.keys(item).length)all[selectedKey]=item;else delete all[selectedKey];
+    state.clientUiLayout=normalizedClientUiLayout({...getLayout(),elements:all});
+    applyLayout();updateToolbar();
+  }
+  function toolbar(){
+    if(document.getElementById('client-visual-editor-toolbar'))return;
+    const bar=document.createElement('div');bar.id='client-visual-editor-toolbar';bar.classList.add('sonaa-unified-editor-panel');bar.innerHTML=
+      '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:7px"><div><b style="font-size:13px">✦ تعديل واجهة صُنّاع مباشرة</b><div id="client-editor-selected-label" style="font-size:10px;color:#cbd5e1;margin-top:2px">اضغط على أي عنصر في اللوحة لتعديله</div></div><button type="button" class="editor-cancel" id="client-editor-cancel">إلغاء</button></div>'+
+      '<div class="editor-controls"><label>حجم الخط <input id="client-editor-font" type="range" min="10" max="36" value="16"><span id="client-editor-font-val">16</span></label>'+
+      '<label>عرض العنصر <input id="client-editor-width" type="range" min="30" max="100" value="100"><span id="client-editor-width-val">100%</span></label>'+
+      '<label>الخلفية <input id="client-editor-bg" type="color" value="#ffffff"></label><label>شكل اللون <select id="client-editor-finish" style="color:#0f172a;border-radius:7px;padding:5px"><option value="solid">سادة</option><option value="glossy">لامع متدرّج</option></select></label><label>لون الزر عند الضغط <input id="client-editor-active-bg" type="color" value="#1d4ed8"></label><button type="button" id="client-editor-3d">استعادة تأثير 3D</button><label>لون النص <input id="client-editor-color" type="color" value="#0f172a"></label>'+
+      '<label>استدارة <input id="client-editor-radius" type="range" min="0" max="40" value="12"><span id="client-editor-radius-val">12</span></label>'+
+      '<label>تحريك أفقي <input id="client-editor-x" type="range" min="-2000" max="2000" value="0"><span id="client-editor-x-val">0</span></label><label>تحريك رأسي <input id="client-editor-y" type="range" min="-2000" max="2000" value="0"><span id="client-editor-y-val">0</span></label><label style="flex:1 1 180px">تعديل النص <input id="client-editor-text" type="text" maxlength="200" placeholder="اختَر عنصرًا نصيًا" style="width:150px;color:#0f172a;border-radius:7px;padding:5px"></label><button type="button" id="client-editor-apply-text">تطبيق النص</button><button type="button" id="client-editor-hide">إخفاء/إظهار</button><button type="button" class="editor-reset" id="client-editor-reset">مسح تنسيق العنصر</button><button type="button" class="editor-save" id="client-editor-save">حفظ التعديلات للجميع</button></div>'+
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px"><b style="flex-basis:100%;font-size:11px;color:#bfdbfe">صفحات العميل</b><button type="button" id="client-editor-dashboard">لوحة العميل</button><button type="button" id="client-editor-new">طلب جديد</button><button type="button" id="client-editor-orders">طلباتي</button><button type="button" id="client-editor-track">تتبع الطلبات</button><button type="button" id="client-editor-complaint">الشكاوى ومتابعتها</button><button type="button" id="client-editor-login">تسجيل دخول العميل</button><button type="button" id="client-editor-register">تسجيل عميل جديد</button><button type="button" id="client-editor-account">حساب العميل</button><button type="button" id="client-editor-support">دعم العميل</button></div><div style="font-size:10px;color:#cbd5e1;margin-top:6px">وضع معاينة آمن: لا يتم إرسال طلبات أو إنشاء حسابات من أدوات التعديل.</div>';
+    const collapseRow=document.createElement('div');collapseRow.id='client-editor-collapse-row';collapseRow.style.cssText='display:flex;justify-content:flex-start;margin-bottom:8px';collapseRow.innerHTML='<button type="button" id="client-editor-undo" class="editor-cancel" style="margin-left:auto">↶ أندو</button><button type="button" id="client-editor-collapse" class="editor-cancel" aria-expanded="true">طي لوحة المحرر ▲</button>';bar.prepend(collapseRow);collapseRow.style.direction='ltr';collapseRow.querySelector('#client-editor-undo').onclick=undoClientEditorStep;collapseRow.querySelector('#client-editor-collapse').onclick=()=>{const collapsed=bar.classList.toggle('editor-collapsed');collapseRow.querySelector('#client-editor-collapse').textContent=collapsed?'فتح لوحة المحرر ▼':'طي لوحة المحرر ▲';collapseRow.querySelector('#client-editor-collapse').setAttribute('aria-expanded',String(!collapsed));};
+    document.body.appendChild(bar);
+    bar.querySelector('#client-editor-3d').onclick=()=>setStyle('threeD',true);
+    ['font','width','bg','finish','active-bg','color','radius','x','y'].forEach(id=>bar.querySelector('#client-editor-'+id).addEventListener('input',e=>{
+      const prop={font:'fontSize',width:'width',bg:'background','active-bg':'activeBackground',finish:'backgroundFinish',color:'color',radius:'radius',x:'x',y:'y'}[id];
+      const value=['font','width','radius','x','y'].includes(id)?Number(e.target.value):e.target.value;
+      setStyle(prop,value);
+    }));
+    bar.querySelector('#client-editor-dashboard').onclick=()=>location.href='client.html?adminLayout=1';bar.querySelector('#client-editor-new').onclick=()=>location.href='client.html?adminLayout=1&tab=new';bar.querySelector('#client-editor-orders').onclick=()=>location.href='client.html?adminLayout=1&tab=orders';bar.querySelector('#client-editor-track').onclick=()=>location.href='client.html?adminLayout=1&tab=track';bar.querySelector('#client-editor-complaint').onclick=()=>location.href='client.html?adminLayout=1&tab=complaint';bar.querySelector('#client-editor-login').onclick=()=>location.href='client.html?adminLayout=1&view=login';bar.querySelector('#client-editor-register').onclick=()=>location.href='client.html?adminLayout=1&view=register';bar.querySelector('#client-editor-account').onclick=()=>location.href='password.html?role=client&mode=account&adminLayout=1';bar.querySelector('#client-editor-support').onclick=()=>location.href='support.html?role=client&adminLayout=1';
+    bar.querySelector('#client-editor-apply-text').onclick=()=>{if(!selected)return;if(selected.children.length){alert('تعديل النص متاح للعناصر النصية البسيطة فقط حتى لا يتأثر شكل الأيقونات.');return;}setStyle('text',bar.querySelector('#client-editor-text').value.slice(0,200));};
+    bar.querySelector('#client-editor-hide').onclick=()=>setStyle('hidden',!selectedStyle().hidden);
+    bar.querySelector('#client-editor-reset').onclick=()=>{if(!selectedKey)return;const all={...(getLayout().elements||{})},item=clearResponsiveStyle({...((all[selectedKey])||{})});if(Object.keys(item).length)all[selectedKey]=item;else delete all[selectedKey];state.clientUiLayout=normalizedClientUiLayout({...getLayout(),elements:all});applyLayout();updateToolbar();};
+    bar.querySelector('#client-editor-cancel').onclick=()=>{if(confirm('إلغاء وضع التعديل والرجوع للوحة العميل؟'))location.href='client.html';};
+    bar.querySelector('#client-editor-save').onclick=saveVisualLayout;
+  }
+  function updateToolbar(){
+    const bar=document.getElementById('client-visual-editor-toolbar');if(!bar)return;
+    const style=selectedStyle();
+    const label=selected?(selected.innerText||selected.getAttribute('aria-label')||selected.tagName.toLowerCase()).trim().replace(/\s+/g,' ').slice(0,65):'اضغط على أي عنصر في اللوحة لتعديله';
+    bar.querySelector('#client-editor-selected-label').textContent=label;
+    [['font','fontSize',16],['width','width',100],['radius','radius',12],['x','x',0],['y','y',0]].forEach(([id,key,def])=>{const input=bar.querySelector('#client-editor-'+id);input.value=style[key]??def;bar.querySelector('#client-editor-'+id+'-val').textContent=(style[key]??def)+(id==='width'?'%':'');});
+    bar.querySelector('#client-editor-bg').value=style.background||'#ffffff';bar.querySelector('#client-editor-finish').value=style.backgroundFinish||'glossy';bar.querySelector('#client-editor-active-bg').value=style.activeBackground||'#1d4ed8';bar.querySelector('#client-editor-color').value=style.color||'#0f172a';bar.querySelector('#client-editor-text').value=selected&&selected.children.length===0?(style.text??selected.textContent.trim()).slice(0,200):'';bar.querySelector('#client-editor-text').disabled=Boolean(selected&&selected.children.length);
+  }
+  async function saveVisualLayout(){
+    const button=document.getElementById('client-editor-save');button.disabled=true;button.textContent='جاري الحفظ...';
+    try{
+      const token=localStorage.getItem('admin_token_v3')||'';if(!token)throw new Error('جلسة الأدمن غير موجودة؛ ارجع للأدمن وسجّل الدخول.');
+      const response=await fetch('/api/admin/client-layout',{method:'PUT',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({layout:normalizedClientUiLayout(getLayout())})});
+      const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.message||'تعذر حفظ التعديلات.');
+      state.clientUiLayout=normalizedClientUiLayout(data.layout);alert('تم حفظ تعديلات لوحة العميل للجميع.');location.href='client.html';
+    }catch(error){alert(error.message||'تعذر الحفظ.');button.disabled=false;button.textContent='حفظ التعديلات للجميع';}
+  }
+  let pointerDrag=null,clientSuppressClickUntil=0;
+  function selectForEditing(el){
+    if(selected&&selected!==el)delete selected.dataset.sonaaEditorSelected;
+    selected=el;selectedKey=el.dataset.sonaaEditorKey||stableKey(el);el.dataset.sonaaEditorSelected='1';updateToolbar();
+  }
+  document.addEventListener('pointerdown',function(event){
+    if(event.pointerType==='touch')return;
+    if(!editing||event.button!==0||event.target.closest('#client-visual-editor-toolbar'))return;
+    const app=document.getElementById('app');if(!app||!app.contains(event.target))return;
+    const el=event.target.closest(editableSelector);if(!el)return;
+    event.preventDefault();event.stopImmediatePropagation();selectForEditing(el);
+    const st=selectedStyle();pointerDrag={el,startX:event.clientX,startY:event.clientY,baseX:Number(st.x||0),baseY:Number(st.y||0),pointerId:event.pointerId,moved:false};
+    try{el.setPointerCapture(event.pointerId)}catch(_){}
+    el.style.cursor='grabbing';
+  },true);
+  document.addEventListener('pointermove',function(event){
+    if(event.pointerType==='touch')return;
+    if(!pointerDrag||event.pointerId!==pointerDrag.pointerId)return;
+    const dx=event.clientX-pointerDrag.startX,dy=event.clientY-pointerDrag.startY;
+    if(Math.abs(dx)+Math.abs(dy)>2)pointerDrag.moved=true;
+    if(!pointerDrag.moved)return;
+    event.preventDefault();setStyle('x',Math.max(-2000,Math.min(2000,Math.round(pointerDrag.baseX+dx*1440/Math.max(1,(pointerDrag.el.parentElement||document.documentElement).getBoundingClientRect().width)))));setStyle('y',Math.max(-2000,Math.min(2000,Math.round(pointerDrag.baseY+dy*900/Math.max(1,(pointerDrag.el.parentElement||document.documentElement).getBoundingClientRect().height)))));
+  },true);
+  function finishPointerDrag(event){if(!pointerDrag||event.pointerId!==pointerDrag.pointerId)return;if(pointerDrag.moved)clientSuppressClickUntil=Date.now()+700;pointerDrag.el.style.cursor='';try{pointerDrag.el.releasePointerCapture(event.pointerId)}catch(_){}pointerDrag=null;}
+  document.addEventListener('click',function(event){if(Date.now()>clientSuppressClickUntil)return;clientSuppressClickUntil=0;event.preventDefault();event.stopImmediatePropagation()},true);
+  document.addEventListener('pointerup',finishPointerDrag,true);document.addEventListener('pointercancel',finishPointerDrag,true);
+   let clientTouchDrag=null,clientTouchTimer=null;
+   document.addEventListener('touchstart',function(event){if(!editing||event.touches.length!==1||event.target.closest('#client-visual-editor-toolbar'))return;const app=document.getElementById('app');if(!app||!app.contains(event.target))return;const el=event.target.closest(editableSelector);if(!el)return;const t=event.touches[0];const d={el,startX:t.clientX,startY:t.clientY,lastX:t.clientX,lastY:t.clientY,active:false,scrollMode:false,moved:false,baseX:0,baseY:0};clientTouchDrag=d;clientTouchTimer=setTimeout(()=>{if(clientTouchDrag!==d)return;selectForEditing(el);const st=selectedStyle();d.baseX=Number(st.x||0);d.baseY=Number(st.y||0);d.active=true;el.style.cursor='grabbing';},450);},{capture:true,passive:true});
+   document.addEventListener('touchmove',function(event){if(!clientTouchDrag||event.touches.length!==1)return;const t=event.touches[0],d=clientTouchDrag,dx=t.clientX-d.startX,dy=t.clientY-d.startY;if(!d.active){if(Math.abs(dx)+Math.abs(dy)>8){d.scrollMode=true;clearTimeout(clientTouchTimer);clientTouchTimer=null;}d.lastX=t.clientX;d.lastY=t.clientY;return;}event.preventDefault();if(Math.abs(dx)+Math.abs(dy)>2)d.moved=true;setStyle('x',Math.max(-2000,Math.min(2000,Math.round(d.baseX+dx*1440/Math.max(1,(d.el.parentElement||document.documentElement).getBoundingClientRect().width)))));setStyle('y',Math.max(-2000,Math.min(2000,Math.round(d.baseY+dy*900/Math.max(1,(d.el.parentElement||document.documentElement).getBoundingClientRect().height)))));},{capture:true,passive:false});
+   function finishClientTouch(){if(!clientTouchDrag)return;clearTimeout(clientTouchTimer);clientTouchTimer=null;if(clientTouchDrag.active&&clientTouchDrag.moved)clientSuppressClickUntil=Date.now()+700;clientTouchDrag.el.style.cursor='';clientTouchDrag=null;}
+   document.addEventListener('touchend',finishClientTouch,{capture:true,passive:true});document.addEventListener('touchcancel',finishClientTouch,{capture:true,passive:true});
+  document.addEventListener('click',function(event){
+    if(event.target.closest('#client-visual-editor-toolbar'))return;
+    if(!document.body.classList.contains('client-visual-editor'))return;
+    const app=document.getElementById('app');if(!app||!app.contains(event.target))return;
+    /* Keep the preview interactive: buttons and form controls work normally. Use long-press to select them for styling. */
+    const interactive=event.target.closest('button,a');
+    if(interactive){const el=interactive.closest(editableSelector)||interactive;event.preventDefault();event.stopImmediatePropagation();selectForEditing(el);document.querySelectorAll('[data-sonaa-editor-selected="1"]').forEach(n=>{if(n!==el)delete n.dataset.sonaaEditorSelected;});return;}
+    if(event.target.closest('input,select,textarea,label,form'))return;
+    const el=event.target.closest(editableSelector);if(el){event.preventDefault();event.stopImmediatePropagation();selectForEditing(el);document.querySelectorAll('[data-sonaa-editor-selected="1"]').forEach(n=>{if(n!==el)delete n.dataset.sonaaEditorSelected;});}
+    else {event.preventDefault();event.stopImmediatePropagation();}
+  },true);
+  document.addEventListener('submit',e=>{if(document.body.classList.contains('client-visual-editor')){e.preventDefault();e.stopImmediatePropagation();}},true);
+  document.addEventListener('change',e=>{if(document.body.classList.contains('client-visual-editor')&&!e.target.closest('#client-visual-editor-toolbar')&&!e.target.closest('input,select,textarea')){e.preventDefault();e.stopImmediatePropagation();}},true);
+  if(editing)toolbar();markElements();
+  new MutationObserver(()=>{markElements();}).observe(document.getElementById('app'),{childList:true,subtree:true});
+})();
+</script>
 
 <script src="/web-push.js" defer></script>
 <script src="/page-visit.js" defer></script>
@@ -1821,10 +2119,57 @@ render();
 </script>
 
 
-
+<script id="sonaa-editor-precision-controls">
+(function(){
+ const toolbarId="client-visual-editor-toolbar",p="client-editor";
+ function attach(){
+  const bar=document.getElementById(toolbarId);if(!bar||bar.querySelector('.sonaa-editor-nudge'))return;
+  const row=document.createElement('div');row.className='sonaa-editor-nudge';row.setAttribute('aria-label','تحكم دقيق في العنصر المحدد');
+  row.innerHTML='<span style="font-size:10px;font-weight:800;color:#dbeafe">تحريك دقيق</span><button type="button" data-move="up" aria-label="تحريك لأعلى">↑</button><button type="button" data-move="left" aria-label="تحريك لليسار">←</button><button type="button" data-move="down" aria-label="تحريك لأسفل">↓</button><button type="button" data-move="right" aria-label="تحريك لليمين">→</button><span style="font-size:10px;font-weight:800;color:#dbeafe">الحجم</span><button type="button" class="sonaa-size-btn" data-size="down" aria-label="تصغير العنصر">−</button><button type="button" class="sonaa-size-btn" data-size="up" aria-label="تكبير العنصر">+</button>';
+  bar.appendChild(row);
+  row.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.move){const axis=['left','right'].includes(b.dataset.move)?'x':'y',el=bar.querySelector('#'+p+'-'+axis);if(!el)return;const dir={left:-1,right:1,up:-1,down:1}[b.dataset.move];el.value=Math.max(Number(el.min),Math.min(Number(el.max),Number(el.value||0)+dir*2));el.dispatchEvent(new Event('input',{bubbles:true}));}else if(b.dataset.size){const el=bar.querySelector('#'+p+'-width');if(el){el.value=Math.max(Number(el.min),Math.min(Number(el.max),Number(el.value||100)+(b.dataset.size==='up'?3:-3)));el.dispatchEvent(new Event('input',{bubbles:true}));}}});
+ }
+ const mo=new MutationObserver(attach);mo.observe(document.documentElement,{childList:true,subtree:true});attach();
+})();
+</script>
 
 <!-- Sonaa responsive viewport preview for visual layout editors -->
-
+<script>
+(function(){
+  try {
+    const params=new URLSearchParams(location.search);
+    if(params.get('adminLayout')!=='1' || params.get('editorPreviewFrame')==='1') return;
+    const css=document.createElement('style');
+    css.textContent='#sonaa-viewport-preview-launch{position:fixed;z-index:2147483000;left:12px;bottom:14px;border:0;border-radius:12px;padding:12px 15px;background:#0a2342;color:#fff;font:800 13px system-ui;box-shadow:0 5px 20px #0004;cursor:pointer}#sonaa-viewport-preview{position:fixed;inset:0;z-index:2147483001;background:#0a1020ed;display:none;align-items:center;justify-content:center;padding:12px;box-sizing:border-box}#sonaa-viewport-preview.open{display:flex}#sonaa-viewport-preview .svp-shell{height:100%;width:100%;display:flex;flex-direction:column;align-items:center;gap:8px;min-height:0}#sonaa-viewport-preview .svp-tools{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;color:white;font:700 12px system-ui}#sonaa-viewport-preview button{border:0;border-radius:8px;padding:8px 12px;font-weight:800;cursor:pointer}#sonaa-viewport-preview .svp-stage{flex:1;min-height:0;width:100%;display:flex;justify-content:center;align-items:stretch}#sonaa-viewport-preview iframe{height:100%;width:100%;max-width:100%;border:0;border-radius:12px;background:white;box-shadow:0 8px 30px #0005}#sonaa-viewport-preview.mobile .svp-stage iframe{width:min(390px,100%);border:5px solid #111827;border-radius:26px}';
+    document.head.appendChild(css);
+    const launch=document.createElement('button');launch.id='sonaa-viewport-preview-launch';launch.type='button';launch.textContent='📱 معاينة الموبايل / الكمبيوتر';
+    document.body.appendChild(launch);
+    launch.style.display='none';
+    const dockPreviewLaunch=()=>{
+      const panel=document.querySelector('#admin-element-drag-toolbar,#client-visual-editor-toolbar,#fanni-visual-editor-toolbar,#sonaa-standalone-editor');
+      if(!panel){launch.style.display='none';return;}
+      const row=panel.querySelector('#admin-editor-collapse-row,#client-editor-collapse-row,#fanni-editor-collapse-row,#sonaa-standalone-collapse-row')||panel;
+      if(launch.parentElement!==row)row.appendChild(launch);
+      launch.style.cssText='position:static;inset:auto;z-index:auto;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;margin:0 6px;padding:6px 9px;border:1px solid #60a5fa;border-radius:9px;background:#1d4ed8;color:#fff;font:800 10px Cairo,sans-serif;box-shadow:0 3px 0 #102858;cursor:pointer;white-space:normal;max-width:190px';
+      launch.title='معاينة الموبايل والكمبيوتر من داخل لوحة التعديل';
+    };
+    dockPreviewLaunch();
+    new MutationObserver(dockPreviewLaunch).observe(document.documentElement,{childList:true,subtree:true});
+    const overlay=document.createElement('div');overlay.id='sonaa-viewport-preview';overlay.innerHTML='<div class="svp-shell"><div class="svp-tools"><strong>معاينة فعلية حسب عرض الشاشة</strong><button type="button" data-view="mobile">موبايل 390px</button><button type="button" data-view="desktop">كمبيوتر</button><button type="button" data-close>إغلاق المعاينة ✕</button></div><div class="svp-stage"><iframe title="معاينة استجابة الصفحة" loading="lazy"></iframe></div></div>';
+    document.body.appendChild(overlay);
+    const frame=overlay.querySelector('iframe');
+    const url=new URL(location.href);
+    url.searchParams.set('adminLayout','1');
+    url.searchParams.set('editorPreviewFrame','1');
+    url.searchParams.set('editorViewport','mobile');
+    function setView(view){overlay.classList.toggle('mobile',view==='mobile');overlay.querySelectorAll('[data-view]').forEach(b=>{b.style.background=b.dataset.view===view?'#1eb5a6':'#e2e8f0';b.style.color=b.dataset.view===view?'#062b35':'#0f172a'});frame.style.width=view==='mobile'?'min(390px, 100%)':'100%';const target=new URL(url.href);target.searchParams.set('adminLayout','1');target.searchParams.set('editorPreviewFrame','1');target.searchParams.set('editorViewport',view);if(frame.src&&new URL(frame.src).searchParams.get('editorViewport')!==view)frame.src=target.href;}
+    launch.addEventListener('click',()=>{if(!frame.src)frame.src=url.href;overlay.classList.add('open');setView('mobile');});
+    overlay.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));
+    overlay.querySelector('[data-close]').addEventListener('click',()=>overlay.classList.remove('open'));
+    document.addEventListener('keydown',e=>{if(e.key==='Escape')overlay.classList.remove('open');});
+  } catch(e) { console.warn('Sonaa viewport preview unavailable',e); }
+})();
+</script>
 
 </body>
 </html>

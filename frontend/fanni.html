@@ -24,9 +24,13 @@
 html{scroll-behavior:smooth}
 body{margin:0;background:var(--page);color:var(--navy);overflow-x:hidden;-webkit-tap-highlight-color:transparent}
 .fanni-dashboard-tabs{position:sticky;top:var(--sonaa-sticky-header-height,112px);z-index:30;background:var(--page);padding-top:8px;padding-bottom:8px}
+.fanni-layout-toolbar{margin:8px 0 0;padding:10px;border:1px dashed #93b4e5;border-radius:14px;background:linear-gradient(145deg,#eff6ff,#fff);color:#173c6c}
+.fanni-layout-toolbar button,.fanni-layout-toolbar select{min-height:34px;border:1px solid #cbd8e9;border-radius:9px;background:#fff;padding:5px 9px;font-size:11px;font-weight:800}
+.fanni-layout-toolbar .fanni-layout-save{background:linear-gradient(145deg,#2563eb,#173c6c);color:#fff;border-color:#1d4ed8}
+.fanni-layout-item{display:flex;align-items:center;gap:7px;padding:7px 0;border-top:1px solid #dbeafe}.fanni-layout-item:first-child{border-top:0}.fanni-layout-item strong{flex:1;min-width:0;font-size:11px}.fanni-layout-item select{max-width:104px}
 .fanni-dashboard-tabs [data-fanni-layout-tab][draggable="true"]{cursor:grab;touch-action:pan-y}.fanni-dashboard-tabs [data-fanni-layout-tab].fanni-tab-dragging{opacity:.45;outline:2px dashed #2563eb;outline-offset:-3px}
 .fanni-dashboard-tabs .fanni-tab-size-small{font-size:10px!important;padding-inline:4px!important}.fanni-dashboard-tabs .fanni-tab-size-medium{font-size:12px!important}.fanni-dashboard-tabs .fanni-tab-size-large{font-size:13px!important}
-@media(max-width:380px){.fanni-dashboard-tabs .fanni-tab-size-large{font-size:11px!important}}
+@media(max-width:380px){.fanni-layout-toolbar{padding:8px}.fanni-layout-item{gap:4px}.fanni-layout-item select{max-width:92px}.fanni-dashboard-tabs .fanni-tab-size-large{font-size:11px!important}}
 
 button,input,textarea,select{font:inherit}
 button{cursor:pointer;transition:background-color .18s,border-color .18s,transform .18s}
@@ -449,14 +453,27 @@ body:has(.fanni-login-gate) .fanni-app-header,body:has(.fanni-login-gate) nav.fi
 
 </style>
 
-
+<style id="sonaa-editor-compact-controls">
+/* Compact editing workspace: preserve the canvas and make controls precise. */
+.sonaa-unified-editor-panel{max-height:26vh!important;overflow-y:auto!important;overscroll-behavior:contain!important;padding:6px 8px calc(6px + env(safe-area-inset-bottom))!important;gap:4px!important}
+.sonaa-unified-editor-panel .editor-controls{gap:4px!important}
+.sonaa-unified-editor-panel label{gap:3px!important;font-size:10px!important}
+.sonaa-unified-editor-panel input[type=range]{width:58px!important}
+.sonaa-unified-editor-panel button{padding:5px 7px!important;font-size:10px!important;min-height:28px}
+.sonaa-unified-editor-panel #client-editor-collapse-row,.sonaa-unified-editor-panel #fanni-editor-collapse-row,.sonaa-unified-editor-panel #admin-editor-collapse-row,.sonaa-unified-editor-panel #sonaa-standalone-collapse-row{margin-bottom:4px!important}
+.sonaa-editor-nudge{display:flex;align-items:center;gap:4px;flex-wrap:wrap;padding:4px 0;border-top:1px solid #ffffff24;margin-top:4px}
+.sonaa-editor-nudge button{min-width:30px;min-height:30px;background:#1e40af;color:#fff;border-radius:7px;font-weight:900}
+.sonaa-editor-nudge .sonaa-size-btn{background:#0f766e}
+</style>
 </head>
 <body class="min-h-screen antialiased">
 <div id="app"></div>
 <div id="fanniLoadingOverlay" class="fanni-loading-overlay" role="status" aria-live="polite"><main class="account-gate min-h-screen px-4 py-8 flex items-center justify-center"><div class="w-full max-w-[440px] text-center"><div class="account-brand mx-auto mb-5 flex items-center justify-center"><img src="/images/LOGO_UPLOAD_HERE/logo.png" alt="صُنّاع" class="sonaa-logo-svg account-loading-logo"></div><h1 class="text-2xl font-black">صُنّاع</h1><p class="account-slogan mt-1 text-base font-extrabold">كل خدمة تبدأ بخطوة</p><div class="mt-7 inline-flex items-center gap-3 rounded-2xl border border-blue-200 bg-white/90 px-5 py-4 font-extrabold text-blue-900 shadow-xl"><span class="inline-block h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent"></span><span id="fanniLoadingMessage">جاري تحميل البيانات...</span></div></div></main></div>
 <div id="toast" class="fixed bottom-[88px] left-3 right-3 z-[200] pointer-events-none"></div>
 
-
+<script>
+(function(){try{if(new URLSearchParams(location.search).get('adminLayout')!=='1')return;function report(kind,error){var raw=String(error&&((error.stack)||(error.message))||error||'Unknown error').slice(0,1400);console.error('[Sonaa layout editor '+kind+']',error);var show=function(){var app=document.getElementById('app');if(!app)return;var safe=raw.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');app.innerHTML='<main dir="rtl" style="min-height:100vh;padding:24px;background:#f8fafc;color:#0f172a;font-family:system-ui,sans-serif"><section style="max-width:760px;margin:8vh auto;background:white;border:1px solid #fecaca;border-radius:18px;padding:22px;box-shadow:0 8px 30px #0f172a12"><h1 style="font-size:20px;font-weight:900;color:#b91c1c">تعذر فتح محرر التعديل</h1><p style="margin:10px 0;color:#475569">ظهر خطأ أثناء تشغيل محرر اللوحة. ابعت صورة الرسالة دي للدعم.</p><pre style="direction:ltr;text-align:left;white-space:pre-wrap;overflow-wrap:anywhere;background:#f1f5f9;border-radius:10px;padding:12px;font-size:12px">'+safe+'</pre></section></main>';};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',show,{once:true});else show();}window.addEventListener('error',function(e){report('runtime',e.error||e.message);});window.addEventListener('unhandledrejection',function(e){report('promise',e.reason);});}catch(e){console.error(e);}})();
+</script>
 <script>
 'use strict';
 
@@ -743,7 +760,7 @@ let state={
  regSpecialties:[],regAreas:[],regAreaSearch:'',regAreaCustom:'',openSpecialtyCategory:'',
  editProfileMode:false,editPhone:'',editAreasText:'',editSpecialties:[],editSaving:false,
  loading:false,checkingSession:false,
- technicianUiLayout:{tabOrder:[],sizes:{},elements:{}},technicianLayoutEditorAvailable:false,technicianLayoutEditorChecked:true,technicianLayoutEditMode:false,technicianLayoutDragId:'',
+ technicianUiLayout:{tabOrder:[],sizes:{},elements:{}},technicianLayoutEditorAvailable:false,technicianLayoutEditorChecked:false,technicianLayoutEditMode:false,technicianLayoutDragId:'',
  orders:[],filteredOrders:[],search:'',filterSkill:'الكل',
  myOffers:[],completedOffers:[],offerModal:null,offerPrice:'',offerMessage:'',
  offerError:'',offerSubmitting:false,
@@ -829,16 +846,48 @@ function performFanniLogout(){
 
 const TECHNICIAN_TAB_DEFINITIONS=[{id:'available',label:'طلبات متاحة'},{id:'myOffers',label:'طلبات جارية'},{id:'completed',label:'المهام المكتملة'},{id:'wallet',label:'محفظتي'}];
 function normalizedTechnicianUiLayout(input){const source=input&&typeof input==='object'&&!Array.isArray(input)?input:{};const allowed=TECHNICIAN_TAB_DEFINITIONS.map(item=>item.id);const order=Array.isArray(source.tabOrder)?[...new Set(source.tabOrder.filter(id=>allowed.includes(id)))]:[];allowed.forEach(id=>{if(!order.includes(id))order.push(id)});const sizes={};if(source.sizes&&typeof source.sizes==='object'&&!Array.isArray(source.sizes))allowed.forEach(id=>{if(['small','medium','large'].includes(source.sizes[id]))sizes[id]=source.sizes[id]});const elements={};if(source.elements&&typeof source.elements==='object'&&!Array.isArray(source.elements)){for(const [key,value] of Object.entries(source.elements).slice(0,500)){if(!/^[a-zA-Z0-9_-]{1,100}$/.test(key)||!value||typeof value!=='object'||Array.isArray(value))continue;const item={};if(Number.isFinite(value.fontSize)&&value.fontSize>=10&&value.fontSize<=36)item.fontSize=value.fontSize;if(Number.isFinite(value.width)&&value.width>=30&&value.width<=100)item.width=value.width;if(typeof value.background==='string'&&/^#[0-9a-fA-F]{6}$/.test(value.background))item.background=value.background;if(['solid','glossy'].includes(value.backgroundFinish))item.backgroundFinish=value.backgroundFinish;if(typeof value.activeBackground==='string'&&/^#[0-9a-fA-F]{6}$/.test(value.activeBackground))item.activeBackground=value.activeBackground;if(typeof value.color==='string'&&/^#[0-9a-fA-F]{6}$/.test(value.color))item.color=value.color;if(Number.isFinite(value.radius)&&value.radius>=0&&value.radius<=40)item.radius=value.radius;if(Number.isFinite(value.scale)&&value.scale>=0.5&&value.scale<=2)item.scale=value.scale;if(Number.isFinite(value.x)&&value.x>=-2000&&value.x<=2000)item.x=value.x;if(Number.isFinite(value.y)&&value.y>=-2000&&value.y<=2000)item.y=value.y;if(Number.isFinite(value.scale)&&value.scale>=0.5&&value.scale<=2)item.scale=value.scale;if(typeof value.text==='string')item.text=value.text.slice(0,200);if(typeof value.hidden==='boolean')item.hidden=value.hidden;if(typeof value.threeD==='boolean')item.threeD=value.threeD;const mobile={};if(value.mobile&&typeof value.mobile==='object'&&!Array.isArray(value.mobile)){const mv=value.mobile;if(Number.isFinite(mv.fontSize)&&mv.fontSize>=10&&mv.fontSize<=36)mobile.fontSize=mv.fontSize;if(Number.isFinite(mv.width)&&mv.width>=30&&mv.width<=100)mobile.width=mv.width;if(typeof mv.background==='string'&&/^#[0-9a-fA-F]{6}$/.test(mv.background))mobile.background=mv.background;if(typeof mv.color==='string'&&/^#[0-9a-fA-F]{6}$/.test(mv.color))mobile.color=mv.color;if(Number.isFinite(mv.radius)&&mv.radius>=0&&mv.radius<=40)mobile.radius=mv.radius;if(Number.isFinite(mv.scale)&&mv.scale>=0.5&&mv.scale<=2)mobile.scale=mv.scale;if(Number.isFinite(mv.x)&&mv.x>=-2000&&mv.x<=2000)mobile.x=mv.x;if(Number.isFinite(mv.y)&&mv.y>=-2000&&mv.y<=2000)mobile.y=mv.y;if(Number.isFinite(mv.scale)&&mv.scale>=0.5&&mv.scale<=2)mobile.scale=mv.scale;if(typeof mv.text==='string')mobile.text=mv.text.slice(0,200);if(typeof mv.hidden==='boolean')mobile.hidden=mv.hidden;if(typeof mv.threeD==='boolean')mobile.threeD=mv.threeD;}if(Object.keys(mobile).length)item.mobile=mobile;if(Object.keys(item).length)elements[key]=item;}}return {tabOrder:order,sizes,elements};}
-function technicianTabsInLayoutOrder(){return TECHNICIAN_TAB_DEFINITIONS;}
-async function loadTechnicianUiLayout(){state.technicianUiLayout=normalizedTechnicianUiLayout({});state.technicianLayoutEditorAvailable=false;state.technicianLayoutEditorChecked=true;state.technicianLayoutEditMode=false;}
-function toggleTechnicianLayoutEdit(){}
-function cancelTechnicianLayoutEdit(){}
-function moveTechnicianTab(){}
-function setTechnicianTabSize(){}
-function startTechnicianTabDrag(){}
-function allowTechnicianTabDrop(){}
-function dropTechnicianTab(){}
-function saveTechnicianUiLayout(){}
+function technicianTabsInLayoutOrder(){return normalizedTechnicianUiLayout(state.technicianUiLayout).tabOrder.map(id=>TECHNICIAN_TAB_DEFINITIONS.find(item=>item.id===id)).filter(Boolean);}
+async function loadTechnicianUiLayout(){
+ const params=new URLSearchParams(location.search),editorMode=params.get('adminLayout')==='1';
+ if(editorMode){
+  const requestedTab=params.get('tab');
+  if(['available','myOffers','completed','wallet','register'].includes(requestedTab))state.tab=requestedTab;
+  // The editor is a preview UI; the server still enforces root-admin permission on every save.
+  state.technicianLayoutEditorAvailable=true;
+  state.technicianLayoutEditorChecked=true;
+  render();
+ }
+ const timedFetch=async(url,options={})=>{const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),8000);try{return await fetch(url,{...options,signal:controller.signal,cache:'no-store'});}finally{clearTimeout(timer);}};
+ try{
+  const response=await timedFetch('/api/admin/technician-layout');
+  if(!response.ok)throw Error('تعذر تحميل ترتيب أزرار الفني');
+  const data=await response.json();state.technicianUiLayout=normalizedTechnicianUiLayout(data.layout);
+ }catch(error){log('تعذر تحميل ترتيب لوحة الفني:',error.name==='AbortError'?'انتهت مهلة تحميل التخطيط':error.message);}
+ state.technicianLayoutEditorChecked=true;
+ render();
+}
+function toggleTechnicianLayoutEdit(){if(!state.technicianLayoutEditorAvailable)return;state.technicianLayoutEditMode=!state.technicianLayoutEditMode;state.technicianLayoutDragId='';render();}
+function cancelTechnicianLayoutEdit(){loadTechnicianUiLayout().then(()=>{state.technicianLayoutEditMode=false;render();});}
+function moveTechnicianTab(id,delta){const order=technicianTabsInLayoutOrder().map(item=>item.id),from=order.indexOf(id),to=from+delta;if(from<0||to<0||to>=order.length)return;[order[from],order[to]]=[order[to],order[from]];state.technicianUiLayout=normalizedTechnicianUiLayout({...state.technicianUiLayout,tabOrder:order});render();}
+function setTechnicianTabSize(id,size){if(!['small','medium','large'].includes(size))return;state.technicianUiLayout=normalizedTechnicianUiLayout({...state.technicianUiLayout,sizes:{...(state.technicianUiLayout?.sizes||{}),[id]:size}});render();}
+function startTechnicianTabDrag(event,id){if(!state.technicianLayoutEditMode){event.preventDefault();return;}state.technicianLayoutDragId=id;if(event.dataTransfer){event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',id);}}
+function allowTechnicianTabDrop(event){if(state.technicianLayoutEditMode)event.preventDefault();}
+function dropTechnicianTab(event,targetId){if(!state.technicianLayoutEditMode)return;event.preventDefault();event.stopPropagation();const sourceId=state.technicianLayoutDragId||(event.dataTransfer?.getData('text/plain')||''),order=technicianTabsInLayoutOrder().map(item=>item.id);if(!sourceId||sourceId===targetId||!order.includes(sourceId)||!order.includes(targetId)){state.technicianLayoutDragId='';return;}const from=order.indexOf(sourceId);order.splice(from,1);order.splice(order.indexOf(targetId),0,sourceId);state.technicianUiLayout=normalizedTechnicianUiLayout({...state.technicianUiLayout,tabOrder:order});state.technicianLayoutDragId='';render();}
+async function saveTechnicianUiLayout(){const button=document.getElementById('save-technician-layout');if(button){button.disabled=true;button.textContent='جاري الحفظ...';}try{const token=localStorage.getItem('admin_token_v3')||'';if(!token)throw Error('سجّل دخول المدير الرئيسي في لوحة الإدارة أولًا.');const response=await fetch('/api/admin/technician-layout',{method:'PUT',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({layout:normalizedTechnicianUiLayout(state.technicianUiLayout)})}),data=await response.json().catch(()=>({}));if(!response.ok)throw Error(data.message||'تعذر حفظ الترتيب؛ تأكد من صلاحية المدير الرئيسي.');state.technicianUiLayout=normalizedTechnicianUiLayout(data.layout);state.technicianLayoutEditMode=false;toast(data.message||'تم حفظ ترتيب أزرار لوحة الفني للجميع.');}catch(error){toast(error.message||'تعذر حفظ ترتيب أزرار الفني.','error');}finally{render();}}
+function renderTechnicianLayoutEditor(){if(!state.technicianLayoutEditorAvailable)return '';if(!state.technicianLayoutEditMode)return '<div class="mt-2 flex justify-end"><button type="button" onclick="toggleTechnicianLayoutEdit()" class="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[10px] font-extrabold text-blue-800">↕ ترتيب أزرار الفني</button></div>';return '<div class="fanni-layout-toolbar"><b class="text-[12px]">ترتيب أزرار لوحة الفني</b><p class="mt-1 text-[10px] leading-5">اسحب الزر على الكمبيوتر أو استخدم الأسهم على الموبايل؛ الترتيب بعد الحفظ يظهر لكل الفنيين.</p><div class="mt-2">'+technicianTabsInLayoutOrder().map((item,index)=>'<div class="fanni-layout-item"><strong>'+esc(item.label)+'</strong><button type="button" '+(index===0?'disabled':'')+' onclick="moveTechnicianTab(\''+item.id+'\',-1)">↑</button><button type="button" '+(index===TECHNICIAN_TAB_DEFINITIONS.length-1?'disabled':'')+' onclick="moveTechnicianTab(\''+item.id+'\',1)">↓</button><select aria-label="حجم زر '+esc(item.label)+'" onchange="setTechnicianTabSize(\''+item.id+'\',this.value)"><option value="small" '+(state.technicianUiLayout?.sizes?.[item.id]==='small'?'selected':'')+'>صغير</option><option value="medium" '+(!state.technicianUiLayout?.sizes?.[item.id]||state.technicianUiLayout?.sizes?.[item.id]==='medium'?'selected':'')+'>متوسط</option><option value="large" '+(state.technicianUiLayout?.sizes?.[item.id]==='large'?'selected':'')+'>كبير</option></select></div>').join('')+'</div><div class="mt-3 flex gap-2"><button id="save-technician-layout" type="button" onclick="saveTechnicianUiLayout()" class="fanni-layout-save flex-1">حفظ للجميع</button><button type="button" onclick="cancelTechnicianLayoutEdit()">إلغاء</button></div></div>';}
+
+function setTab(tab){
+ state.tab=tab;
+ state.error='';
+ state.success='';
+ state.pendingMsg='';
+ render();
+
+ if(tab==='available')loadOrders();
+if(tab==='myOffers'||tab==='completed')loadMyOffers();
+ if(tab==='wallet'){loadWalletHistory();loadWalletTransferNumbers();}
+ if(tab==='profile')loadProfile();
+}
 
 function toggleSpecialtyCategory(label){
  state.openSpecialtyCategory=state.openSpecialtyCategory===label?'':label;
@@ -995,9 +1044,12 @@ async function acceptTechnicianGuidelines(){try{const result=await API.acceptGui
 async function sendFanniQuickReply(sn,offerId,reply){try{await API.sendChat(sn,reply,offerId);await refreshFanniChatsSilently();toast('تم إرسال الرد.');}catch(e){toast(e.message||'تعذر إرسال الرد.','error');}}
 async function sendFanniChat(sn,offerId){const el=document.getElementById('fanni-chat-'+sn);const text=String(el?.value||'').trim();if(!text)return toast('اكتب الرسالة أولًا.','error');try{await API.sendChat(sn,text,offerId);if(el)el.value='';await refreshFanniChatsSilently();toast('تم إرسال الرسالة.');}catch(e){toast(e.message||'تعذر إرسال الرسالة.','error');}}
 async function requestFanniPriceChange(sn){const price=Number(document.getElementById('price-change-'+sn)?.value);const reason=String(document.getElementById('price-reason-'+sn)?.value||'').trim();const offer=[...state.myOffers,...state.completedOffers].find(o=>String(o.orderSn||o.sn||o.order?.sn||'').toUpperCase()===String(sn||'').toUpperCase());const currentPrice=Number(offer?.client?.acceptedOfferPrice??offer?.acceptedOfferPrice??offer?.priceNum??offer?.price);if(!Number.isFinite(currentPrice))return toast('تعذر تحديد السعر الحالي؛ حدّث البيانات وحاول مرة أخرى.','error');if(!Number.isFinite(price)||price<=currentPrice||price<=0)return toast('السعر الجديد لازم يكون أعلى من السعر الحالي ('+currentPrice+' جنيه).','error');if(reason.length<5)return toast('اكتب سببًا واضحًا للتعديل.','error');try{const r=await API.requestPriceChange(sn,price,reason);toast(r.message||'تم إرسال طلب تعديل السعر.');await loadMyOffers();}catch(e){toast(e.message||'تعذر طلب تعديل السعر.','error');}}
+function applyEditorPositionGlobalFix(el,pos){const parent=el&&el.parentElement;const rect=parent?parent.getBoundingClientRect():{width:window.innerWidth,height:window.innerHeight};const xPercent=Number.isFinite(pos.xPercent)?pos.xPercent:Number(pos.x||0)/14.4;const yPercent=Number.isFinite(pos.yPercent)?pos.yPercent:Number(pos.y||0)/9;el.style.translate=(Math.max(1,rect.width)*xPercent/100)+'px '+(Math.max(1,rect.height)*yPercent/100)+'px';if(pos.wPercent!==undefined){el.style.width=pos.wPercent+'%';el.style.maxWidth='100%';}if(pos.hPercent!==undefined)el.style.height=pos.hPercent+'%';if(pos.zIndex!==undefined)el.style.zIndex=String(pos.zIndex);}
+function applyEditorPosition(el,pos){return applyEditorPositionGlobalFix(el,pos);}
+const TECHNICIAN_EDITOR_SELECTOR='header,main,section,article,form,input,select,textarea,img,svg,div,span,button,a,h1,h2,h3,h4,p,label,.panel,.rounded-xl,.rounded-2xl';function technicianEditorKeyFor(el){if(el.id)return ('id_'+el.id).replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,100);const parts=[];let n=el;while(n&&n.id!=='app'&&parts.length<5){const i=n.parentElement?[...n.parentElement.children].filter(x=>x.tagName===n.tagName).indexOf(n):0;parts.unshift(n.tagName.toLowerCase()+'_'+Math.max(i,0));n=n.parentElement;}return ('p_'+parts.join('_')).slice(0,100);}function applySavedTechnicianElementLayout(){const app=document.getElementById('app');if(!app)return;const elements=normalizedTechnicianUiLayout(state.technicianUiLayout).elements||{};app.querySelectorAll(TECHNICIAN_EDITOR_SELECTOR).forEach(el=>{if(!el.dataset.fanniEditorKey)el.dataset.fanniEditorKey=technicianEditorKeyFor(el);const s=elements[el.dataset.fanniEditorKey];if(!s)return;if(s.fontSize)el.style.fontSize=s.fontSize+'px';if(s.width){el.style.width=s.width+'%';el.style.maxWidth='100%';}if(s.background){if(s.threeD){const c=s.background,rgb=parseInt(c.slice(1),16),r=(rgb>>16)&255,g=(rgb>>8)&255,b=rgb&255,light='#'+[r,g,b].map(v=>Math.min(255,Math.round(v+(255-v)*.24)).toString(16).padStart(2,'0')).join(''),dark='#'+[r,g,b].map(v=>Math.round(v*.62).toString(16).padStart(2,'0')).join('');el.style.setProperty('background',`linear-gradient(145deg,${light} 0%,${c} 55%,${dark} 100%)`,'important');el.style.setProperty('box-shadow',`0 4px 0 ${dark},0 7px 12px ${c}45,inset 0 1px 0 #ffffff70`,'important');}else el.style.setProperty('background',s.background,'important');}if(s.threeD===false)el.style.setProperty('box-shadow','none','important');if(s.color){el.style.setProperty('color',s.color,'important');el.querySelectorAll('*').forEach(ch=>{if(!['IMG','VIDEO','CANVAS'].includes(ch.tagName))ch.style.setProperty('color',s.color,'important');});}if(s.radius!==undefined)el.style.borderRadius=s.radius+'px';if(s.scale!==undefined)el.style.scale=String(s.scale);if(s.xPercent!==undefined||s.yPercent!==undefined||s.x!==undefined||s.y!==undefined)applyEditorPosition(el,s);if(typeof s.text==='string'&&!el.children.length&&el.textContent!==s.text)el.textContent=s.text;el.style.display=s.hidden?'none':'';});}
 function render(){
  const paramsForPreview=new URLSearchParams(location.search);
- const layoutEditorRequested=false;
+ const layoutEditorRequested=paramsForPreview.get('adminLayout')==='1';
  if(layoutEditorRequested&&!state.technicianLayoutEditorChecked){document.getElementById('app').innerHTML='<main dir="rtl" style="min-height:100vh;padding:24px;display:grid;place-items:center;background:#f8fafc;color:#0f172a;font-family:system-ui,sans-serif"><div style="padding:20px;border-radius:16px;background:white;font-weight:800">جاري التحقق من صلاحية المدير الرئيسي...</div></main>';return;}
  if(layoutEditorRequested&&!state.technicianLayoutEditorAvailable){document.getElementById('app').innerHTML='<main dir="rtl" style="min-height:100vh;padding:24px;display:grid;place-items:center;background:#f8fafc;color:#0f172a;font-family:system-ui,sans-serif"><div style="max-width:440px;padding:22px;border-radius:16px;background:white;text-align:center;color:#0f172a"><h1 style="font-weight:900">صلاحية غير كافية</h1><p style="margin-top:8px">سجّل دخول المدير الرئيسي من لوحة الإدارة ثم افتح رابط تعديل لوحة الفني مرة أخرى.</p></div></main>';return;}
  const technicianAdminPreview=layoutEditorRequested&&state.technicianLayoutEditorAvailable;
@@ -1010,7 +1062,7 @@ function render(){
  const approved=isApproved();
  const status=user?.status||'غير محدد';
  const guidelinesAccepted=Boolean(user?.technicianGuidelinesAcceptedAt&&user?.technicianGuidelinesVersion==='2026-10-20-v1');
- if(authenticated && approved && !guidelinesAccepted){document.getElementById('app').innerHTML='<main class="mx-auto max-w-[680px] p-4"><section class="panel p-5 space-y-3"><h1 class="text-xl font-black">أهلًا بيك في صُنّاع – ميثاق التعامل المهني مع العملاء</h1><p class="text-sm leading-7">اقرأ التعليمات التالية ووافق عليها قبل استخدام لوحة الفني.</p><div class="max-h-[55vh] overflow-y-auto rounded-xl border p-4 text-sm leading-7"><p>١. التزم بسعر العرض الذي وافق عليه العميل. أي زيادة تحتاج موافقة صريحة مسجلة داخل المنصة قبل التنفيذ.</p><p>٢. تعامل باحترام وصدق، دون ضغط أو تهديد أو تضليل.</p><p>٣. قبل قبول العرض، الردود المسموحة «نعم»، «لا»، «حسب الاتفاق». ممنوع تبادل بيانات الاتصال أو التحايل على المنصة قبل القبول.</p><p>٤. لا تضغط إنهاء المهمة إلا بعد إنجازها فعلًا.</p><p>٥. احمِ بيانات العميل ولا تستخدمها خارج الطلب.</p><p>٦. يحق للطرفين التقييم بعد الإكمال؛ ممنوع الإكراه على تقييم إيجابي أو التلاعب بالتقييمات.</p><p>٧. المخالفات قد تؤدي إلى مراجعة الطلب أو تعليق الحساب أو إيقافه.</p><p class="font-extrabold">بالضغط على الموافقة، تؤكد أنك قرأت التعليمات وفهمتها وتتعهد بالالتزام بها أثناء استخدام منصة صُنّاع.</p></div><label class="flex gap-2 items-start text-sm font-bold"><input id="guidelinesAcceptedCheck" type="checkbox" class="mt-1"> قرأت التعليمات وأوافق على الالتزام بها.</label><button type="button" onclick="if(!document.getElementById(\'guidelinesAcceptedCheck\')?.checked){toast(\'لازم تحدد الموافقة أولًا.\',\'error\');return;}acceptTechnicianGuidelines()" class="primary-btn w-full h-12 rounded-xl font-extrabold">موافق ثم تأكيد</button></section></main>';return;}
+ if(authenticated && approved && !guidelinesAccepted){document.getElementById('app').innerHTML='<main class="mx-auto max-w-[680px] p-4"><section class="panel p-5 space-y-3"><h1 class="text-xl font-black">أهلًا بيك في صُنّاع – ميثاق التعامل المهني مع العملاء</h1><p class="text-sm leading-7">اقرأ التعليمات التالية ووافق عليها قبل استخدام لوحة الفني.</p><div class="max-h-[55vh] overflow-y-auto rounded-xl border p-4 text-sm leading-7"><p>١. التزم بسعر العرض الذي وافق عليه العميل. أي زيادة تحتاج موافقة صريحة مسجلة داخل المنصة قبل التنفيذ.</p><p>٢. تعامل باحترام وصدق، دون ضغط أو تهديد أو تضليل.</p><p>٣. قبل قبول العرض، الردود المسموحة «نعم»، «لا»، «حسب الاتفاق». ممنوع تبادل بيانات الاتصال أو التحايل على المنصة قبل القبول.</p><p>٤. لا تضغط إنهاء المهمة إلا بعد إنجازها فعلًا.</p><p>٥. احمِ بيانات العميل ولا تستخدمها خارج الطلب.</p><p>٦. يحق للطرفين التقييم بعد الإكمال؛ ممنوع الإكراه على تقييم إيجابي أو التلاعب بالتقييمات.</p><p>٧. المخالفات قد تؤدي إلى مراجعة الطلب أو تعليق الحساب أو إيقافه.</p><p class="font-extrabold">بالضغط على الموافقة، تؤكد أنك قرأت التعليمات وفهمتها وتتعهد بالالتزام بها أثناء استخدام منصة صُنّاع.</p></div><label class="flex gap-2 items-start text-sm font-bold"><input id="guidelinesAcceptedCheck" type="checkbox" class="mt-1"> قرأت التعليمات وأوافق على الالتزام بها.</label><button type="button" onclick="if(!document.getElementById(\'guidelinesAcceptedCheck\')?.checked){toast(\'لازم تحدد الموافقة أولًا.\',\'error\');return;}acceptTechnicianGuidelines()" class="primary-btn w-full h-12 rounded-xl font-extrabold">موافق ثم تأكيد</button></section></main>';applySavedTechnicianElementLayout();return;}
 
  document.getElementById('app').innerHTML=`
  <header class="app-header fanni-app-header sticky top-0 z-40 backdrop-blur-xl">
@@ -1126,7 +1178,7 @@ function render(){
    </details>
   </section>
 
-  <section class="fanni-dashboard-tabs mt-4"><div class="grid grid-cols-4 gap-2">${technicianTabsInLayoutOrder().map(t=>{const info={available:['📋','طلبات متاحه',state.filteredOrders.length],myOffers:['💼','طلبات جاريه',state.myOffers.length],completed:['🏁','المهام المكتملة',state.completedOffers.length],wallet:['💳','محفظتي','']}[t.id];return `<button type="button" data-fanni-layout-tab="${t.id}" ${state.technicianLayoutEditMode?`draggable="true" ondragstart="startTechnicianTabDrag(event,'${t.id}')" ondragover="allowTechnicianTabDrop(event)" ondrop="dropTechnicianTab(event,'${t.id}')" ondragend="state.technicianLayoutDragId='';this.classList.remove('fanni-tab-dragging')"`:''} onclick="if(!state.technicianLayoutEditMode)setTab('${t.id}')" class="fanni-tab-size-${state.technicianUiLayout?.sizes?.[t.id]||'medium'} rounded-2xl border p-2 flex flex-col items-center justify-center gap-1.5 min-h-[76px] ${state.tab===t.id?'bg-blue-50 border-blue-300 text-blue-800':'bg-white border-slate-200 text-slate-600'} ${state.technicianLayoutEditMode?'border-dashed border-blue-300':''}">${state.technicianLayoutEditMode?'<span aria-hidden="true">⠿</span>':''}<span>${info[0]}</span><span class="text-[10px] font-extrabold">${info[1]}</span>${info[2]!==''?`<span class="text-[9px] rounded-full bg-white border px-2">${info[2]}</span>`:''}</button>`}).join('')}</div>${}</section>
+  <section class="fanni-dashboard-tabs mt-4"><div class="grid grid-cols-4 gap-2">${technicianTabsInLayoutOrder().map(t=>{const info={available:['📋','طلبات متاحه',state.filteredOrders.length],myOffers:['💼','طلبات جاريه',state.myOffers.length],completed:['🏁','المهام المكتملة',state.completedOffers.length],wallet:['💳','محفظتي','']}[t.id];return `<button type="button" data-fanni-layout-tab="${t.id}" ${state.technicianLayoutEditMode?`draggable="true" ondragstart="startTechnicianTabDrag(event,'${t.id}')" ondragover="allowTechnicianTabDrop(event)" ondrop="dropTechnicianTab(event,'${t.id}')" ondragend="state.technicianLayoutDragId='';this.classList.remove('fanni-tab-dragging')"`:''} onclick="if(!state.technicianLayoutEditMode)setTab('${t.id}')" class="fanni-tab-size-${state.technicianUiLayout?.sizes?.[t.id]||'medium'} rounded-2xl border p-2 flex flex-col items-center justify-center gap-1.5 min-h-[76px] ${state.tab===t.id?'bg-blue-50 border-blue-300 text-blue-800':'bg-white border-slate-200 text-slate-600'} ${state.technicianLayoutEditMode?'border-dashed border-blue-300':''}">${state.technicianLayoutEditMode?'<span aria-hidden="true">⠿</span>':''}<span>${info[0]}</span><span class="text-[10px] font-extrabold">${info[1]}</span>${info[2]!==''?`<span class="text-[9px] rounded-full bg-white border px-2">${info[2]}</span>`:''}</button>`}).join('')}</div>${renderTechnicianLayoutEditor()}</section>
 
   ${state.tab==='available'?`
    <section class="mt-4 space-y-3">
@@ -1336,7 +1388,7 @@ function render(){
   </nav>
   ${!authenticated?`<a href="support.html?role=fanni" aria-label="خدمة العملاء" title="خدمة العملاء" class="support-float prelogin-floating"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 13v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="12" width="4" height="7" rx="2"/><rect x="17" y="12" width="4" height="7" rx="2"/><path d="M17 19a5 5 0 0 1-5 2h-1"/></svg></a>`:''}
   <button id="global-refresh" type="button" onclick="handleGlobalRefresh()" aria-label="تحديث البيانات" title="تحديث البيانات" class="global-refresh global-refresh-float ${authenticated?'':'prelogin-floating'} ${globalRefreshInProgress?'is-refreshing':''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7v5h-5"/><path d="M4 17v-5h5"/><path d="M5.6 9A7 7 0 0 1 17 5l3 7M4 12l3 7a7 7 0 0 0 11.4-2"/></svg></button>`;
- 
+ applySavedTechnicianElementLayout();
 }
 
 function errorBox(s){
@@ -1851,8 +1903,138 @@ start();
 <script>async function handleGlobalRefresh(){const button=document.getElementById('global-refresh');if(globalRefreshInProgress||button?.disabled)return;globalRefreshInProgress=true;if(button){button.disabled=true;button.classList.add('is-refreshing');}try{await refreshTechnicianPage();}catch(e){toast('تعذر تحديث البيانات. حاول مرة أخرى.','error');}finally{hideFanniLoading();globalRefreshInProgress=false;const currentButton=document.getElementById('global-refresh');if(currentButton){currentButton.disabled=false;currentButton.classList.remove('is-refreshing');}}}</script>
 
 
+<style>
+body.fanni-registration-editor{padding-bottom:180px}
+.fanni-registration-editor #app [data-fanni-editor-key]{touch-action:pan-y;cursor:grab}.fanni-registration-editor #app [data-fanni-editor-key]:hover{outline:2px dashed #2563eb!important;outline-offset:2px;cursor:grab}
+.fanni-registration-editor #app [data-fanni-editor-selected="1"]{outline:3px solid #f59e0b!important;outline-offset:3px}
+#fanni-visual-editor-toolbar{position:fixed;z-index:99999;bottom:0;left:0;right:0;max-height:60vh;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;background:#0b1b3a;color:#fff;padding:10px 12px calc(10px + env(safe-area-inset-bottom));box-shadow:0 -8px 28px #0b1b3a38;font-family:Cairo,sans-serif}
+#fanni-visual-editor-toolbar.editor-collapsed>*:not(#fanni-editor-collapse-row){display:none!important}
+#fanni-visual-editor-toolbar .editor-controls{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+#fanni-visual-editor-toolbar label{font-size:11px;font-weight:800;display:flex;align-items:center;gap:5px}
+#fanni-visual-editor-toolbar input[type=range]{width:80px;accent-color:#60a5fa}
+#fanni-visual-editor-toolbar input[type=color]{width:30px;height:29px;padding:2px;border:0;border-radius:7px}
+#fanni-visual-editor-toolbar button{border:1px solid #ffffff35;border-radius:9px;padding:7px 10px;font-size:11px;font-weight:900}
+#fanni-visual-editor-toolbar .editor-save{background:#10b981;color:#052e24}
+</style>
+<script>
+(function(){
+ const params=new URLSearchParams(location.search);
+ if(params.get('adminLayout')!=='1')return;
+ document.body.classList.add('fanni-registration-editor');
+ let selected=null,key='',busy=false,ready=false;
+ const selector='header,main,section,article,form,input,select,textarea,img,svg,div,span,button,a,h1,h2,h3,h4,p,label,.panel,.rounded-xl,.rounded-2xl';
+ const config=()=>state.technicianUiLayout||{tabOrder:[],sizes:{},elements:{}};
+ const editorViewport=()=> 'shared';
+ const responsiveStyle=item=>item;
+ function saveResponsiveStyle(item,prop,value){if(value===null||value===''){delete item[prop];if(prop==='x')delete item.xPercent;if(prop==='y')delete item.yPercent;}else{item[prop]=value;if(prop==='x')item.xPercent=Number(value)/14.4;if(prop==='y')item.yPercent=Number(value)/9;}return editorContainerMeta(item,selected);}
+ function clearResponsiveStyle(item){Object.keys(item).forEach(k=>delete item[k]);return item;}
+ const keyFor=el=>{if(el.id)return ('id_'+el.id).replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,100);const parts=[];let n=el;while(n&&n.id!=='app'&&parts.length<5){let i=n.parentElement?[...n.parentElement.children].filter(x=>x.tagName===n.tagName).indexOf(n):0;parts.unshift(n.tagName.toLowerCase()+'_'+Math.max(i,0));n=n.parentElement;}return ('p_'+parts.join('_')).slice(0,100)};
+ function applyEditorPosition(el,pos){
+ const parent=el&&el.parentElement;
+ const rect=parent?parent.getBoundingClientRect():{width:window.innerWidth,height:window.innerHeight};
+ const xPercent=Number.isFinite(pos.xPercent)?pos.xPercent:Number(pos.x||0)/14.4;
+ const yPercent=Number.isFinite(pos.yPercent)?pos.yPercent:Number(pos.y||0)/9;
+ // Individual translate keeps existing transform/3D effects intact; offsets scale with the real parent container.
+ el.style.translate=(Math.max(1,rect.width)*xPercent/100)+'px '+(Math.max(1,rect.height)*yPercent/100)+'px';
+ if(pos.wPercent!==undefined){el.style.width=pos.wPercent+'%';el.style.maxWidth='100%';}
+ if(pos.hPercent!==undefined)el.style.height=pos.hPercent+'%';
+ if(pos.zIndex!==undefined)el.style.zIndex=String(pos.zIndex);
+}
+function editorContainerMeta(item,el){
+ const parent=el&&el.parentElement;
+ if(!parent)return item;
+ const id=String(parent.id||parent.dataset.adminLayoutKey||parent.dataset.sonaaEditorKey||parent.dataset.fanniEditorKey||parent.dataset.sonaaStandaloneKey||parent.tagName||'container').replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,100);
+ item.containerId=id||'container';item.anchor=item.anchor||'top-left';return item;
+}
 
+function sonaaEditorColorFor3D(el){
+ if(!el)return '#2563eb';
+ const value=window.getComputedStyle(el).backgroundColor||'';
+ const m=value.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)/i);
+ if(m&&!(m[4]!==undefined&&Number(m[4])<0.05))return '#'+[m[1],m[2],m[3]].map(v=>Number(v).toString(16).padStart(2,'0')).join('');
+ return el.matches('button,a,[role="button"],input[type="button"],input[type="submit"],.btn,[class*="btn"]')?'#2563eb':'#f8fafc';
+}
+function sonaaEditorApplySurface(el,style){
+ if(!el||!style)return;
+ const cssId='sonaa-editor-button-state-css';
+ if(!document.getElementById(cssId)){
+  const css=document.createElement('style');css.id=cssId;
+  css.textContent='[data-sonaa-editor-surface="1"][data-sonaa-editor-finish="glossy"]{background:linear-gradient(135deg,var(--sonaa-editor-dark) 0%,var(--sonaa-editor-base-bg) 28%,var(--sonaa-editor-light) 52%,var(--sonaa-editor-base-bg) 76%,var(--sonaa-editor-dark) 100%)!important}[data-sonaa-editor-surface="1"][data-sonaa-editor-finish="solid"]{background:var(--sonaa-editor-base-bg)!important}[data-sonaa-editor-surface="1"][data-sonaa-editor-3d="1"]{box-shadow:0 4px 0 var(--sonaa-editor-dark),0 7px 12px color-mix(in srgb,var(--sonaa-editor-base-bg) 28%,transparent),inset 0 1px 0 #ffffff85!important}[data-sonaa-editor-has-active-bg="1"]:is(:active,.active,[aria-pressed="true"],[aria-selected="true"]):not([data-sonaa-editor-3d="1"]){background:var(--sonaa-editor-active-bg)!important;filter:none!important}[data-sonaa-editor-has-active-bg="1"][data-sonaa-editor-3d="1"][data-sonaa-editor-finish="glossy"]:is(:active,.active,[aria-pressed="true"],[aria-selected="true"]){background:linear-gradient(135deg,var(--sonaa-editor-active-dark) 0%,var(--sonaa-editor-active-bg) 28%,var(--sonaa-editor-active-light) 52%,var(--sonaa-editor-active-bg) 76%,var(--sonaa-editor-active-dark) 100%)!important;box-shadow:0 2px 0 var(--sonaa-editor-active-dark),0 4px 8px color-mix(in srgb,var(--sonaa-editor-active-bg) 28%,transparent),inset 0 1px 0 #ffffff70!important;filter:none!important;transform:translateY(2px)}[data-sonaa-editor-has-active-bg="1"][data-sonaa-editor-3d="1"][data-sonaa-editor-finish="solid"]:is(:active,.active,[aria-pressed="true"],[aria-selected="true"]){background:var(--sonaa-editor-active-bg)!important;box-shadow:0 2px 0 var(--sonaa-editor-active-dark),0 4px 8px color-mix(in srgb,var(--sonaa-editor-active-bg) 28%,transparent),inset 0 1px 0 #ffffff70!important;filter:none!important;transform:translateY(2px)}button[data-sonaa-editor-colored="1"]:hover,a[data-sonaa-editor-colored="1"]:hover,[role="button"][data-sonaa-editor-colored="1"]:hover,input[type="button"][data-sonaa-editor-colored="1"]:hover,input[type="submit"][data-sonaa-editor-colored="1"]:hover{filter:brightness(1.1) saturate(1.08)!important}button[data-sonaa-editor-colored="1"]:active,a[data-sonaa-editor-colored="1"]:active,[role="button"][data-sonaa-editor-colored="1"]:active,input[type="button"][data-sonaa-editor-colored="1"]:active,input[type="submit"][data-sonaa-editor-colored="1"]:active{filter:brightness(.66) saturate(1.2)!important}button[data-sonaa-editor-colored="1"].active,a[data-sonaa-editor-colored="1"].active,[role="button"][data-sonaa-editor-colored="1"].active,button[data-sonaa-editor-colored="1"][aria-pressed="true"],button[data-sonaa-editor-colored="1"][aria-selected="true"]{filter:brightness(.88) saturate(1.12)!important}button[data-sonaa-editor-colored="1"],a[data-sonaa-editor-colored="1"],[role="button"][data-sonaa-editor-colored="1"]{transition:filter .12s ease,transform .12s ease}';
+  document.head.appendChild(css);
+ }
+ if(!el.dataset.sonaaEditorOriginalBg){
+  const computed=window.getComputedStyle(el).backgroundColor||'';
+  const m=computed.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)/i);
+  if(m&&!(m[4]!==undefined&&Number(m[4])===0))el.dataset.sonaaEditorOriginalBg='#'+[m[1],m[2],m[3]].map(v=>Number(v).toString(16).padStart(2,'0')).join('');
+ }
+ const isInteractive=el.matches('button,a,[role="button"],input[type="button"],input[type="submit"]');
+ const validHex=value=>typeof value==='string'&&/^#[0-9a-f]{6}$/i.test(value);
+ const configured=validHex(style.background),activeConfigured=validHex(style.activeBackground);
+ const useSurface=configured||style.threeD===true||activeConfigured;
+ if(useSurface){
+  const c=configured?style.background:(el.dataset.sonaaEditorOriginalBg||(isInteractive?'#2563eb':'#f8fafc'));
+  el.dataset.sonaaEditorSurface='1';el.style.setProperty('--sonaa-editor-base-bg',c);el.dataset.sonaaEditorFinish=style.backgroundFinish==='solid'?'solid':'glossy';
+  const rgb=parseInt(c.slice(1),16),channels=[(rgb>>16)&255,(rgb>>8)&255,rgb&255];
+  el.style.setProperty('--sonaa-editor-light','#'+channels.map(v=>Math.min(255,Math.round(v+(255-v)*.24)).toString(16).padStart(2,'0')).join(''));
+  el.style.setProperty('--sonaa-editor-dark','#'+channels.map(v=>Math.round(v*.62).toString(16).padStart(2,'0')).join(''));
+  if(style.threeD===true)el.dataset.sonaaEditor3d='1';else delete el.dataset.sonaaEditor3d;
+  if(activeConfigured&&isInteractive){
+   const argb=parseInt(style.activeBackground.slice(1),16),ac=[(argb>>16)&255,(argb>>8)&255,argb&255];
+   el.dataset.sonaaEditorHasActiveBg='1';el.style.setProperty('--sonaa-editor-active-bg',style.activeBackground);
+   el.style.setProperty('--sonaa-editor-active-light','#'+ac.map(v=>Math.min(255,Math.round(v+(255-v)*.24)).toString(16).padStart(2,'0')).join(''));
+   el.style.setProperty('--sonaa-editor-active-dark','#'+ac.map(v=>Math.round(v*.62).toString(16).padStart(2,'0')).join(''));
+  }else{
+   delete el.dataset.sonaaEditorHasActiveBg;
+   ['--sonaa-editor-active-bg','--sonaa-editor-active-light','--sonaa-editor-active-dark'].forEach(prop=>el.style.removeProperty(prop));
+  }
+  if(isInteractive)el.dataset.sonaaEditorColored='1';
+  if(style.threeD===true&&(el.tagName==='BUTTON'||el.tagName==='A'))el.style.setProperty('border-bottom-color',el.style.getPropertyValue('--sonaa-editor-dark'),'important');
+ }else{
+  delete el.dataset.sonaaEditorSurface;delete el.dataset.sonaaEditorFinish;delete el.dataset.sonaaEditor3d;delete el.dataset.sonaaEditorHasActiveBg;delete el.dataset.sonaaEditorColored;
+  ['--sonaa-editor-base-bg','--sonaa-editor-light','--sonaa-editor-dark','--sonaa-editor-active-bg','--sonaa-editor-active-light','--sonaa-editor-active-dark'].forEach(prop=>el.style.removeProperty(prop));
+ }
+ if(style.threeD===false)el.style.setProperty('box-shadow','none','important');
+}
 
+function apply(){if(busy)return;busy=true;try{document.querySelectorAll('#app [data-fanni-editor-key]').forEach(el=>{const base=config().elements?.[el.dataset.fanniEditorKey];if(!base)return;const s=responsiveStyle(base);if(s.fontSize)el.style.fontSize=s.fontSize+'px';if(s.width){el.style.width=s.width+'%';el.style.maxWidth='100%'}sonaaEditorApplySurface(el,s);if(s.color){el.style.setProperty('color',s.color,'important');el.querySelectorAll('*').forEach(ch=>{if(!['IMG','VIDEO','CANVAS'].includes(ch.tagName))ch.style.setProperty('color',s.color,'important')})}if(s.radius!==undefined)el.style.borderRadius=s.radius+'px';if(s.x!==undefined||s.y!==undefined)el.style.setProperty('translate',Number(s.x||0)/14.4+'vw '+Number(s.y||0)/9+'vh');if(typeof s.text==='string'&&!el.children.length&&el.textContent!==s.text)el.textContent=s.text;el.style.display=s.hidden?'none':''})}finally{busy=false}}
+ window.addEventListener('resize',()=>requestAnimationFrame(apply),{passive:true});
+ function mark(){document.querySelectorAll('#app '+selector).forEach(el=>{if(!el.dataset.fanniEditorKey)el.dataset.fanniEditorKey=keyFor(el)});apply()}
+ const style=()=>responsiveStyle(config().elements?.[key]||{});
+ const fanniEditorHistory=[];let fanniEditorHistoryAt=0;
+ function rememberFanniEditorStep(){const now=Date.now();if(now-fanniEditorHistoryAt<450)return;fanniEditorHistoryAt=now;fanniEditorHistory.push(JSON.parse(JSON.stringify(config())));if(fanniEditorHistory.length>40)fanniEditorHistory.shift();}
+ function undoFanniEditorStep(){const previous=fanniEditorHistory.pop();if(!previous){alert('مفيش خطوة سابقة للتراجع عنها.');return;}state.technicianUiLayout=normalizedTechnicianUiLayout(previous);apply();update();}
+ function set(prop,val){if(!key)return;rememberFanniEditorStep();const all={...(config().elements||{})},source={...((all[key])||{})};if(prop==='threeD'&&val===true&&!source.background)source.background=sonaaEditorColorFor3D(selected);const item=saveResponsiveStyle(source,prop,val);if(Object.keys(item).length)all[key]=item;else delete all[key];state.technicianUiLayout=normalizedTechnicianUiLayout({...config(),elements:all});apply();update()}
+ function update(){const b=document.getElementById('fanni-visual-editor-toolbar');if(!b)return;const s=style();b.querySelector('#fanni-editor-selected').textContent=selected?(selected.innerText||selected.tagName).trim().replace(/\s+/g,' ').slice(0,60):'اختَر عنصرًا من الصفحة';[['font','fontSize',16],['width','width',100],['radius','radius',12],['x','x',0],['y','y',0]].forEach(([id,p,d])=>{b.querySelector('#fanni-editor-'+id).value=s[p]??d;b.querySelector('#fanni-editor-'+id+'-val').textContent=(s[p]??d)+(id==='width'?'%':'')});b.querySelector('#fanni-editor-bg').value=s.background||'#ffffff';b.querySelector('#fanni-editor-finish').value=s.backgroundFinish||'glossy';b.querySelector('#fanni-editor-active-bg').value=s.activeBackground||'#1d4ed8';b.querySelector('#fanni-editor-color').value=s.color||'#0f172a';b.querySelector('#fanni-editor-text').value=selected&&!selected.children.length?(s.text??selected.textContent.trim()).slice(0,200):'';b.querySelector('#fanni-editor-text').disabled=!!(selected&&selected.children.length)}
+ function init(){if(ready||!state.technicianLayoutEditorAvailable)return;ready=true;const b=document.createElement('div');b.id='fanni-visual-editor-toolbar';b.classList.add('sonaa-unified-editor-panel');b.innerHTML='<div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:7px"><b>✦ تعديل صفحات الفني</b><span id="fanni-editor-selected" style="font-size:10px;color:#cbd5e1">اختَر عنصرًا من الصفحة</span></div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"><b style="flex-basis:100%;font-size:11px;color:#bfdbfe">صفحات الفني</b><button type="button" id="fanni-nav-available">الطلبات المتاحة</button><button type="button" id="fanni-nav-offers">الطلبات الجارية</button><button type="button" id="fanni-nav-completed">المهام المكتملة</button><button type="button" id="fanni-nav-wallet">المحفظة</button><button type="button" id="fanni-nav-register">تسجيل فني جديد</button><button type="button" id="fanni-nav-account">حساب الفني</button><button type="button" id="fanni-nav-support">دعم الفني</button></div><div class="editor-controls"><label>الخط <input id="fanni-editor-font" type="range" min="10" max="36" value="16"><span id="fanni-editor-font-val">16</span></label><label>العرض <input id="fanni-editor-width" type="range" min="30" max="100" value="100"><span id="fanni-editor-width-val">100%</span></label><label>الخلفية <input id="fanni-editor-bg" type="color" value="#ffffff"></label><label>شكل اللون <select id="fanni-editor-finish" style="color:#0f172a;border-radius:7px;padding:5px"><option value="solid">سادة</option><option value="glossy">لامع متدرّج</option></select></label><label>لون الزر عند الضغط <input id="fanni-editor-active-bg" type="color" value="#1d4ed8"></label><button type="button" id="fanni-editor-3d">استعادة تأثير 3D</button><label>النص <input id="fanni-editor-color" type="color" value="#0f172a"></label><label>الحواف <input id="fanni-editor-radius" type="range" min="0" max="40" value="12"><span id="fanni-editor-radius-val">12</span></label><label>أفقي <input id="fanni-editor-x" type="range" min="-2000" max="2000" value="0"><span id="fanni-editor-x-val">0</span></label><label>رأسي <input id="fanni-editor-y" type="range" min="-2000" max="2000" value="0"><span id="fanni-editor-y-val">0</span></label><label>النص <input id="fanni-editor-text" type="text" maxlength="200" style="width:120px;color:#0f172a;border-radius:6px;padding:4px"></label><button id="fanni-editor-apply-text">تطبيق</button><button id="fanni-editor-hide">إخفاء/إظهار</button><button id="fanni-editor-reset">مسح تنسيق</button><button class="editor-save" id="fanni-editor-save">حفظ للجميع</button></div><div style="font-size:10px;color:#cbd5e1;margin-top:5px">المعاينة لا ترسل تسجيلًا أو تنشئ حسابًا.</div>';const collapseRow=document.createElement('div');collapseRow.id='fanni-editor-collapse-row';collapseRow.style.cssText='display:flex;justify-content:flex-start;margin-bottom:8px';collapseRow.innerHTML='<button type="button" id="fanni-editor-undo" style="margin-left:auto;background:#334155;color:white;border-radius:9px;padding:7px 12px;font-weight:900">↶ أندو</button><button type="button" id="fanni-editor-collapse" aria-expanded="true" style="background:#1d4ed8;color:white;border-radius:9px;padding:7px 12px;font-weight:900">طي لوحة المحرر ▲</button>';b.prepend(collapseRow);collapseRow.style.direction='ltr';collapseRow.querySelector('#fanni-editor-undo').onclick=undoFanniEditorStep;collapseRow.querySelector('#fanni-editor-collapse').onclick=()=>{const collapsed=b.classList.toggle('editor-collapsed');collapseRow.querySelector('#fanni-editor-collapse').textContent=collapsed?'فتح لوحة المحرر ▼':'طي لوحة المحرر ▲';collapseRow.querySelector('#fanni-editor-collapse').setAttribute('aria-expanded',String(!collapsed));};
+  document.body.appendChild(b);
+ b.querySelector('#fanni-editor-3d').onclick=()=>set('threeD',true);
+ ['font','width','bg','finish','active-bg','color','radius','x','y'].forEach(id=>b.querySelector('#fanni-editor-'+id).addEventListener('input',e=>set(({font:'fontSize',width:'width',bg:'background','active-bg':'activeBackground',finish:'backgroundFinish',color:'color',radius:'radius',x:'x',y:'y'})[id],['font','width','radius','x','y'].includes(id)?Number(e.target.value):e.target.value)));
+ b.querySelector('#fanni-editor-apply-text').onclick=()=>{if(!selected)return;if(selected.children.length)return alert('اختَر عنصرًا نصيًا بسيطًا لتعديل النص.');set('text',b.querySelector('#fanni-editor-text').value.slice(0,200))};
+ b.querySelector('#fanni-editor-hide').onclick=()=>set('hidden',!style().hidden);
+ b.querySelector('#fanni-editor-reset').onclick=()=>{const all={...(config().elements||{})},item=clearResponsiveStyle({...((all[key])||{})});if(Object.keys(item).length)all[key]=item;else delete all[key];state.technicianUiLayout=normalizedTechnicianUiLayout({...config(),elements:all});apply();update()};
+ 
+ b.querySelector('#fanni-nav-available').onclick=()=>location.href='fanni.html?adminLayout=1&tab=available';b.querySelector('#fanni-nav-offers').onclick=()=>location.href='fanni.html?adminLayout=1&tab=myOffers';b.querySelector('#fanni-nav-completed').onclick=()=>location.href='fanni.html?adminLayout=1&tab=completed';b.querySelector('#fanni-nav-wallet').onclick=()=>location.href='fanni.html?adminLayout=1&tab=wallet';b.querySelector('#fanni-nav-register').onclick=()=>location.href='fanni.html?adminLayout=1&tab=register';b.querySelector('#fanni-nav-account').onclick=()=>location.href='password.html?role=fanni&mode=account&adminLayout=1';b.querySelector('#fanni-nav-support').onclick=()=>location.href='support.html?role=fanni&adminLayout=1';
+ b.querySelector('#fanni-editor-save').onclick=async()=>{const btn=b.querySelector('#fanni-editor-save');btn.disabled=true;try{const token=localStorage.getItem('admin_token_v3')||'';const res=await fetch('/api/admin/technician-layout',{method:'PUT',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({layout:normalizedTechnicianUiLayout(config())})});const data=await res.json().catch(()=>({}));if(!res.ok)throw Error(data.message||'تعذر الحفظ');state.technicianUiLayout=normalizedTechnicianUiLayout(data.layout);alert('تم حفظ تنسيق صفحة تسجيل الفني.');location.href='fanni.html?tab=register'}catch(e){alert(e.message||'تعذر الحفظ');btn.disabled=false}};
+ let pointerDrag=null,fanniSuppressClickUntil=0,pressHoldTimer=null;
+ function selectForEditing(el){if(selected&&selected!==el)delete selected.dataset.fanniEditorSelected;selected=el;key=el.dataset.fanniEditorKey||keyFor(el);el.dataset.fanniEditorSelected='1';update()}
+ document.addEventListener('pointerdown',e=>{if(e.pointerType==='touch')return;if(e.button!==0||e.target.closest('#fanni-visual-editor-toolbar'))return;const app=document.getElementById('app');if(!app?.contains(e.target))return;const el=e.target.closest(selector);if(!el)return;const st=style();const drag={el,startX:e.clientX,startY:e.clientY,baseX:Number((el.dataset.fanniEditorKey&&config().elements?.[el.dataset.fanniEditorKey]?.x)||0),baseY:Number((el.dataset.fanniEditorKey&&config().elements?.[el.dataset.fanniEditorKey]?.y)||0),pointerId:e.pointerId,moved:false,active:false};pointerDrag=drag;pressHoldTimer=setTimeout(()=>{if(pointerDrag!==drag)return;drag.active=true;selectForEditing(el);try{el.setPointerCapture(e.pointerId)}catch(_){}el.style.cursor='grabbing'},450)},true);
+ document.addEventListener('pointermove',e=>{if(e.pointerType==='touch')return;if(!pointerDrag||e.pointerId!==pointerDrag.pointerId)return;const dx=e.clientX-pointerDrag.startX,dy=e.clientY-pointerDrag.startY;if(!pointerDrag.active){if(Math.abs(dx)+Math.abs(dy)>8){clearTimeout(pressHoldTimer);pressHoldTimer=null;pointerDrag=null}return}if(Math.abs(dx)+Math.abs(dy)>2)pointerDrag.moved=true;if(!pointerDrag.moved)return;e.preventDefault();set('x',Math.max(-2000,Math.min(2000,Math.round(pointerDrag.baseX+dx*1440/Math.max(1,(pointerDrag.el.parentElement||document.documentElement).getBoundingClientRect().width)))));set('y',Math.max(-2000,Math.min(2000,Math.round(pointerDrag.baseY+dy*900/Math.max(1,(pointerDrag.el.parentElement||document.documentElement).getBoundingClientRect().height)))))},true);
+ function finishPointerDrag(e){if(!pointerDrag||e.pointerId!==pointerDrag.pointerId)return;clearTimeout(pressHoldTimer);pressHoldTimer=null;if(pointerDrag.active){if(pointerDrag.moved)fanniSuppressClickUntil=Date.now()+700;pointerDrag.el.style.cursor='';try{pointerDrag.el.releasePointerCapture(e.pointerId)}catch(_){}}pointerDrag=null}
+ document.addEventListener('click',e=>{if(Date.now()>fanniSuppressClickUntil)return;fanniSuppressClickUntil=0;e.preventDefault();e.stopImmediatePropagation()},true);
+ document.addEventListener('pointerup',finishPointerDrag,true);document.addEventListener('pointercancel',finishPointerDrag,true);
+ let fanniTouchDrag=null,fanniTouchTimer=null;
+ document.addEventListener('touchstart',e=>{if(!document.body.classList.contains('fanni-registration-editor')||e.touches.length!==1||e.target.closest('#fanni-visual-editor-toolbar'))return;const app=document.getElementById('app');if(!app?.contains(e.target))return;const el=e.target.closest(selector);if(!el)return;const t=e.touches[0];const d={el,startX:t.clientX,startY:t.clientY,lastX:t.clientX,lastY:t.clientY,active:false,scrollMode:false,moved:false,baseX:0,baseY:0};fanniTouchDrag=d;fanniTouchTimer=setTimeout(()=>{if(fanniTouchDrag!==d)return;d.active=true;selectForEditing(el);const p=config().elements?.[key]||{};d.baseX=Number(p.x||0);d.baseY=Number(p.y||0);el.style.cursor='grabbing'},450);},{capture:true,passive:true});
+ document.addEventListener('touchmove',e=>{if(!fanniTouchDrag||e.touches.length!==1)return;const t=e.touches[0],d=fanniTouchDrag,dx=t.clientX-d.startX,dy=t.clientY-d.startY;if(!d.active){if(Math.abs(dx)+Math.abs(dy)>8){d.scrollMode=true;clearTimeout(fanniTouchTimer);fanniTouchTimer=null;}d.lastX=t.clientX;d.lastY=t.clientY;return;}e.preventDefault();if(Math.abs(dx)+Math.abs(dy)>2)d.moved=true;set('x',Math.max(-2000,Math.min(2000,Math.round(d.baseX+dx*1440/Math.max(1,(d.el.parentElement||document.documentElement).getBoundingClientRect().width)))));set('y',Math.max(-2000,Math.min(2000,Math.round(d.baseY+dy*900/Math.max(1,(d.el.parentElement||document.documentElement).getBoundingClientRect().height)))));},{capture:true,passive:false});
+ function finishFanniTouch(){if(!fanniTouchDrag)return;clearTimeout(fanniTouchTimer);fanniTouchTimer=null;if(fanniTouchDrag.active&&fanniTouchDrag.moved)fanniSuppressClickUntil=Date.now()+700;fanniTouchDrag.el.style.cursor='';fanniTouchDrag=null;}
+ document.addEventListener('touchend',finishFanniTouch,{capture:true,passive:true});document.addEventListener('touchcancel',finishFanniTouch,{capture:true,passive:true});
+ document.addEventListener('click',e=>{if(e.target.closest('#fanni-visual-editor-toolbar'))return;const app=document.getElementById('app');if(!app?.contains(e.target))return;const interactive=e.target.closest('button,a');if(interactive){e.preventDefault();e.stopImmediatePropagation();selectForEditing(interactive);return;}if(e.target.closest('input,select,textarea,label,form'))return;const el=e.target.closest(selector);if(!el)return;e.preventDefault();e.stopImmediatePropagation();selectForEditing(el)},true);
+ document.addEventListener('submit',e=>{e.preventDefault();e.stopImmediatePropagation()},true);
+ document.addEventListener('change',e=>{if(!e.target.closest('#fanni-visual-editor-toolbar')&&!e.target.closest('input,select,textarea')){e.preventDefault();e.stopImmediatePropagation()}},true);
+ mark();new MutationObserver(mark).observe(document.getElementById('app'),{childList:true,subtree:true});update();
+ }
+ const wait=new MutationObserver(()=>init());wait.observe(document.getElementById('app'),{childList:true,subtree:true});setTimeout(()=>init(),1000);
+})();
+</script>
 
 <script src="/web-push.js" defer></script>
 <script src="/page-visit.js" defer></script>
@@ -1887,10 +2069,57 @@ start();
 </script>
 
 
-
+<script id="sonaa-editor-precision-controls">
+(function(){
+ const toolbarId="fanni-visual-editor-toolbar",p="fanni-editor";
+ function attach(){
+  const bar=document.getElementById(toolbarId);if(!bar||bar.querySelector('.sonaa-editor-nudge'))return;
+  const row=document.createElement('div');row.className='sonaa-editor-nudge';row.setAttribute('aria-label','تحكم دقيق في العنصر المحدد');
+  row.innerHTML='<span style="font-size:10px;font-weight:800;color:#dbeafe">تحريك دقيق</span><button type="button" data-move="up" aria-label="تحريك لأعلى">↑</button><button type="button" data-move="left" aria-label="تحريك لليسار">←</button><button type="button" data-move="down" aria-label="تحريك لأسفل">↓</button><button type="button" data-move="right" aria-label="تحريك لليمين">→</button><span style="font-size:10px;font-weight:800;color:#dbeafe">الحجم</span><button type="button" class="sonaa-size-btn" data-size="down" aria-label="تصغير العنصر">−</button><button type="button" class="sonaa-size-btn" data-size="up" aria-label="تكبير العنصر">+</button>';
+  bar.appendChild(row);
+  row.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.move){const axis=['left','right'].includes(b.dataset.move)?'x':'y',el=bar.querySelector('#'+p+'-'+axis);if(!el)return;const dir={left:-1,right:1,up:-1,down:1}[b.dataset.move];el.value=Math.max(Number(el.min),Math.min(Number(el.max),Number(el.value||0)+dir*2));el.dispatchEvent(new Event('input',{bubbles:true}));}else if(b.dataset.size){const el=bar.querySelector('#'+p+'-width');if(el){el.value=Math.max(Number(el.min),Math.min(Number(el.max),Number(el.value||100)+(b.dataset.size==='up'?3:-3)));el.dispatchEvent(new Event('input',{bubbles:true}));}}});
+ }
+ const mo=new MutationObserver(attach);mo.observe(document.documentElement,{childList:true,subtree:true});attach();
+})();
+</script>
 
 <!-- Sonaa responsive viewport preview for visual layout editors -->
-
+<script>
+(function(){
+  try {
+    const params=new URLSearchParams(location.search);
+    if(params.get('adminLayout')!=='1' || params.get('editorPreviewFrame')==='1') return;
+    const css=document.createElement('style');
+    css.textContent='#sonaa-viewport-preview-launch{position:fixed;z-index:2147483000;left:12px;bottom:14px;border:0;border-radius:12px;padding:12px 15px;background:#0a2342;color:#fff;font:800 13px system-ui;box-shadow:0 5px 20px #0004;cursor:pointer}#sonaa-viewport-preview{position:fixed;inset:0;z-index:2147483001;background:#0a1020ed;display:none;align-items:center;justify-content:center;padding:12px;box-sizing:border-box}#sonaa-viewport-preview.open{display:flex}#sonaa-viewport-preview .svp-shell{height:100%;width:100%;display:flex;flex-direction:column;align-items:center;gap:8px;min-height:0}#sonaa-viewport-preview .svp-tools{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;color:white;font:700 12px system-ui}#sonaa-viewport-preview button{border:0;border-radius:8px;padding:8px 12px;font-weight:800;cursor:pointer}#sonaa-viewport-preview .svp-stage{flex:1;min-height:0;width:100%;display:flex;justify-content:center;align-items:stretch}#sonaa-viewport-preview iframe{height:100%;width:100%;max-width:100%;border:0;border-radius:12px;background:white;box-shadow:0 8px 30px #0005}#sonaa-viewport-preview.mobile .svp-stage iframe{width:min(390px,100%);border:5px solid #111827;border-radius:26px}';
+    document.head.appendChild(css);
+    const launch=document.createElement('button');launch.id='sonaa-viewport-preview-launch';launch.type='button';launch.textContent='📱 معاينة الموبايل / الكمبيوتر';
+    document.body.appendChild(launch);
+    launch.style.display='none';
+    const dockPreviewLaunch=()=>{
+      const panel=document.querySelector('#admin-element-drag-toolbar,#client-visual-editor-toolbar,#fanni-visual-editor-toolbar,#sonaa-standalone-editor');
+      if(!panel){launch.style.display='none';return;}
+      const row=panel.querySelector('#admin-editor-collapse-row,#client-editor-collapse-row,#fanni-editor-collapse-row,#sonaa-standalone-collapse-row')||panel;
+      if(launch.parentElement!==row)row.appendChild(launch);
+      launch.style.cssText='position:static;inset:auto;z-index:auto;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;margin:0 6px;padding:6px 9px;border:1px solid #60a5fa;border-radius:9px;background:#1d4ed8;color:#fff;font:800 10px Cairo,sans-serif;box-shadow:0 3px 0 #102858;cursor:pointer;white-space:normal;max-width:190px';
+      launch.title='معاينة الموبايل والكمبيوتر من داخل لوحة التعديل';
+    };
+    dockPreviewLaunch();
+    new MutationObserver(dockPreviewLaunch).observe(document.documentElement,{childList:true,subtree:true});
+    const overlay=document.createElement('div');overlay.id='sonaa-viewport-preview';overlay.innerHTML='<div class="svp-shell"><div class="svp-tools"><strong>معاينة فعلية حسب عرض الشاشة</strong><button type="button" data-view="mobile">موبايل 390px</button><button type="button" data-view="desktop">كمبيوتر</button><button type="button" data-close>إغلاق المعاينة ✕</button></div><div class="svp-stage"><iframe title="معاينة استجابة الصفحة" loading="lazy"></iframe></div></div>';
+    document.body.appendChild(overlay);
+    const frame=overlay.querySelector('iframe');
+    const url=new URL(location.href);
+    url.searchParams.set('adminLayout','1');
+    url.searchParams.set('editorPreviewFrame','1');
+    url.searchParams.set('editorViewport','mobile');
+    function setView(view){overlay.classList.toggle('mobile',view==='mobile');overlay.querySelectorAll('[data-view]').forEach(b=>{b.style.background=b.dataset.view===view?'#1eb5a6':'#e2e8f0';b.style.color=b.dataset.view===view?'#062b35':'#0f172a'});frame.style.width=view==='mobile'?'min(390px, 100%)':'100%';const target=new URL(url.href);target.searchParams.set('adminLayout','1');target.searchParams.set('editorPreviewFrame','1');target.searchParams.set('editorViewport',view);if(frame.src&&new URL(frame.src).searchParams.get('editorViewport')!==view)frame.src=target.href;}
+    launch.addEventListener('click',()=>{if(!frame.src)frame.src=url.href;overlay.classList.add('open');setView('mobile');});
+    overlay.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));
+    overlay.querySelector('[data-close]').addEventListener('click',()=>overlay.classList.remove('open'));
+    document.addEventListener('keydown',e=>{if(e.key==='Escape')overlay.classList.remove('open');});
+  } catch(e) { console.warn('Sonaa viewport preview unavailable',e); }
+})();
+</script>
 
 </body>
 </html>
