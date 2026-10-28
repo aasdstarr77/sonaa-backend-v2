@@ -1643,8 +1643,8 @@ body.client-visual-editor{padding-bottom:180px}
   function getLayout(){return state.clientUiLayout||{tabOrder:[],sizes:{},elements:{}}}
   const editorViewport=()=> 'shared';
   const responsiveStyle=item=>item;
-  function saveResponsiveStyle(item,prop,value){if(value===null||value==='')delete item[prop];else item[prop]=value;return item;}if(editorViewport()==='mobile'){const m={...(item.mobile||{})};if(value===null||value==='')delete m[prop];else m[prop]=value;if(Object.keys(m).length)item.mobile=m;else delete item.mobile;}else{if(value===null||value==='')delete item[prop];else item[prop]=value;}return item;}
-  function clearResponsiveStyle(item){if(editorViewport()==='mobile')delete item.mobile;else Object.keys(item).forEach(k=>{if(k!=='mobile')delete item[k];});return item;}
+  function saveResponsiveStyle(item,prop,value){if(value===null||value==='')delete item[prop];else item[prop]=value;return item;}
+  function clearResponsiveStyle(item){Object.keys(item).forEach(k=>delete item[k]);return item;}
   function applyLayout(){
     if(applying||!document.getElementById('app'))return;applying=true;
     try{
