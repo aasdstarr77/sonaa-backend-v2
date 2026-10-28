@@ -272,7 +272,7 @@ function confirmPending(key){
 
 function normalizedAdminUiLayout(input){
  const source=input&&typeof input==='object'?input:{};
- return {sectionOrder:Array.isArray(source.sectionOrder)?source.sectionOrder:[],tabOrder:source.tabOrder&&typeof source.tabOrder==='object'?source.tabOrder:{},tabGroups:source.tabGroups&&typeof source.tabGroups==='object'?source.tabGroups:{},sizes:source.sizes&&typeof source.sizes==='object'?source.sizes:{},elements:source.elements&&typeof source.elements==='object'?source.elements:{}};
+ return {sectionOrder:Array.isArray(source.sectionOrder)?source.sectionOrder:[],tabOrder:source.tabOrder&&typeof source.tabOrder==='object'?source.tabOrder:{},tabGroups:source.tabGroups&&typeof source.tabGroups==='object'?source.tabGroups:{},sizes:source.sizes&&typeof source.sizes==='object'?source.sizes:{},elements:source.elements&&typeof source.elements==='object'?Object.fromEntries(Object.entries(source.elements).map(([k,v])=>[k,v&&typeof v==='object'&&!Array.isArray(v)&&v.mobile&&typeof v.mobile==='object'?{...v,mobile:{...v.mobile}}:v])):{}};
 }
 const adminElementKeyCache=new WeakMap();
 let adminSiblingIndexCache=new WeakMap();
@@ -300,6 +300,10 @@ function adminElementKey(el){
  const key=('p_'+parts.join('_')).replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,100);
  adminElementKeyCache.set(el,key);return key;
 }
+const adminEditorViewport=()=>new URLSearchParams(location.search).get('editorViewport')==='mobile'?'mobile':'desktop';
+function adminResponsiveStyle(item){return adminEditorViewport()==='mobile'?{...item,...(item.mobile||{})}:item;}
+function adminSaveResponsiveStyle(item,prop,value){if(adminEditorViewport()==='mobile'){const m={...(item.mobile||{})};if(value===null||value==='')delete m[prop];else m[prop]=value;if(Object.keys(m).length)item.mobile=m;else delete item.mobile;}else{if(value===null||value==='')delete item[prop];else item[prop]=value;}return item;}
+function switchAdminEditorViewport(view){const u=new URL(location.href);u.searchParams.set('editorViewport',view);location.href=u.href;}
 function applyAdminElementPositions(){
  const app=document.getElementById('app');if(!app)return;
  const savedElements=state.adminUiLayout?.elements||{};
@@ -307,7 +311,7 @@ function applyAdminElementPositions(){
  app.querySelectorAll('*').forEach(el=>{
   if(el.closest('#admin-element-drag-toolbar'))return;
   const key=el.dataset.adminLayoutKey||adminElementKey(el);
-  const pos=savedElements[key];if(!pos)return;
+  const base=savedElements[key];if(!base)return;const pos=adminResponsiveStyle(base);
   el.dataset.adminLayoutKey=key;
   if(pos.x!==undefined||pos.y!==undefined)el.style.translate=Number(pos.x||0)+'px '+Number(pos.y||0)+'px';
   if(pos.fontSize)el.style.fontSize=Number(pos.fontSize)+'px';
@@ -320,14 +324,13 @@ function applyAdminElementPositions(){
  });
 }
 let adminSelectedKey='',adminSelectedElement=null;
-function adminSelectedStyle(){return state.adminUiLayout?.elements?.[adminSelectedKey]||{};}
+function adminSelectedStyle(){return adminResponsiveStyle(state.adminUiLayout?.elements?.[adminSelectedKey]||{});}
 const adminEditorHistory=[];let adminEditorHistoryAt=0;
 function rememberAdminEditorStep(){const now=Date.now();if(now-adminEditorHistoryAt<450)return;adminEditorHistoryAt=now;adminEditorHistory.push(JSON.parse(JSON.stringify(state.adminUiLayout||{})));if(adminEditorHistory.length>40)adminEditorHistory.shift();}
 function undoAdminEditorStep(){const previous=adminEditorHistory.pop();if(!previous||!Object.keys(previous).length)return showToast('مفيش خطوة سابقة للتراجع عنها','error');state.adminUiLayout=previous;applyAdminElementPositions();updateAdminEditorControls();}
 function setAdminElementStyle(prop,value){
  if(!adminSelectedKey)return;rememberAdminEditorStep();
- const all={...(state.adminUiLayout.elements||{})},item={...(all[adminSelectedKey]||{})};
- if(value===null||value==='')delete item[prop];else item[prop]=value;
+ const all={...(state.adminUiLayout.elements||{})},item=adminSaveResponsiveStyle({...((all[adminSelectedKey])||{})},prop,value);
  if(Object.keys(item).length)all[adminSelectedKey]=item;else delete all[adminSelectedKey];
  state.adminUiLayout={...state.adminUiLayout,elements:all};applyAdminElementPositions();updateAdminEditorControls();
 }
@@ -345,7 +348,7 @@ function updateAdminEditorControls(){
 let adminPointerDrag=null,adminSuppressClickUntil=0;
 function renderAdminLayoutDock(){
  const sections=orderedAdminSections();
- let html='<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:7px"><div><b style="font-size:13px">✦ تعديل واجهة صُنّاع مباشرة</b><div id="admin-editor-selected-label" style="font-size:10px;color:#cbd5e1;margin-top:2px">اضغط مطولًا على أي عنصر في اللوحة لتحديده</div></div><button type="button" class="editor-cancel" id="admin-drag-cancel-top">إلغاء</button></div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"><b style="flex-basis:100%;font-size:11px;color:#bfdbfe">صفحات الإدارة</b><button type="button" id="admin-editor-dashboard">لوحة الإدارة</button><button type="button" id="admin-editor-account">حساب الأدمن</button><button type="button" id="admin-editor-support">دعم الأدمن</button></div><div class="editor-controls"><label>حجم الخط <input id="admin-editor-font" type="range" min="10" max="36" value="16"><span id="admin-editor-font-val">16</span></label><label>عرض العنصر <input id="admin-editor-width" type="range" min="30" max="100" value="100"><span id="admin-editor-width-val">100%</span></label><label>الخلفية <input id="admin-editor-bg" type="color" value="#ffffff"></label><label>لون النص <input id="admin-editor-color" type="color" value="#0f172a"></label><label>استدارة <input id="admin-editor-radius" type="range" min="0" max="40" value="12"><span id="admin-editor-radius-val">12</span></label><label>تحريك أفقي <input id="admin-editor-x" type="range" min="-2000" max="2000" value="0"><span id="admin-editor-x-val">0</span></label><label>تحريك رأسي <input id="admin-editor-y" type="range" min="-2000" max="2000" value="0"><span id="admin-editor-y-val">0</span></label><label style="flex:1 1 180px">تعديل النص <input id="admin-editor-text" type="text" maxlength="200" placeholder="اختَر عنصرًا نصيًا" style="width:150px;color:#0b1b3a;border-radius:7px;padding:5px"></label><button type="button" id="admin-editor-apply-text">تطبيق النص</button><button type="button" id="admin-editor-hide">إخفاء/إظهار</button><button type="button" class="editor-reset" id="admin-editor-reset">مسح تنسيق العنصر</button></div><div style="font-size:10px;color:#cbd5e1;margin-top:6px;margin-bottom:8px">وضع معاينة آمن: أدوات التعديل لا تنفّذ عمليات الإدارة.</div><div style="font-size:11px;font-weight:900;color:#bfdbfe;margin-bottom:5px">ترتيب أقسام وأزرار الإدارة</div><div style="font-size:10px;color:#cbd5e1;margin-bottom:7px">رتّب الأقسام وغيّر أحجامها من القائمة، أو اسحب عناصر الواجهة بعد ضغطة مطوّلة.</div><div style="max-height:22vh;overflow:auto;border:1px solid #334155;border-radius:10px;padding:5px">';
+ let html='<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px"><b style="font-size:11px">نمط الحفظ:</b><button type="button" id="admin-editor-viewport-desktop">كمبيوتر</button><button type="button" id="admin-editor-viewport-mobile">موبايل</button><span style="font-size:10px;color:#cbd5e1">إعدادات مستقلة لكل مقاس</span></div><div style="display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:7px"><div><b style="font-size:13px">✦ تعديل واجهة صُنّاع مباشرة</b><div id="admin-editor-selected-label" style="font-size:10px;color:#cbd5e1;margin-top:2px">اضغط مطولًا على أي عنصر في اللوحة لتحديده</div></div><button type="button" class="editor-cancel" id="admin-drag-cancel-top">إلغاء</button></div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"><b style="flex-basis:100%;font-size:11px;color:#bfdbfe">صفحات الإدارة</b><button type="button" id="admin-editor-dashboard">لوحة الإدارة</button><button type="button" id="admin-editor-account">حساب الأدمن</button><button type="button" id="admin-editor-support">دعم الأدمن</button></div><div class="editor-controls"><label>حجم الخط <input id="admin-editor-font" type="range" min="10" max="36" value="16"><span id="admin-editor-font-val">16</span></label><label>عرض العنصر <input id="admin-editor-width" type="range" min="30" max="100" value="100"><span id="admin-editor-width-val">100%</span></label><label>الخلفية <input id="admin-editor-bg" type="color" value="#ffffff"></label><label>لون النص <input id="admin-editor-color" type="color" value="#0f172a"></label><label>استدارة <input id="admin-editor-radius" type="range" min="0" max="40" value="12"><span id="admin-editor-radius-val">12</span></label><label>تحريك أفقي <input id="admin-editor-x" type="range" min="-2000" max="2000" value="0"><span id="admin-editor-x-val">0</span></label><label>تحريك رأسي <input id="admin-editor-y" type="range" min="-2000" max="2000" value="0"><span id="admin-editor-y-val">0</span></label><label style="flex:1 1 180px">تعديل النص <input id="admin-editor-text" type="text" maxlength="200" placeholder="اختَر عنصرًا نصيًا" style="width:150px;color:#0b1b3a;border-radius:7px;padding:5px"></label><button type="button" id="admin-editor-apply-text">تطبيق النص</button><button type="button" id="admin-editor-hide">إخفاء/إظهار</button><button type="button" class="editor-reset" id="admin-editor-reset">مسح تنسيق العنصر</button></div><div style="font-size:10px;color:#cbd5e1;margin-top:6px;margin-bottom:8px">وضع معاينة آمن: أدوات التعديل لا تنفّذ عمليات الإدارة.</div><div style="font-size:11px;font-weight:900;color:#bfdbfe;margin-bottom:5px">ترتيب أقسام وأزرار الإدارة</div><div style="font-size:10px;color:#cbd5e1;margin-bottom:7px">رتّب الأقسام وغيّر أحجامها من القائمة، أو اسحب عناصر الواجهة بعد ضغطة مطوّلة.</div><div style="max-height:22vh;overflow:auto;border:1px solid #334155;border-radius:10px;padding:5px">';
  sections.forEach((section,si)=>{
   html+='<div style="padding:5px 2px;border-bottom:1px solid #334155"><div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap"><strong style="flex:1;min-width:100px;font-size:11px">'+escHtml(section.icon+' '+section.label)+'</strong><button type="button" class="layout-control" '+(si===0?'disabled':'')+' onclick="moveAdminSection(\''+section.id+'\',-1)">↑</button><button type="button" class="layout-control" '+(si===sections.length-1?'disabled':'')+' onclick="moveAdminSection(\''+section.id+'\',1)">↓</button></div>';
   orderedAdminTabs(section).forEach((tab,ti,arr)=>{
@@ -369,7 +372,7 @@ function ensureAdminElementToolbar(){
  bar.querySelector('#admin-editor-apply-text').onclick=()=>{if(!adminSelectedElement)return showToast('اختَر عنصرًا أولًا','error');if(adminSelectedElement.children.length)return showToast('اختَر عنصرًا نصيًا بسيطًا','error');setAdminElementStyle('text',bar.querySelector('#admin-editor-text').value.slice(0,200));};
  bar.querySelector('#admin-editor-hide').onclick=()=>setAdminElementStyle('hidden',!adminSelectedStyle().hidden);
  bar.querySelector('#admin-editor-reset').onclick=()=>{if(!adminSelectedKey)return;const all={...(state.adminUiLayout.elements||{})};delete all[adminSelectedKey];state.adminUiLayout={...state.adminUiLayout,elements:all};adminSelectedKey='';adminSelectedElement=null;render();};
- bar.querySelector('#admin-editor-dashboard').onclick=()=>{state.tab='dashboard';render()};bar.querySelector('#admin-editor-account').onclick=()=>location.href='password.html?role=admin&mode=account&adminLayout=1';bar.querySelector('#admin-editor-support').onclick=()=>location.href='support.html?role=admin&adminLayout=1';bar.querySelector('#admin-drag-save').onclick=saveAdminUiLayout;bar.querySelector('#admin-drag-cancel').onclick=cancelAdminLayoutEdit;bar.querySelector('#admin-drag-cancel-top').onclick=cancelAdminLayoutEdit;updateAdminEditorControls();
+ bar.querySelector('#admin-editor-dashboard').onclick=()=>{state.tab='dashboard';render()};bar.querySelector('#admin-editor-account').onclick=()=>location.href='password.html?role=admin&mode=account&adminLayout=1';bar.querySelector('#admin-editor-support').onclick=()=>location.href='support.html?role=admin&adminLayout=1';bar.querySelector('#admin-drag-save').onclick=saveAdminUiLayout;['desktop','mobile'].forEach(view=>{const btn=bar.querySelector('#admin-editor-viewport-'+view);if(btn){btn.style.cssText='border:0;border-radius:8px;padding:6px 10px;font-weight:800;background:'+(adminEditorViewport()===view?'#1eb5a6':'#e2e8f0')+';color:'+(adminEditorViewport()===view?'#062b35':'#0f172a');btn.onclick=()=>switchAdminEditorViewport(view);}});bar.querySelector('#admin-drag-cancel').onclick=cancelAdminLayoutEdit;bar.querySelector('#admin-drag-cancel-top').onclick=cancelAdminLayoutEdit;updateAdminEditorControls();
 }
 document.addEventListener('pointerdown',event=>{
  if(event.pointerType==='touch')return;
@@ -389,7 +392,7 @@ document.addEventListener('pointermove',event=>{
  if(Math.abs(dx)+Math.abs(dy)>2)adminPointerDrag.moved=true;if(!adminPointerDrag.moved)return;
  event.preventDefault();
  const x=Math.max(-2000,Math.min(2000,Math.round(adminPointerDrag.baseX+dx))),y=Math.max(-2000,Math.min(2000,Math.round(adminPointerDrag.baseY+dy)));
- const elements={...(state.adminUiLayout.elements||{}),[adminPointerDrag.key]:{...(state.adminUiLayout.elements?.[adminPointerDrag.key]||{}),x,y}};
+ const elements={...(state.adminUiLayout.elements||{})};const dragged={...((elements[adminPointerDrag.key])||{})};adminSaveResponsiveStyle(dragged,'x',x);adminSaveResponsiveStyle(dragged,'y',y);elements[adminPointerDrag.key]=dragged;
  state.adminUiLayout={...state.adminUiLayout,elements};adminPointerDrag.el.style.translate=x+'px '+y+'px';
 },true);
 document.addEventListener('click',event=>{if(!state.layoutEditMode||!isRootAdminUI()||event.target.closest('#admin-element-drag-toolbar,#admin-drag-toggle,.layout-toolbar,.layout-item-controls,.layout-control'))return;const app=document.getElementById('app');if(!app?.contains(event.target))return;const interactive=event.target.closest('button,a');if(!interactive)return;event.preventDefault();event.stopImmediatePropagation();selectAdminElement(interactive);},true);
@@ -448,6 +451,7 @@ async function saveAdminUiLayout(){if(!isRootAdminUI())return showToast('تعد�
 function toggleAdminLayoutEdit(){if(!isRootAdminUI())return showToast('تعديل ترتيب الأزرار متاح للمدير الرئيسي فقط','error');state.layoutEditMode=!state.layoutEditMode;render();}
 function cancelAdminLayoutEdit(){state.layoutEditMode=false;loadAdminUiLayout().finally(()=>render());}
 function render(){
+  if(new URLSearchParams(location.search).get('adminLayout')==='1'&&isRootAdminUI())state.layoutEditMode=true;
   adminSiblingIndexCache=new WeakMap();
   document.body.classList.toggle('admin-layout-touch-editor',!!state.layoutEditMode);
   if(!getToken()){renderLogin();return;}
@@ -1428,9 +1432,10 @@ if(getToken()){ loadAll(); } else { renderLogin(); }
     document.body.appendChild(overlay);
     const frame=overlay.querySelector('iframe');
     const url=new URL(location.href);
-    url.searchParams.delete('adminLayout');
+    url.searchParams.set('adminLayout','1');
     url.searchParams.set('editorPreviewFrame','1');
-    function setView(view){overlay.classList.toggle('mobile',view==='mobile');overlay.querySelectorAll('[data-view]').forEach(b=>{b.style.background=b.dataset.view===view?'#1eb5a6':'#e2e8f0';b.style.color=b.dataset.view===view?'#062b35':'#0f172a'});frame.style.width=view==='mobile'?'min(390px, 100%)':'100%';}
+    url.searchParams.set('editorViewport','mobile');
+    function setView(view){overlay.classList.toggle('mobile',view==='mobile');overlay.querySelectorAll('[data-view]').forEach(b=>{b.style.background=b.dataset.view===view?'#1eb5a6':'#e2e8f0';b.style.color=b.dataset.view===view?'#062b35':'#0f172a'});frame.style.width=view==='mobile'?'min(390px, 100%)':'100%';const target=new URL(url.href);target.searchParams.set('adminLayout','1');target.searchParams.set('editorPreviewFrame','1');target.searchParams.set('editorViewport',view);if(frame.src&&new URL(frame.src).searchParams.get('editorViewport')!==view)frame.src=target.href;}
     launch.addEventListener('click',()=>{if(!frame.src)frame.src=url.href;overlay.classList.add('open');setView('mobile');});
     overlay.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));
     overlay.querySelector('[data-close]').addEventListener('click',()=>overlay.classList.remove('open'));
