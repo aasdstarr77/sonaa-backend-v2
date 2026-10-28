@@ -15,6 +15,23 @@
 <aside><div class="controls">
 <label for="page">الصفحة</label>
 <select id="page"><option value="admin">لوحة الإدارة</option><option value="client">صفحة العميل</option><option value="fanni">صفحة الفني</option><option value="password">الحساب وكلمة المرور</option><option value="support">الدعم</option></select>
+<label for="subPage">الصفحة الفرعية</label>
+<select id="subPage">
+<option value="">— اختر قسمًا لفتحه في المعاينة —</option>
+<optgroup label="العميل">
+<option value="client:login">تسجيل دخول العميل</option><option value="client:register">تسجيل العميل</option><option value="client:my-orders">طلباتي</option><option value="client:new-order">طلب خدمة جديد</option><option value="client:complaint-form">الشكاوى / تقديم شكوى</option><option value="client:profile">بيانات العميل</option>
+</optgroup>
+<optgroup label="الفني">
+<option value="fanni:login">تسجيل دخول الفني</option><option value="fanni:register">تسجيل الفني</option><option value="fanni:my-orders">طلباتي / فرص العمل</option><option value="fanni:profile">بيانات الفني</option><option value="fanni:wallet">المحفظة</option><option value="fanni:notifications">الإشعارات</option>
+</optgroup>
+<optgroup label="الإدارة">
+<option value="admin:dashboard">الرئيسية</option><option value="admin:orders">الطلبات</option><option value="admin:technicians">الفنيون</option><option value="admin:clients">العملاء</option><option value="admin:support">الدعم</option><option value="admin:password-recovery">استعادة كلمة المرور</option>
+</optgroup>
+<optgroup label="الحساب والدعم">
+<option value="password:profile">بيانات الحساب</option><option value="password:change-password">تغيير كلمة المرور</option><option value="support:my-cases">طلبات الدعم</option><option value="support:new-case">طلب دعم جديد</option>
+</optgroup>
+</select>
+<div class="actions"><button type="button" id="openSubPage" class="secondary">فتح القسم في المعاينة</button></div>
 <label for="element">العنصر المحدد</label><input id="element" readonly placeholder="اضغط على عنصر داخل المعاينة">
 <label for="containerId">معرّف الحاوية</label><input id="containerId" maxlength="100" placeholder="container-id">
 <label for="anchor">نقطة الارتكاز</label><select id="anchor"><option value="top-left">أعلى اليسار</option><option value="top-right">أعلى اليمين</option><option value="bottom-left">أسفل اليسار</option><option value="bottom-right">أسفل اليمين</option><option value="center">المنتصف</option></select>
@@ -34,6 +51,12 @@
 'use strict';
 const API='/api/admin/ui-layout/';
 const pages={admin:{title:'لوحة الإدارة',url:'/admin.html'},client:{title:'صفحة العميل',url:'/client.html'},fanni:{title:'صفحة الفني',url:'/fanni.html'},password:{title:'الحساب وكلمة المرور',url:'/password.html'},support:{title:'الدعم',url:'/support.html'}};
+const subPages={
+ 'client:login':'login','client:register':'register','client:my-orders':'my-orders','client:new-order':'new-order','client:complaint-form':'complaint-form','client:profile':'profile',
+ 'fanni:login':'login','fanni:register':'register','fanni:my-orders':'my-orders','fanni:profile':'profile','fanni:wallet':'wallet','fanni:notifications':'notifications',
+ 'admin:dashboard':'dashboard','admin:orders':'orders','admin:technicians':'technicians','admin:clients':'clients','admin:support':'support','admin:password-recovery':'password-recovery',
+ 'password:profile':'profile','password:change-password':'change-password','support:my-cases':'my-cases','support:new-case':'new-case'
+};
 const $=id=>document.getElementById(id);
 const frame=$('preview'),pageSelect=$('page');
 let layouts={},selectedId='',selected=null,injecting=false;
@@ -119,6 +142,16 @@ async function loadPage(){
  frame.onload=setupFrame;
  frame.src=pages[p].url+(pages[p].url.includes('?')?'&':'?')+'editorPreview=1&_editorReload='+Date.now();
 }
+$('subPage').addEventListener('change',function(){
+ const val=this.value;if(!val)return;const targetPage=val.split(':')[0];if(pageSelect.value!==targetPage){pageSelect.value=targetPage;loadPage().then(sendSubPage)}else sendSubPage();
+});
+function sendSubPage(){
+ const val=$('subPage').value;if(!val)return;
+ const pair=val.split(':');const targetPage=pair[0];if(pageSelect.value!==targetPage){pageSelect.value=targetPage;return loadPage().then(sendSubPage)}
+ const section=subPages[val];if(!section)return;
+ try{frame.contentWindow.postMessage({action:'openSection',section:section},'*');status('تم إرسال أمر فتح القسم: '+section+' إلى المعاينة.')}catch(e){status('تعذر فتح القسم: '+e.message)}
+}
+$('openSubPage').addEventListener('click',sendSubPage);
 $('page').addEventListener('change',loadPage);
 $('reload').addEventListener('click',loadPage);
 $('apply').addEventListener('click',()=>{
