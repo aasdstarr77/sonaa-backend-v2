@@ -1,6 +1,27 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
+<script>
+(async function checkAdmin() {
+  const token = localStorage.getItem('adminToken') || localStorage.getItem('sonaa_admin_token') || localStorage.getItem('token');
+  if (!token) {
+    alert('يجب تسجيل الدخول كأدمن أولاً');
+    window.location.href = '/frontend/admin.html';
+    return;
+  }
+  try {
+    const res = await fetch('/api/admin/me', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!res.ok) throw new Error('not admin');
+    const data = await res.json();
+    if (!data.isAdmin && data.role !== 'admin' && !data.admin) throw new Error('not admin');
+  } catch (e) {
+    alert('غير مصرح لك - يجب تسجيل الدخول كأدمن');
+    window.location.href = '/frontend/admin.html';
+  }
+})();
+</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#0A2342">
@@ -10,6 +31,9 @@
 </style>
 </head>
 <body>
+<div style="background:#1F2937;color:white;padding:10px;text-align:center;">
+  وضع تحرير الواجهة - <a href="/frontend/admin.html" style="color:#60A5FA;">العودة للوحة التحكم</a>
+</div>
 <header><div><h1>محرر صُنّاع الموحد</h1><small>تجريبي — يعمل على الصفحة المعروضة فقط، ولا يغيّر ملفاتها</small></div><div><button id="reload" class="secondary">إعادة تحميل المعاينة</button></div></header>
 <main>
 <aside><div class="controls">
