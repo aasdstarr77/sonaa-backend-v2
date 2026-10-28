@@ -334,10 +334,10 @@ async function run() {
     });
 
     await test('admin button layout is shared, persisted, and safely sanitized', async () => {
-      const unauthorized = await request(app).get('/api/admin/layout');
+      const unauthorized = await request(app).get('/api/admin/ui-layout/admin');
       assert.equal(unauthorized.status, 401);
 
-      const saved = await request(app).put('/api/admin/layout')
+      const saved = await request(app).put('/api/admin/ui-layout/admin')
         .set('Authorization', 'Bearer ' + adminToken)
         .send({ layout: {
           sectionOrder: ['platform-admin', 'dashboard', 'unknown-section', 'dashboard'],
@@ -353,7 +353,7 @@ async function run() {
       assert.equal(saved.body.layout.sizes.orders, 'large');
       assert.equal(saved.body.layout.sizes.dashboard, undefined);
       assert.equal(saved.body.layout.sizes.stats, 'small');
-      const loaded = await request(app).get('/api/admin/layout')
+      const loaded = await request(app).get('/api/admin/ui-layout/admin')
         .set('Authorization', 'Bearer ' + adminToken);
       assert.equal(loaded.status, 200);
       assert.deepEqual(loaded.body.layout, saved.body.layout);
