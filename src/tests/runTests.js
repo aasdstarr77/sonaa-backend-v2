@@ -114,7 +114,9 @@ async function run() {
       const r = await request(app).get('/');
       const csp = r.headers['content-security-policy'] || '';
       assert.ok(csp.includes("object-src 'none'"));
-      assert.ok(csp.includes("frame-ancestors 'none'"));
+      assert.ok(csp.includes("frame-ancestors 'self'"));
+      assert.ok(!csp.includes("https://*.vercel.app"));
+      assert.equal(r.headers['x-frame-options'], 'SAMEORIGIN');
     });
 
     await test('CORS allows configured production origin', async () => {
