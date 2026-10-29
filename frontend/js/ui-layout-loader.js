@@ -7,6 +7,14 @@
   var previewParams = new URLSearchParams(window.location.search);
   if (previewParams.has('preview') || window.self !== window.top) {
     console.log('[Sonaa UI layout] Preview mode detected — saved layout loader disabled.');
+    var previewSplash = document.getElementById('splash') ||
+      document.getElementById('splash-screen') ||
+      document.getElementById('loading') ||
+      document.querySelector('.splash-screen') ||
+      document.querySelector('.splash') ||
+      document.querySelector('#app-loading') ||
+      document.querySelector('[class*="loading-screen"]');
+    if (previewSplash) previewSplash.style.display = 'none';
     return;
   }
   console.log('[Sonaa UI layout] Live site mode — applying saved layout.');
