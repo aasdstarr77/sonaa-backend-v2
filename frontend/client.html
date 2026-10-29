@@ -1767,11 +1767,34 @@ render();
 }
 
 
-/* Match the technician header controls: blue download/home actions and compact, aligned controls. */
-#app .app-header>div{gap:8px!important}
-#app .app-header>div>div:first-child{flex:1 1 155px;min-width:0;gap:8px!important}
-#app .app-header>div>div:last-child{max-width:58%;min-width:0;flex:0 1 auto}
-#app .app-header>div>div:last-child>div:first-child{gap:3px!important;flex-wrap:nowrap}
+/* Customer header layout: one shared structure, responsive sizing only where needed. */
+#app .app-header>div:first-child{
+ gap:12px!important;align-items:center!important;
+}
+#app .app-header>div:first-child>div:first-child{
+ flex:1 1 155px;min-width:0;gap:8px!important;
+}
+#app .app-header>div:first-child>div:last-child{
+ min-width:0;max-width:none;flex:0 1 290px;width:290px;
+}
+#app .app-header>div:first-child>div:last-child>div:first-child{
+ gap:5px!important;
+}
+@media(max-width:519px){
+ #app .app-header>div:first-child{
+  display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1.08fr)!important;
+  gap:7px!important;align-items:center!important;
+ }
+ #app .app-header>div:first-child>div:first-child{width:100%;min-width:0;flex:none}
+ #app .app-header>div:first-child>div:last-child{
+  width:100%!important;max-width:none!important;min-width:0;flex:none!important;
+ }
+ #app .app-header>div:first-child>div:last-child>div:first-child{gap:5px!important}
+}
+@media(min-width:520px){
+ #app .app-header>div:first-child{display:flex!important;flex-wrap:nowrap!important}
+ #app .app-header>div:first-child>div:last-child{flex:0 0 290px!important;width:290px!important;max-width:290px!important}
+}
 #app .app-header .dashboard-download-btn,
 #app .app-header a[href*="password.html?role=client&mode=account"],
 #app .app-header button[onclick="logoutClient()"],
@@ -1809,7 +1832,7 @@ render();
  box-shadow:0 1px 0 #cbd8e9,0 3px 6px #0b1b3a12!important;
 }
 @media(max-width:420px){
- #app .app-header>div>div:last-child{max-width:62%}
+ #app .app-header>div:first-child>div:last-child{max-width:none!important}
  #app .app-header .dashboard-download-btn{padding-left:5px!important;padding-right:5px!important;font-size:9px!important}
 }
 
