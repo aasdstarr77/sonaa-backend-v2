@@ -86,13 +86,13 @@
 <div id="status" class="status">اختر عنصرًا من المعاينة لبدء التعديل. يلزم تسجيل دخول الإدارة لحفظ التخطيط.</div>
 <div class="hint">يستخدم المحرر data-editor-id ومعرّفًا ثابتًا مشتقًا من ID أو مسار DOM للعناصر التي لا تحمل ID. طبقة التموضع منفصلة منطقيًا عن طبقة التأثير: pos-layer للإزاحة والأبعاد، وeffect-layer للـ 3D، لتجنب الكتابة فوق transform الأصلي.</div>
 </div></aside>
-<section class="preview"><div class="previewbar"><strong id="previewTitle">لوحة الإدارة</strong><small>انقر عنصرًا لتحديده</small></div><div class="framewrap"><iframe id="preview" title="معاينة الصفحة"></iframe></div></section>
+<section class="preview"><div class="previewbar"><strong id="previewTitle">لوحة الإدارة</strong><small>انقر عنصرًا لتحديده</small></div><div class="framewrap"><iframe id="previewFrame" src="/frontend/client.html" title="معاينة الصفحة" style="width:100%;height:700px;border:1px solid #ddd;" sandbox="allow-same-origin allow-scripts allow-forms allow-popups"></iframe></div></section>
 </main>
 <script>
 (function(){
 'use strict';
 const API='/api/admin/ui-layout/';
-const pages={admin:{title:'لوحة الإدارة',url:'/frontend/admin.html'},client:{title:'صفحة العميل',url:'/frontend/client.html?v=1'},fanni:{title:'صفحة الفني',url:'/frontend/fanni.html'},password:{title:'الحساب وكلمة المرور',url:'/frontend/password.html'},support:{title:'الدعم',url:'/frontend/support.html'}};
+const pages={admin:{title:'لوحة الإدارة',url:'/frontend/admin.html'},client:{title:'صفحة العميل',url:'/frontend/client.html'},fanni:{title:'صفحة الفني',url:'/frontend/fanni.html'},password:{title:'الحساب وكلمة المرور',url:'/frontend/password.html'},support:{title:'الدعم',url:'/frontend/support.html'}};
 const subPages={
  'client:login':'login','client:register':'register','client:my-orders':'orders','client:new-order':'new','client:complaint-form':'complaint','client:profile':'profile',
  'fanni:login':'login','fanni:register':'register','fanni:my-orders':'myOffers','fanni:profile':'profile','fanni:wallet':'wallet','fanni:notifications':'notifications',
@@ -100,7 +100,7 @@ const subPages={
  'password:profile':'profile','password:change-password':'changePassword','support:my-cases':'main','support:new-case':'new-title'
 };
 const $=id=>document.getElementById(id);
-const frame=$('preview'),pageSelect=$('page');
+const frame=$('previewFrame'),pageSelect=$('page');
 let layouts={},selectedId='',selected=null,injecting=false;
 const status=(s)=>{$('status').textContent=s};
 const token=()=>{try{return localStorage.getItem('admin_token_v3')||''}catch(_){return ''}};
@@ -183,7 +183,7 @@ async function loadPage(){
  await loadLayout();
  frame.onload=function(){console.log('iframe loaded:',frame.src);setupFrame();};
  frame.onerror=function(){console.error('iframe error:',frame.src);status('تعذر تحميل المعاينة داخل الإطار: '+frame.src);};
- frame.src=pages[p].url+(pages[p].url.includes('?')?'&':'?')+'editorPreview=1&_editorReload='+Date.now();
+ frame.src=pages[p].url;
 }
 $('subPage').addEventListener('change',function(){
  const val=this.value;if(!val)return;const targetPage=val.split(':')[0];if(pageSelect.value!==targetPage){pageSelect.value=targetPage;loadPage().then(sendSubPage)}else sendSubPage();
