@@ -44,17 +44,12 @@ app.use(helmet({
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
       formAction: ["'self'"],
-      frameAncestors: ["'self'", 'https://*.vercel.app']
+      frameAncestors: ["'self'"]
     }
   },
   crossOriginEmbedderPolicy: false
 }));
 
-// Allow same-origin editor previews and Vercel-hosted pages to embed frontend pages.
-app.use((req, res, next) => {
-  res.removeHeader('X-Frame-Options');
-  next();
-});
 
 // Restrict browser access to explicitly configured origins. Requests without
 // an Origin header (for example native apps/server-to-server calls) remain valid.
