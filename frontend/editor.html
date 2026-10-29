@@ -103,6 +103,7 @@ function selectElement(el){
   if(selected)selected.classList.remove('sonaa-selected');
   selected=el;selectedId=key(el);el.classList.add('sonaa-selected');
   $('elementName').textContent=displayName(el)+' · '+el.tagName.toLowerCase();
+  if(typeof makeElementDraggable==='function')makeElementDraggable(el);
   const doc=el.ownerDocument,computed=doc.defaultView.getComputedStyle(el),rect=el.getBoundingClientRect();
   const parentWidth=Math.max(1,el.parentElement?.clientWidth||doc.body.clientWidth||rect.width||1);
   const saved=layout().elements?.[selectedId]||{};
@@ -130,7 +131,74 @@ function selectElement(el){
     fontSize:saved.fontSize??current.fontSize,radius:saved.radius??current.radius,
     buttonWidth:saved.buttonWidth??current.buttonWidth,buttonHeight:saved.buttonHeight??current.buttonHeight});
 }
-function setupFrame(){let doc;try{doc=frame.contentDocument;if(!doc||!doc.body)throw Error('empty')}catch(_){status('تعذر الوصول إلى المعاينة. تأكد من فتح الصفحات على نفس النطاق.');return}const style=doc.createElement('style');style.textContent='[data-editor-id]{cursor:crosshair!important}[data-editor-id].sonaa-selected{outline:3px solid #ff9f1c!important;outline-offset:2px!important}';doc.head.appendChild(style);const all=[...doc.body.querySelectorAll('*')].filter(el=>!['SCRIPT','STYLE','LINK','META','NOSCRIPT','SVG','PATH'].includes(el.tagName));all.forEach(el=>{if(!el.dataset.editorId)el.dataset.editorId=stable(el);const saved=layout().elements?.[key(el)];if(saved)applyItem(el,saved)});doc.addEventListener('click',ev=>{const el=ev.target.closest('[data-editor-id]');if(!el)return;ev.preventDefault();ev.stopPropagation();if(ev.stopImmediatePropagation)ev.stopImmediatePropagation();selectElement(el);status('تم تحديد العنصر. عدّل خصائصه ثم اضغط تطبيق على المعاينة.')},true);const chosen=$('subPage').value;if(chosen&&chosen.split(':')[0]===$('page').value&&sections[chosen])frame.contentWindow.postMessage({action:'openSection',section:sections[chosen]},location.origin);status('المعاينة جاهزة. اضغط على أي عنصر لتحديده.')}
+let dragHandle=null,isDragging=false,dragTarget=null,dragDoc=null,startX=0,startY=0,startLeftPercent=0,startTopPercent=0,dragParent=null;
+function placeDragHandle(el){
+  if(!dragHandle||!el||!el.isConnected)return;
+  const r=el.getBoundingClientRect();
+  dragHandle.style.left=(r.left+r.width/2)+'px';
+  dragHandle.style.top=Math.max(2,r.top-30)+'px';
+}
+function makeElementDraggable(el){
+  const doc=el.ownerDocument;
+  if(!dragHandle||dragDoc!==doc){
+    if(dragHandle)dragHandle.remove();
+    dragDoc=doc;
+    dragHandle=doc.createElement('div');
+    dragHandle.className='drag-handle';
+    dragHandle.textContent='↔️ اسحب للتحريك';
+    dragHandle.style.cssText='position:fixed;top:2px;left:2px;transform:translateX(-50%);background:#7C3AED;color:#fff;padding:4px 9px;border-radius:5px;font-size:11px;font-family:Arial,sans-serif;cursor:grab;z-index:2147483647;user-select:none;touch-action:none;white-space:nowrap;box-shadow:0 2px 8px #0003;';
+    doc.body.appendChild(dragHandle);
+    dragHandle.addEventListener('mousedown',ev=>startDrag(ev,selected));
+    dragHandle.addEventListener('touchstart',ev=>{if(ev.touches[0])startDrag(ev.touches[0],selected,ev)},{passive:false});
+    doc.addEventListener('mousemove',onDrag);
+    doc.addEventListener('touchmove',ev=>{if(ev.touches[0])onDrag(ev.touches[0],ev)},{passive:false});
+    doc.addEventListener('mouseup',endDrag);
+    doc.addEventListener('touchend',endDrag);
+    doc.defaultView.addEventListener('scroll',()=>placeDragHandle(selected),true);
+    doc.defaultView.addEventListener('resize',()=>placeDragHandle(selected));
+  }
+  placeDragHandle(el);
+}
+function startDrag(e,el,originalEvent){
+  if(originalEvent){originalEvent.preventDefault();originalEvent.stopPropagation()}
+  else {e.preventDefault();e.stopPropagation()}
+  isDragging=true;dragTarget=el;
+  dragParent=el.parentElement;
+  if(!dragParent)return endDrag();
+  if(dragParent.ownerDocument.defaultView.getComputedStyle(dragParent).position==='static')dragParent.style.position='relative';
+  const pr=dragParent.getBoundingClientRect(),r=el.getBoundingClientRect();
+  startX=e.clientX;startY=e.clientY;
+  startLeftPercent=pr.width?((r.left-pr.left)/pr.width)*100:0;
+  startTopPercent=pr.height?((r.top-pr.top)/pr.height)*100:0;
+  dragHandle.style.cursor='grabbing';
+  dragDoc.body.style.userSelect='none';
+  dragDoc.body.style.cursor='grabbing';
+}
+function onDrag(e,originalEvent){
+  if(!isDragging||!dragTarget||!dragParent)return;
+  if(originalEvent)originalEvent.preventDefault();
+  const pr=dragParent.getBoundingClientRect();
+  if(!pr.width||!pr.height)return;
+  const left=startLeftPercent+((e.clientX-startX)/pr.width)*100;
+  const top=startTopPercent+((e.clientY-startY)/pr.height)*100;
+  dragTarget.style.position='absolute';
+  dragTarget.style.left=left+'%';
+  dragTarget.style.top=top+'%';
+  dragTarget.style.zIndex=dragTarget.style.zIndex||'2';
+  const xInput=document.getElementById('posX')||document.getElementById('xPercent');
+  const yInput=document.getElementById('posY')||document.getElementById('yPercent');
+  if(xInput)xInput.value=Math.round(left);
+  if(yInput)yInput.value=Math.round(top);
+  placeDragHandle(dragTarget);
+}
+function endDrag(){
+  if(!isDragging)return;
+  isDragging=false;
+  if(dragDoc&&dragDoc.body){dragDoc.body.style.cursor='';dragDoc.body.style.userSelect=''}
+  if(dragHandle)dragHandle.style.cursor='grab';
+  dragTarget=null;dragParent=null;
+}
+function setupFrame(){let doc;try{doc=frame.contentDocument;if(!doc||!doc.body)throw Error('empty')}catch(_){status('تعذر الوصول إلى المعاينة. تأكد من فتح الصفحات على نفس النطاق.');return}const style=doc.createElement('style');style.textContent='[data-editor-id]{cursor:crosshair!important}[data-editor-id].sonaa-selected{outline:3px solid #ff9f1c!important;outline-offset:2px!important}';doc.head.appendChild(style);const all=[...doc.body.querySelectorAll('*')].filter(el=>!['SCRIPT','STYLE','LINK','META','NOSCRIPT','SVG','PATH'].includes(el.tagName));all.forEach(el=>{if(!el.dataset.editorId)el.dataset.editorId=stable(el);const saved=layout().elements?.[key(el)];if(saved)applyItem(el,saved)});doc.addEventListener('click',ev=>{if(ev.target.closest('.drag-handle')){ev.preventDefault();ev.stopPropagation();return}if(isDragging)return;const el=ev.target.closest('[data-editor-id]');if(!el)return;ev.preventDefault();ev.stopPropagation();if(ev.stopImmediatePropagation)ev.stopImmediatePropagation();selectElement(el);makeElementDraggable(el);status('تم تحديد العنصر. اسحب المقبض البنفسجي لتحريكه، ثم اضغط حفظ ونشر.')},true);const chosen=$('subPage').value;if(chosen&&chosen.split(':')[0]===$('page').value&&sections[chosen])frame.contentWindow.postMessage({action:'openSection',section:sections[chosen]},location.origin);status('المعاينة جاهزة. اضغط على أي عنصر لتحديده ثم اسحب المقبض البنفسجي لتحريكه.')}
 async function loadLayout(){const p=$('page').value;layouts[p]={sectionOrder:[],tabOrder:{},tabGroups:{},sizes:{},elements:{}};const t=token();if(!t){status('المعاينة متاحة، لكن يلزم تسجيل الدخول للإدارة لتحميل وحفظ التخطيط.');return}try{const r=await fetch(API+encodeURIComponent(p),{headers:{Authorization:'Bearer '+t},cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.message||r.status);layouts[p]=d.layout||layouts[p]}catch(e){status('تعذر تحميل التخطيط المحفوظ: '+e.message)}}
 async function loadPage(pageKey){
   const requested=typeof pageKey==='string'?pageKey:$('page').value;
@@ -139,8 +207,8 @@ async function loadPage(pageKey){
   let p=aliasSection?aliasSection.split(':')[0]:requested;
   const mappedFile=PAGE_MAP[requested];
   if(!pages[p]){
-    const fileName=mappedFile||requested;
-    const found=Object.keys(pages).find(key=>pages[key].url.endsWith('/'+fileName));
+    const targetFile=mappedFile||requested;
+    const found=Object.keys(pages).find(key=>pages[key].url.endsWith('/'+targetFile));
     p=found||$('page').value;
   }
   if(!pages[p])p=$('page').value;
@@ -152,16 +220,11 @@ async function loadPage(pageKey){
   await loadLayout();
   const chosen=$('subPage').value;
   const section=chosen&&chosen.split(':')[0]===p?(sections[chosen]||''):'';
-  console.log('Loading page:',requested);
   frame.onload=()=>{console.log('Iframe loaded:',fileName);status('تم تحميل المعاينة');setupFrame()};
   frame.onerror=e=>{console.error('Iframe error:',e);status('فشل تحميل المعاينة')};
-  frame.src='about:blank';
-  setTimeout(()=>{
-    const baseUrl='/frontend/'+fileName;
-    const url=baseUrl+'?preview=true&section='+encodeURIComponent(section)+'&t='+Date.now()+'&page='+encodeURIComponent(requested);
-    console.log('Setting iframe src to:',url);
-    frame.src=url;
-  },100);
+  const url='/frontend/'+fileName+'?preview=true&section='+encodeURIComponent(section)+'&t='+Date.now()+'&page='+encodeURIComponent(requested);
+  console.log('Setting iframe src to:',url);
+  frame.src=url;
 }
 function openSection(){
   const v=$('subPage').value;
