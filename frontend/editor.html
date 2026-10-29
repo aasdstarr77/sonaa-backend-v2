@@ -91,7 +91,25 @@ function layout(){return layouts[$('page').value]||(layouts[$('page').value]={se
 function key(el){return el.dataset.editorId||stable(el)}
 function stable(el){if(el.id)return'id-'+safe(el.id);let parts=[],n=el;while(n&&n.nodeType===1&&n!==n.ownerDocument.body){let p=n.tagName.toLowerCase();if(n.classList.length)p+='.'+[...n.classList].slice(0,2).map(safe).join('.');const par=n.parentElement;if(par){const same=[...par.children].filter(x=>x.tagName===n.tagName);if(same.length>1)p+='-'+(same.indexOf(n)+1)}parts.unshift(p);n=par;if(parts.length>8)break}return'auto-'+safe(parts.join('_')).slice(0,94)}
 function displayName(el){const text=(el.getAttribute('aria-label')||el.title||el.innerText||el.textContent||'').trim().replace(/\s+/g,' ').slice(0,45);if(text)return text;return({BUTTON:'زر',A:'رابط',INPUT:'حقل إدخال',SECTION:'قسم',MAIN:'محتوى الصفحة',FORM:'نموذج',H1:'عنوان الصفحة',IMG:'صورة'})[el.tagName]||'عنصر واجهة'}
-function setVal(id,v){if($(id)&&v!==undefined&&v!==null&&typeof v!=='object')$(id).value=v}
+function safeColor(v,fallback){
+  if(!v||v===''||v==='transparent'||v==='rgba(0, 0, 0, 0)')return fallback;
+  let hex=typeof rgbToHex==='function'?rgbToHex(v):v;
+  if(!hex||hex===''||!/^#([0-9a-fA-F]{6})$/.test(hex))return fallback;
+  return hex;
+}
+function setVal(id,v){
+  const el=$(id);
+  if(!el||v===undefined||v===null||typeof v==='object')return;
+  if(el.type==='color'){
+    const fallback=/^(color|textAlign)$/.test(id)?'#142b43':
+      (id==='buttonTextColor'?'#ffffff':
+      (id==='buttonBg'||id==='buttonHover'||id==='gradientStart'?'#0d9488':
+      (id==='gradientEnd'?'#2563eb':(id==='shadowColor'?'#0a2342':'#ffffff'))));
+    el.value=safeColor(v,fallback);
+    return;
+  }
+  el.value=v;
+}
 function setCheck(id,v){if($(id))$(id).checked=!!v}
 function loadControls(o){anchor=o.anchor||'top-left';imageData=o.backgroundImage||'';const map={text:'textValue'};Object.entries(map).forEach(([k,id])=>setVal(id,o[k]));['fontFamily','fontSize','fontWeight','textAlign','color','hoverTextColor','buttonBg','buttonBgAlpha','buttonTextColor','buttonHover','buttonSize','buttonWidth','buttonHeight','radius','shadowColor','buttonIcon','elementBg','sectionBg','gradientStart','gradientEnd','gradientDirection','imageOpacity','translateX','translateY','wPercent','hPercent','zIndex','scale','rotateY','entrance','opacity','shadowDepth'].forEach(k=>setVal(k,o[k]));['threeD','shadowEnabled','useGradient','useSectionBg','hideDesktop','hideMobile','hidden'].forEach(k=>setCheck(k,o[k]));setVal('translateX',o.translateX??0);setVal('translateY',o.translateY??0);setVal('fontSize',o.fontSize??16);setVal('color',o.color||'#142b43');setVal('buttonBg',o.buttonBg||'#0d9488');setVal('buttonBgAlpha',o.buttonBgAlpha??100);setVal('buttonTextColor',o.buttonTextColor||'#ffffff');setVal('buttonHover',o.buttonHover??'');setVal('elementBg',o.elementBg||'#ffffff');setVal('sectionBg',o.sectionBg||'#ffffff');setVal('gradientStart',o.gradientStart||'#0d9488');setVal('gradientEnd',o.gradientEnd||'#2563eb');setVal('buttonWidth',o.buttonWidth??100);setVal('buttonHeight',o.buttonHeight??100);setVal('radius',o.radius??10);setVal('imageOpacity',o.imageOpacity??100);setVal('scale',o.scale??1);setVal('rotateY',o.rotateY??0);setVal('opacity',o.opacity??100);setVal('shadowDepth',o.shadowDepth??8);setVal('zIndex',o.zIndex??1);setVal('entrance',o.entrance||'none');if(o.text===undefined&&selected)setVal('textValue',(selected.value!==undefined?selected.value:selected.innerText||selected.textContent||'').trim().slice(0,200));updateLabels()}
 function readControls(){const o={anchor,translateX:Number($('translateX').value)||0,translateY:Number($('translateY').value)||0,threeD:$('threeD').checked,scale:Number($('scale').value)||1,rotateY:Number($('rotateY').value)||0,opacity:Number($('opacity').value),shadowDepth:Number($('shadowDepth').value)||0,entrance:$('entrance').value,hideDesktop:$('hideDesktop').checked,hideMobile:$('hideMobile').checked,hidden:$('hidden').checked};const ids=['textValue','fontFamily','fontSize','fontWeight','textAlign','color','hoverTextColor','buttonBg','buttonBgAlpha','buttonTextColor','buttonHover','buttonSize','buttonWidth','buttonHeight','radius','shadowColor','buttonIcon','elementBg','sectionBg','gradientStart','gradientEnd','gradientDirection','imageOpacity','useGradient','useSectionBg','shadowEnabled','zIndex','wPercent','hPercent'];const names={textValue:'text'};ids.forEach(id=>{const e=$(id);if(!e)return;const name=names[id]||id;let v=e.type==='checkbox'?e.checked:(e.type==='range'||e.type==='number')?Number(e.value):e.value;if(e.type==='number'&&e.value==='')return;if(v!==''&&v!==undefined)o[name]=v});if(imageData)o.backgroundImage=imageData;return o}
@@ -265,6 +283,7 @@ $('page').addEventListener('change',loadPage);$('subPage').addEventListener('cha
   });
   status('تم تطبيق '+changedIds.length+' خاصية تغيّرت فقط. اضغط حفظ ونشر لحفظها.');
 });$('clear').addEventListener('click',()=>{if(!selected)return status('حدد عنصرًا أولًا.');delete layout().elements[selectedId];selected.removeAttribute('style');selected.classList.remove('sonaa-selected');loadControls({});status('تم حذف تعديل العنصر من المسودة الحالية. لم يتم الحفظ بعد.')});async function saveLayout(){
+  console.log('Starting save...');
   const t=token();
   if(!t){status('سجّل الدخول كأدمن في نفس النطاق ثم أعد المحاولة.');return}
   const page=$('page').value;
@@ -272,7 +291,7 @@ $('page').addEventListener('change',loadPage);$('subPage').addEventListener('cha
   if(selected&&selectedId){
     const savedControls=readControls();
     const currentWidth=selected.style&&selected.style.width?String(selected.style.width).trim():'';
-    if(currentWidth){
+    if(currentWidth && currentWidth!==''){
       savedControls.width=currentWidth;
       if(/^(BUTTON|A)$/.test(selected.tagName)&&/%$/.test(currentWidth)){
         savedControls.buttonWidth=Math.min(100,Math.max(20,parseFloat(currentWidth)||100));
