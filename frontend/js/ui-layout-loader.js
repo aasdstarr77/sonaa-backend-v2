@@ -40,7 +40,7 @@
   function ensureStyle() {
     if (document.getElementById(styleId)) return;
     var style = document.createElement('style'); style.id = styleId;
-    style.textContent = '.sonaa-pos-layer{position:relative;translate:var(--sonaa-x,0) var(--sonaa-y,0);width:var(--sonaa-w,auto);height:var(--sonaa-h,auto);z-index:var(--sonaa-z,auto)}.sonaa-effect-layer{transform-style:preserve-3d;min-width:0;min-height:0}';
+    style.textContent = '.sonaa-pos-layer{position:relative;translate:var(--sonaa-x,0) var(--sonaa-y,0);width:var(--sonaa-w,auto);height:var(--sonaa-h,auto);max-width:100%;box-sizing:border-box;z-index:var(--sonaa-z,auto)}.sonaa-effect-layer{transform-style:preserve-3d;min-width:0;min-height:0}';
     document.head.appendChild(style);
   }
   function setPct(el, prop, value) {
@@ -95,20 +95,38 @@
         return;
       }
       var container = getContainer(cfg.containerId, el);
-      if (container && container !== document.body && !isLayoutContainer(container) && getComputedStyle(container).position === 'static') container.style.position = 'relative';
-      el.classList.add('sonaa-pos-layer', 'sonaa-effect-layer');
-      var anchor = String(cfg.anchor || 'top-left').toLowerCase();
-      el.style.position = 'absolute'; el.style.margin = '0';
-      el.style.right = 'auto'; el.style.bottom = 'auto';
-      if (anchor.indexOf('right') !== -1) { el.style.left = 'auto'; el.style.right = '0'; }
-      else { el.style.right = 'auto'; el.style.left = '0'; }
-      if (anchor.indexOf('bottom') !== -1) { el.style.top = 'auto'; el.style.bottom = '0'; }
-      else { el.style.bottom = 'auto'; el.style.top = '0'; }
-      setPct(el, '--sonaa-x', cfg.xPercent); setPct(el, '--sonaa-y', cfg.yPercent);
-      if (cfg.wPercent !== undefined) setPct(el, '--sonaa-w', mobile ? Math.min(100, Number(cfg.wPercent)) : cfg.wPercent);
-      if (cfg.hPercent !== undefined) setPct(el, '--sonaa-h', cfg.hPercent);
-      if (mobile) { el.style.maxWidth = '100%'; el.style.boxSizing = 'border-box'; }
-      if (cfg.zIndex !== undefined) el.style.setProperty('--sonaa-z', String(cfg.zIndex));
+      // Keep edited elements in normal document/Flex flow; never apply absolute positioning.
+      el.classList.remove('sonaa-pos-layer');
+      el.classList.add('sonaa-effect-layer');
+      el.style.position = 'relative';
+      el.style.removeProperty('left'); el.style.removeProperty('right');
+      el.style.removeProperty('top'); el.style.removeProperty('bottom');
+      el.style.removeProperty('margin');
+      // New editor saves pixel offsets. Preserve legacy percentage offsets when loading old layouts.
+      if (cfg.translateX !== undefined || cfg.translateY !== undefined) {
+        var tx = Number(cfg.translateX) || 0, ty = Number(cfg.translateY) || 0;
+        el.style.translate = tx + 'px ' + ty + 'px';
+      } else if (cfg.xPercent !== undefined || cfg.yPercent !== undefined) {
+        var oldX = Number(cfg.xPercent) || 0, oldY = Number(cfg.yPercent) || 0;
+        el.style.translate = oldX + '% ' + oldY + '%';
+      }
+      if (cfg.wPercent !== undefined && Number.isFinite(Number(cfg.wPercent))) {
+        el.style.width = Math.max(1, Math.min(100, Number(cfg.wPercent))) + '%';
+        el.style.maxWidth = '100%'; el.style.boxSizing = 'border-box';
+      }
+      if (cfg.buttonWidth !== undefined && /^(BUTTON|A)$/.test(el.tagName)) {
+        el.style.width = Math.max(20, Math.min(100, Number(cfg.buttonWidth))) + '%';
+        el.style.maxWidth = '100%'; el.style.minWidth = '80px';
+        el.style.boxSizing = 'border-box'; el.style.flex = '0 1 auto';
+        if (container && ['flex','inline-flex'].indexOf(getComputedStyle(container).display) !== -1) {
+          container.style.flexWrap = 'wrap';
+          if (!container.style.gap) container.style.gap = '8px';
+        }
+      }
+      if (cfg.hPercent !== undefined && Number.isFinite(Number(cfg.hPercent))) {
+        el.style.height = Math.max(1, Math.min(100, Number(cfg.hPercent))) + '%';
+      }
+      if (cfg.zIndex !== undefined) el.style.zIndex = String(cfg.zIndex);
       if (cfg.hidden) el.style.display = 'none';
       if (cfg.threeD === false) { el.style.boxShadow = 'none'; el.style.scale = '1'; }
       else if (cfg.threeD === true) { el.style.scale = String(cfg.scale || 1); el.style.boxShadow = '0 7px 16px rgba(10,35,66,.22),inset 0 1px 0 rgba(255,255,255,.65)'; }
