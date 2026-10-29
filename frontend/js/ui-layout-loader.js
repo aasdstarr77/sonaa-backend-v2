@@ -64,37 +64,7 @@
     if (!elements || typeof elements !== 'object') return;
     Object.keys(elements).forEach(function (key) {
       var item = elements[key]; if (!item || typeof item !== 'object') return;
-      var escaped = window.CSS && CSS.escape ? CSS.escape(key) : key.replace(/["\\]/g, '\\  function apply(layout) {
-    ensureStyle(); assignEditorIds(document.body);
-    var elements = layout && (layout.elements || layout.items || layout.layout || layout);
-    if (!elements || typeof elements !== 'object') return;
-    Object.keys(elements).forEach(function (key) {
-      var item = elements[key]; if (!item || typeof item !== 'object') return;
-      var el = document.querySelector('[data-editor-id="' + (window.CSS && CSS.escape ? CSS.escape(key) : key.replace(/["\\]/g, '\\$&')) + '"]') || document.getElementById(key);
-      if (!el) return;
-      if (!el.hasAttribute('data-editor-id')) el.setAttribute('data-editor-id', key);
-      var mobile = window.matchMedia('(max-width: 767px)').matches;
-      var ov = mobile && (item.mobile || item.mobileOverride || item.mobileOverrides) || {};
-      var cfg = Object.assign({}, item, ov);
-      var container = getContainer(cfg.containerId, el);
-      if (container && container !== document.body && getComputedStyle(container).position === 'static') container.style.position = 'relative';
-      el.classList.add('sonaa-pos-layer', 'sonaa-effect-layer');
-      var anchor = String(cfg.anchor || 'top-left').toLowerCase();
-      el.style.position = 'absolute'; el.style.margin = '0';
-      el.style.right = 'auto'; el.style.bottom = 'auto';
-      if (anchor.indexOf('right') !== -1) { el.style.left = 'auto'; el.style.right = '0'; }
-      else { el.style.right = 'auto'; el.style.left = '0'; }
-      if (anchor.indexOf('bottom') !== -1) { el.style.top = 'auto'; el.style.bottom = '0'; }
-      else { el.style.bottom = 'auto'; el.style.top = '0'; }
-      setPct(el, '--sonaa-x', cfg.xPercent); setPct(el, '--sonaa-y', cfg.yPercent);
-      if (cfg.wPercent !== undefined) setPct(el, '--sonaa-w', cfg.wPercent);
-      if (cfg.hPercent !== undefined) setPct(el, '--sonaa-h', cfg.hPercent);
-      if (cfg.zIndex !== undefined) el.style.setProperty('--sonaa-z', String(cfg.zIndex));
-      if (cfg.hidden) el.style.display = 'none';
-      if (cfg.threeD === false) { el.style.boxShadow = 'none'; el.style.scale = '1'; }
-      else if (cfg.threeD === true) { el.style.scale = String(cfg.scale || 1); el.style.boxShadow = '0 7px 16px rgba(10,35,66,.22),inset 0 1px 0 rgba(255,255,255,.65)'; }
-    });
-  }');
+      var escaped = window.CSS && CSS.escape ? CSS.escape(key) : key.replace(/["\\]/g, '\\$&');
       var el = document.querySelector('[data-editor-id="' + escaped + '"]') || document.getElementById(key);
       if (!el) return;
       if (!el.hasAttribute('data-editor-id')) el.setAttribute('data-editor-id', key);
