@@ -1782,14 +1782,40 @@ render();
 }
 @media(max-width:519px){
  #app .app-header>div:first-child{
-  display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1.08fr)!important;
+  display:grid!important;direction:rtl!important;
+  grid-template-columns:minmax(0,1.05fr) minmax(0,1fr)!important;
   gap:7px!important;align-items:center!important;
  }
- #app .app-header>div:first-child>div:first-child{width:100%;min-width:0;flex:none}
- #app .app-header>div:first-child>div:last-child{
-  width:100%!important;max-width:none!important;min-width:0;flex:none!important;
+ /* Brand stays on the right; actions stay together on the left. */
+ #app .app-header>div:first-child>div:first-child{
+  grid-column:1!important;grid-row:1!important;width:100%;min-width:0;flex:none;
  }
- #app .app-header>div:first-child>div:last-child>div:first-child{gap:5px!important}
+ #app .app-header>div:first-child>div:last-child{
+  grid-column:2!important;grid-row:1!important;
+  width:100%!important;max-width:none!important;min-width:0!important;flex:none!important;
+  align-items:stretch!important;gap:5px!important;
+ }
+ #app .app-header>div:first-child>div:last-child>div:first-child{
+  display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:5px!important;width:100%!important;min-width:0!important;
+ }
+ #app .app-header>div:first-child>div:last-child>div:first-child>*{
+  min-width:0!important;width:100%!important;max-width:100%!important;
+  padding-inline:2px!important;font-size:10px!important;white-space:nowrap!important;
+ }
+ #app .app-header>div:first-child>div:last-child>div:first-child>a:first-child{
+  grid-column:span 2!important;min-height:34px!important;font-size:9px!important;
+ }
+ #app .app-header>div:first-child>div:last-child>div:first-child>button[onclick="toggleNotifications()"]{
+  min-height:34px!important;height:34px!important;
+ }
+ #app .app-header>div:first-child>div:last-child>div:first-child>a[href*="password.html?role=client&mode=account"],
+ #app .app-header>div:first-child>div:last-child>div:first-child>button[onclick="logoutClient()"]{
+  min-height:30px!important;height:30px!important;
+ }
+ #app .app-header>div:first-child>div:last-child>a:last-child{
+  width:100%!important;min-height:30px!important;padding:4px 2px!important;font-size:9px!important;
+ }
 }
 @media(min-width:520px){
  #app .app-header>div:first-child{display:flex!important;flex-wrap:nowrap!important}
@@ -1831,9 +1857,14 @@ render();
  transform:translateY(3px);filter:brightness(.98);
  box-shadow:0 1px 0 #cbd8e9,0 3px 6px #0b1b3a12!important;
 }
-@media(max-width:420px){
- #app .app-header>div:first-child>div:last-child{max-width:none!important}
- #app .app-header .dashboard-download-btn{padding-left:5px!important;padding-right:5px!important;font-size:9px!important}
+@media(max-width:360px){
+ #app .app-header>div:first-child{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:5px!important}
+ #app .app-header>div:first-child>div:first-child{gap:4px!important}
+ #app .app-header>div:first-child>div:first-child .brand-mark{width:40px!important;height:40px!important;flex-basis:40px!important}
+ #app .app-header>div:first-child>div:first-child h1{font-size:12px!important}
+ #app .app-header .client-header-slogan{font-size:9px!important}
+ #app .app-header>div:first-child>div:last-child>div:first-child{gap:3px!important}
+ #app .app-header .dashboard-download-btn{padding-left:2px!important;padding-right:2px!important;font-size:8px!important}
 }
 
 </style>
