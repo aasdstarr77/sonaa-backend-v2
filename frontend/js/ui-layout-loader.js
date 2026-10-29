@@ -7,9 +7,13 @@
   var previewParams = new URLSearchParams(window.location.search);
   if (previewParams.has('preview') || window.self !== window.top) {
     console.log('[Sonaa UI layout] Preview mode detected — saved layout loader disabled.');
-    var previewSplash = document.getElementById('splash') ||
+    var previewSplash = document.getElementById('clientLoadingOverlay') ||
+      document.getElementById('fanniLoadingOverlay') ||
+      document.getElementById('splash') ||
       document.getElementById('splash-screen') ||
       document.getElementById('loading') ||
+      document.querySelector('.client-loading-overlay') ||
+      document.querySelector('.fanni-loading-overlay') ||
       document.querySelector('.splash-screen') ||
       document.querySelector('.splash') ||
       document.querySelector('#app-loading') ||
@@ -32,9 +36,13 @@
   var splashReleased = false;
   var splashFallbackTimer = null;
   function getSplash() {
-    return document.getElementById('splash') ||
+    return document.getElementById('clientLoadingOverlay') ||
+      document.getElementById('fanniLoadingOverlay') ||
+      document.getElementById('splash') ||
       document.getElementById('splash-screen') ||
       document.getElementById('loading') ||
+      document.querySelector('.client-loading-overlay') ||
+      document.querySelector('.fanni-loading-overlay') ||
       document.querySelector('.splash-screen') ||
       document.querySelector('.splash') ||
       document.querySelector('#app-loading') ||
@@ -52,8 +60,8 @@
     splash = document.createElement('div');
     splash.id = 'sonaa-temp-splash';
     splash.setAttribute('aria-label', 'جاري تحميل الصفحة');
-    splash.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#fff;display:flex;align-items:center;justify-content:center;opacity:1;visibility:visible;';
-    splash.innerHTML = '<div style="width:40px;height:40px;border:3px solid #e5e7eb;border-top-color:#0d9488;border-radius:50%;animation:sonaaSplashSpin .8s linear infinite"></div><style>@keyframes sonaaSplashSpin{to{transform:rotate(360deg)}}</style>';
+    splash.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:linear-gradient(145deg,#f8fbff 0%,#eaf1fb 100%);display:flex;align-items:center;justify-content:center;opacity:1;visibility:visible;';
+    splash.innerHTML = '<main style="width:100%;max-width:440px;text-align:center;padding:32px 16px;color:#0b1b3a;font-family:Cairo,system-ui,sans-serif"><div style="width:132px;height:132px;margin:0 auto 20px;border-radius:28px;background:linear-gradient(145deg,#fff,#e8eff9);border:1px solid #fff;box-shadow:0 6px 0 #cbd8ea,0 15px 24px #0b1b3a20,inset 0 2px 3px #fff;display:flex;align-items:center;justify-content:center"><img src="/images/LOGO_UPLOAD_HERE/logo.png" alt="صُنّاع" style="width:118px;height:118px;object-fit:contain;animation:sonaa-logo-splash 1.05s ease-in-out infinite;filter:drop-shadow(0 5px 2px #0b1b3a28)"></div><h1 style="font-size:28px;font-weight:900;margin:0">صُنّاع</h1><p style="font-weight:900;color:#173c6c;margin:4px 0 24px">كل خدمة تبدأ بخطوة</p><div style="display:inline-flex;align-items:center;gap:12px;border:1px solid #bfdbfe;border-radius:16px;background:#fffffff0;padding:16px 20px;font-weight:800;color:#173c6c"><span style="width:20px;height:20px;border:2px solid #2563eb;border-top-color:transparent;border-radius:50%;animation:sonaaSplashSpin .8s linear infinite"></span>جاري تحميل البيانات...</div></main><style>@keyframes sonaaSplashSpin{to{transform:rotate(360deg)}}@keyframes sonaa-logo-splash{0%,100%{transform:translateX(0) scale(1)}22%{transform:translateX(-10px) scale(1.025)}48%{transform:translateX(0) scale(1)}72%{transform:translateX(10px) scale(1.025)}}</style>';
     document.body.appendChild(splash);
     return splash;
   }
