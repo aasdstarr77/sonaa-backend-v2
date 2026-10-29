@@ -9,7 +9,7 @@
 
 
 
-<script>(function(){var urlParams=new URLSearchParams(window.location.search);if(urlParams.get("preview")==="true"){window.IS_EDITOR_PREVIEW=true;}})();</script>
+<script>(function(){var urlParams=new URLSearchParams(window.location.search);if(urlParams.has("preview") || window.self !== window.top){window.IS_EDITOR_PREVIEW=true;}})();</script>
 </head>
 <body>
 <div class="wrap">

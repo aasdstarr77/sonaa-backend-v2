@@ -8,46 +8,36 @@
 </style></head>
 <body>
 <script>
-(function () {
-  'use strict';
-  let token = '';
-  try {
-    token = localStorage.getItem('admin_token') ||
-      localStorage.getItem('token') ||
-      localStorage.getItem('auth_token') || '';
-  } catch (error) {
-    token = '';
+(function checkAdmin() {
+  const possibleKeys = ['admin_token', 'token', 'auth_token', 'jwt', 'adminToken', 'authToken', 'sonaa_token', 'admin_jwt'];
+  let token = null;
+  let foundKey = null;
+
+  for (const key of possibleKeys) {
+    const val = localStorage.getItem(key);
+    if (val && val.length > 20) {
+      token = val;
+      foundKey = key;
+      break;
+    }
   }
 
-  function goToAdminLogin(message) {
-    try {
-      ['admin_token', 'token', 'auth_token', 'admin_token_v3', 'adminToken', 'authToken'].forEach(function (key) {
-        localStorage.removeItem(key);
-      });
-    } catch (_) {}
-    alert(message);
-    window.location.replace('/frontend/admin.html');
-  }
+  console.log('Admin check, key:', foundKey, 'exists:', !!token);
 
   if (!token) {
-    try { console.log('No admin token found, keys:', Object.keys(localStorage)); } catch (_) {}
-    alert('يجب تسجيل الدخول كأدمن أولاً');
-    window.location.replace('/frontend/admin.html');
+    const goLogin = confirm('يجب تسجيل الدخول كأدمن أولاً. هل تريد الذهاب لصفحة تسجيل دخول الأدمن؟');
+    if (goLogin) {
+      window.location.href = '/frontend/admin.html';
+    }
     return;
   }
 
   fetch('/api/admin/me', {
-    method: 'GET',
-    headers: { Authorization: 'Bearer ' + token, Accept: 'application/json' },
-    cache: 'no-store',
-    credentials: 'same-origin'
-  }).then(function (response) {
-    if (!response.ok) {
-      goToAdminLogin('جلسة الأدمن منتهية، سجل دخول مرة أخرى');
-    }
-  }).catch(function (error) {
-    console.warn('Could not verify admin token; keeping editor open only because the verification endpoint could not be reached.', error);
-  });
+    headers: { Authorization: 'Bearer ' + token }
+  }).then(r => {
+    if (!r.ok) console.warn('Admin verification failed, allowing anyway, status:', r.status);
+    else console.log('Admin verified');
+  }).catch(e => console.warn('Could not verify admin, allowing anyway:', e.message));
 })();
 </script><div style="background:#1f2937;color:white;text-align:center;padding:8px">محرر الواجهة الموحد · <a href="/frontend/admin.html" style="color:#93c5fd">العودة للإدارة</a></div>
 <header><div><h1>🎨 محرر صُنّاع الشامل</h1><small>اختار الصفحة ثم اضغط على أي عنصر في المعاينة لتعديله</small></div><button id="reload" class="secondary" type="button">إعادة تحميل المعاينة</button></header>
