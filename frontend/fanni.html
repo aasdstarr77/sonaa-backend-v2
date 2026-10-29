@@ -17,7 +17,7 @@
 <meta name="twitter:title" content="تسجيل فني جديد | صُنّاع">
 <meta name="twitter:description" content="أنشئ حساب فني جديد على منصة صُنّاع وابدأ في استقبال طلبات الخدمات.">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script>(function(){var urlParams=new URLSearchParams(window.location.search);if(urlParams.get("preview")==="true"){window.IS_EDITOR_PREVIEW=true;}})();</script>
+<script>(function(){const isPreviewMode=new URLSearchParams(window.location.search).has("preview");window.IS_EDITOR_PREVIEW=isPreviewMode;console.log("Preview mode:",isPreviewMode);if(isPreviewMode){console.log("Skipping auth redirect for preview");}})();</script>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
 :root{--navy:#0b1b3a;--navy-light:#163b70;--blue:#2563eb;--blue-dark:#1d4ed8;--page:#f4f7fc;--border:#e2e8f0}
