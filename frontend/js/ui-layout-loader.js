@@ -170,21 +170,25 @@
           if (!container.style.gap) container.style.gap = '8px';
         }
       }
-      // Apply an explicitly saved inline width safely (legacy layouts may omit it).
-      if (cfg.width !== undefined && /^(BUTTON|A)$/.test(el.tagName)) {
+      // Apply the explicit saved CSS width after buttonWidth so the exact editor value wins.
+      // This supports buttons/links and other editable elements, while clamping unsafe sizes.
+      if (cfg.width !== undefined) {
         var savedWidth = String(cfg.width).trim();
         var widthMatch = savedWidth.match(/^(\d+(?:\.\d+)?)(px|%)$/);
         if (widthMatch) {
           var widthNumber = Number(widthMatch[1]);
-          if (Number.isFinite(widthNumber) && widthNumber > 0) {
-            if (widthMatch[2] === 'px') el.style.width = Math.min(500, widthNumber) + 'px';
-            else el.style.width = Math.min(100, widthNumber) + '%';
+          var isButtonLike = /^(BUTTON|A)$/.test(el.tagName);
+          var maxWidthNumber = widthMatch[2] === 'px' ? (isButtonLike ? 500 : 2000) : 100;
+          if (Number.isFinite(widthNumber) && widthNumber > 0 && widthNumber <= maxWidthNumber) {
+            el.style.width = widthNumber + widthMatch[2];
             el.style.maxWidth = '100%';
             el.style.boxSizing = 'border-box';
-            el.style.flex = '0 1 auto';
-            if (container && ['flex','inline-flex'].indexOf(getComputedStyle(container).display) !== -1) {
-              container.style.flexWrap = 'wrap';
-              if (!container.style.gap) container.style.gap = '8px';
+            if (isButtonLike) {
+              el.style.flex = '0 1 auto';
+              if (container && ['flex','inline-flex'].indexOf(getComputedStyle(container).display) !== -1) {
+                container.style.flexWrap = 'wrap';
+                if (!container.style.gap) container.style.gap = '8px';
+              }
             }
           }
         }
