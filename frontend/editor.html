@@ -414,7 +414,7 @@ $('page').addEventListener('change',loadPage);$('subPage').addEventListener('cha
     let d={};try{d=JSON.parse(responseText)}catch(_){}
     if(!r.ok)throw Error(d.message||responseText||'فشل الحفظ ('+r.status+')');
     layouts[page]=d.layout||currentLayout;
-    status('تم حفظ التخطيط بنجاح. عدد العناصر المعدلة: '+Object.keys((layouts[page].elements)||{}).length);
+    status('تم حفظ التخطيط بنجاح. تم حفظ تعديلات العنصر المحدد ضمن تخطيط الصفحة.');
   }catch(e){
     status('فشل الحفظ: '+(e&&e.message||e));
     console.error('Layout save failed:',e);
