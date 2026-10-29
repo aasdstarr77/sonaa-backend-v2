@@ -50,6 +50,11 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
+// Allow same-origin editor previews while preventing third-party framing.
+app.use((req, res, next) => {
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  next();
+});
 
 // Restrict browser access to explicitly configured origins. Requests without
 // an Origin header (for example native apps/server-to-server calls) remain valid.

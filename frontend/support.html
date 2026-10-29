@@ -9,6 +9,7 @@
 
 
 
+<script>(function(){var urlParams=new URLSearchParams(window.location.search);if(urlParams.get("preview")==="true"){window.IS_EDITOR_PREVIEW=true;}})();</script>
 </head>
 <body>
 <div class="wrap">
@@ -172,7 +173,7 @@ function init(){
  const authenticated=!!token();
  $('back-btn').addEventListener('click',()=>{if(role==='fanni')location.href='fanni.html';else if(role==='admin')location.href='admin.html';else location.href='client.html'});
  $('login-link').href=role==='fanni'?'fanni.html':role==='admin'?'admin.html':'client.html';
- if(!['client','fanni','admin'].includes(role)||!authenticated){$('login-needed').classList.remove('hidden');return}
+ if(!['client','fanni','admin'].includes(role)||(!authenticated&&!window.IS_EDITOR_PREVIEW)){$('login-needed').classList.remove('hidden');return}
  if(role==='admin'){
   $('role-caption').textContent='إدارة محادثات العملاء والفنيين والرد عليهم';
   $('main').classList.add('hidden');$('admin-main').classList.remove('hidden');
