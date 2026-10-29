@@ -17,8 +17,58 @@
   };
   var page = pageMap[location.pathname.replace(/\/+$/, '')] || location.pathname.split('/').pop().replace(/\.html$/, '');
   if (!/^(admin|client|fanni|password|support)$/.test(page)) return;
-  // Do not hide the document while fetching layout: the page's animated loading splash
-  // must remain visible during refresh, even if the layout API is slow or unavailable.
+  // Keep the existing page splash visible while the saved layout is fetched/applied.
+  // If a page has no splash, add a small temporary one; always release it within 3 seconds.
+  var splashSelectors = '#splash, #splash-screen, #loading, .splash-screen, .splash, #app-loading, [class*="loading-screen"]';
+  var splashStartedAt = Date.now();
+  var splashReleased = false;
+  var splashFallbackTimer = null;
+  function getSplash() {
+    return document.getElementById('splash') ||
+      document.getElementById('splash-screen') ||
+      document.getElementById('loading') ||
+      document.querySelector('.splash-screen') ||
+      document.querySelector('.splash') ||
+      document.querySelector('#app-loading') ||
+      document.querySelector('[class*="loading-screen"]');
+  }
+  function showSplash() {
+    var splash = getSplash();
+    if (splash) {
+      splash.style.display = 'flex';
+      splash.style.opacity = '1';
+      splash.style.visibility = 'visible';
+      return splash;
+    }
+    if (!document.body) return null;
+    splash = document.createElement('div');
+    splash.id = 'sonaa-temp-splash';
+    splash.setAttribute('aria-label', 'جاري تحميل الصفحة');
+    splash.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#fff;display:flex;align-items:center;justify-content:center;opacity:1;visibility:visible;';
+    splash.innerHTML = '<div style="width:40px;height:40px;border:3px solid #e5e7eb;border-top-color:#0d9488;border-radius:50%;animation:sonaaSplashSpin .8s linear infinite"></div><style>@keyframes sonaaSplashSpin{to{transform:rotate(360deg)}}</style>';
+    document.body.appendChild(splash);
+    return splash;
+  }
+  function hideSplash() {
+    if (splashReleased) return;
+    splashReleased = true;
+    if (splashFallbackTimer) clearTimeout(splashFallbackTimer);
+    var splash = getSplash() || document.getElementById('sonaa-temp-splash');
+    if (!splash) return;
+    splash.style.transition = 'opacity .25s ease';
+    splash.style.opacity = '0';
+    window.setTimeout(function () {
+      splash.style.display = 'none';
+      if (splash.id === 'sonaa-temp-splash' && splash.parentNode) splash.parentNode.removeChild(splash);
+    }, 260);
+  }
+  // Start before requesting the layout to prevent a flash of unstyled content.
+  function beginLayoutSplash() {
+    showSplash();
+    splashFallbackTimer = window.setTimeout(hideSplash, 3000);
+  }
+  beginLayoutSplash();
+
   var styleId = 'sonaa-ui-layout-style';
   function safeId(value) { return String(value || '').replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 100); }
   // Keep this algorithm in sync with frontend/editor.html so saved keys match in preview and live pages.
@@ -264,13 +314,22 @@
     console.warn('[Sonaa editor] Section not found on ' + page + ':', section);
   }
   function load() {
+    // Do not flash the splash again on resize-triggered layout refreshes.
+    if (splashReleased) {
+      return fetch('/api/admin/ui-layout/' + encodeURIComponent(page), {
+        method: 'GET', credentials: 'same-origin',
+        headers: getToken() ? { Authorization: 'Bearer ' + getToken() } : {}
+      }).then(function (r) { if (!r.ok) throw new Error('layout HTTP ' + r.status); return r.json(); })
+        .then(function (data) { apply(data.layout || data.uiLayout || data); })
+        .catch(function (err) { console.warn('[Sonaa UI layout] Could not load layout for ' + page, err); });
+    }
     return fetch('/api/admin/ui-layout/' + encodeURIComponent(page), {
       method: 'GET', credentials: 'same-origin',
       headers: getToken() ? { Authorization: 'Bearer ' + getToken() } : {}
     }).then(function (r) { if (!r.ok) throw new Error('layout HTTP ' + r.status); return r.json(); })
       .then(function (data) { apply(data.layout || data.uiLayout || data); })
       .catch(function (err) { console.warn('[Sonaa UI layout] Could not load layout for ' + page, err); })
-      .finally(function () {});
+      .finally(function () { hideSplash(); });
   }
   function getToken() {
     var keys = ['admin_token_v3', 'adminToken', 'token', 'authToken'];
