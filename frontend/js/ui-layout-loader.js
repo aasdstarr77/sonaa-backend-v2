@@ -1,6 +1,16 @@
 /* Sonaa shared UI layout loader — editor-v2 */
 (function () {
   'use strict';
+
+  // The visual editor owns preview styling. Never re-apply persisted styles inside its iframe.
+  // The editor already loads previews with ?preview=true; the frame check is a safe fallback.
+  var previewParams = new URLSearchParams(window.location.search);
+  if (previewParams.has('preview') || window.self !== window.top) {
+    console.log('[Sonaa UI layout] Preview mode detected — saved layout loader disabled.');
+    return;
+  }
+  console.log('[Sonaa UI layout] Live site mode — applying saved layout.');
+
   var pageMap = {
     '/admin.html': 'admin', '/client.html': 'client', '/fanni.html': 'fanni',
     '/password.html': 'password', '/support.html': 'support'
