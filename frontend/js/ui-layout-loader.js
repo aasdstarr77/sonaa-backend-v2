@@ -193,7 +193,9 @@
         el.style.height = Math.max(1, Math.min(100, Number(cfg.hPercent))) + '%';
       }
       if (cfg.zIndex !== undefined) el.style.zIndex = String(cfg.zIndex);
-      if (cfg.hidden) el.style.display = 'none';
+      if (cfg.hidden || (cfg.hideDesktop && window.innerWidth > 767) || (cfg.hideMobile && window.innerWidth <= 767)) {
+        el.style.display = 'none';
+      }
       if (cfg.threeD === false) { el.style.boxShadow = 'none'; el.style.scale = '1'; }
       else if (cfg.threeD === true) { el.style.scale = String(cfg.scale || 1); el.style.boxShadow = '0 7px 16px rgba(10,35,66,.22),inset 0 1px 0 rgba(255,255,255,.65)'; }
     });
