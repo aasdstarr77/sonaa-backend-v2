@@ -19,7 +19,29 @@
 <meta name="twitter:title" content="تسجيل عميل جديد | صُنّاع">
 <meta name="twitter:description" content="أنشئ حساب عميل جديد على منصة صُنّاع واطلب الخدمات التي تحتاجها بسهولة.">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script>(function(){const isPreviewMode=new URLSearchParams(window.location.search).has("preview") || window.self !== window.top;window.IS_EDITOR_PREVIEW=isPreviewMode;window.SONAA_SKIP_AUTH_REDIRECT=isPreviewMode;console.log("Preview mode:",isPreviewMode);if(isPreviewMode){console.log("Skipping auth redirect for preview");}})();</script>
+<script>
+(function(){
+  const params=new URLSearchParams(window.location.search);
+  const isPreviewMode=params.has('preview') || window.self !== window.top;
+  window.IS_EDITOR_PREVIEW=isPreviewMode;
+  window.SONAA_SKIP_AUTH_REDIRECT=isPreviewMode;
+  if(!isPreviewMode)return;
+  const requested=params.get('section') || params.get('page') || '';
+  const pageToTab={
+    'new':'new','new-order':'new','طلب جديد':'new',
+    'orders':'orders','my-orders':'orders','طلباتي':'orders',
+    'complaint':'complaint','complaint-form':'complaint','شكوى':'complaint',
+    'track-complaint':'complaint','track':'complaint',
+    'profile':'orders','الملف الشخصي':'orders',
+    'login':'login','client-login':'login','client':'login','تسجيل الدخول':'login',
+    'register':'register','client-register':'register','تسجيل جديد':'register'
+  };
+  const key=String(requested).trim().toLowerCase();
+  window.PREVIEW_REQUESTED_TAB=pageToTab[key] || pageToTab[String(requested).trim()] || 'login';
+  console.log('Preview mode - requested section:',requested,'tab:',window.PREVIEW_REQUESTED_TAB);
+  window.SONAA_FORCE_PREVIEW_TAB=true;
+})();
+</script>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
 :root{--navy:#0b1b3a;--navy2:#173c6c;--blue:#2563eb;--blue-dark:#1d4ed8;--page:#f4f7fb;--border:#e2e8f0;--text:#0f172a;--muted:#64748b}
@@ -716,6 +738,18 @@ let state={
   
 };
 const CLIENT_TAB_DEFINITIONS=[{id:'new',label:'طلب جديد'},{id:'orders',label:'طلباتي'},{id:'complaint',label:'شكوى'}];
+if(window.IS_EDITOR_PREVIEW){
+  const previewTab=window.PREVIEW_REQUESTED_TAB||'login';
+  if(previewTab==='register'){
+    state.accountAuthMode='register';
+  }else if(previewTab==='login'){
+    state.accountAuthMode='login';
+  }else{
+    state.tab=previewTab;
+    state.account={name:'معاينة المحرر',phone:''};
+    state.clientName='معاينة المحرر';
+  }
+}
 function getCat(service){return CATEGORIES.find(c=>c.services.includes(service))||null;}
 function captureScrollPosition(){
   const list=document.getElementById('serviceList');
@@ -885,8 +919,8 @@ function notificationPanel(){
 document.addEventListener('click',function(event){var item=event.target.closest('[data-notification-id]');if(item)openNotification(item.getAttribute('data-notification-id'));});
 document.addEventListener('focusout',function(){if(!clientLiveRenderPending||!state.account||!['orders','track'].includes(state.tab))return;setTimeout(function(){if(clientLiveRenderPending&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)){clientLiveRenderPending=false;const scrollY=window.scrollY||window.pageYOffset||0;render();window.scrollTo({top:scrollY,left:0,behavior:'instant'});focusClientPostAction();}},0);});
 function render(){
-  if(forceClientRegistration&&!state.account){renderAccountGate();return;}
-  if(state.accountInitializing&&!state.accountToken){renderAccountGate();return;}
+  if(!window.IS_EDITOR_PREVIEW&&forceClientRegistration&&!state.account){renderAccountGate();return;}
+  if(!window.IS_EDITOR_PREVIEW&&state.accountInitializing&&!state.accountToken){renderAccountGate();return;}
   if(!state.account){
     if(state.accountToken&&state.accountInitializing){
       document.getElementById('app').innerHTML='<main class="account-gate min-h-screen px-4 py-8 flex items-center justify-center"><div class="w-full max-w-[440px] text-center"><div class="account-brand mx-auto mb-5 flex items-center justify-center"><img src="/images/LOGO_UPLOAD_HERE/logo.png" alt="صُنّاع" class="sonaa-logo-svg account-loading-logo"></div><h1 class="text-2xl font-black">صُنّاع</h1><p class="account-slogan mt-1 text-base font-extrabold">كل خدمة تبدأ بخطوة</p><div class="mt-7 inline-flex items-center gap-3 rounded-2xl border border-blue-200 bg-white/90 px-5 py-4 font-extrabold text-blue-900 shadow-xl"><span class="inline-block h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent"></span>جاري تحميل البيانات...</div></div></main>';
