@@ -171,6 +171,25 @@
           if (!container.style.gap) container.style.gap = '8px';
         }
       }
+      // Apply an explicitly saved inline width safely (legacy layouts may omit it).
+      if (cfg.width !== undefined && /^(BUTTON|A)$/.test(el.tagName)) {
+        var savedWidth = String(cfg.width).trim();
+        var widthMatch = savedWidth.match(/^(\\d+(?:\\.\\d+)?)(px|%)$/);
+        if (widthMatch) {
+          var widthNumber = Number(widthMatch[1]);
+          if (Number.isFinite(widthNumber) && widthNumber > 0) {
+            if (widthMatch[2] === 'px') el.style.width = Math.min(500, widthNumber) + 'px';
+            else el.style.width = Math.min(100, widthNumber) + '%';
+            el.style.maxWidth = '100%';
+            el.style.boxSizing = 'border-box';
+            el.style.flex = '0 1 auto';
+            if (container && ['flex','inline-flex'].indexOf(getComputedStyle(container).display) !== -1) {
+              container.style.flexWrap = 'wrap';
+              if (!container.style.gap) container.style.gap = '8px';
+            }
+          }
+        }
+      }
       if (cfg.hPercent !== undefined && Number.isFinite(Number(cfg.hPercent))) {
         el.style.height = Math.max(1, Math.min(100, Number(cfg.hPercent))) + '%';
       }
