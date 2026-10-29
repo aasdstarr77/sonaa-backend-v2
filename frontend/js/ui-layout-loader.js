@@ -125,7 +125,7 @@
         el.style.scale = '1'; el.style.transform = 'none';
         if (cfg.shadowEnabled === false) el.style.boxShadow = 'none';
       } else {
-        if (cfg.scale !== undefined) el.style.scale = String(Math.max(0.5, Math.min(1.5, Number(cfg.scale) || 1));
+        if (cfg.scale !== undefined) el.style.scale = String(Math.max(0.5, Math.min(1.5, Number(cfg.scale) || 1)));
         if (cfg.rotateY !== undefined) el.style.transform = 'perspective(800px) rotateY(' + (Number(cfg.rotateY) || 0) + 'deg)';
         if (cfg.shadowEnabled === false) el.style.boxShadow = 'none';
         else if (cfg.shadowDepth !== undefined || cfg.shadowColor) {
