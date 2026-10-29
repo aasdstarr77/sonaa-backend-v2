@@ -1468,8 +1468,8 @@ function sanitizeAdminUiLayout(input) {
       if (Number.isInteger(value.zIndex) && value.zIndex >= 0 && value.zIndex <= 999999) item.zIndex = value.zIndex;
       if (Number.isFinite(value.fontSize) && value.fontSize >= 10 && value.fontSize <= 72) item.fontSize = value.fontSize;
       // Accept the editor's CSS width string (e.g. "29%") as well as legacy numeric percentages.
-      if (typeof value.width === 'string' && /^(?:[1-9]\\d{0,2})(?:\\.\\d{1,2})?(?:px|%)$/.test(value.width.trim())) {
-        const match = value.width.trim().match(/^(\\d+(?:\\.\\d+)?)(px|%)$/);
+      if (typeof value.width === 'string' && /^(?:[1-9]\d{0,2})(?:\.\d{1,2})?(?:px|%)$/.test(value.width.trim())) {
+        const match = value.width.trim().match(/^(\d+(?:\.\d+)?)(px|%)$/);
         const n = match ? Number(match[1]) : 0;
         if (n > 0 && n <= (match[2] === 'px' ? 2000 : 100)) item.width = value.width.trim();
       } else if (Number.isFinite(value.width) && value.width >= 1 && value.width <= 100) item.width = value.width;
@@ -1488,7 +1488,7 @@ function sanitizeAdminUiLayout(input) {
       if (['solid', 'glossy'].includes(value.backgroundFinish)) item.backgroundFinish = value.backgroundFinish;
       if (typeof value.activeBackground === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.activeBackground)) item.activeBackground = value.activeBackground;
       if (typeof value.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.color)) item.color = value.color;
-      if (typeof value.buttonBg === 'string' && (/^#[0-9a-fA-F]{6}$/.test(value.buttonBg) || /^rgba?\\([0-9.,%\\s]+\\)$/.test(value.buttonBg))) item.buttonBg = value.buttonBg;
+      if (typeof value.buttonBg === 'string' && (/^#[0-9a-fA-F]{6}$/.test(value.buttonBg) || /^rgba?\([0-9.,%\s]+\)$/.test(value.buttonBg))) item.buttonBg = value.buttonBg;
       if (typeof value.buttonTextColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.buttonTextColor)) item.buttonTextColor = value.buttonTextColor;
       if (typeof value.buttonHover === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.buttonHover)) item.buttonHover = value.buttonHover;
       if (typeof value.hoverTextColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.hoverTextColor)) item.hoverTextColor = value.hoverTextColor;
@@ -1511,7 +1511,7 @@ function sanitizeAdminUiLayout(input) {
       if (typeof value.threeD === 'boolean') item.threeD = value.threeD;
       if (Number.isFinite(value.scale) && value.scale >= 0.5 && value.scale <= 2) item.scale = value.scale;
       if (typeof value.shadowColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.shadowColor)) item.shadowColor = value.shadowColor;
-      if (typeof value.backgroundImage === 'string' && value.backgroundImage.length <= 2000000 && /^data:image\\/(?:png|jpeg|webp);base64,[a-zA-Z0-9+/=]+$/.test(value.backgroundImage)) item.backgroundImage = value.backgroundImage;
+      if (typeof value.backgroundImage === 'string' && value.backgroundImage.length <= 2000000 && /^data:image\/(?:png|jpeg|webp);base64,[a-zA-Z0-9+/=]+$/.test(value.backgroundImage)) item.backgroundImage = value.backgroundImage;
       const mobile = {};
       if (value.mobile && typeof value.mobile === 'object' && !Array.isArray(value.mobile)) {
         if (Number.isFinite(value.mobile.x) && value.mobile.x >= -2000 && value.mobile.x <= 2000) mobile.x = value.mobile.x;
