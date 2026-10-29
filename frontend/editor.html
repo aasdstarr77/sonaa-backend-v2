@@ -6,7 +6,46 @@
 <style>
 *{box-sizing:border-box}body{margin:0;background:#edf2f7;color:#142b43;font-family:Cairo,Tajawal,Tahoma,Arial,sans-serif}header{background:#0a2342;color:white;padding:13px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}h1{font-size:19px;margin:0}main{display:grid;grid-template-columns:minmax(300px,390px) minmax(0,1fr);gap:12px;padding:12px;height:calc(100vh - 62px)}aside,.preview{background:#fff;border:1px solid #d5dfeb;border-radius:13px;overflow:hidden;min-height:0}.controls{height:100%;overflow:auto;padding:13px}label{display:block;font-size:12px;font-weight:700;margin:9px 0 4px}input,select{width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:8px;font:inherit;background:#fff;color:#142b43}input[type=color]{height:38px;padding:2px}input[type=checkbox]{width:auto}input[type=range]{padding:0;accent-color:#0d9488}button{border:0;border-radius:8px;padding:9px 11px;background:#0a2342;color:white;font:inherit;font-weight:700;cursor:pointer}button:disabled{opacity:.55;cursor:wait}.secondary{background:#e8eef5;color:#17344f}.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.tabs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;margin:12px 0}.tab{font-size:11px;padding:8px 2px;background:#e8eef5;color:#17344f}.tab[aria-selected=true]{background:#0a2342;color:white}.panel{display:none}.panel.active{display:block}.panel h2{font-size:14px;margin:10px 0}.check{display:flex;align-items:center;gap:8px;margin:9px 0}.check label{margin:0}.picked{outline:3px solid #ff9f1c!important;outline-offset:2px!important}.elementName{background:#f1f5f9;padding:9px;border-radius:8px;font-size:13px;font-weight:bold}.actions{position:sticky;bottom:0;background:white;border-top:1px solid #e2e8f0;padding:10px 0 0;margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:7px}.apply{background:#0d9488}.save{background:linear-gradient(135deg,#2876ed,#1749bc);box-shadow:0 3px 0 #153e8a}.status{white-space:pre-wrap;font-size:12px;line-height:1.7;color:#52677d;margin-top:9px}.preview{display:flex;flex-direction:column}.bar{padding:10px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;gap:8px}.frame{flex:1;min-height:0;background:#dce5ee}iframe{width:100%;height:100%;display:block;border:0;background:white}.hint{font-size:11px;color:#64748b;line-height:1.6;margin-top:8px}@media(max-width:800px){main{height:auto;min-height:calc(100vh - 62px);grid-template-columns:1fr}.preview{height:42vh;min-height:270px;order:-1}.controls{height:auto;overflow:visible}.tabs{position:sticky;top:0;background:#fff;z-index:3}}@media(max-width:420px){.tabs{grid-template-columns:repeat(3,1fr)}}
 </style></head>
-<body><div style="background:#1f2937;color:white;text-align:center;padding:8px">محرر الواجهة الموحد · <a href="/frontend/admin.html" style="color:#93c5fd">العودة للإدارة</a></div>
+<body>
+<script>
+(function(){
+  'use strict';
+  const keys=['admin_token_v3','admin_token','token','auth_token','adminToken','sonaa_admin_token','sonaaAdminToken','authToken','accessToken','sonaa_token'];
+  let token='';
+  try { for(const key of keys){const value=localStorage.getItem(key);if(value){token=value;break;}} }
+  catch(_){}
+  document.documentElement.style.visibility='hidden';
+  function rejectSession(message){
+    try { keys.forEach(key=>localStorage.removeItem(key)); } catch(_){}
+    alert(message);
+    window.location.replace('/frontend/admin.html');
+  }
+  if(!token){
+    let found=[];
+    try { found=Object.keys(localStorage); } catch(_){}
+    console.warn('No admin token found, keys:',found);
+    rejectSession('يجب تسجيل الدخول كأدمن أولاً');
+    return;
+  }
+  fetch('/api/admin/me',{method:'GET',headers:{Authorization:'Bearer '+token},cache:'no-store',credentials:'same-origin'})
+    .then(response=>{
+      if(!response.ok) throw new Error('Admin session rejected: '+response.status);
+      return response.json();
+    })
+    .then(data=>{
+      if(data && (data.admin || data.user || data._id || data.id || data.success===true)){
+        document.documentElement.style.visibility='';
+        console.log('Admin session verified for editor');
+      } else {
+        rejectSession('تعذر التحقق من جلسة الأدمن. سجل دخول مرة أخرى');
+      }
+    })
+    .catch(error=>{
+      console.warn('Could not verify admin token:',error);
+      rejectSession('تعذر التحقق من جلسة الأدمن. تأكد من الاتصال ثم سجل الدخول مرة أخرى');
+    });
+})();
+</script><div style="background:#1f2937;color:white;text-align:center;padding:8px">محرر الواجهة الموحد · <a href="/frontend/admin.html" style="color:#93c5fd">العودة للإدارة</a></div>
 <header><div><h1>🎨 محرر صُنّاع الشامل</h1><small>اختار الصفحة ثم اضغط على أي عنصر في المعاينة لتعديله</small></div><button id="reload" class="secondary" type="button">إعادة تحميل المعاينة</button></header>
 <main><aside><div class="controls">
 <div class="row"><div><label for="page">الصفحة</label><select id="page"><option value="client">صفحة العميل</option><option value="fanni">صفحة الفني</option><option value="admin">لوحة الإدارة</option><option value="password">الحساب وكلمة المرور</option><option value="support">الدعم</option></select></div><div><label for="subPage">القسم</label><select id="subPage"><option value="">اختر القسم</option><optgroup label="العميل"><option value="client:login">تسجيل الدخول</option><option value="client:register">تسجيل جديد</option><option value="client:new-order">طلب جديد</option><option value="client:my-orders">طلباتي</option><option value="client:details">تفاصيل الطلب</option><option value="client:complaint-form">شكوى</option><option value="client:track-complaint">تتبع شكوى</option><option value="client:support">الدعم</option><option value="client:profile">حسابي</option></optgroup><optgroup label="الفني"><option value="fanni:login">تسجيل الدخول</option><option value="fanni:register">تسجيل جديد</option><option value="fanni:available">الطلبات المتاحة</option><option value="fanni:my-orders">طلباتي</option><option value="fanni:wallet">المحفظة</option><option value="fanni:profile">حسابي</option></optgroup><optgroup label="الإدارة"><option value="admin:dashboard">الرئيسية</option><option value="admin:orders">الطلبات</option><option value="admin:technicians">الفنيون</option><option value="admin:clients">العملاء</option><option value="admin:support">الدعم</option><option value="admin:password-recovery">استعادة كلمة المرور</option><option value="admin:settings">الإعدادات</option><option value="admin:notifications">الإشعارات</option></optgroup><optgroup label="أخرى"><option value="password:profile">بيانات الحساب</option><option value="password:change-password">تغيير كلمة المرور</option><option value="support:my-cases">طلبات الدعم</option><option value="support:new-case">طلب دعم جديد</option></optgroup></select></div></div>
@@ -26,7 +65,7 @@ const $=id=>document.getElementById(id),frame=$('previewFrame'),API='/api/admin/
 const pages={client:{title:'صفحة العميل',url:'/frontend/client.html'},fanni:{title:'صفحة الفني',url:'/frontend/fanni.html'},admin:{title:'لوحة الإدارة',url:'/frontend/admin.html'},password:{title:'الحساب وكلمة المرور',url:'/frontend/password.html'},support:{title:'الدعم',url:'/frontend/support.html'}};
 const sections={'client:login':'login','client:register':'register','client:new-order':'new','client:my-orders':'orders','client:details':'track','client:complaint-form':'complaint','client:track-complaint':'track','client:support':'support','client:profile':'profile','fanni:login':'login','fanni:register':'register','fanni:available':'available','fanni:my-orders':'myOffers','fanni:wallet':'wallet','fanni:profile':'profile','admin:dashboard':'dashboard','admin:orders':'orders','admin:technicians':'fannis','admin:clients':'clients','admin:support':'support','admin:password-recovery':'__passwordRecovery','admin:settings':'settings','admin:notifications':'notifications','password:profile':'profile','password:change-password':'changePassword','support:my-cases':'main','support:new-case':'new-title'};
 let layouts={},selected=null,selectedId='',anchor='top-left',imageData='';
-function token(){for(const k of ['admin_token_v3','adminToken','sonaa_admin_token','token','admin_token','sonaaAdminToken','authToken','accessToken','sonaa_token'])try{const t=localStorage.getItem(k)||sessionStorage.getItem(k);if(t)return t}catch(_){}return''}
+function token(){for(const k of ['admin_token_v3','admin_token','token','auth_token','adminToken','sonaa_admin_token','sonaaAdminToken','authToken','accessToken','sonaa_token'])try{const t=localStorage.getItem(k)||sessionStorage.getItem(k);if(t)return t}catch(_){}return''}
 function status(s){$('status').textContent=s}
 function safe(s){return String(s||'').replace(/[^a-zA-Z0-9_-]/g,'-').slice(0,100)}
 function layout(){return layouts[$('page').value]||(layouts[$('page').value]={sectionOrder:[],tabOrder:{},tabGroups:{},sizes:{},elements:{}})}
