@@ -50,6 +50,12 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
+// Allow same-origin editor previews while preventing third-party framing.
+app.use((req, res, next) => {
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  next();
+});
+
 // Restrict browser access to explicitly configured origins. Requests without
 // an Origin header (for example native apps/server-to-server calls) remain valid.
 const configuredOrigins = String(process.env.ALLOWED_ORIGINS || '')
@@ -92,11 +98,7 @@ const frontendPath = possibleFrontendPaths.find(
 // Serve the editor and other repository frontend files from an explicit absolute path.
 // The explicit sendFile route is a fallback if static middleware does not resolve the file.
 const repositoryFrontendPath = path.join(__dirname, '../frontend');
-app.use('/frontend', (req, res, next) => {
-  // Allow same-origin editor previews; never send DENY for these pages.
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-  next();
-}, express.static(repositoryFrontendPath, {
+app.use('/frontend', express.static(repositoryFrontendPath, {
   index: false,
   dotfiles: 'ignore'
 }));
