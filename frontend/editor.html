@@ -229,23 +229,37 @@ function attachEditorListeners(){
   let doc;
   try{doc=iframe.contentDocument||iframe.contentWindow.document}catch(e){console.warn('Cannot access editor iframe:',e);return}
   if(!doc||!doc.body||!doc.head)return;
-  console.log('🔧 Attaching editor listeners inside iframe');
-  // Keep the existing setup idempotent: load events can fire more than once.
+  console.log('🔧 Attaching editor listeners for account button and all controls');
   if(doc.documentElement.dataset.sonaaEditorListenersAttached!=='1'){
     doc.documentElement.dataset.sonaaEditorListenersAttached='1';
-    doc.addEventListener('click',e=>{
+    // Stop preview interactions before page handlers can navigate or open account panels.
+    const blockPreviewAction=e=>{
       const raw=e.target;
-      if(!raw||isDragging||raw.closest?.('.drag-handle'))return;
-      let target=raw.closest?.('[data-editor-id],button,a,.account-nav-btn,input[type=button],input[type=submit],[role=button]');
-      // SVG icons are often the actual click target; select their nearest editable wrapper.
-      if(target&&['SVG','PATH','I'].includes(target.tagName)){
-        target=target.closest('[data-editor-id]')||target.parentElement?.closest?.('[data-editor-id],button,a,.account-nav-btn,[role=button]');
-      }
-      if(!target||target===doc.body||target===doc.documentElement)return;
+      if(!raw||raw.closest?.('.drag-handle')||isDragging)return;
+      const clickable=raw.closest?.('button,a,#account-btn,[id*="account"],.account-nav-btn,[role="button"],input[type="button"],input[type="submit"]');
+      const editable=clickable||raw.closest?.('[data-editor-id]');
+      if(!editable||editable===doc.body||editable===doc.documentElement)return;
+      // For account controls, block pointer events as well as click so their own handlers do not fire.
+      if(e.type!=='click'&&!(/حسابي/.test(editable.textContent||'')||editable.id==='account-btn'||/account/i.test(String(editable.id||'')+' '+String(editable.className||''))))return;
       e.preventDefault();
       e.stopPropagation();
       e.stopImmediatePropagation();
-      console.log('✅ Selected in editor:',(target.textContent||target.getAttribute('aria-label')||target.tagName).trim?.()||target.tagName,target);
+    };
+    ['pointerdown','mousedown','mouseup'].forEach(type=>doc.addEventListener(type,blockPreviewAction,true));
+    doc.addEventListener('click',e=>{
+      const raw=e.target;
+      if(!raw||raw.closest?.('.drag-handle')||isDragging)return;
+      // Prefer the actual button/link, not an inner icon/span, so "حسابي" is selected as one control.
+      let target=raw.closest?.('button,a,#account-btn,[id*="account"],.account-nav-btn,[role="button"],input[type="button"],input[type="submit"]');
+      if(!target)target=raw.closest?.('[data-editor-id]');
+      if(!target||target===doc.body||target===doc.documentElement){
+        console.log('No selectable element found');
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      console.log('✅ Selected in editor:',(target.textContent||target.getAttribute('aria-label')||target.tagName).trim(),target);
       selectElement(target);
       if(typeof makeElementDraggable==='function')makeElementDraggable(target);
       status('تم تحديد العنصر بدل تشغيله. اسحب مقبض التحريك ثم اضغط حفظ ونشر.');
@@ -254,17 +268,17 @@ function attachEditorListeners(){
     const style=doc.createElement('style');
     style.id='sonaa-editor-cursor-styles';
     style.textContent=`
-      [data-editor-id], [data-editor-id] *, button, a, .account-nav-btn, [role="button"] {
+      [data-editor-id], [data-editor-id] *, button, a, .account-nav-btn, [id*="account"], [role="button"] {
         cursor: crosshair !important;
       }
-      [data-editor-id]:hover, button:hover, a:hover, .account-nav-btn:hover, [role="button"]:hover {
+      [data-editor-id]:hover, button:hover, a:hover, .account-nav-btn:hover, [id*="account"]:hover, [role="button"]:hover {
         outline: 2px dashed #0d9488 !important;
         outline-offset: 2px !important;
         cursor: crosshair !important;
       }
       .sonaa-selected, .picked {
-        outline: 2px solid #0d9488 !important;
-        outline-offset: 2px !important;
+        outline: 3px solid #0d9488 !important;
+        outline-offset: 3px !important;
         cursor: move !important;
       }
     `;
@@ -276,14 +290,13 @@ function attachEditorListeners(){
     const saved=layout().elements?.[key(el)];
     if(saved)applyItem(el,saved);
   });
-  // Disable inline click handlers that could still trigger navigation or actions.
   doc.querySelectorAll('a,button,input[type=button],input[type=submit],[role=button]').forEach(btn=>{
     btn.removeAttribute('onclick');
     try{btn.onclick=null}catch(_){}
   });
   const chosen=$('subPage').value;
   if(chosen&&chosen.split(':')[0]===$('page').value&&sections[chosen])iframe.contentWindow.postMessage({action:'openSection',section:sections[chosen]},location.origin);
-  console.log('✅ Editor listeners attached, cursor is now crosshair');
+  console.log('✅ Editor listeners attached; account and other buttons are selectable');
   status('المعاينة جاهزة. اضغط على أي عنصر لتحديده ثم اسحب المقبض لتحريكه.');
 }
 function setupFrame(){attachEditorListeners()}
@@ -308,7 +321,7 @@ async function loadPage(pageKey){
   await loadLayout();
   const chosen=$('subPage').value;
   const section=chosen&&chosen.split(':')[0]===p?(sections[chosen]||''):'';
-  frame.onload=()=>{console.log('Iframe loaded:',fileName);status('تم تحميل المعاينة');setupFrame();setTimeout(attachEditorListeners,1000)};
+  frame.onload=()=>{console.log('Iframe loaded:',fileName);status('تم تحميل المعاينة');setupFrame();[100,500,1500].forEach(delay=>setTimeout(attachEditorListeners,delay))};
   frame.onerror=e=>{console.error('Iframe error:',e);status('فشل تحميل المعاينة')};
   const url='/frontend/'+fileName+'?preview=true&section='+encodeURIComponent(section)+'&t='+Date.now()+'&page='+encodeURIComponent(requested);
   console.log('Setting iframe src to:',url);
