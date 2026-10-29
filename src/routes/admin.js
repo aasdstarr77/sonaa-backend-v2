@@ -1467,12 +1467,21 @@ function sanitizeAdminUiLayout(input) {
       if (Number.isFinite(value.hPercent) && value.hPercent >= 0 && value.hPercent <= 100) item.hPercent = value.hPercent;
       if (Number.isInteger(value.zIndex) && value.zIndex >= 0 && value.zIndex <= 999999) item.zIndex = value.zIndex;
       if (Number.isFinite(value.fontSize) && value.fontSize >= 10 && value.fontSize <= 72) item.fontSize = value.fontSize;
-      // Accept the editor's CSS width string (e.g. "29%") as well as legacy numeric percentages.
-      if (typeof value.width === 'string' && /^(?:[1-9]\d{0,2})(?:\.\d{1,2})?(?:px|%)$/.test(value.width.trim())) {
-        const match = value.width.trim().match(/^(\d+(?:\.\d+)?)(px|%)$/);
-        const n = match ? Number(match[1]) : 0;
-        if (n > 0 && n <= (match[2] === 'px' ? 2000 : 100)) item.width = value.width.trim();
-      } else if (Number.isFinite(value.width) && value.width >= 1 && value.width <= 100) item.width = value.width;
+      // Preserve the editor's explicit CSS width ("29%", "240px") and legacy numeric percentages.
+      // Normalize whitespace before validation so the value survives the same sanitizer on PUT and GET.
+      const widthValue = typeof value.width === 'string' ? value.width.trim() : value.width;
+      if (typeof widthValue === 'string') {
+        const widthMatch = widthValue.match(/^(\d+(?:\.\d{1,2})?)(px|%)$/);
+        if (widthMatch) {
+          const widthNumber = Number(widthMatch[1]);
+          if (Number.isFinite(widthNumber) && widthNumber > 0 &&
+              widthNumber <= (widthMatch[2] === 'px' ? 2000 : 100)) {
+            item.width = widthValue;
+          }
+        }
+      } else if (Number.isFinite(widthValue) && widthValue >= 1 && widthValue <= 100) {
+        item.width = widthValue;
+      }
       if (Number.isFinite(value.buttonWidth) && value.buttonWidth >= 20 && value.buttonWidth <= 100) item.buttonWidth = value.buttonWidth;
       if (Number.isFinite(value.buttonHeight) && value.buttonHeight >= 50 && value.buttonHeight <= 180) item.buttonHeight = value.buttonHeight;
       if (Number.isFinite(value.translateX) && value.translateX >= -2000 && value.translateX <= 2000) item.translateX = value.translateX;
