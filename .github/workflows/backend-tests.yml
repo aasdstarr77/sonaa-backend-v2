@@ -5,6 +5,10 @@ on:
     branches: [main]
     paths:
       - 'src/**'
+      - 'frontend/admin.html'
+      - 'frontend/editor.html'
+      - 'frontend/client.html'
+      - 'frontend/fanni.html'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/backend-tests.yml'
