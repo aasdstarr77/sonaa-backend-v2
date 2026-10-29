@@ -7,6 +7,9 @@
   };
   var page = pageMap[location.pathname.replace(/\/+$/, '')] || location.pathname.split('/').pop().replace(/\.html$/, '');
   if (!/^(admin|client|fanni|password|support)$/.test(page)) return;
+  // Hide the initial page until the first layout request settles to prevent a visible layout jump.
+  document.documentElement.style.opacity = '0';
+  var initialLayoutPending = true;
   var styleId = 'sonaa-ui-layout-style';
   function safeId(value) { return String(value || '').replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 100); }
   // Keep this algorithm in sync with frontend/editor.html so saved keys match in preview and live pages.
@@ -185,12 +188,19 @@
     console.warn('[Sonaa editor] Section not found on ' + page + ':', section);
   }
   function load() {
-    fetch('/api/admin/ui-layout/' + encodeURIComponent(page), {
+    return fetch('/api/admin/ui-layout/' + encodeURIComponent(page), {
       method: 'GET', credentials: 'same-origin',
       headers: getToken() ? { Authorization: 'Bearer ' + getToken() } : {}
     }).then(function (r) { if (!r.ok) throw new Error('layout HTTP ' + r.status); return r.json(); })
       .then(function (data) { apply(data.layout || data.uiLayout || data); })
-      .catch(function (err) { console.warn('[Sonaa UI layout] Could not load layout for ' + page, err); });
+      .catch(function (err) { console.warn('[Sonaa UI layout] Could not load layout for ' + page, err); })
+      .finally(function () {
+        if (initialLayoutPending) {
+          initialLayoutPending = false;
+          document.documentElement.style.transition = 'opacity 0.2s';
+          document.documentElement.style.opacity = '1';
+        }
+      });
   }
   function getToken() {
     var keys = ['admin_token_v3', 'adminToken', 'token', 'authToken'];

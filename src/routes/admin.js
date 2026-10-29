@@ -1544,6 +1544,26 @@ router.put('/ui-layout/:page', auth('admin'), async (req, res, next) => {
     return res.set('Cache-Control', 'no-store').json({ message: 'تم حفظ تخطيط الصفحة', page, layout });
   } catch (err) { next(err); }
 });
+router.delete('/ui-layout/:page', auth('admin'), async (req, res, next) => {
+  try {
+    const { error, value: page } = uiLayoutPageSchema.validate(String(req.params.page || '').trim());
+    if (error) return res.status(400).json({ message: 'اسم الصفحة غير مسموح به' });
+    const field = UI_LAYOUT_FIELDS[page];
+    const config = await getAdminConfig();
+    const before = sanitizeAdminUiLayout(config.get(field) || {});
+    const emptyLayout = sanitizeAdminUiLayout({});
+    config.set(field, emptyLayout);
+    config.history.push({
+      key: field, before, after: emptyLayout, by: adminName(req),
+      byId: String(req.user?._id || ''), reason: 'حذف تخطيط واجهة ' + page, createdAt: new Date()
+    });
+    if (config.history.length > 200) config.history = config.history.slice(-200);
+    await config.save();
+    await writeAdminAudit(req, 'حذف تخطيط واجهة', 'ui-layout', page, JSON.stringify({ previousElementCount: Object.keys(before.elements || {}).length }));
+    return res.set('Cache-Control', 'no-store').json({ message: 'تم حذف تخطيط الصفحة وإعادة الإعدادات الافتراضية', page, layout: emptyLayout });
+  } catch (err) { next(err); }
+});
+
 router.get('/settings', auth('admin'), async (req, res, next) => {
   try { const config = await getAdminConfig(); return res.set('Cache-Control', 'no-store').json({ settings: config.settings }); }
   catch (err) { next(err); }
