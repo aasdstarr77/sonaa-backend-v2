@@ -50,7 +50,18 @@
     if (id) { var c = document.getElementById(id); if (c && c !== el && c.contains(el)) return c; }
     return el.parentElement || document.body;
   }
+  function isLayoutContainer(el) {
+    if (!el || el.nodeType !== 1) return false;
+    return el.matches('main, .container, .main-box, .login-box, body > div, #app, form, .form-container, .card') ||
+      (el.children && el.children.length > 5 && /container|wrapper|content|layout|login|form|card|main/i.test(String(el.className || '') + ' ' + String(el.id || '')));
+  }
   function apply(layout) {
+    ensureStyle(); assignEditorIds(document.body);
+    var elements = layout && (layout.elements || layout.items || layout.layout || layout);
+    if (!elements || typeof elements !== 'object') return;
+    Object.keys(elements).forEach(function (key) {
+      var item = elements[key]; if (!item || typeof item !== 'object') return;
+      var escaped = window.CSS && CSS.escape ? CSS.escape(key) : key.replace(/["\\]/g, '\\  function apply(layout) {
     ensureStyle(); assignEditorIds(document.body);
     var elements = layout && (layout.elements || layout.items || layout.layout || layout);
     if (!elements || typeof elements !== 'object') return;
@@ -75,6 +86,56 @@
       setPct(el, '--sonaa-x', cfg.xPercent); setPct(el, '--sonaa-y', cfg.yPercent);
       if (cfg.wPercent !== undefined) setPct(el, '--sonaa-w', cfg.wPercent);
       if (cfg.hPercent !== undefined) setPct(el, '--sonaa-h', cfg.hPercent);
+      if (cfg.zIndex !== undefined) el.style.setProperty('--sonaa-z', String(cfg.zIndex));
+      if (cfg.hidden) el.style.display = 'none';
+      if (cfg.threeD === false) { el.style.boxShadow = 'none'; el.style.scale = '1'; }
+      else if (cfg.threeD === true) { el.style.scale = String(cfg.scale || 1); el.style.boxShadow = '0 7px 16px rgba(10,35,66,.22),inset 0 1px 0 rgba(255,255,255,.65)'; }
+    });
+  }');
+      var el = document.querySelector('[data-editor-id="' + escaped + '"]') || document.getElementById(key);
+      if (!el) return;
+      if (!el.hasAttribute('data-editor-id')) el.setAttribute('data-editor-id', key);
+      var mobile = window.matchMedia('(max-width: 767px)').matches;
+      var ov = mobile && (item.mobile || item.mobileOverride || item.mobileOverrides) || {};
+      var cfg = Object.assign({}, item, ov);
+      var isContainer = isLayoutContainer(el);
+      // A saved editor position must never pull a page/form container out of normal flow.
+      if (isContainer) {
+        el.classList.remove('sonaa-pos-layer');
+        el.style.removeProperty('position');
+        el.style.removeProperty('left');
+        el.style.removeProperty('right');
+        el.style.removeProperty('top');
+        el.style.removeProperty('bottom');
+        el.style.removeProperty('translate');
+        el.style.removeProperty('--sonaa-x');
+        el.style.removeProperty('--sonaa-y');
+        el.style.removeProperty('--sonaa-w');
+        el.style.removeProperty('--sonaa-h');
+        if (cfg.wPercent !== undefined && Number.isFinite(Number(cfg.wPercent))) {
+          var containerWidth = Math.max(0, Math.min(100, Number(cfg.wPercent)));
+          el.style.width = containerWidth + '%';
+          el.style.maxWidth = '100%';
+        }
+        if (cfg.hidden) el.style.display = 'none';
+        if (cfg.threeD === false) { el.style.boxShadow = 'none'; el.style.scale = '1'; }
+        else if (cfg.threeD === true) { el.style.scale = String(cfg.scale || 1); el.style.boxShadow = '0 7px 16px rgba(10,35,66,.22),inset 0 1px 0 rgba(255,255,255,.65)'; }
+        return;
+      }
+      var container = getContainer(cfg.containerId, el);
+      if (container && container !== document.body && !isLayoutContainer(container) && getComputedStyle(container).position === 'static') container.style.position = 'relative';
+      el.classList.add('sonaa-pos-layer', 'sonaa-effect-layer');
+      var anchor = String(cfg.anchor || 'top-left').toLowerCase();
+      el.style.position = 'absolute'; el.style.margin = '0';
+      el.style.right = 'auto'; el.style.bottom = 'auto';
+      if (anchor.indexOf('right') !== -1) { el.style.left = 'auto'; el.style.right = '0'; }
+      else { el.style.right = 'auto'; el.style.left = '0'; }
+      if (anchor.indexOf('bottom') !== -1) { el.style.top = 'auto'; el.style.bottom = '0'; }
+      else { el.style.bottom = 'auto'; el.style.top = '0'; }
+      setPct(el, '--sonaa-x', cfg.xPercent); setPct(el, '--sonaa-y', cfg.yPercent);
+      if (cfg.wPercent !== undefined) setPct(el, '--sonaa-w', mobile ? Math.min(100, Number(cfg.wPercent)) : cfg.wPercent);
+      if (cfg.hPercent !== undefined) setPct(el, '--sonaa-h', cfg.hPercent);
+      if (mobile) { el.style.maxWidth = '100%'; el.style.boxSizing = 'border-box'; }
       if (cfg.zIndex !== undefined) el.style.setProperty('--sonaa-z', String(cfg.zIndex));
       if (cfg.hidden) el.style.display = 'none';
       if (cfg.threeD === false) { el.style.boxShadow = 'none'; el.style.scale = '1'; }
