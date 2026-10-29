@@ -94,6 +94,54 @@
         else if (cfg.threeD === true) { el.style.scale = String(cfg.scale || 1); el.style.boxShadow = '0 7px 16px rgba(10,35,66,.22),inset 0 1px 0 rgba(255,255,255,.65)'; }
         return;
       }
+      // Reapply the editor's saved visual styles on live pages as well as in preview.
+      // Keep the editor's structured layout format; do not replace it with raw CSS selectors.
+      if (cfg.fontFamily) el.style.fontFamily = '"' + String(cfg.fontFamily).replace(/["\\\\]/g, '') + '"';
+      if (cfg.fontSize !== undefined) el.style.fontSize = Number(cfg.fontSize) + 'px';
+      if (cfg.fontWeight) el.style.fontWeight = String(cfg.fontWeight);
+      if (cfg.textAlign) el.style.textAlign = String(cfg.textAlign);
+      if (cfg.color) el.style.color = String(cfg.color);
+      if (cfg.buttonTextColor && /^(BUTTON|A)$/.test(el.tagName)) el.style.color = String(cfg.buttonTextColor);
+      if (cfg.buttonBg) {
+        var bg = String(cfg.buttonBg).replace('#', '');
+        var alpha = Math.max(0, Math.min(100, Number(cfg.buttonBgAlpha === undefined ? 100 : cfg.buttonBgAlpha))) / 100;
+        if (/^[0-9a-fA-F]{6}$/.test(bg)) el.style.backgroundColor = 'rgba(' + parseInt(bg.slice(0,2),16) + ',' + parseInt(bg.slice(2,4),16) + ',' + parseInt(bg.slice(4,6),16) + ',' + alpha + ')';
+        else el.style.backgroundColor = String(cfg.buttonBg);
+      }
+      if (cfg.elementBg) el.style.backgroundColor = String(cfg.elementBg);
+      if (cfg.radius !== undefined) el.style.borderRadius = Math.max(0, Number(cfg.radius) || 0) + 'px';
+      if (cfg.opacity !== undefined) el.style.opacity = String(Math.max(0, Math.min(100, Number(cfg.opacity))) / 100);
+      if (cfg.buttonSize && /^(BUTTON|A)$/.test(el.tagName)) {
+        el.style.padding = cfg.buttonSize === 'small' ? '6px 10px' : cfg.buttonSize === 'large' ? '14px 22px' : '10px 16px';
+      }
+      if (cfg.buttonHeight !== undefined && /^(BUTTON|A)$/.test(el.tagName)) el.style.minHeight = (36 * Math.max(50, Math.min(180, Number(cfg.buttonHeight))) / 100) + 'px';
+      if (cfg.useSectionBg && cfg.sectionBg && el.parentElement) el.parentElement.style.backgroundColor = String(cfg.sectionBg);
+      if (cfg.useGradient) el.style.backgroundImage = 'linear-gradient(' + (cfg.gradientDirection || '135deg') + ',' + (cfg.gradientStart || '#0d9488') + ',' + (cfg.gradientEnd || '#2563eb') + ')';
+      if (cfg.backgroundImage) {
+        var imageAlpha = 1 - Math.max(0, Math.min(100, Number(cfg.imageOpacity === undefined ? 100 : cfg.imageOpacity))) / 100;
+        el.style.backgroundImage = 'linear-gradient(rgba(0,0,0,' + imageAlpha + '),rgba(0,0,0,' + imageAlpha + ')),url("' + String(cfg.backgroundImage).replace(/["\\\\]/g, '') + '")';
+      }
+      if (cfg.threeD === false) {
+        el.style.scale = '1'; el.style.transform = 'none';
+        if (cfg.shadowEnabled === false) el.style.boxShadow = 'none';
+      } else {
+        if (cfg.scale !== undefined) el.style.scale = String(Math.max(0.5, Math.min(1.5, Number(cfg.scale) || 1));
+        if (cfg.rotateY !== undefined) el.style.transform = 'perspective(800px) rotateY(' + (Number(cfg.rotateY) || 0) + 'deg)';
+        if (cfg.shadowEnabled === false) el.style.boxShadow = 'none';
+        else if (cfg.shadowDepth !== undefined || cfg.shadowColor) {
+          var depth = Math.max(0, Number(cfg.shadowDepth) || 0);
+          var shadowColor = /^#[0-9a-fA-F]{6}$/.test(String(cfg.shadowColor || '')) ? String(cfg.shadowColor) + '66' : '#0a234266';
+          el.style.boxShadow = '0 ' + depth + 'px ' + (depth * 2) + 'px ' + shadowColor + ',inset 0 1px 0 #ffffff88';
+        }
+      }
+      if (cfg.buttonHover || cfg.hoverTextColor) {
+        var hoverStyleId = 'sonaa-layout-hover-style';
+        var hoverStyle = document.getElementById(hoverStyleId);
+        if (!hoverStyle) { hoverStyle = document.createElement('style'); hoverStyle.id = hoverStyleId; document.head.appendChild(hoverStyle); }
+        var hoverSelector = '[data-editor-id="' + String(key).replace(/["\\\\]/g, '\\\\      var container = getContainer(cfg.containerId, el);
+') + '"]';
+        hoverStyle.textContent += hoverSelector + ':hover{' + (cfg.buttonHover ? 'background-color:' + String(cfg.buttonHover) + '!important;' : '') + (cfg.hoverTextColor ? 'color:' + String(cfg.hoverTextColor) + '!important;' : '') + '}';
+      }
       var container = getContainer(cfg.containerId, el);
       // Keep edited elements in normal document/Flex flow; never apply absolute positioning.
       el.classList.remove('sonaa-pos-layer');
