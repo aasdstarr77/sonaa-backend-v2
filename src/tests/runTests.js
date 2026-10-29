@@ -345,7 +345,14 @@ async function run() {
           sectionOrder: ['platform-admin', 'dashboard', 'unknown-section', 'dashboard'],
           tabOrder: { dashboard: ['stats', 'orders', 'dashboard', 'not-a-tab'] },
           tabGroups: { orders: 'dashboard', dashboard: 'invalid-section' },
-          sizes: { orders: 'large', dashboard: 'tiny', stats: 'small', unknown: 'large' }
+          sizes: { orders: 'large', dashboard: 'tiny', stats: 'small', unknown: 'large' },
+          elements: {
+            'auto-div-1_button-': {
+              width: '29%', buttonWidth: 29, translateX: 12, translateY: -4,
+              anchor: 'center', fontSize: 16, color: '#142b43', radius: 10,
+              text: 'اختبار العرض', hidden: false, threeD: true, scale: 1
+            }
+          }
         } });
       assert.equal(saved.status, 200);
       assert.deepEqual(saved.body.layout.sectionOrder, ['platform-admin', 'dashboard']);
@@ -355,10 +362,14 @@ async function run() {
       assert.equal(saved.body.layout.sizes.orders, 'large');
       assert.equal(saved.body.layout.sizes.dashboard, undefined);
       assert.equal(saved.body.layout.sizes.stats, 'small');
+      assert.equal(saved.body.layout.elements['auto-div-1_button-'].width, '29%');
+      assert.equal(saved.body.layout.elements['auto-div-1_button-'].buttonWidth, 29);
+      assert.equal(saved.body.layout.elements['auto-div-1_button-'].translateX, 12);
       const loaded = await request(app).get('/api/admin/ui-layout/admin')
         .set('Authorization', 'Bearer ' + adminToken);
       assert.equal(loaded.status, 200);
       assert.deepEqual(loaded.body.layout, saved.body.layout);
+      assert.equal(loaded.body.layout.elements['auto-div-1_button-'].width, '29%');
     });
 
     await test('admin API rejects requests without a token', async () => {
