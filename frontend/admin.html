@@ -265,7 +265,7 @@ function render(){
         <img class="sonaa-logo-svg admin-header-logo h-full w-full object-contain" src="/images/LOGO_UPLOAD_HERE/logo.png" alt="شعار صُنّاع" width="120" height="120" decoding="async">
       </div>
       <div class="flex flex-col gap-1 shrink-0 items-stretch justify-self-end w-[104px]">
-        <a href="/frontend/editor.html" target="_blank" rel="noopener noreferrer" style="background:#7C3AED;color:white;padding:8px 16px;border-radius:8px;text-decoration:none;display:inline-block;text-align:center;font-size:10px;font-weight:800;margin-bottom:3px;">🎨 تحرير الواجهة</a>
+        ${isAuth?'<a href="/frontend/editor.html" target="_blank" id="visualEditorLink" style="background:#7C3AED;color:#fff;padding:8px 14px;border-radius:8px;text-decoration:none;margin-right:10px;display:inline-block;">🎨 تحرير الواجهة</a>':''}
         
         <a href="password.html?role=admin&amp;mode=account" class="h-8 w-full rounded-lg bg-white/10 hover:bg-white/20 border border-white/15 text-[10px] font-black text-white inline-flex items-center justify-center gap-1 no-underline leading-none"><span aria-hidden="true">👤</span><span>حسابي</span></a>
         
@@ -277,7 +277,7 @@ function render(){
   
   <main class="mx-auto max-w-[800px] px-3 pb-28">
     ${isAuth?`<section class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2" aria-label="إحصائيات سريعة"><div class="premium-panel p-3"><p class="text-[10px] font-bold text-slate-500">الطلبات</p><p class="text-[19px] font-black text-slate-900">${state.orders.length}</p></div><div class="premium-panel p-3"><p class="text-[10px] font-bold text-slate-500">الفنيون</p><p class="text-[19px] font-black text-slate-900">${state.accountCounts.technicians}</p></div><div class="premium-panel p-3"><p class="text-[10px] font-bold text-slate-500">العملاء</p><p class="text-[19px] font-black text-slate-900">${state.accountCounts.clients}</p></div><div class="premium-panel p-3"><p class="text-[10px] font-bold text-slate-500">الشكاوى الجديدة</p><p class="text-[19px] font-black text-slate-900">${state.complaints.filter(c=>c.status==='جديدة').length}</p></div></section>
-    
+
 `:''}
     
     ${!isAuth?`
