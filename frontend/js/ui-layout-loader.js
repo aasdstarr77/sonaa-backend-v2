@@ -5,23 +5,12 @@
   // The visual editor owns preview styling. Never re-apply persisted styles inside its iframe.
   // The editor already loads previews with ?preview=true; the frame check is a safe fallback.
   var previewParams = new URLSearchParams(window.location.search);
-  if (previewParams.has('preview') || window.self !== window.top) {
-    console.log('[Sonaa UI layout] Preview mode detected — saved layout loader disabled.');
-    var previewSplash = document.getElementById('clientLoadingOverlay') ||
-      document.getElementById('fanniLoadingOverlay') ||
-      document.getElementById('splash') ||
-      document.getElementById('splash-screen') ||
-      document.getElementById('loading') ||
-      document.querySelector('.client-loading-overlay') ||
-      document.querySelector('.fanni-loading-overlay') ||
-      document.querySelector('.splash-screen') ||
-      document.querySelector('.splash') ||
-      document.querySelector('#app-loading') ||
-      document.querySelector('[class*="loading-screen"]');
-    if (previewSplash) previewSplash.style.display = 'none';
-    return;
+  var isPreview = previewParams.has('preview') || window.self !== window.top;
+  if (isPreview) {
+    console.log('[Sonaa UI layout] Preview mode — applying saved layout once.');
+  } else {
+    console.log('[Sonaa UI layout] Live site mode — applying saved layout.');
   }
-  console.log('[Sonaa UI layout] Live site mode — applying saved layout.');
 
   var pageMap = {
     '/admin.html': 'admin', '/client.html': 'client', '/fanni.html': 'fanni',
@@ -365,5 +354,5 @@
     if (document.body) observer.observe(document.body, { childList: true, subtree: true });
   }
   window.addEventListener('message', handleMessage);
-  window.addEventListener('resize', function () { load(); }, { passive: true });
+  if (!isPreview) window.addEventListener('resize', function () { load(); }, { passive: true });
 })();
