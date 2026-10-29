@@ -174,7 +174,7 @@
       // Apply an explicitly saved inline width safely (legacy layouts may omit it).
       if (cfg.width !== undefined && /^(BUTTON|A)$/.test(el.tagName)) {
         var savedWidth = String(cfg.width).trim();
-        var widthMatch = savedWidth.match(/^(\\d+(?:\\.\\d+)?)(px|%)$/);
+        var widthMatch = savedWidth.match(/^(\d+(?:\.\d+)?)(px|%)$/);
         if (widthMatch) {
           var widthNumber = Number(widthMatch[1]);
           if (Number.isFinite(widthNumber) && widthNumber > 0) {
