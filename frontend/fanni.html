@@ -17,7 +17,27 @@
 <meta name="twitter:title" content="تسجيل فني جديد | صُنّاع">
 <meta name="twitter:description" content="أنشئ حساب فني جديد على منصة صُنّاع وابدأ في استقبال طلبات الخدمات.">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script>(function(){const isPreviewMode=new URLSearchParams(window.location.search).has("preview") || window.self !== window.top;window.IS_EDITOR_PREVIEW=isPreviewMode;console.log("Preview mode:",isPreviewMode);if(isPreviewMode){console.log("Skipping auth redirect for preview");}})();</script>
+<script>
+(function(){
+ const params=new URLSearchParams(window.location.search);
+ const isPreview=params.has('preview')||window.self!==window.top;
+ window.IS_EDITOR_PREVIEW=isPreview;
+ if(!isPreview)return;
+ const requested=params.get('section')||params.get('page')||'';
+ const tabs={
+  'available':'available','fanni-dashboard':'available','الطلبات المتاحة':'available',
+  'myOffers':'myOffers','my':'myOffers','fanni-orders':'myOffers','طلباتي':'myOffers',
+  'wallet':'wallet','المحفظة':'wallet',
+  'profile':'profile','حسابي':'profile',
+  'completed':'completed','المهام المكتملة':'completed',
+  'login':'login','fanni-login':'login','fanni':'login','تسجيل دخول الفني':'login',
+  'register':'register','fanni-register':'register','تسجيل جديد':'register'
+ };
+ window.PREVIEW_REQUESTED_TAB=tabs[requested]||tabs[requested.toLowerCase()]||'login';
+ window.SONAA_FORCE_PREVIEW_TAB=true;
+ console.log('Fanni Preview - will show tab:',window.PREVIEW_REQUESTED_TAB);
+})();
+</script>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
 :root{--navy:#0b1b3a;--navy-light:#163b70;--blue:#2563eb;--blue-dark:#1d4ed8;--page:#f4f7fc;--border:#e2e8f0}
@@ -995,8 +1015,10 @@ async function sendFanniQuickReply(sn,offerId,reply){try{await API.sendChat(sn,r
 async function sendFanniChat(sn,offerId){const el=document.getElementById('fanni-chat-'+sn);const text=String(el?.value||'').trim();if(!text)return toast('اكتب الرسالة أولًا.','error');try{await API.sendChat(sn,text,offerId);if(el)el.value='';await refreshFanniChatsSilently();toast('تم إرسال الرسالة.');}catch(e){toast(e.message||'تعذر إرسال الرسالة.','error');}}
 async function requestFanniPriceChange(sn){const price=Number(document.getElementById('price-change-'+sn)?.value);const reason=String(document.getElementById('price-reason-'+sn)?.value||'').trim();const offer=[...state.myOffers,...state.completedOffers].find(o=>String(o.orderSn||o.sn||o.order?.sn||'').toUpperCase()===String(sn||'').toUpperCase());const currentPrice=Number(offer?.client?.acceptedOfferPrice??offer?.acceptedOfferPrice??offer?.priceNum??offer?.price);if(!Number.isFinite(currentPrice))return toast('تعذر تحديد السعر الحالي؛ حدّث البيانات وحاول مرة أخرى.','error');if(!Number.isFinite(price)||price<=currentPrice||price<=0)return toast('السعر الجديد لازم يكون أعلى من السعر الحالي ('+currentPrice+' جنيه).','error');if(reason.length<5)return toast('اكتب سببًا واضحًا للتعديل.','error');try{const r=await API.requestPriceChange(sn,price,reason);toast(r.message||'تم إرسال طلب تعديل السعر.');await loadMyOffers();}catch(e){toast(e.message||'تعذر طلب تعديل السعر.','error');}}
 function render(){
-  const user=currentUser||getUser()||null;
-  const authenticated=!!getToken()&&!forceTechnicianRegistration;
+  if(window.IS_EDITOR_PREVIEW&&window.PREVIEW_REQUESTED_TAB){state.tab=window.PREVIEW_REQUESTED_TAB;}
+  const user=currentUser||getUser()||(window.IS_EDITOR_PREVIEW&&window.PREVIEW_REQUESTED_TAB&&!['login','register'].includes(window.PREVIEW_REQUESTED_TAB)?{name:'معاينة المحرر',status:'approved',technicianGuidelinesAcceptedAt:'preview',technicianGuidelinesVersion:'2026-10-20-v1',specialties:[],areas:[],walletBalance:0}:null);
+  const previewTab=window.IS_EDITOR_PREVIEW?window.PREVIEW_REQUESTED_TAB:'';
+  const authenticated=(!!previewTab&&!['login','register'].includes(previewTab))||(!!getToken()&&!forceTechnicianRegistration);
  document.title=authenticated?'لوحة الفني | صُنّاع':(state.tab==='register'?'تسجيل فني جديد | صُنّاع':'تسجيل دخول الفني | صُنّاع');
  const specialties=Array.isArray(user?.specialties)?user.specialties:[];
  const areas=Array.isArray(user?.areas)?user.areas:[];
