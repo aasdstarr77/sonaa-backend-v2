@@ -109,11 +109,14 @@ function selectElement(el){
   const saved=layout().elements?.[selectedId]||{};
   const shadow=computed.boxShadow;
   const shadowDepthMatch=shadow.match(/(?:^|\\s)(\\d+(?:\\.\\d+)?)px\\s+(?:\\d+(?:\\.\\d+)?px\\s+)?(?:\\d+(?:\\.\\d+)?px)?/);
+  const bgParts=computed.backgroundColor.split(',');
+  const bgAlphaPart=bgParts[bgParts.length-1]?bgParts[bgParts.length-1].replace(')','').trim():'';
+  const bgAlpha=parseFloat(bgAlphaPart);
   const current={
     text:(/^(INPUT|TEXTAREA)$/.test(el.tagName)?el.value:(el.innerText||el.textContent||'')).trim(),
     color:rgbToHex(computed.color),fontSize:parseInt(computed.fontSize,10)||16,
     buttonBg:computed.backgroundColor==='rgba(0, 0, 0, 0)'?'':rgbToHex(computed.backgroundColor),
-    buttonBgAlpha:computed.backgroundColor.startsWith('rgba')?Math.round(Number(computed.backgroundColor.match(/,\\s*([\\d.]+)\\s*\\)$/)?.[1]||1)*100:100,
+    buttonBgAlpha:computed.backgroundColor.startsWith('rgba')?Math.round((Number.isFinite(bgAlpha)?bgAlpha:1)*100):100,
     buttonTextColor:rgbToHex(computed.color),buttonHover:saved.buttonHover??'',
     buttonWidth:Math.max(1,Math.min(100,Math.round(rect.width/parentWidth*100))),
     buttonHeight:Math.max(1,Math.min(300,Math.round(rect.height/36*100))),
