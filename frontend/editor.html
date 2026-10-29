@@ -251,6 +251,11 @@ async function loadPage(pageKey){
   console.log('Setting iframe src to:',url);
   frame.src=url;
 }
+function loadPreviewWithSavedLayout(page){
+  const target=typeof page==='string'?page:$('page').value;
+  console.log('Reloading preview with saved layout:',target);
+  return loadPage(target);
+}
 function openSection(){
   const v=$('subPage').value;
   if(!v)return;
@@ -260,7 +265,7 @@ function openSection(){
   loadPage(p);
 }
 function updateLabels(){$('fontSizeLabel').textContent=$('fontSize').value+'px';$('radiusLabel').textContent=$('radius').value+'px';$('scaleLabel').textContent=$('scale').value+'x';$('rotateYLabel').textContent=$('rotateY').value+'°';$('opacityLabel').textContent=$('opacity').value+'%'}
-$('page').addEventListener('change',loadPage);$('subPage').addEventListener('change',openSection);$('reload').addEventListener('click',loadPage);$('reloadLayout').addEventListener('click',loadPage);document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('[data-tab]').forEach(x=>x.setAttribute('aria-selected',String(x===b)));document.querySelectorAll('[data-panel]').forEach(x=>x.classList.toggle('active',x.dataset.panel===b.dataset.tab))}));document.querySelectorAll('[data-anchor]').forEach(b=>b.addEventListener('click',()=>{anchor=b.dataset.anchor;document.querySelectorAll('[data-anchor]').forEach(x=>x.style.outline=x===b?'2px solid #0d9488':'' )}));$('backgroundImage').addEventListener('change',ev=>{const f=ev.target.files&&ev.target.files[0];if(!f)return;if(f.size>70000){status('اختر صورة أقل من 70 كيلوبايت حتى لا يتضخم التخطيط.');ev.target.value='';return}const reader=new FileReader();reader.onload=()=>{imageData=reader.result;status('تم تحميل الصورة إلى المسودة. اضغط تطبيق ثم حفظ.')};reader.readAsDataURL(f)});$('removeImage').addEventListener('click',()=>{imageData='';$('backgroundImage').value=''});['fontSize','radius','scale','rotateY','opacity'].forEach(id=>$(id).addEventListener('input',updateLabels));$('apply').addEventListener('click',()=>{
+$('page').addEventListener('change',loadPage);$('subPage').addEventListener('change',openSection);$('reload').addEventListener('click',()=>loadPreviewWithSavedLayout($('page').value));$('reloadLayout').addEventListener('click',()=>loadPreviewWithSavedLayout($('page').value));document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('[data-tab]').forEach(x=>x.setAttribute('aria-selected',String(x===b)));document.querySelectorAll('[data-panel]').forEach(x=>x.classList.toggle('active',x.dataset.panel===b.dataset.tab))}));document.querySelectorAll('[data-anchor]').forEach(b=>b.addEventListener('click',()=>{anchor=b.dataset.anchor;document.querySelectorAll('[data-anchor]').forEach(x=>x.style.outline=x===b?'2px solid #0d9488':'' )}));$('backgroundImage').addEventListener('change',ev=>{const f=ev.target.files&&ev.target.files[0];if(!f)return;if(f.size>70000){status('اختر صورة أقل من 70 كيلوبايت حتى لا يتضخم التخطيط.');ev.target.value='';return}const reader=new FileReader();reader.onload=()=>{imageData=reader.result;status('تم تحميل الصورة إلى المسودة. اضغط تطبيق ثم حفظ.')};reader.readAsDataURL(f)});$('removeImage').addEventListener('click',()=>{imageData='';$('backgroundImage').value=''});['fontSize','radius','scale','rotateY','opacity'].forEach(id=>$(id).addEventListener('input',updateLabels));$('apply').addEventListener('click',()=>{
   if(!selected)return status('حدد عنصرًا أولًا من المعاينة.');
   const changedIds=[];
   document.querySelectorAll('.controls input,.controls select,.controls textarea').forEach(input=>{
