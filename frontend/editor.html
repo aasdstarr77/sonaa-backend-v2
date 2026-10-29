@@ -92,7 +92,7 @@
 (function(){
 'use strict';
 const API='/api/admin/ui-layout/';
-const pages={admin:{title:'لوحة الإدارة',url:'/admin.html'},client:{title:'صفحة العميل',url:'/client.html'},fanni:{title:'صفحة الفني',url:'/fanni.html'},password:{title:'الحساب وكلمة المرور',url:'/password.html'},support:{title:'الدعم',url:'/support.html'}};
+const pages={admin:{title:'لوحة الإدارة',url:'/frontend/admin.html'},client:{title:'صفحة العميل',url:'/frontend/client.html?v=1'},fanni:{title:'صفحة الفني',url:'/frontend/fanni.html'},password:{title:'الحساب وكلمة المرور',url:'/frontend/password.html'},support:{title:'الدعم',url:'/frontend/support.html'}};
 const subPages={
  'client:login':'login','client:register':'register','client:my-orders':'orders','client:new-order':'new','client:complaint-form':'complaint','client:profile':'profile',
  'fanni:login':'login','fanni:register':'register','fanni:my-orders':'myOffers','fanni:profile':'profile','fanni:wallet':'wallet','fanni:notifications':'notifications',
@@ -181,7 +181,8 @@ async function loadLayout(){
 async function loadPage(){
  const p=pageSelect.value;selected=null;selectedId='';$('element').value='';$('previewTitle').textContent=pages[p].title;
  await loadLayout();
- frame.onload=setupFrame;
+ frame.onload=function(){console.log('iframe loaded:',frame.src);setupFrame();};
+ frame.onerror=function(){console.error('iframe error:',frame.src);status('تعذر تحميل المعاينة داخل الإطار: '+frame.src);};
  frame.src=pages[p].url+(pages[p].url.includes('?')?'&':'?')+'editorPreview=1&_editorReload='+Date.now();
 }
 $('subPage').addEventListener('change',function(){
