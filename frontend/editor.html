@@ -223,7 +223,70 @@ function endDrag(){
   if(dragHandle)dragHandle.style.cursor='grab';
   dragTarget=null;dragParent=null;
 }
-function setupFrame(){let doc;try{doc=frame.contentDocument;if(!doc||!doc.body)throw Error('empty')}catch(_){status('تعذر الوصول إلى المعاينة. تأكد من فتح الصفحات على نفس النطاق.');return}const style=doc.createElement('style');style.textContent='[data-editor-id]{cursor:crosshair!important}[data-editor-id].sonaa-selected{outline:3px solid #ff9f1c!important;outline-offset:2px!important}';doc.head.appendChild(style);const all=[...doc.body.querySelectorAll('*')].filter(el=>!['SCRIPT','STYLE','LINK','META','NOSCRIPT','SVG','PATH'].includes(el.tagName));all.forEach(el=>{if(!el.dataset.editorId)el.dataset.editorId=stable(el);const saved=layout().elements?.[key(el)];if(saved)applyItem(el,saved)});const captureSelection=ev=>{const target=ev.target;if(!target||target.closest?.('.drag-handle')){if(target?.closest?.('.drag-handle')){ev.preventDefault();ev.stopPropagation();ev.stopImmediatePropagation()}return}if(isDragging)return;const interactive=target.closest?.('a,button,input[type=button],input[type=submit],[role=button]');const el=target.closest?.('[data-editor-id]')||interactive;if(!el)return;ev.preventDefault();ev.stopPropagation();ev.stopImmediatePropagation();selectElement(el);makeElementDraggable(el);status('تم تحديد العنصر بدل تشغيله. اسحب المقبض البنفسجي لتحريكه، ثم اضغط حفظ ونشر.')};doc.defaultView.addEventListener('click',captureSelection,true);doc.querySelectorAll('a,button,input[type=button],input[type=submit],[role=button]').forEach(btn=>{btn.removeAttribute('onclick');try{btn.onclick=null}catch(_){}});const chosen=$('subPage').value;if(chosen&&chosen.split(':')[0]===$('page').value&&sections[chosen])frame.contentWindow.postMessage({action:'openSection',section:sections[chosen]},location.origin);status('المعاينة جاهزة. اضغط على أي عنصر لتحديده ثم اسحب المقبض البنفسجي لتحريكه.')}
+function attachEditorListeners(){
+  const iframe=document.getElementById('previewFrame');
+  if(!iframe)return;
+  let doc;
+  try{doc=iframe.contentDocument||iframe.contentWindow.document}catch(e){console.warn('Cannot access editor iframe:',e);return}
+  if(!doc||!doc.body||!doc.head)return;
+  console.log('🔧 Attaching editor listeners inside iframe');
+  // Keep the existing setup idempotent: load events can fire more than once.
+  if(doc.documentElement.dataset.sonaaEditorListenersAttached!=='1'){
+    doc.documentElement.dataset.sonaaEditorListenersAttached='1';
+    doc.addEventListener('click',e=>{
+      const raw=e.target;
+      if(!raw||isDragging||raw.closest?.('.drag-handle'))return;
+      let target=raw.closest?.('[data-editor-id],button,a,.account-nav-btn,input[type=button],input[type=submit],[role=button]');
+      // SVG icons are often the actual click target; select their nearest editable wrapper.
+      if(target&&['SVG','PATH','I'].includes(target.tagName)){
+        target=target.closest('[data-editor-id]')||target.parentElement?.closest?.('[data-editor-id],button,a,.account-nav-btn,[role=button]');
+      }
+      if(!target||target===doc.body||target===doc.documentElement)return;
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      console.log('✅ Selected in editor:',(target.textContent||target.getAttribute('aria-label')||target.tagName).trim?.()||target.tagName,target);
+      selectElement(target);
+      if(typeof makeElementDraggable==='function')makeElementDraggable(target);
+      status('تم تحديد العنصر بدل تشغيله. اسحب مقبض التحريك ثم اضغط حفظ ونشر.');
+      return false;
+    },true);
+    const style=doc.createElement('style');
+    style.id='sonaa-editor-cursor-styles';
+    style.textContent=`
+      [data-editor-id], [data-editor-id] *, button, a, .account-nav-btn, [role="button"] {
+        cursor: crosshair !important;
+      }
+      [data-editor-id]:hover, button:hover, a:hover, .account-nav-btn:hover, [role="button"]:hover {
+        outline: 2px dashed #0d9488 !important;
+        outline-offset: 2px !important;
+        cursor: crosshair !important;
+      }
+      .sonaa-selected, .picked {
+        outline: 2px solid #0d9488 !important;
+        outline-offset: 2px !important;
+        cursor: move !important;
+      }
+    `;
+    doc.head.appendChild(style);
+  }
+  const all=[...doc.body.querySelectorAll('*')].filter(el=>!['SCRIPT','STYLE','LINK','META','NOSCRIPT'].includes(el.tagName));
+  all.forEach(el=>{
+    if(!el.dataset.editorId)el.dataset.editorId=stable(el);
+    const saved=layout().elements?.[key(el)];
+    if(saved)applyItem(el,saved);
+  });
+  // Disable inline click handlers that could still trigger navigation or actions.
+  doc.querySelectorAll('a,button,input[type=button],input[type=submit],[role=button]').forEach(btn=>{
+    btn.removeAttribute('onclick');
+    try{btn.onclick=null}catch(_){}
+  });
+  const chosen=$('subPage').value;
+  if(chosen&&chosen.split(':')[0]===$('page').value&&sections[chosen])iframe.contentWindow.postMessage({action:'openSection',section:sections[chosen]},location.origin);
+  console.log('✅ Editor listeners attached, cursor is now crosshair');
+  status('المعاينة جاهزة. اضغط على أي عنصر لتحديده ثم اسحب المقبض لتحريكه.');
+}
+function setupFrame(){attachEditorListeners()}
 async function loadLayout(){const p=$('page').value;layouts[p]={sectionOrder:[],tabOrder:{},tabGroups:{},sizes:{},elements:{}};const t=token();if(!t){status('المعاينة متاحة، لكن يلزم تسجيل الدخول للإدارة لتحميل وحفظ التخطيط.');return}try{const r=await fetch(API+encodeURIComponent(p),{headers:{Authorization:'Bearer '+t},cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.message||r.status);layouts[p]=d.layout||layouts[p]}catch(e){status('تعذر تحميل التخطيط المحفوظ: '+e.message)}}
 async function loadPage(pageKey){
   const requested=typeof pageKey==='string'?pageKey:$('page').value;
@@ -245,7 +308,7 @@ async function loadPage(pageKey){
   await loadLayout();
   const chosen=$('subPage').value;
   const section=chosen&&chosen.split(':')[0]===p?(sections[chosen]||''):'';
-  frame.onload=()=>{console.log('Iframe loaded:',fileName);status('تم تحميل المعاينة');setupFrame()};
+  frame.onload=()=>{console.log('Iframe loaded:',fileName);status('تم تحميل المعاينة');setupFrame();setTimeout(attachEditorListeners,1000)};
   frame.onerror=e=>{console.error('Iframe error:',e);status('فشل تحميل المعاينة')};
   const url='/frontend/'+fileName+'?preview=true&section='+encodeURIComponent(section)+'&t='+Date.now()+'&page='+encodeURIComponent(requested);
   console.log('Setting iframe src to:',url);
