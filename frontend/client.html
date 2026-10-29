@@ -238,6 +238,11 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--blue)!im
 .account-loading-logo{animation:sonaa-logo-splash 1.05s ease-in-out infinite;transform-origin:center;will-change:transform}
 @keyframes sonaa-logo-splash{0%,100%{transform:translateX(0) scale(1)}22%{transform:translateX(-10px) scale(1.025)}48%{transform:translateX(0) scale(1)}72%{transform:translateX(10px) scale(1.025)}}
 @media(prefers-reduced-motion:reduce){.account-loading-logo{animation:none}}
+.client-loading-overlay{position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(145deg,#f8fbff 0%,#eaf1fb 100%);opacity:1;visibility:visible;transition:opacity .2s,visibility .2s}
+.client-loading-overlay.is-hidden{opacity:0;visibility:hidden;pointer-events:none}
+.client-loading-overlay .account-brand{width:132px;height:132px;margin-left:auto;margin-right:auto;border-radius:28px;background:linear-gradient(145deg,#fff,#e8eff9);border:1px solid #fff;box-shadow:0 6px 0 #cbd8ea,0 15px 24px #0b1b3a20,inset 0 2px 3px #fff}
+.client-loading-overlay .sonaa-logo-svg{width:118px;height:118px;object-fit:contain;filter:drop-shadow(0 5px 2px #0b1b3a28) drop-shadow(0 12px 10px #0b1b3a16)}
+
 .account-gate .account-panel{border:1px solid #d7e2f0;border-radius:25px;background:linear-gradient(145deg,#fff 0%,#fbfdff 100%);box-shadow:0 5px 0 #dce5f1,0 18px 38px #0b1b3a16,0 3px 9px #0b1b3a08}
 .account-gate .account-nav-btn{box-shadow:0 3px 0 #0b1b3a12;transition:transform .16s,box-shadow .16s}
 .account-gate .account-nav-btn:active{transform:translateY(2px);box-shadow:0 1px 0 #0b1b3a12}
@@ -444,6 +449,7 @@ body #app header.app-header a[href="https://aasdstarr77.github.io/sonaa-download
 
 </head>
 <body class="min-h-screen antialiased">
+<div id="clientLoadingOverlay" class="client-loading-overlay" role="status" aria-live="polite"><main class="account-gate min-h-screen px-4 py-8 flex items-center justify-center"><div class="w-full max-w-[440px] text-center"><div class="account-brand mx-auto mb-5 flex items-center justify-center"><img src="/images/LOGO_UPLOAD_HERE/logo.png" alt="صُنّاع" class="sonaa-logo-svg account-loading-logo"></div><h1 class="text-2xl font-black">صُنّاع</h1><p class="account-slogan mt-1 text-base font-extrabold">كل خدمة تبدأ بخطوة</p><div class="mt-7 inline-flex items-center gap-3 rounded-2xl border border-blue-200 bg-white/90 px-5 py-4 font-extrabold text-blue-900 shadow-xl"><span class="inline-block h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent"></span><span id="clientLoadingMessage">جاري تحميل البيانات...</span></div></div></main></div>
 <div id="app"></div>
 <div id="toast" class="fixed bottom-[88px] left-3 right-3 z-[200] pointer-events-none"></div>
 
