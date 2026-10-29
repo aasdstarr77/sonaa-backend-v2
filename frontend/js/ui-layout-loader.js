@@ -138,8 +138,7 @@
         var hoverStyleId = 'sonaa-layout-hover-style';
         var hoverStyle = document.getElementById(hoverStyleId);
         if (!hoverStyle) { hoverStyle = document.createElement('style'); hoverStyle.id = hoverStyleId; document.head.appendChild(hoverStyle); }
-        var hoverSelector = '[data-editor-id="' + String(key).replace(/["\\\\]/g, '\\\\      var container = getContainer(cfg.containerId, el);
-') + '"]';
+        var hoverSelector = '[data-editor-id="' + String(key).replace(/["\\]/g, '\\$&') + '"]';
         hoverStyle.textContent += hoverSelector + ':hover{' + (cfg.buttonHover ? 'background-color:' + String(cfg.buttonHover) + '!important;' : '') + (cfg.hoverTextColor ? 'color:' + String(cfg.hoverTextColor) + '!important;' : '') + '}';
       }
       var container = getContainer(cfg.containerId, el);
