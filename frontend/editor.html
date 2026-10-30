@@ -59,7 +59,7 @@ iframe{width:100%;height:100%;border:0;background:white}
 <label>لون النص</label><input type="color" id="ctrlColor">
 </div>
 <div class="panel"><h3>📐 الشكل</h3>
-<div class="row"><div><label>العرض (px أو %)</label><input type="text" id="ctrlWidth" placeholder="مثال: 100%"></div><div><label>الارتفاع (%)</label><input type="number" id="ctrlHeight" min="0" max="100" placeholder="اتركه فارغًا للتلقائي"></div></div>
+<div class="row"><div><label>العرض (px أو %)</label><input type="text" id="ctrlWidth" placeholder="مثال: 100%"></div><div><label>الارتفاع (%)</label><input type="number" id="ctrlHeight" min="1" max="100" placeholder="اتركه فارغًا للتلقائي"></div></div>
 <div class="row"><div><label>الحواف</label><input type="number" id="ctrlRadius" min="0" max="50"></div><div><label>شفافية %</label><input type="number" id="ctrlOpacity" min="0" max="100"></div></div>
 <label>لون الخلفية</label><input type="color" id="ctrlBgColor">
 <label>محاذاة</label><select id="ctrlAlign"><option value="right">يمين</option><option value="center">وسط</option><option value="left">يسار</option><option value="justify">ضبط</option></select>
@@ -169,7 +169,7 @@ function colorToHex(color){
  if(value==='transparent'||value==='rgba(0, 0, 0, 0)')return '#000000';
  if(/^#[0-9a-f]{6}$/i.test(value))return value;
  if(/^#[0-9a-f]{3}$/i.test(value))return '#'+value.slice(1).split('').map(c=>c+c).join('');
- const match=value.match(/rgba?\\(\\s*(\\d+)[,\\s]+(\\d+)[,\\s]+(\\d+)/);
+ const match=value.match(/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/);
  if(!match)return '#ffffff';
  return '#'+[match[1],match[2],match[3]].map(n=>Number(n).toString(16).padStart(2,'0')).join('');
 }
@@ -177,7 +177,7 @@ function applyLayout(){
  if(!frameReady)return;const doc=previewFrame.contentDocument;if(!doc)return;
  Object.entries(currentLayout.elements||{}).forEach(([key,data])=>{
   if(!data||typeof data!=='object')return;
-  const el=doc.querySelector('[data-editor-id="'+key.replace(/["\\\\]/g,'\\\\$&')+'"]')||doc.getElementById(key);if(!el)return;
+  const el=doc.querySelector('[data-editor-id="'+key.replace(/["\\]/g,'\\$&')+'"]')||doc.getElementById(key);if(!el)return;
   captureOriginalState(el);
   if(hasOwn(data,'fontSize'))el.style.fontSize=Number(data.fontSize)+'px';
   if(hasOwn(data,'fontWeight'))el.style.fontWeight=String(data.fontWeight);
@@ -205,7 +205,7 @@ function selectElement(el){
  const style=previewFrame.contentWindow.getComputedStyle(el);
  $('ctrlText').value=el.matches('input,textarea')?el.value:getEditableTextNodes(el).map(n=>n.textContent).join('');
  $('ctrlFontSize').value=hasOwn(data,'fontSize')?data.fontSize:(parseInt(style.fontSize)||16);
- $('ctrlFontWeight').value=String(data.fontWeight||style.fontWeight||'400').includes('700')||Number(data.fontWeight||style.fontWeight)>=700?'700':(Number(data.fontWeight||style.fontWeight)>=800?'900':'400');
+ $('ctrlFontWeight').value=String(data.fontWeight||style.fontWeight||'400').includes('700')||Number(data.fontWeight||style.fontWeight)>=800?'900':(Number(data.fontWeight||style.fontWeight)>=600?'700':'400');
  $('ctrlColor').value=data.color||colorToHex(style.color);
  $('ctrlBgColor').value=data.elementBg||colorToHex(style.backgroundColor);
  $('ctrlRadius').value=hasOwn(data,'radius')?data.radius:(parseInt(style.borderRadius)||0);
@@ -239,7 +239,7 @@ Object.entries(binds).forEach(([id,property])=>$(id).addEventListener('input',ev
   const limits={fontSize:[10,72],radius:[0,50],hPercent:[0,100],opacity:[0,100]}[property];
   if(number<limits[0]||number>limits[1])return;value=number;
  }
- if(property==='width'&&value!==''&&!/^(\\d+(?:\\.\\d{1,2})?)(px|%)$/.test(value.trim()))return;
+ if(property==='width'&&value!==''&&!/^(\d+(?:\.\d{1,2})?)(px|%)$/.test(value.trim()))return;
  updateElement(property,value);
 }));
 function nudgeElement(dx,dy){
