@@ -136,13 +136,14 @@ function getElementKey(el){
  if(!key){key=stablePath(el);el.setAttribute('data-editor-id',key);}
  return /^[a-zA-Z0-9_-]{1,100}$/.test(key)?key:null;
 }
+function canEditElementText(el){
+ if(!el||el.nodeType!==1)return false;
+ if(el.matches('input,textarea'))return true;
+ return el.children.length===0&&!el.matches('html,body,main,header,nav,section,article,form');
+}
 function getEditableTextNodes(el){
- const doc=el.ownerDocument,walker=doc.createTreeWalker(el,doc.defaultView.NodeFilter.SHOW_TEXT),nodes=[];let node;
- while((node=walker.nextNode())){
-  const parent=node.parentElement;if(!parent||parent.closest('svg,script,style,textarea,input,noscript'))continue;
-  if(node.textContent.trim())nodes.push(node);
- }
- return nodes;
+ if(!el||el.matches('input,textarea')||el.children.length>0)return [];
+ return Array.from(el.childNodes).filter(node=>node.nodeType===3&&node.textContent.trim());
 }
 function captureOriginalState(el){
  if(originalState.has(el))return originalState.get(el);
@@ -153,8 +154,9 @@ function captureOriginalState(el){
 function setElementText(el,value){
  const state=captureOriginalState(el);
  if(el.matches('input,textarea')){el.value=value;return;}
+ if(!canEditElementText(el))return;
  const nodes=getEditableTextNodes(el);
- if(nodes.length){nodes[0].textContent=value;for(let i=1;i<nodes.length;i++)nodes[i].textContent='';}
+ if(nodes.length){nodes[0].textContent=value;}
  else{const textNode=el.ownerDocument.createTextNode(value);el.appendChild(textNode);state.createdTextNode=textNode;}
 }
 function restoreOriginalState(el){
@@ -203,7 +205,10 @@ function selectElement(el){
  clearSelection();const key=getElementKey(el);if(!key)return;
  selectedElement=el;selectedKey=key;const data=getSelectedData();captureOriginalState(el);el.classList.add('sonaa-editor-selected');
  const style=previewFrame.contentWindow.getComputedStyle(el);
- $('ctrlText').value=el.matches('input,textarea')?el.value:getEditableTextNodes(el).map(n=>n.textContent).join('');
+ const textControl=$('ctrlText'),canEditText=canEditElementText(el);
+ textControl.disabled=!canEditText;
+ textControl.placeholder=canEditText?'النص':'لتعديل النص اختر العنصر النصي الداخلي';
+ textControl.value=canEditText?(el.matches('input,textarea')?el.value:getEditableTextNodes(el).map(n=>n.textContent).join('')):'';
  $('ctrlFontSize').value=hasOwn(data,'fontSize')?data.fontSize:(parseInt(style.fontSize)||16);
  const selectedWeight=Number(data.fontWeight||style.fontWeight)||400;$('ctrlFontWeight').value=selectedWeight>=800?'900':(selectedWeight>=600?'700':'400');
  $('ctrlColor').value=data.color||colorToHex(style.color);
@@ -217,7 +222,7 @@ function selectElement(el){
 }
 function updateElement(property,value){
  if(!selectedElement)return;const data=getSelectedData();
- if(property==='text'){setElementText(selectedElement,value);data.text=value;}
+ if(property==='text'){if(!canEditElementText(selectedElement))return;setElementText(selectedElement,value);data.text=value;}
  else if(value===''||value===null){selectedElement.style[property]='';delete data[property];}
  else if(property==='fontSize'){selectedElement.style.fontSize=Number(value)+'px';data.fontSize=Number(value);}
  else if(property==='radius'){selectedElement.style.borderRadius=Number(value)+'px';data.radius=Number(value);}
