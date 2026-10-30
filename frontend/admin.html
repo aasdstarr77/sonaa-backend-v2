@@ -144,6 +144,17 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
 ::-webkit-scrollbar{width:5px;height:5px} ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:99px}
   .global-refresh.is-refreshing svg{animation:global-refresh-spin .8s linear infinite}@keyframes global-refresh-spin{to{transform:rotate(360deg)}}
 
+
+/* Keep every admin header control fully inside the navy header. */
+.glass-header>div{min-height:84px!important;align-items:center!important}
+.glass-header .admin-header-actions{align-self:center!important;transform:translateY(-7px)!important}
+.glass-header button[onclick="goBack()"]{margin-top:0!important;align-self:center!important}
+@media(max-width:380px){
+ .glass-header>div{min-height:76px!important}
+ .glass-header .admin-header-actions{transform:translateY(-5px)!important}
+ .glass-header button[onclick="goBack()"]{margin-top:0!important}
+}
+
 </style>
 
 </head>
