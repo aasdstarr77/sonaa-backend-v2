@@ -180,23 +180,9 @@ function applyLayout(){
  if(!frameReady)return;const doc=previewFrame.contentDocument;if(!doc)return;
  Object.entries(currentLayout.elements||{}).forEach(([key,data])=>{
   if(!data||typeof data!=='object')return;
-  const el=doc.querySelector('[data-editor-id="'+key.replace(/["\\]/g,'\\  if(!data||typeof data!=='object')return;
-  const el=doc.querySelector('[data-editor-id="'+key.replace(/["\\]/g,'\\$&')+'"]')||doc.getElementById(key);if(!el)return;
+  const el=doc.querySelector('[data-editor-id="'+key.replace(/["\\\\]/g,'\\\\$&')+'"]')||doc.getElementById(key);if(!el)return;
   captureOriginalState(el);
-  if(hasOwn(data,'fontSize'))el.style.fontSize=Number(data.fontSize)+'px';
-  if(hasOwn(data,'fontWeight'))el.style.fontWeight=String(data.fontWeight);
-  if(hasOwn(data,'color'))el.style.color=data.color;
-  if(hasOwn(data,'elementBg'))el.style.backgroundColor=data.elementBg;
-  if(hasOwn(data,'radius'))el.style.borderRadius=Number(data.radius)+'px';
-  if(hasOwn(data,'width'))el.style.width=String(data.width);
-  if(hasOwn(data,'hPercent'))el.style.height=Number(data.hPercent)+'%';
-  if(hasOwn(data,'opacity'))el.style.opacity=String(Math.max(0,Math.min(100,Number(data.opacity)))/100);
-  if(hasOwn(data,'textAlign'))el.style.textAlign=data.textAlign;
-  if(hasOwn(data,'text'))setElementText(el,data.text);
-  if(Number.isFinite(data.translateX)||Number.isFinite(data.translateY))el.style.translate=(Number(data.translateX)||0)+'px '+(Number(data.translateY)||0)+'px';')+'"]')||doc.getElementById(key);if(!el)return;
-  captureOriginalState(el);
-  // Match the live layout loader: mobile-specific saved values override desktop values
-  // whenever the iframe is actually displaying the mobile CSS viewport.
+  // Match the live loader: mobile-specific saved values override desktop values in a mobile viewport.
   const mobile=doc.defaultView.matchMedia('(max-width: 767px)').matches;
   const mobileOverride=mobile&&(data.mobile||data.mobileOverride||data.mobileOverrides)||{};
   const cfg=Object.assign({},data,mobileOverride);
