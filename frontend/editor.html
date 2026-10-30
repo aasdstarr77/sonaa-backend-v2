@@ -3,84 +3,105 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>محرر صُنّاع الاحترافي - Visual Builder</title>
+<title>محرر صُنّاع الشامل الاحترافي</title>
 <style>
   * { box-sizing: border-box; }
   body { margin: 0; background: #0f172a; color: #f8fafc; font-family: Cairo, Tajawal, sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
   
-  /* Header */
-  header { background: #1e293b; border-bottom: 1px solid #334155; padding: 10px 20px; display: flex; justify-between: space-between; align-items: center; gap: 15px; }
-  h1 { font-size: 18px; margin: 0; color: #38bdf8; display: flex; align-items: center; gap: 8px; }
+  header { background: #1e293b; border-bottom: 1px solid #334155; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  h1 { font-size: 16px; margin: 0; color: #38bdf8; display: flex; align-items: center; gap: 6px; }
   
-  /* Layout */
-  main { flex: 1; display: grid; grid-template-columns: 360px 1fr; overflow: hidden; }
+  main { flex: 1; display: grid; grid-template-columns: 340px 1fr; overflow: hidden; height: calc(100vh - 55px); }
   
-  /* Sidebar / Controls */
-  aside { background: #1e293b; border-left: 1px solid #334155; display: flex; flex-direction: column; overflow-y: auto; padding: 15px; gap: 15px; }
-  .panel-section { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 12px; }
-  .panel-section h3 { margin: 0 0 10px 0; font-size: 13px; color: #94a3b8; border-bottom: 1px solid #334155; padding-bottom: 5px; }
+  aside { background: #1e293b; border-left: 1px solid #334155; display: flex; flex-direction: column; overflow-y: auto; padding: 12px; gap: 10px; }
+  .panel-section { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 10px; }
+  .panel-section h3 { margin: 0 0 8px 0; font-size: 12px; color: #94a3b8; border-bottom: 1px solid #334155; padding-bottom: 4px; }
   
-  label { display: block; font-size: 11px; color: #cbd5e1; margin: 8px 0 4px; font-weight: bold; }
-  input, select, button { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #475569; background: #334155; color: #fff; font-family: inherit; font-size: 12px; }
-  input[type=range] { padding: 0; accent-color: #38bdf8; }
-  input[type=color] { height: 35px; padding: 2px; cursor: pointer; }
+  label { display: block; font-size: 11px; color: #cbd5e1; margin: 6px 0 3px; font-weight: bold; }
+  input, select, button { width: 100%; padding: 7px; border-radius: 6px; border: 1px solid #475569; background: #334155; color: #fff; font-family: inherit; font-size: 11px; }
+  input[type=color] { height: 32px; padding: 2px; cursor: pointer; }
   
-  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
   
-  /* Canvas / Preview */
-  .preview-container { background: #475569; display: flex; flex-direction: column; items-center; justify-content: center; padding: 15px; overflow: hidden; position: relative; }
-  .device-bar { background: #0f172a; padding: 8px 15px; border-radius: 8px 8px 0 0; display: flex; gap: 10px; width: 100%; max-width: 100%; justify-content: space-between; align-items: center; border: 1px solid #334155; border-bottom: 0; }
-  .iframe-wrapper { width: 100%; height: 100%; transition: all 0.3s ease; background: #fff; border-radius: 0 0 8px 8px; overflow: hidden; border: 1px solid #334155; }
-  iframe { width: 100%; height: 100%; border: 0; }
+  .preview-container { background: #334155; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px; overflow: hidden; position: relative; }
+  .device-bar { background: #0f172a; padding: 6px 12px; border-radius: 6px 6px 0 0; display: flex; justify-content: space-between; width: 100%; max-width: 100%; align-items: center; border: 1px solid #334155; border-bottom: 0; }
+  .iframe-wrapper { width: 100%; height: 100%; transition: all 0.3s ease; background: #fff; border-radius: 0 0 6px 6px; overflow: hidden; border: 1px solid #334155; }
+  iframe { width: 100%; height: 100%; border: 0; background: white; }
   
-  /* Buttons */
-  .btn-primary { background: #0284c7; color: white; border: 0; font-weight: bold; cursor: pointer; padding: 10px; border-radius: 6px; }
-  .btn-primary:hover { background: #0369a1; }
-  .btn-success { background: #16a34a; color: white; border: 0; font-weight: bold; cursor: pointer; padding: 10px; border-radius: 6px; }
+  .btn-success { background: #16a34a; color: white; border: 0; font-weight: bold; cursor: pointer; padding: 8px 15px; border-radius: 6px; font-size: 12px; }
   .btn-success:hover { background: #15803d; }
-  .btn-mode { width: auto; padding: 5px 12px; background: #334155; border: 1px solid #475569; cursor: pointer; }
-  .btn-mode.active { background: #0284c7; border-color: #38bdf8; }
+  .btn-mode { width: auto; padding: 4px 10px; background: #1e293b; border: 1px solid #475569; cursor: pointer; font-size: 11px; color: #cbd5e1; border-radius: 4px; }
+  .btn-mode.active { background: #0284c7; border-color: #38bdf8; color: #fff; }
   
-  .selected-badge { background: #38bdf8; color: #0f172a; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; margin-bottom: 10px; display: block; text-align: center; }
+  .selected-badge { background: #0284c7; color: #fff; padding: 6px; border-radius: 6px; font-weight: bold; font-size: 11px; text-align: center; }
+
+  @media(max-width: 800px) {
+    main { grid-template-columns: 1fr; height: auto; overflow: auto; }
+    .preview-container { height: 350px; }
+  }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>🎨 محرر صُنّاع الذكي (تحكم كامل بدون اللجوء لـ Vercel)</h1>
-  <div style="display: flex; gap: 10px; width: auto;">
-    <button id="saveBtn" class="btn-success" style="width: auto; padding: 8px 20px;">💾 حفظ ونشر في MongoDB</button>
-  </div>
+  <h1>🎨 محرر صُنّاع الشامل</h1>
+  <button id="saveBtn" class="btn-success">💾 حفظ ونشر في MongoDB</button>
 </header>
 
 <main>
-  <!-- لوحة التحكم الجانبية -->
   <aside>
+    <!-- اختيار الصفحات والأقسام الأصلية التفصيلية -->
     <div class="panel-section">
-      <h3>📄 اختيار الصفحة والقسم</h3>
-      <label>الصفحة الرئيسية</label>
-      <select id="pageSelect">
-        <option value="client">صفحة العميل (client.html)</option>
-        <option value="fanni">صفحة الفني (fanni.html)</option>
-        <option value="admin">لوحة الإدارة (admin.html)</option>
-        <option value="password">كلمة المرور (password.html)</option>
-        <option value="support">الدعم (support.html)</option>
-      </select>
+      <h3>📁 اختيار الصفحة والاقسام الفرعية</h3>
+      <div class="row">
+        <div>
+          <label>الصفحة الرئيسية</label>
+          <select id="pageSelect">
+            <option value="client">صفحة العميل</option>
+            <option value="fanni">صفحة الفني</option>
+            <option value="admin">لوحة الإدارة</option>
+            <option value="password">الحساب وكلمة المرور</option>
+            <option value="support">الدعم</option>
+          </select>
+        </div>
+        <div>
+          <label>القسم الفرعي</label>
+          <select id="subPageSelect">
+            <option value="">اختر القسم</option>
+            <optgroup label="العميل">
+              <option value="client:login">تسجيل الدخول</option>
+              <option value="client:register">تسجيل جديد</option>
+              <option value="client:new-order">طلب جديد</option>
+              <option value="client:my-orders">طلباتي</option>
+              <option value="client:profile">حسابي</option>
+            </optgroup>
+            <optgroup label="الفني">
+              <option value="fanni:login">تسجيل الدخول</option>
+              <option value="fanni:available">الطلبات المتاحة</option>
+              <option value="fanni:my-orders">طلباتي</option>
+              <option value="fanni:wallet">المحفظة</option>
+            </optgroup>
+            <optgroup label="الإدارة">
+              <option value="admin:dashboard">الرئيسية</option>
+              <option value="admin:orders">الطلبات</option>
+              <option value="admin:settings">الإعدادات</option>
+            </optgroup>
+          </select>
+        </div>
+      </div>
     </div>
 
-    <div id="selectionNotice" class="selected-badge" style="background: #475569; color: #94a3b8;">
+    <div id="selectionNotice" class="selected-badge" style="background: #334155; color: #94a3b8;">
       اضغط على أي عنصر في المعاينة لتعديله
     </div>
 
-    <!-- أدوات التعديل الفردية -->
-    <div id="editorControls" style="display: none; flex-direction: column; gap: 12px;">
+    <!-- لوحة التحكم بالخصائص -->
+    <div id="editorControls" style="display: none; flex-direction: column; gap: 10px;">
       
-      <!-- النصوص والخطوط -->
       <div class="panel-section">
-        <h3>🔤 النص والخطوط</h3>
-        <label>محتوى النص / الكتابة</label>
+        <h3>🔤 النص والكتابة</h3>
+        <label>محتوى النص</label>
         <input type="text" id="ctrlText">
-        
         <div class="row">
           <div>
             <label>حجم الخط (PX)</label>
@@ -89,76 +110,59 @@
           <div>
             <label>وزن الخط</label>
             <select id="ctrlFontWeight">
-              <option value="">افتراضي</option>
-              <option value="300">رفيع (Light)</option>
-              <option value="400">عادي (Normal)</option>
+              <option value="">عادي</option>
               <option value="700">عريض (Bold)</option>
-              <option value="900">ثقيل جداً (Black)</option>
+              <option value="900">ثقيل جداً</option>
             </select>
           </div>
         </div>
-        
         <label>لون النص</label>
-        <input type="color" id="ctrlColor" value="#ffffff">
+        <input type="color" id="ctrlColor" value="#142b43">
       </div>
 
-      <!-- الأيقونات والأحجام -->
       <div class="panel-section">
-        <h3>📐 الحجم والأيقونات</h3>
+        <h3>📐 الحجم والأيقونات والتدوير</h3>
         <div class="row">
           <div>
-            <label>حجم الأيقونة/العنصر (PX)</label>
-            <input type="number" id="ctrlIconSize" min="10" max="200" placeholder="مثال: 24">
+            <label>عرض العنصر (PX)</label>
+            <input type="number" id="ctrlWidth" placeholder="تلقائي">
           </div>
           <div>
-            <label>استدارة الحواف (Radius)</label>
-            <input type="number" id="ctrlRadius" min="0" max="100" value="0">
+            <label>استدارة الحواف</label>
+            <input type="number" id="ctrlRadius" min="0" max="50" value="8">
           </div>
         </div>
       </div>
 
-      <!-- الموضع والمسافات (الهيدر والأزرار) -->
       <div class="panel-section">
-        <h3>↕️ رفع/نزل العنصر والمساحات (Margin & Padding)</h3>
+        <h3>↕️ الموضع والتحريك (رفع/نزول الهيدر)</h3>
         <div class="row">
           <div>
-            <label>إزاحة رأسية Y (PX)</label>
+            <label>إزاحة رأسية Y</label>
             <input type="number" id="ctrlTranslateY" value="0">
           </div>
           <div>
-            <label>إزاحة أفقية X (PX)</label>
+            <label>إزاحة أفقية X</label>
             <input type="number" id="ctrlTranslateX" value="0">
-          </div>
-        </div>
-        <div class="row">
-          <div>
-            <label>المساحة الداخلية (Padding)</label>
-            <input type="number" id="ctrlPadding" min="0" max="100" value="0">
-          </div>
-          <div>
-            <label>الترتيب (z-index)</label>
-            <input type="number" id="ctrlZIndex" value="1">
           </div>
         </div>
       </div>
 
-      <!-- الألوان والخلفية -->
       <div class="panel-section">
-        <h3>🎨 الخلفيات والألوان</h3>
+        <h3>🎨 خلفية العنصر</h3>
         <label>لون الخلفية</label>
-        <input type="color" id="ctrlBgColor" value="#000000">
+        <input type="color" id="ctrlBgColor" value="#ffffff">
       </div>
 
     </div>
   </aside>
 
-  <!-- منطقة المعاينة (Canvas) -->
   <div class="preview-container">
     <div class="device-bar">
-      <span id="targetName" style="font-size: 12px; font-weight: bold; color: #38bdf8;">معاينة الشاشة</span>
-      <div style="display: flex; gap: 5px;">
-        <button class="btn-mode active" onclick="setDevice('desktop')">💻 كمبيوتر</button>
-        <button class="btn-mode" onclick="setDevice('mobile')">📱 تليفون</button>
+      <span id="previewTitle" style="font-size: 11px; font-weight: bold; color: #38bdf8;">صفحة العميل</span>
+      <div style="display: flex; gap: 4px;">
+        <button class="btn-mode active" onclick="setDevice('desktop', this)">💻 كمبيوتر</button>
+        <button class="btn-mode" onclick="setDevice('mobile', this)">📱 موبايل</button>
       </div>
     </div>
     <div id="wrapper" class="iframe-wrapper">
@@ -169,6 +173,7 @@
 
 <script>
 const pageSelect = document.getElementById('pageSelect');
+const subPageSelect = document.getElementById('subPageSelect');
 const previewFrame = document.getElementById('previewFrame');
 const wrapper = document.getElementById('wrapper');
 const editorControls = document.getElementById('editorControls');
@@ -178,74 +183,90 @@ const saveBtn = document.getElementById('saveBtn');
 let selectedElement = null;
 let currentLayout = { elements: {} };
 
-// 1. تغيير الشاشة (كمبيوتر / موبايل)
-function setDevice(mode) {
+const pagesMap = {
+  client: 'client.html',
+  fanni: 'fanni.html',
+  admin: 'admin.html',
+  password: 'password.html',
+  support: 'support.html'
+};
+
+function setDevice(mode, btn) {
   document.querySelectorAll('.btn-mode').forEach(b => b.classList.remove('active'));
-  event.target.classList.add('active');
+  btn.classList.add('active');
   if (mode === 'mobile') {
     wrapper.style.width = '375px';
-    wrapper.style.height = '667px';
+    wrapper.style.height = '100%';
   } else {
     wrapper.style.width = '100%';
     wrapper.style.height = '100%';
   }
 }
 
-// 2. تحميل الصفحة داخل الـ Iframe ومنع الضغط التفاعلي
 function loadPage(pageKey) {
-  const url = '/frontend/' + pageKey + '.html?preview=true&t=' + Date.now();
+  const fileName = pagesMap[pageKey] || 'client.html';
+  const url = '/frontend/' + fileName + '?preview=true&t=' + Date.now();
   previewFrame.src = url;
+  document.getElementById('previewTitle').textContent = pageSelect.options[pageSelect.selectedIndex].text;
 }
 
-pageSelect.addEventListener('change', () => loadPage(pageSelect.value));
+pageSelect.addEventListener('change', () => {
+  loadPage(pageSelect.value);
+});
 
-// 3. ربط الأحداث داخل الـ Iframe وإلغاء الـ Click الاصطناعي
+subPageSelect.addEventListener('change', () => {
+  const val = subPageSelect.value;
+  if(val) {
+    const mainPage = val.split(':')[0];
+    pageSelect.value = mainPage;
+    loadPage(mainPage);
+  }
+});
+
+// منع فتح الروابط داخل المعاينة وتفعيل التحديد الدقيق
 previewFrame.onload = () => {
-  const doc = previewFrame.contentDocument || previewFrame.contentWindow.document;
-  
-  // شطب كل التفاعلات عشان ما يفتحش الصفحات لما تدوس على حاجة صغيرة
-  const style = doc.createElement('style');
-  style.textContent = `
-    * { cursor: pointer !important; }
-    .editor-selected { outline: 3px solid #38bdf8 !important; outline-offset: 2px !important; }
-  `;
-  doc.head.appendChild(style);
-
-  doc.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+  try {
+    const doc = previewFrame.contentDocument || previewFrame.contentWindow.document;
     
-    let target = e.target;
-    if (selectedElement) selectedElement.classList.remove('editor-selected');
-    
-    selectedElement = target;
-    selectedElement.classList.add('editor-selected');
+    const style = doc.createElement('style');
+    style.textContent = `
+      * { cursor: crosshair !important; }
+      .editor-selected-box { outline: 3px solid #0d9488 !important; outline-offset: 2px !important; }
+    `;
+    doc.head.appendChild(style);
 
-    // إظهار لوحة التعديل وتعبئة البيانات
-    selectionNotice.style.background = '#0284c7';
-    selectionNotice.style.color = '#fff';
-    selectionNotice.textContent = 'العنصر المحدد: ' + (target.tagName.toLowerCase());
-    editorControls.style.display = 'flex';
+    doc.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      
+      let target = e.target.closest('button, a, input, h1, h2, p, section, div, span') || e.target;
+      if (selectedElement) selectedElement.classList.remove('editor-selected-box');
+      
+      selectedElement = target;
+      selectedElement.classList.add('editor-selected-box');
 
-    // قراءة الخصائص والحجم
-    const computed = previewFrame.contentWindow.getComputedStyle(target);
-    document.getElementById('ctrlText').value = target.innerText || target.value || '';
-    document.getElementById('ctrlFontSize').value = parseInt(computed.fontSize) || 16;
-    document.getElementById('ctrlFontWeight').value = computed.fontWeight || '';
-    document.getElementById('ctrlRadius').value = parseInt(computed.borderRadius) || 0;
-    document.getElementById('ctrlTranslateY').value = parseInt(target.style.translateY) || 0;
-    document.getElementById('ctrlTranslateX').value = parseInt(target.style.translateX) || 0;
-  }, true);
+      selectionNotice.style.background = '#0d9488';
+      selectionNotice.style.color = '#fff';
+      selectionNotice.textContent = 'تم تحديد: ' + target.tagName.toLowerCase();
+      editorControls.style.display = 'flex';
+
+      const computed = previewFrame.contentWindow.getComputedStyle(target);
+      document.getElementById('ctrlText').value = target.innerText || target.value || '';
+      document.getElementById('ctrlFontSize').value = parseInt(computed.fontSize) || 16;
+      document.getElementById('ctrlFontWeight').value = computed.fontWeight || '';
+      document.getElementById('ctrlRadius').value = parseInt(computed.borderRadius) || 0;
+    }, true);
+  } catch(err) {
+    console.log('Frame load restriction:', err);
+  }
 };
 
-// 4. تطبيق التعديلات فوراً على العنصر داخل المعاينة
+// التعديل اللحظي
 document.querySelectorAll('#editorControls input, #editorControls select').forEach(input => {
   input.addEventListener('input', () => {
     if (!selectedElement) return;
 
-    const id = selectedElement.dataset.editorId || selectedElement.id || selectedElement.tagName;
-    
-    // التعديلات المباشرة
     if (input.id === 'ctrlText') {
       if (selectedElement.tagName === 'INPUT') selectedElement.value = input.value;
       else selectedElement.innerText = input.value;
@@ -253,41 +274,24 @@ document.querySelectorAll('#editorControls input, #editorControls select').forEa
     if (input.id === 'ctrlFontSize') selectedElement.style.fontSize = input.value + 'px';
     if (input.id === 'ctrlFontWeight') selectedElement.style.fontWeight = input.value;
     if (input.id === 'ctrlRadius') selectedElement.style.borderRadius = input.value + 'px';
-    if (input.id === 'ctrlIconSize') {
-      selectedElement.style.width = input.value + 'px';
-      selectedElement.style.height = input.value + 'px';
-    }
+    if (input.id === 'ctrlWidth') selectedElement.style.width = input.value + 'px';
     if (input.id === 'ctrlTranslateY' || input.id === 'ctrlTranslateX') {
       const x = document.getElementById('ctrlTranslateX').value || 0;
       const y = document.getElementById('ctrlTranslateY').value || 0;
       selectedElement.style.transform = `translate(${x}px, ${y}px)`;
     }
-    if (input.id === 'ctrlPadding') selectedElement.style.padding = input.value + 'px';
-    if (input.id === 'ctrlZIndex') selectedElement.style.zIndex = input.value;
     if (input.id === 'ctrlColor') selectedElement.style.color = input.value;
     if (input.id === 'ctrlBgColor') selectedElement.style.backgroundColor = input.value;
-
-    // حفظ في الكائن المحلي
-    if (!currentLayout.elements[id]) currentLayout.elements[id] = {};
-    currentLayout.elements[id] = {
-      text: document.getElementById('ctrlText').value,
-      fontSize: document.getElementById('ctrlFontSize').value,
-      fontWeight: document.getElementById('ctrlFontWeight').value,
-      color: document.getElementById('ctrlColor').value,
-      bgColor: document.getElementById('ctrlBgColor').value,
-      translateY: document.getElementById('ctrlTranslateY').value,
-      translateX: document.getElementById('ctrlTranslateX').value
-    };
   });
 });
 
-// 5. الحفظ في الـ Backend و MongoDB بدون Vercel
+// الحفظ المباشر في MongoDB
 saveBtn.addEventListener('click', async () => {
-  const token = localStorage.getItem('admin_token') || localStorage.getItem('token') || '';
+  const token = localStorage.getItem('admin_token') || localStorage.getItem('token') || localStorage.getItem('admin_token_v3') || '';
   const page = pageSelect.value;
   
   saveBtn.disabled = true;
-  saveBtn.textContent = '⏳ جاري الحفظ في MongoDB...';
+  saveBtn.textContent = '⏳ جاري الحفظ...';
 
   try {
     const res = await fetch('/api/admin/ui-layout/' + page, {
@@ -300,19 +304,18 @@ saveBtn.addEventListener('click', async () => {
     });
 
     if (res.ok) {
-      alert('✅ تم حفظ التعديلات ونشرها على الموقع بنجاح!');
+      alert('✅ تم الحفظ في قاعدة البيانات (MongoDB) بنجاح!');
     } else {
-      alert('❌ حدث خطأ أثناء الحفظ في قاعدة البيانات.');
+      alert('❌ فشل الحفظ، تأكد من تسجيل دخولك كأدمن.');
     }
   } catch (err) {
-    alert('❌ تعذر الاتصال بالباك إند.');
+    alert('❌ خطأ في الاتصال بالباك إند.');
   } finally {
     saveBtn.disabled = false;
     saveBtn.textContent = '💾 حفظ ونشر في MongoDB';
   }
 });
 
-// بدء التحميل لأول مرة
 loadPage('client');
 </script>
 </body>
