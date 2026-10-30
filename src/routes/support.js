@@ -101,7 +101,11 @@ router.get('/client', clientAuth, async (req, res, next) => {
   try { return await listCases(req, res, 'client'); } catch (e) { return next(e); }
 });
 router.get('/client/:id', clientAuth, async (req, res, next) => {
-  try { const item = await getOwnedCase(req, res, 'client'); return item ? res.json({ supportCase: publicCase(item) }) : undefined; } catch (e) { return next(e); }
+  try {
+    const item = await getOwnedCase(req, res, 'client');
+    if (!item) return;
+    return res.json({ supportCase: publicCase(item) });
+  } catch (e) { return next(e); }
 });
 router.post('/client/:id/messages', clientAuth, supportMessageLimiter, async (req, res, next) => {
   try { return await sendOwnerMessage(req, res, 'client'); } catch (e) { return next(e); }
@@ -114,7 +118,11 @@ router.get('/fanni', auth('fanni'), async (req, res, next) => {
   try { return await listCases(req, res, 'fanni'); } catch (e) { return next(e); }
 });
 router.get('/fanni/:id', auth('fanni'), async (req, res, next) => {
-  try { const item = await getOwnedCase(req, res, 'fanni'); return item ? res.json({ supportCase: publicCase(item) }) : undefined; } catch (e) { return next(e); }
+  try {
+    const item = await getOwnedCase(req, res, 'fanni');
+    if (!item) return;
+    return res.json({ supportCase: publicCase(item) });
+  } catch (e) { return next(e); }
 });
 router.post('/fanni/:id/messages', auth('fanni'), supportMessageLimiter, async (req, res, next) => {
   try { return await sendOwnerMessage(req, res, 'fanni'); } catch (e) { return next(e); }
