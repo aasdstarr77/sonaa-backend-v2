@@ -73,9 +73,15 @@ async function listCases(req, res, role) {
 }
 async function getOwnedCase(req, res, role) {
   const owner = role === 'client' ? req.client : req.user;
-  if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: 'معرّف محادثة الدعم غير صحيح.' });
+  if (!mongoose.isValidObjectId(req.params.id)) {
+    res.status(400).json({ message: 'معرّف محادثة الدعم غير صحيح.' });
+    return null;
+  }
   const item = await SupportCase.findOne({ _id: req.params.id, ...ownerFilter(role, owner._id) });
-  if (!item) return res.status(404).json({ message: 'محادثة الدعم غير موجودة.' });
+  if (!item) {
+    res.status(404).json({ message: 'محادثة الدعم غير موجودة.' });
+    return null;
+  }
   return item;
 }
 async function sendOwnerMessage(req, res, role) {
