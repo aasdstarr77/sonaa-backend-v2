@@ -3,50 +3,35 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>محرر صُنَّاع الاحترافي الشامل (النسخة النهائية المستقرة)</title>
-<!-- Tailwind CSS للوحة التحكم الخاصة بالمحرر -->
+<title>محرر صُنَّاع الاحترافي المضمون</title>
 <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 <style>
   * { box-sizing: border-box; }
   body { margin: 0; background: #07090e; color: #f8fafc; font-family: Cairo, Tajawal, sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-  
-  /* هيدر فائق الصغر لتوفير مساحة المعاينة */
   header { background: #0f172a; border-bottom: 1px solid #1e293b; padding: 4px 10px; display: flex; justify-content: space-between; align-items: center; min-height: 36px; }
   h1 { font-size: 11px; margin: 0; color: #38bdf8; font-weight: bold; }
-  
   main { flex: 1; display: grid; grid-template-columns: 280px 1fr; overflow: hidden; height: calc(100vh - 36px); }
-  
-  /* لوحة التحكم الجانبية ذات السحب المستقل */
   aside { background: #0f172a; border-left: 1px solid #1e293b; display: flex; flex-direction: column; overflow-y: auto; padding: 6px; gap: 6px; max-height: 100%; scrollbar-width: thin; }
   aside::-webkit-scrollbar { width: 4px; }
   aside::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-
   .panel-section { background: #111827; border: 1px solid #1f2937; border-radius: 4px; padding: 5px; }
   .panel-section h3 { margin: 0 0 4px 0; font-size: 10px; color: #94a3b8; border-bottom: 1px solid #1f2937; padding-bottom: 2px; }
-  
   label { display: block; font-size: 9px; color: #cbd5e1; margin: 3px 0 1px; font-weight: bold; }
   input, select, button { width: 100%; padding: 4px 6px; border-radius: 3px; border: 1px solid #334155; background: #1e293b; color: #fff; font-family: inherit; font-size: 10px; }
   input[type=color] { height: 22px; padding: 0; cursor: pointer; }
-  
   .row { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
   .row-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; }
   .row-4 button { padding: 4px 2px; font-size: 9px; background: #0284c7; border: 0; font-weight: bold; cursor: pointer; border-radius: 3px; }
   .row-4 button:hover { background: #0369a1; }
-
-  /* منطقة المعاينة */
   .preview-container { background: #1e293b; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4px; overflow: hidden; position: relative; height: 100%; }
   .device-bar { background: #0f172a; padding: 2px 8px; border-radius: 4px 4px 0 0; display: flex; justify-content: space-between; width: 100%; align-items: center; border: 1px solid #0f172a; border-bottom: 0; min-height: 24px; }
-  
   .iframe-wrapper { width: 100%; flex: 1; background: #fff; border-radius: 0 0 4px 4px; overflow: hidden; border: 1px solid #1e293b; transition: width 0.3s ease; }
   iframe { width: 100%; height: 100%; border: 0; background: white; }
-  
   .btn-success { background: #16a34a; color: white; border: 0; font-weight: bold; cursor: pointer; padding: 3px 10px; border-radius: 3px; font-size: 10px; width: auto; }
   .btn-success:hover { background: #15803d; }
   .btn-mode { width: auto; padding: 2px 6px; background: #1e293b; border: 1px solid #334155; cursor: pointer; font-size: 9px; color: #cbd5e1; border-radius: 2px; }
   .btn-mode.active { background: #0284c7; border-color: #38bdf8; color: #fff; }
-  
   .selected-badge { background: #0d9488; color: #fff; padding: 3px; border-radius: 3px; font-weight: bold; font-size: 9px; text-align: center; }
-
   @media(max-width: 800px) {
     main { grid-template-columns: 1fr; overflow: auto; }
     aside { max-height: 180px; border-left: 0; border-bottom: 1px solid #1e293b; }
@@ -57,12 +42,11 @@
 <body>
 
 <header>
-  <h1>🎨 محرر صُنَّاع الاحترافي (المعتمد)</h1>
+  <h1>🎨 محرر صُنَّاع الاحترافي الآمن</h1>
   <button id="saveBtn" class="btn-success">💾 حفظ في MongoDB</button>
 </header>
 
 <main>
-  <!-- لوحة التحكم الجانبية -->
   <aside>
     <div class="panel-section">
       <h3>📁 الصفحة والقسم الفرعي</h3>
@@ -108,9 +92,7 @@
       اضغط على أي عنصر في المعاينة لتعديله
     </div>
 
-    <!-- لوحة الخصائص -->
     <div id="editorControls" style="display: none; flex-direction: column; gap: 5px;">
-      
       <div class="panel-section">
         <h3>🔤 النص والخطوط</h3>
         <label>المحتوى</label>
@@ -134,8 +116,7 @@
       </div>
 
       <div class="panel-section">
-        <h3>🎯 الضبط الدقيق (بدون طيران مع السكرول)</h3>
-        <label>التحريك بالبيكسل</label>
+        <h3>🎯 الضبط الدقيق (بالأسهم)</h3>
         <div class="row-4">
           <button type="button" onclick="nudgeElement(0, -3)">⬆️ فوق</button>
           <button type="button" onclick="nudgeElement(0, 3)">⬇️ تحت</button>
@@ -159,11 +140,9 @@
         <label>لون الخلفية</label>
         <input type="color" id="ctrlBgColor" value="#ffffff">
       </div>
-
     </div>
   </aside>
 
-  <!-- مساحة المعاينة -->
   <div class="preview-container">
     <div class="device-bar">
       <span id="previewTitle" style="font-size: 9px; font-weight: bold; color: #38bdf8;">صفحة العميل</span>
@@ -179,11 +158,25 @@
 </main>
 
 <script>
-// التحقق الأمني من صلاحيات الأدمن
-const token = localStorage.getItem('admin_token') || localStorage.getItem('token');
-if (!token) {
-  alert('⚠️ يجدر تسجيل الدخول كأدمن أولاً لفتح المحرر.');
-  window.location.href = '/frontend/admin.html';
+// حماية أمنية صارمة: فحص صلاحيات الأدمن عبر السيرفر والـ Token المحلي
+async function verifyAdminAuth() {
+  const token = localStorage.getItem('admin_token') || localStorage.getItem('token');
+  if (!token) {
+    alert('⚠️ ممنوع الدخول! يجب تسجيل الدخول كأدمن أولاً.');
+    window.location.replace('/frontend/admin.html');
+    return false;
+  }
+  try {
+    const res = await fetch('/api/admin/verify', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!res.ok) throw new Error('Unauthorized');
+  } catch (err) {
+    alert('⚠️ انتهت صلاحية الجلسة أو ليس لديك صلاحية أدمن.');
+    window.location.replace('/frontend/admin.html');
+    return false;
+  }
+  return true;
 }
 
 const pageSelect = document.getElementById('pageSelect');
@@ -236,7 +229,8 @@ function setDevice(mode, btn) {
 
 function loadPage(pageKey, sectionKey = '') {
   const fileName = pagesMap[pageKey] || 'client.html';
-  let url = '/frontend/' + fileName + '?preview=true&t=' + Date.now();
+  // المسار النسبي المضمون لمنع الشاشة البيضاء
+  let url = './' + fileName + '?preview=true&t=' + Date.now();
   if (sectionKey) {
     url += '&section=' + encodeURIComponent(sectionKey);
   }
@@ -256,11 +250,10 @@ subPageSelect.addEventListener('change', () => {
   }
 });
 
-// حقن سكريبت التحديد ومنع التنقل والأخطاء داخل الـ iframe
+// تحميل المعاينة ومنع التنقل الخارجي أثناء التحرير
 previewFrame.onload = () => {
   try {
     const doc = previewFrame.contentDocument || previewFrame.contentWindow.document;
-    
     const style = doc.createElement('style');
     style.textContent = `
       * { cursor: pointer !important; }
@@ -268,11 +261,9 @@ previewFrame.onload = () => {
     `;
     doc.head.appendChild(style);
 
-    // منع الروابط والأزرار من فتح صفحات أو تنفيذ الوظائف أثناء التحرير
     doc.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      
       let target = e.target.closest('button, a, input, h1, h2, p, section, div, span, img') || e.target;
       if (selectedElement) selectedElement.classList.remove('editor-active-target');
       
@@ -281,7 +272,6 @@ previewFrame.onload = () => {
       
       selectionNotice.textContent = 'تم تحديد: ' + target.tagName.toLowerCase();
       editorControls.style.display = 'flex';
-
       currentTranslateX = 0;
       currentTranslateY = 0;
 
@@ -292,13 +282,11 @@ previewFrame.onload = () => {
     }, true);
 
     doc.addEventListener('submit', (e) => { e.preventDefault(); e.stopPropagation(); }, true);
-
   } catch(err) {
-    console.log('Frame access error:', err);
+    console.log('Frame load notice:', err);
   }
 };
 
-// الضبط الدقيق بالأسهم حصرياً لعدم طيران العناصر مع السكرول
 function nudgeElement(dx, dy) {
   if (!selectedElement) return;
   currentTranslateX += dx;
@@ -306,19 +294,16 @@ function nudgeElement(dx, dy) {
   selectedElement.style.position = 'relative';
   selectedElement.style.transform = `translate(${currentTranslateX}px, ${currentTranslateY}px)`;
   
-  // حفظ مؤقت في الذاكرة
-  let elemId = selectedElement.id || selectedElement.className || 'el_' + Math.random().toString(36.substring(2));
+  let elemId = selectedElement.id || selectedElement.className || 'el_' + Math.random().toString(36).substring(2);
   currentLayout.elements[elemId] = {
     transform: `translate(${currentTranslateX}px, ${currentTranslateY}px)`,
     text: selectedElement.innerText || ''
   };
 }
 
-// التعديل الفوري للخصائص الآمنة
 document.querySelectorAll('#editorControls input, #editorControls select').forEach(input => {
   input.addEventListener('input', () => {
     if (!selectedElement) return;
-    
     if (input.id === 'ctrlText') {
       if (selectedElement.tagName === 'INPUT') selectedElement.value = input.value;
       else selectedElement.innerText = input.value;
@@ -332,22 +317,18 @@ document.querySelectorAll('#editorControls input, #editorControls select').forEa
   });
 });
 
-// الحفظ الآمن في MongoDB Atlas (بدون استهلاك ليميت Vercel)
 saveBtn.addEventListener('click', async () => {
+  const token = localStorage.getItem('admin_token') || localStorage.getItem('token') || '';
   saveBtn.disabled = true;
-  saveBtn.textContent = '⏳ جاري الحفظ في القاعدة...';
-
+  saveBtn.textContent = '⏳ جاري الحفظ...';
   try {
     const res = await fetch('/api/admin/ui-layout/' + pageSelect.value, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
       body: JSON.stringify({ layout: currentLayout })
     });
-    if (res.ok) {
-      alert('✅ تم حفظ التخطيط في MongoDB Atlas بنجاح وبدون أي Deploys!');
-    } else {
-      alert('❌ فشل الحفظ، تأكد من صلاحيات الأدمن.');
-    }
+    if (res.ok) alert('✅ تم الحفظ في MongoDB بنجاح!');
+    else alert('❌ فشل الحفظ، تأكد من الصلاحيات.');
   } catch (err) {
     alert('❌ خطأ في الاتصال بالخادم.');
   } finally {
@@ -356,7 +337,10 @@ saveBtn.addEventListener('click', async () => {
   }
 });
 
-loadPage('client');
+// بدء التشغيل بفحص الأمان أولاً
+verifyAdminAuth().then(isAuth => {
+  if (isAuth) loadPage('client');
+});
 </script>
 </body>
 </html>
