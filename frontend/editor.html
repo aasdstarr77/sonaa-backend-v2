@@ -90,6 +90,7 @@ let selectedElement=null,selectedKey=null,editMode=false,dirty=false,saving=fals
 const layoutsCache=Object.create(null);
 const defaultLayout=()=>({version:3,elements:{}});
 const clone=value=>JSON.parse(JSON.stringify(value));
+function cacheLayout(page,layout){try{localStorage.setItem('sonaa-ui-layout-cache-v1:'+page,JSON.stringify(layout));}catch(error){console.warn('تعذر تحديث نسخة التخطيط المحلية',error);}}
 const hasOwn=(obj,key)=>Object.prototype.hasOwnProperty.call(obj,key);
 function setStatus(message,type){saveStatus.textContent=message;saveStatus.className='status '+(type||'');}
 function markDirty(){dirty=true;editVersion++;setStatus('⚠️ تعديلات غير محفوظة','dirty');}
@@ -101,7 +102,7 @@ async function loadLayout(page,force){
  const result=await response.json(),layout=result.layout||result.data?.layout||(result.elements?result:defaultLayout());
  if(!layout||typeof layout!=='object'||Array.isArray(layout))throw new Error('بيانات التخطيط غير صحيحة');
  if(!layout.elements||typeof layout.elements!=='object'||Array.isArray(layout.elements))layout.elements={};
- layout.version=layout.version||3;layoutsCache[page]=clone(layout);return clone(layout);
+ layout.version=layout.version||3;layoutsCache[page]=clone(layout);cacheLayout(page,layout);return clone(layout);
 }
 async function saveLayout(){
  if(saving)return;if(!layoutReady){setStatus('❌ لا يمكن الحفظ قبل تحميل التخطيط','error');return;}if(!dirty){setStatus('لا توجد تعديلات جديدة','saved');return;}
@@ -112,7 +113,7 @@ async function saveLayout(){
   const result=await response.json().catch(()=>({}));
   if(!response.ok)throw new Error(result.message||'فشل حفظ التخطيط');
   const canonical=result.layout&&typeof result.layout==='object'?result.layout:snapshot;
-  layoutsCache[pageAtSave]=clone(canonical);
+  layoutsCache[pageAtSave]=clone(canonical);cacheLayout(pageAtSave,canonical);
   if(currentPage===pageAtSave&&editVersion===versionAtSave){currentLayout=clone(canonical);dirty=false;setStatus('✅ تم الحفظ في MongoDB','saved');}
   else setStatus('⚠️ توجد تعديلات أحدث لم تُحفظ','dirty');
  }catch(error){setStatus('❌ '+error.message,'error');alert(error.message);}
