@@ -1066,8 +1066,8 @@ function render(){
       </div>
   ${state.tab==='register'?`
    <div class="space-y-4">
-    <div><label class="field-label">الاسم بالكامل *</label><input class="field" autocomplete="name" value="${esc(state.regName)}" oninput="state.regName=this.value.slice(0,50)" placeholder="الاسم بالكامل"></div>
-    <div><label class="field-label">رقم التليفون *</label><input class="field" inputmode="numeric" autocomplete="tel" value="${esc(state.regPhone)}" oninput="state.regPhone=this.value.replace(/\\D/g,'').slice(0,11)" placeholder="01xxxxxxxxx"></div>
+    <div><label class="field-label">الاسم بالكامل *</label><input id="fanniRegName" class="field" autocomplete="name" enterkeyhint="next" value="${esc(state.regName)}" oninput="state.regName=this.value.slice(0,50)" placeholder="الاسم بالكامل"></div>
+    <div><label class="field-label">رقم التليفون *</label><input id="fanniRegPhone" class="field" inputmode="numeric" autocomplete="tel" enterkeyhint="next" value="${esc(state.regPhone)}" oninput="state.regPhone=this.value.replace(/\\D/g,'').slice(0,11)" placeholder="01xxxxxxxxx"></div>
 
     <div class="rounded-2xl border p-3">
      <div class="font-extrabold text-[12px] mb-3">التخصصات * ${SERVICES_LOADING?'<span class="text-blue-600">(جاري التحميل...)</span>':SERVICES_ERROR?'<span class="text-red-600">(فشل التحميل)</span>':''}</div>
@@ -1091,11 +1091,11 @@ function render(){
 
     <div>
       <label class="field-label">منطقة العمل أو الحي اللي حابب تشتغل فيه *</label>
-      <input class="field" required minlength="2" autocomplete="address-level2" maxlength="60" value="${esc(state.regAreaCustom)}" oninput="state.regAreaCustom=this.value.slice(0,60)" placeholder="مثال: شبرا، المعادي، فيصل...">
+      <input id="fanniRegArea" class="field" required minlength="2" autocomplete="address-level2" enterkeyhint="next" maxlength="60" value="${esc(state.regAreaCustom)}" oninput="state.regAreaCustom=this.value.slice(0,60)" placeholder="مثال: شبرا، المعادي، فيصل...">
       <p class="mt-1 text-[10px] text-slate-500">اكتب اسم المنطقة أو الحي. مش لازم تختار من قائمة.</p>
      </div>
-    <div><label class="field-label">كلمة السر *</label><input type="password" class="field" autocomplete="new-password" value="${esc(state.regPass)}" oninput="state.regPass=this.value.slice(0,100)" placeholder="6 أحرف على الأقل"></div>
-    <div><label class="field-label">تأكيد كلمة السر *</label><input type="password" class="field" autocomplete="new-password" value="${esc(state.regPassConfirm)}" oninput="state.regPassConfirm=this.value.slice(0,100)" placeholder="اكتب كلمة السر مرة تانية"><p class="text-[10px] text-slate-500 mt-1">لازم تكون مطابقة لكلمة السر الأولى.</p></div>
+    <div><label class="field-label">كلمة السر *</label><input id="fanniRegPassword" type="password" class="field" autocomplete="new-password" enterkeyhint="next" value="${esc(state.regPass)}" oninput="state.regPass=this.value.slice(0,100)" placeholder="6 أحرف على الأقل"></div>
+    <div><label class="field-label">تأكيد كلمة السر *</label><input id="fanniRegPasswordConfirm" type="password" class="field" autocomplete="new-password" enterkeyhint="go" value="${esc(state.regPassConfirm)}" oninput="state.regPassConfirm=this.value.slice(0,100)" placeholder="اكتب كلمة السر مرة تانية"><p class="text-[10px] text-slate-500 mt-1">لازم تكون مطابقة لكلمة السر الأولى.</p></div>
 
     <section class="rounded-2xl border border-amber-200 bg-amber-50 p-3 space-y-3">
      <h2 class="font-extrabold text-sm text-slate-900">ميثاق التعامل المهني مع العملاء</h2>
@@ -1115,8 +1115,8 @@ function render(){
     ${state.error?errorBox(state.error):''}
    </div>`:`
    <div class="space-y-4">
-    <div><label class="field-label">رقم التليفون</label><input id="fanniLoginPhone" class="field" type="tel" inputmode="numeric" enterkeyhint="next" autocomplete="tel" value="${esc(state.loginPhone)}" oninput="state.loginPhone=this.value.replace(/\\D/g,'').slice(0,11)" placeholder="01xxxxxxxxx"></div>
-    <div><label class="field-label">كلمة السر</label><input id="fanniLoginPassword" type="password" class="field" enterkeyhint="done" autocomplete="current-password" value="${esc(state.loginPass)}" oninput="state.loginPass=this.value" placeholder="اكتب كلمة السر"></div>
+    <div><label class="field-label">رقم التليفون</label><input id="fanniLoginPhone" class="field" type="tel" inputmode="numeric" enterkeyhint="next" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('fanniLoginPassword')?.focus()}" autocomplete="tel" value="${esc(state.loginPhone)}" oninput="state.loginPhone=this.value.replace(/\\D/g,'').slice(0,11)" placeholder="01xxxxxxxxx"></div>
+    <div><label class="field-label">كلمة السر</label><input id="fanniLoginPassword" type="password" class="field" enterkeyhint="go" onkeydown="if(event.key==='Enter'){event.preventDefault();doLogin()}" autocomplete="current-password" value="${esc(state.loginPass)}" oninput="state.loginPass=this.value" placeholder="اكتب كلمة السر"></div>
      <p class="text-left -mt-2 mb-2"><a class="text-xs font-bold text-blue-700" href="password.html?role=fanni&mode=recovery">نسيت كلمة المرور؟</a></p>
     <button type="button" onclick="doLogin()" ${state.loading?'disabled':''} class="primary-btn w-full h-12">${state.loading?'جاري تسجيل الدخول...':'دخول إلى حسابي'}</button>
     ${state.pendingMsg?`<div class="rounded-xl bg-amber-50 border border-amber-200 p-3 text-center text-[12px] font-bold text-amber-800">${esc(state.pendingMsg)}</div>`:''}
@@ -1296,8 +1296,8 @@ function render(){
     <div class="flex items-center gap-3 pb-4 border-b"><div class="text-2xl">👤</div><div><h3 class="section-title">بيانات حسابي</h3><p class="text-[10px] text-slate-500 mt-1">راجع بياناتك وعدّل رقم التليفون والتخصصات ومناطق العمل</p></div></div>
     ${state.editProfileMode?`
      <div class="mt-4 space-y-4">
-      <div><label class="field-label">رقم التليفون *</label><input class="field" inputmode="numeric" autocomplete="tel" maxlength="11" value="${esc(state.editPhone)}" oninput="state.editPhone=this.value.replace(/\\D/g,'').slice(0,11)" placeholder="01xxxxxxxxx"><p class="text-[10px] text-slate-500 mt-1">رقم مصري من 11 رقمًا وغير مسجل لحساب آخر.</p></div>
-      <div><label class="field-label">مناطق العمل *</label><textarea class="field min-h-[90px]" maxlength="1800" oninput="state.editAreasText=this.value.slice(0,1800)" placeholder="اكتب المناطق أو الأحياء وافصل بينها بفاصلة، مثال: شبرا، المعادي، فيصل">${esc(state.editAreasText)}</textarea><p class="text-[10px] text-slate-500 mt-1">اكتب كل المناطق اللي تقدر تشتغل فيها، وافصل بينها بفاصلة.</p></div>
+      <div><label class="field-label">رقم التليفون *</label><input id="fanniEditPhone" class="field" inputmode="numeric" autocomplete="tel" maxlength="11" enterkeyhint="next" value="${esc(state.editPhone)}" oninput="state.editPhone=this.value.replace(/\\D/g,'').slice(0,11)" placeholder="01xxxxxxxxx"><p class="text-[10px] text-slate-500 mt-1">رقم مصري من 11 رقمًا وغير مسجل لحساب آخر.</p></div>
+      <div><label class="field-label">مناطق العمل *</label><textarea id="fanniEditAreas" class="field min-h-[90px]" maxlength="1800" enterkeyhint="go" oninput="state.editAreasText=this.value.slice(0,1800)" placeholder="اكتب المناطق أو الأحياء وافصل بينها بفاصلة، مثال: شبرا، المعادي، فيصل">${esc(state.editAreasText)}</textarea><p class="text-[10px] text-slate-500 mt-1">اكتب كل المناطق اللي تقدر تشتغل فيها، وافصل بينها بفاصلة.</p></div>
       <div class="rounded-2xl border p-3">
        <div class="font-extrabold text-[12px] mb-3">التخصصات * <span class="text-slate-500">(${state.editSpecialties.length} مختار)</span></div>
        ${SERVICES_LOADING?`<p class="py-4 text-center text-[11px]">جاري تحميل التخصصات...</p>`:SERVICES_ERROR?`<div class="rounded-xl bg-red-50 border border-red-200 p-3 text-[11px] text-red-700">${esc(SERVICES_ERROR)} <button type="button" onclick="loadServices()" class="secondary-btn px-3 py-1">إعادة المحاولة</button></div>`:CATEGORIES.map((cat,index)=>{
@@ -1333,9 +1333,9 @@ function render(){
    <div class="flex justify-between items-center pb-3 border-b"><div><h3 class="font-extrabold text-[15px]">تقديم عرض</h3><p class="text-[10px] text-slate-500 mt-1">كود الطلب: ${esc(state.offerModal.sn)}</p></div><button onclick="closeOffer()" class="h-9 w-9 rounded-xl bg-slate-100">✕</button></div>
 
    <div class="mt-4 space-y-4">
-    <div><label class="field-label">السعر بالجنيه *</label><input class="field" type="number" min="10" max="1000000" step="1" value="${esc(state.offerPrice)}" oninput="state.offerPrice=this.value.slice(0,7)" placeholder="150"></div>
+    <div><label class="field-label">السعر بالجنيه *</label><input id="fanniOfferPrice" class="field" type="number" min="10" max="1000000" step="1" enterkeyhint="next" value="${esc(state.offerPrice)}" oninput="state.offerPrice=this.value.slice(0,7)" placeholder="150"></div>
 
-    <div><label class="field-label">رسالتك للعميل *</label><textarea class="field min-h-[100px]" oninput="state.offerMessage=this.value.slice(0,500)" placeholder="اكتب تفاصيل العرض والوقت المتوقع للوصول">${esc(state.offerMessage)}</textarea><p class="text-[10px] text-slate-500 mt-1">من 5 إلى 500 حرف.</p></div>
+    <div><label class="field-label">رسالتك للعميل *</label><textarea id="fanniOfferMessage" class="field min-h-[100px]" enterkeyhint="go" oninput="state.offerMessage=this.value.slice(0,500)" placeholder="اكتب تفاصيل العرض والوقت المتوقع للوصول">${esc(state.offerMessage)}</textarea><p class="text-[10px] text-slate-500 mt-1">من 5 إلى 500 حرف.</p></div>
 
     ${state.offerError?errorBox(state.offerError):''}
 
@@ -1954,5 +1954,31 @@ start();
   document.querySelectorAll('form').forEach(function(form){form.addEventListener('submit',function(e){e.preventDefault();alert('في وضع المعاينة، إرسال النماذج معطل');});});
 })();
 </script>
+<script>
+/* Enter-key support only for flows that did not already have it. */
+(function(){
+ if(window.__sonaaFanniEnterSupport)return;
+ window.__sonaaFanniEnterSupport=true;
+ document.addEventListener('keydown',function(event){
+  if(event.key!=='Enter'||event.shiftKey||event.defaultPrevented)return;
+  var target=event.target;
+  if(!target||target.isContentEditable)return;
+  var loginPanel=target.closest('.fanni-login-panel');
+  if(loginPanel&&target.matches('input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"])')){
+   event.preventDefault();
+   var fields=Array.from(loginPanel.querySelectorAll('input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not(:disabled)')).filter(function(el){return el.getClientRects().length>0});
+   var index=fields.indexOf(target);
+   if(index>=0&&index<fields.length-1){fields[index+1].focus();return;}
+   if(state.tab==='register')doRegister();else doLogin();
+   return;
+  }
+  if(target.id==='fanniEditPhone'){event.preventDefault();document.getElementById('fanniEditAreas')?.focus();return;}
+  if(target.id==='fanniEditAreas'){event.preventDefault();saveProfileChanges();return;}
+  if(target.id==='fanniOfferPrice'){event.preventDefault();document.getElementById('fanniOfferMessage')?.focus();return;}
+  if(target.id==='fanniOfferMessage'){event.preventDefault();submitOffer();return;}
+ });
+})();
+</script>
+
 </body>
 </html>

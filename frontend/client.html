@@ -1097,7 +1097,7 @@ function render(){
                   <span>✍️ وصف المشكلة وتفاصيل الشغل</span>
                   <span id="descCounter" class="text-[10px] text-slate-400">${state.desc.length}/1000</span>
                 </label>
-                <textarea id="descInput" oninput="onDescInput(this.value)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();document.querySelector('button[onclick="createOrder()"]')?.focus()}" maxlength="1000" placeholder="اكتب هنا تفاصيل المشكلة أو الشغل المطلوب..." class="field min-h-[112px] p-3.5 text-[13px] font-semibold resize-none leading-6">${escHtml(state.desc)}</textarea>
+                <textarea id="descInput" oninput="onDescInput(this.value)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();createOrder()}" maxlength="1000" placeholder="اكتب هنا تفاصيل المشكلة أو الشغل المطلوب..." class="field min-h-[112px] p-3.5 text-[13px] font-semibold resize-none leading-6">${escHtml(state.desc)}</textarea>
                 <p class="text-[10px] leading-5 text-slate-500">ممكن تكتب وتسجّل مع بعض. ما تكتبش رقم تليفونك هنا؛ رقمك موجود في الخانة المخصصة.</p>
               </div>
             </div>
@@ -1239,7 +1239,7 @@ ${state.tracked.acceptedOfferId && String(state.tracked.acceptedOfferId)===offer
           </div>
           <div>
             <label for="complaintTextInput" class="text-[12px] font-extrabold mb-1.5 block">تفاصيل الشكوى</label>
-            <textarea id="complaintTextInput" oninput="onComplaintText(this.value)" maxlength="1000" placeholder="احكي اللي حصل بالتفصيل..." class="field min-h-[120px] p-4 text-[13px] font-semibold resize-none leading-6">${escHtml(state.complaintText)}</textarea>
+            <textarea id="complaintTextInput" oninput="onComplaintText(this.value)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendComplaint()}" maxlength="1000" placeholder="احكي اللي حصل بالتفصيل..." class="field min-h-[120px] p-4 text-[13px] font-semibold resize-none leading-6">${escHtml(state.complaintText)}</textarea>
           </div>
           <div class="flex justify-between text-[10px] text-slate-400 font-bold">
             <span id="complaintTextCounter">${state.complaintText.length}/1000</span>
