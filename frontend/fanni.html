@@ -553,15 +553,18 @@ function clean(s,max=1000){
 }
 
 function getToken(){
+ if(window.IS_EDITOR_PREVIEW)return '';
  try{return localStorage.getItem(TOKEN_KEY)||''}catch{return ''}
 }
 async function playOrderVoice(sn,button){let audio=button?.parentElement?.querySelector('audio[data-order-voice]');if(!audio){audio=document.createElement('audio');audio.controls=true;audio.preload='none';audio.dataset.orderVoice='1';audio.className='mt-2 w-full';button?.parentElement?.appendChild(audio)}if(!audio.src){try{button.disabled=true;const response=await fetch('/api/orders/'+encodeURIComponent(sn)+'/voice',{headers:{Authorization:'Bearer '+getToken()}});if(!response.ok)throw Error('تعذر تحميل التسجيل الصوتي.');audio.src=URL.createObjectURL(await response.blob())}catch(e){toast(e.message,'error');return}finally{button.disabled=false}}try{await audio.play()}catch(e){audio.controls=true}}
 
 function getUser(){
+ if(window.IS_EDITOR_PREVIEW)return null;
  try{return JSON.parse(localStorage.getItem(USER_KEY)||'null')}catch{return null}
 }
 
 function setAuth(token,user){
+ if(window.IS_EDITOR_PREVIEW)return;
  try{
   if(token)localStorage.setItem(TOKEN_KEY,token);
   if(user)localStorage.setItem(USER_KEY,JSON.stringify(user));
