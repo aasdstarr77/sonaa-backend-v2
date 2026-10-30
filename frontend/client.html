@@ -733,7 +733,7 @@ const API={
 };
 const forceClientRegistration=(new URLSearchParams(window.location.search).get('tab')||'').replace(/[\u200B-\u200D\u2060\uFEFF]/g,'').trim().toLowerCase()==='register';
 let state={
-  account:null,accountInitializing:false,accountToken:(()=>{try{return localStorage.getItem('sonaa_client_account_token')||'';}catch{return '';}})(),accountAuthMode:forceClientRegistration?'register':'login',accountLoading:false,accountError:'',myOrders:[],accountOrdersLoading:false,accountOrdersTab:'current',notifications:[],notificationsUnread:0,notificationsOpen:false,
+  account:null,accountInitializing:false,accountToken:(()=>{if(window.IS_EDITOR_PREVIEW)return '';try{return localStorage.getItem('sonaa_client_account_token')||'';}catch{return '';}})(),accountAuthMode:forceClientRegistration?'register':'login',accountLoading:false,accountError:'',myOrders:[],accountOrdersLoading:false,accountOrdersTab:'current',notifications:[],notificationsUnread:0,notificationsOpen:false,
   tab:'orders',service:'',clientName:'',area:'',address:'',phone:'',budget:'',desc:'',voiceBlob:null,voiceUrl:'',voiceRecordingData:'',voiceRecorder:null,voiceChunks:[],voiceRecording:false,loading:false,sn:null,
   trackInput:'',tracked:null,trackError:'',trackLoading:false,acceptingOffer:'',
   ratingStars:5,ratingComment:'',ratingSubmitting:false,
@@ -823,7 +823,7 @@ async function submitClientAccount(e){
   try{
     var d=reg?await API.registerClient({name:name,phone:phone,password:password,confirmPassword:confirmPassword}):await API.loginClient({phone:phone,password:password});
     if(!d.token||!d.client)throw new Error('الخادم لم يُرجع بيانات حساب صحيحة.');
-    state.accountToken=d.token;state.account=d.client;try{localStorage.setItem('sonaa_client_account_token',d.token);}catch(e){}
+    state.accountToken=window.IS_EDITOR_PREVIEW?'':d.token;state.account=window.IS_EDITOR_PREVIEW?null:d.client;if(!window.IS_EDITOR_PREVIEW){try{localStorage.setItem('sonaa_client_account_token',d.token);}catch(e){}}
     state.clientName=d.client.name||name;state.phone=d.client.phone||phone;state.tab='orders';state.accountError='';showToast(d.message||'تم تسجيل الدخول بنجاح','success');await loadMyOrders(false);await loadNotifications();
   }catch(error){state.accountError=error.message||'تعذر إتمام العملية.';}
   finally{state.accountLoading=false;render();}
