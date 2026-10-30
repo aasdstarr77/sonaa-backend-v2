@@ -271,12 +271,22 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
 .fanni-app-header .fanni-header-account{background:linear-gradient(145deg,#dbeafe,#eff6ff)!important;border:1px solid #bfdbfe!important;color:#1e40af!important;box-shadow:0 3px 0 #bfdbfe,0 5px 10px #1e3a8a12,inset 0 1px 0 #fff!important}
 .fanni-app-header .fanni-header-logout{background:linear-gradient(145deg,#fff1f2,#fecaca)!important;border:1px solid #fecaca!important;color:#991b1b!important;box-shadow:0 3px 0 #b91c1c,0 5px 9px #991b1b18!important}
 
-/* Apply the approved soft-red logout style to the actual rendered technician header button. */
-.fanni-app-header button[onclick="logout()"]{
+/* Final parity: technician logout must render exactly like the client/admin raised soft-red button. */
+#app .fanni-app-header button[onclick="logout()"]{
+ position:relative!important;
  background:linear-gradient(145deg,#fff1f2,#fecaca)!important;
  border:1px solid #fecaca!important;
  color:#991b1b!important;
+ -webkit-text-fill-color:#991b1b!important;
  box-shadow:0 3px 0 #b91c1c,0 5px 9px #991b1b18!important;
+ text-shadow:0 1px 0 #fff!important;
+ transform:translateY(-1px);
+ transition:transform .16s,box-shadow .16s,filter .16s!important;
+}
+#app .fanni-app-header button[onclick="logout()"]:active{
+ transform:translateY(3px)!important;
+ filter:brightness(.98)!important;
+ box-shadow:0 1px 0 #b91c1c,0 3px 6px #991b1b18!important;
 }
 
 .fanni-app-header .client-home-main-btn{width:100%;min-height:40px;background:linear-gradient(145deg,#eff6ff,#dbeafe)!important;color:#1e40af!important;-webkit-text-fill-color:#1e40af!important;border:1px solid #bfdbfe!important;box-shadow:0 3px 0 #dbeafe,0 5px 10px #1e3a8a12!important}
