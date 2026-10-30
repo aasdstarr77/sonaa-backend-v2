@@ -180,6 +180,7 @@ function applyLayout(){
  if(!frameReady)return;const doc=previewFrame.contentDocument;if(!doc)return;
  Object.entries(currentLayout.elements||{}).forEach(([key,data])=>{
   if(!data||typeof data!=='object')return;
+  const el=doc.querySelector('[data-editor-id="'+key.replace(/["\\]/g,'\\  if(!data||typeof data!=='object')return;
   const el=doc.querySelector('[data-editor-id="'+key.replace(/["\\]/g,'\\$&')+'"]')||doc.getElementById(key);if(!el)return;
   captureOriginalState(el);
   if(hasOwn(data,'fontSize'))el.style.fontSize=Number(data.fontSize)+'px';
@@ -192,7 +193,24 @@ function applyLayout(){
   if(hasOwn(data,'opacity'))el.style.opacity=String(Math.max(0,Math.min(100,Number(data.opacity)))/100);
   if(hasOwn(data,'textAlign'))el.style.textAlign=data.textAlign;
   if(hasOwn(data,'text'))setElementText(el,data.text);
-  if(Number.isFinite(data.translateX)||Number.isFinite(data.translateY))el.style.translate=(Number(data.translateX)||0)+'px '+(Number(data.translateY)||0)+'px';
+  if(Number.isFinite(data.translateX)||Number.isFinite(data.translateY))el.style.translate=(Number(data.translateX)||0)+'px '+(Number(data.translateY)||0)+'px';')+'"]')||doc.getElementById(key);if(!el)return;
+  captureOriginalState(el);
+  // Match the live layout loader: mobile-specific saved values override desktop values
+  // whenever the iframe is actually displaying the mobile CSS viewport.
+  const mobile=doc.defaultView.matchMedia('(max-width: 767px)').matches;
+  const mobileOverride=mobile&&(data.mobile||data.mobileOverride||data.mobileOverrides)||{};
+  const cfg=Object.assign({},data,mobileOverride);
+  if(hasOwn(cfg,'fontSize'))el.style.fontSize=Number(cfg.fontSize)+'px';
+  if(hasOwn(cfg,'fontWeight'))el.style.fontWeight=String(cfg.fontWeight);
+  if(hasOwn(cfg,'color'))el.style.color=cfg.color;
+  if(hasOwn(cfg,'elementBg'))el.style.backgroundColor=cfg.elementBg;
+  if(hasOwn(cfg,'radius'))el.style.borderRadius=Number(cfg.radius)+'px';
+  if(hasOwn(cfg,'width'))el.style.width=String(cfg.width);
+  if(hasOwn(cfg,'hPercent'))el.style.height=Number(cfg.hPercent)+'%';
+  if(hasOwn(cfg,'opacity'))el.style.opacity=String(Math.max(0,Math.min(100,Number(cfg.opacity)))/100);
+  if(hasOwn(cfg,'textAlign'))el.style.textAlign=cfg.textAlign;
+  if(hasOwn(cfg,'text'))setElementText(el,cfg.text);
+  if(Number.isFinite(cfg.translateX)||Number.isFinite(cfg.translateY))el.style.translate=(Number(cfg.translateX)||0)+'px '+(Number(cfg.translateY)||0)+'px';
  });
 }
 function getSelectedData(){if(!selectedKey)return null;if(!currentLayout.elements[selectedKey])currentLayout.elements[selectedKey]={};return currentLayout.elements[selectedKey];}
