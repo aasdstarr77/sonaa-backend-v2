@@ -6,6 +6,8 @@
   // The editor already loads previews with ?preview=true; the frame check is a safe fallback.
   var previewParams = new URLSearchParams(window.location.search);
   var isPreview = previewParams.has('preview') || window.self !== window.top;
+  // The editor iframe owns its preview rendering and applies its unsaved working copy.
+  var isEditorPreview = previewParams.has('editorPreview');
   if (isPreview) {
     console.log('[Sonaa UI layout] Preview mode — applying saved layout once.');
   } else {
@@ -72,7 +74,7 @@
     showSplash();
     splashFallbackTimer = window.setTimeout(hideSplash, 3000);
   }
-  beginLayoutSplash();
+  if (!isEditorPreview) beginLayoutSplash();
 
   var styleId = 'sonaa-ui-layout-style';
   function safeId(value) { return String(value || '').replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 100); }
@@ -122,6 +124,30 @@
     return el.matches('main, .container, .main-box, .login-box, body > div, #app, form, .form-container, .card') ||
       (el.children && el.children.length > 5 && /container|wrapper|content|layout|login|form|card|main/i.test(String(el.className || '') + ' ' + String(el.id || '')));
   }
+  // Update visible text without replacing innerHTML or removing SVG/Font Awesome nodes.
+  function applySavedText(el, value) {
+    if (typeof value !== 'string') return;
+    if (el.matches('input,textarea')) { el.value = value; return; }
+    var walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    var nodes = [], node;
+    while ((node = walker.nextNode())) {
+      var parent = node.parentElement;
+      if (!parent || parent.closest('svg,script,style,noscript,template')) continue;
+      if (String(node.nodeValue || '').trim()) nodes.push(node);
+    }
+    if (nodes.length) {
+      nodes[0].nodeValue = value;
+      for (var i = 1; i < nodes.length; i++) nodes[i].nodeValue = '';
+      return;
+    }
+    var marker = el.querySelector('[data-sonaa-layout-text="true"]');
+    if (!marker) {
+      marker = document.createElement('span');
+      marker.setAttribute('data-sonaa-layout-text', 'true');
+      el.appendChild(marker);
+    }
+    marker.textContent = value;
+  }
   function apply(layout) {
     ensureStyle(); assignEditorIds(document.body);
     var elements = layout && (layout.elements || layout.items || layout.layout || layout);
@@ -135,6 +161,7 @@
       var mobile = window.matchMedia('(max-width: 767px)').matches;
       var ov = mobile && (item.mobile || item.mobileOverride || item.mobileOverrides) || {};
       var cfg = Object.assign({}, item, ov);
+      if (Object.prototype.hasOwnProperty.call(cfg, 'text')) applySavedText(el, cfg.text);
       var isContainer = isLayoutContainer(el);
       // A saved editor position must never pull a page/form container out of normal flow.
       if (isContainer) {
@@ -319,6 +346,8 @@
     console.warn('[Sonaa editor] Section not found on ' + page + ':', section);
   }
   function load() {
+    // Avoid a duplicate API request and avoid applying persisted styles over the editor's live draft.
+    if (isEditorPreview) return Promise.resolve();
     // Do not flash the splash again on resize-triggered layout refreshes.
     if (splashReleased) {
       return fetch('/api/admin/ui-layout/' + encodeURIComponent(page), {
