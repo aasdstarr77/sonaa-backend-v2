@@ -3,21 +3,19 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>محرر صُنَّاع الاحترافي المعتمد</title>
-<!-- Tailwind CSS للتحكم في اللوحة -->
-<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<title>محرر صُنَّاع الاحترافي الشامل المعتمد</title>
 <style>
   * { box-sizing: border-box; }
   body { margin: 0; background: #07090e; color: #f8fafc; font-family: Cairo, Tajawal, sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
   
-  /* هيدر صغير ورفيع جداً عشان يوفر مساحة الشاشة للمعاينة */
+  /* هيدر رفيع وصغير جداً لتوفير مساحة المعاينة */
   header { background: #0f172a; border-bottom: 1px solid #1e293b; padding: 5px 10px; display: flex; justify-content: space-between; align-items: center; min-height: 38px; }
   h1 { font-size: 12px; margin: 0; color: #38bdf8; font-weight: bold; }
   
-  /* هيكل الشاشة الرئيسي */
-  main { flex: 1; display: grid; grid-template-columns: 280px 1fr; overflow: hidden; height: calc(100vh - 38px); }
+  /* التخطيط الرئيسي للشاشة */
+  main { flex: 1; display: grid; grid-template-columns: 290px 1fr; overflow: hidden; height: calc(100vh - 38px); }
   
-  /* لوحة التحكم الجانبية ذات السحب المستقل */
+  /* لوحة التحكم مع شريط سحب مستقل */
   aside { background: #0f172a; border-left: 1px solid #1e293b; display: flex; flex-direction: column; overflow-y: auto; padding: 6px; gap: 6px; max-height: 100%; scrollbar-width: thin; }
   aside::-webkit-scrollbar { width: 4px; }
   aside::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
@@ -27,15 +25,17 @@
   
   label { display: block; font-size: 9px; color: #cbd5e1; margin: 3px 0 1px; font-weight: bold; }
   input, select, button { width: 100%; padding: 4px 6px; border-radius: 3px; border: 1px solid #334155; background: #1e293b; color: #fff; font-family: inherit; font-size: 10px; }
-  input[type=color] { height: 22px; padding: 0; cursor: pointer; }
+  input[type=color] { height: 24px; padding: 0; cursor: pointer; }
   
   .row { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
-  
-  /* منطقة المعاينة الواسعة والمطابقة للواقع */
+  .row-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; }
+  .row-4 button { padding: 4px 2px; font-size: 9px; background: #0284c7; border: 0; font-weight: bold; cursor: pointer; border-radius: 3px; }
+  .row-4 button:hover { background: #0369a1; }
+
+  /* مساحة المعاينة الواسعة */
   .preview-container { background: #1e293b; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4px; overflow: hidden; position: relative; height: 100%; }
-  .device-bar { background: #0f172a; padding: 2px 8px; border-radius: 4px 4px 0 0; display: flex; justify-content: space-between; width: 100%; align-items: center; border: 1px solid #1e293b; border-bottom: 0; min-height: 24px; }
+  .device-bar { background: #0f172a; padding: 2px 8px; border-radius: 4px 4px 0 0; display: flex; justify-content: space-between; width: 100%; align-items: center; border: 1px solid #0f172a; border-bottom: 0; min-height: 24px; }
   
-  /* حاوية المعاينة (تتغير ديناميكياً بين الكمبيوتر والموبايل الحقيقي) */
   .iframe-wrapper { width: 100%; flex: 1; background: #fff; border-radius: 0 0 4px 4px; overflow: hidden; border: 1px solid #1e293b; transition: width 0.3s ease; }
   iframe { width: 100%; height: 100%; border: 0; background: white; }
   
@@ -56,7 +56,7 @@
 <body>
 
 <header>
-  <h1>🎨 محرر صُنَّاع المعتمد</h1>
+  <h1>🎨 محرر صُنَّاع المعتمد الشامل</h1>
   <button id="saveBtn" class="btn-success">💾 حفظ في MongoDB</button>
 </header>
 
@@ -64,7 +64,7 @@
   <!-- لوحة التحكم الجانبية -->
   <aside>
     <div class="panel-section">
-      <h3>📁 الصفحة والقسم الفرعي</h3>
+      <h3>📁 اختيار الصفحة والقسم الفرعي</h3>
       <div class="row">
         <div>
           <label>الصفحة</label>
@@ -77,7 +77,7 @@
           </select>
         </div>
         <div>
-          <label>القسم</label>
+          <label>القسم الفرعي</label>
           <select id="subPageSelect">
             <option value="">اختر القسم</option>
             <optgroup label="العميل">
@@ -107,7 +107,7 @@
       اضغط على أي عنصر في المعاينة لتعديله
     </div>
 
-    <!-- لوحة الخصائص الآمنة (بدون كسر تراكيب الـ Flex والـ Grid) -->
+    <!-- لوحة الخصائص والتعديل -->
     <div id="editorControls" style="display: none; flex-direction: column; gap: 5px;">
       
       <div class="panel-section">
@@ -133,28 +133,25 @@
       </div>
 
       <div class="panel-section">
-        <h3>📏 المسافات والهوامش (Padding & Margin)</h3>
-        <div class="row">
-          <div>
-            <label>الهامش الداخلي (Padding)</label>
-            <input type="number" id="ctrlPadding" min="0" max="50" value="0">
-          </div>
-          <div>
-            <label>الهامش الخارجي (Margin)</label>
-            <input type="number" id="ctrlMargin" min="0" max="50" value="0">
-          </div>
+        <h3>🎯 الضبط الدقيق (4 أسهم) والسحب</h3>
+        <label>تحريك بالبيكسل (بدون تعليق)</label>
+        <div class="row-4">
+          <button type="button" onclick="nudgeElement(0, -3)">⬆️ فوق</button>
+          <button type="button" onclick="nudgeElement(0, 3)">⬇️ تحت</button>
+          <button type="button" onclick="nudgeElement(-3, 0)">⬅️ يسار</button>
+          <button type="button" onclick="nudgeElement(3, 0)">➡️ يمين</button>
         </div>
       </div>
 
       <div class="panel-section">
-        <h3>📐 الحجم والخلفية</h3>
+        <h3>📐 الحجم والشكل والخلفية</h3>
         <div class="row">
           <div>
-            <label>عرض العنصر (Width)</label>
-            <input type="text" id="ctrlWidth" placeholder="مثال: 100% أو 200px">
+            <label>عرض العنصر</label>
+            <input type="text" id="ctrlWidth" placeholder="مثال: 100%">
           </div>
           <div>
-            <label>استدارة الحواف (Radius)</label>
+            <label>استدارة الحواف</label>
             <input type="number" id="ctrlRadius" min="0" max="40" value="4">
           </div>
         </div>
@@ -170,7 +167,7 @@
     <div class="device-bar">
       <span id="previewTitle" style="font-size: 9px; font-weight: bold; color: #38bdf8;">صفحة العميل</span>
       <div style="display: flex; gap: 3px;">
-        <button class="btn-mode active" onclick="setDevice('desktop', this)">💻 كمبيوتر</button>
+        <button class="btn-mode active" onclick="setDevice('desktop', this)">💻 كمبيوتر حقيقي</button>
         <button class="btn-mode" onclick="setDevice('mobile', this)">📱 موبايل حقيقي</button>
       </div>
     </div>
@@ -191,6 +188,7 @@ const saveBtn = document.getElementById('saveBtn');
 
 let selectedElement = null;
 let currentLayout = { elements: {} };
+let posX = 0, posY = 0;
 
 const pagesMap = {
   client: 'client.html',
@@ -200,12 +198,26 @@ const pagesMap = {
   support: 'support.html'
 };
 
-// محاكاة حقيقية للموبايل أو الكمبيوتر
+const sectionsMap = {
+  'client:login': 'login',
+  'client:register': 'register',
+  'client:new-order': 'new',
+  'client:my-orders': 'orders',
+  'client:profile': 'profile',
+  'fanni:login': 'login',
+  'fanni:available': 'available',
+  'fanni:my-orders': 'myOffers',
+  'fanni:wallet': 'wallet',
+  'admin:dashboard': 'dashboard',
+  'admin:orders': 'orders',
+  'admin:settings': 'settings'
+};
+
 function setDevice(mode, btn) {
   document.querySelectorAll('.btn-mode').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   if (mode === 'mobile') {
-    wrapper.style.width = '375px'; // عرض إطار الموبايل القياسي الحقيقي
+    wrapper.style.width = '375px';
     wrapper.style.margin = '0 auto';
   } else {
     wrapper.style.width = '100%';
@@ -213,58 +225,109 @@ function setDevice(mode, btn) {
   }
 }
 
-function loadPage(pageKey) {
+function loadPage(pageKey, sectionKey = '') {
   const fileName = pagesMap[pageKey] || 'client.html';
-  previewFrame.src = '/frontend/' + fileName + '?preview=true&t=' + Date.now();
+  let url = '/frontend/' + fileName + '?preview=true&t=' + Date.now();
+  if (sectionKey) {
+    url += '&section=' + encodeURIComponent(sectionKey);
+  }
+  previewFrame.src = url;
   document.getElementById('previewTitle').textContent = pageSelect.options[pageSelect.selectedIndex].text;
 }
 
 pageSelect.addEventListener('change', () => loadPage(pageSelect.value));
+
 subPageSelect.addEventListener('change', () => {
   const val = subPageSelect.value;
   if(val) {
     const mainPage = val.split(':')[0];
     pageSelect.value = mainPage;
-    loadPage(mainPage);
+    const sec = sectionsMap[val] || '';
+    loadPage(mainPage, sec);
   }
 });
 
-// تحديد عناصر الصفحة بدقة آمنة لا تكسر التخطيط
+// تفعيل السحب والافلات الخالي من التعليق واللمس المزدوج
 previewFrame.onload = () => {
   try {
     const doc = previewFrame.contentDocument || previewFrame.contentWindow.document;
     
     const style = doc.createElement('style');
     style.textContent = `
-      * { cursor: pointer !important; }
+      * { cursor: grab !important; user-select: none; }
       .editor-active-target { outline: 2px solid #16a34a !important; outline-offset: 1px !important; background-color: rgba(22, 163, 74, 0.05) !important; }
     `;
     doc.head.appendChild(style);
 
-    doc.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      
-      let target = e.target.closest('button, a, input, h1, h2, p, section, div, span, img') || e.target;
+    let dragging = false;
+    let startX = 0, startY = 0;
+
+    const startDragHandler = (clientX, clientY, targetElem) => {
       if (selectedElement) selectedElement.classList.remove('editor-active-target');
-      
-      selectedElement = target;
+      selectedElement = targetElem;
       selectedElement.classList.add('editor-active-target');
       
-      selectionNotice.textContent = 'تم تحديد: ' + target.tagName.toLowerCase();
+      selectionNotice.textContent = 'تم تحديد: ' + targetElem.tagName.toLowerCase();
       editorControls.style.display = 'flex';
 
-      const computed = previewFrame.contentWindow.getComputedStyle(target);
-      document.getElementById('ctrlText').value = target.tagName === 'INPUT' ? target.value : (target.innerText || '');
+      dragging = true;
+      startX = clientX - posX;
+      startY = clientY - posY;
+
+      const computed = previewFrame.contentWindow.getComputedStyle(targetElem);
+      document.getElementById('ctrlText').value = targetElem.tagName === 'INPUT' ? targetElem.value : (targetElem.innerText || '');
       document.getElementById('ctrlFontSize').value = parseInt(computed.fontSize) || 16;
-      document.getElementById('ctrlRadius').value = parseInt(computed.borderRadius) || 0;
+    };
+
+    const moveDragHandler = (clientX, clientY) => {
+      if (!dragging || !selectedElement) return;
+      posX = clientX - startX;
+      posY = clientY - startY;
+      selectedElement.style.position = 'relative';
+      selectedElement.style.transform = `translate(${posX}px, ${posY}px)`;
+    };
+
+    // دعم الماوس والتاتش (لمس الشاشة) بدون أي تعليق
+    doc.addEventListener('mousedown', (e) => {
+      let target = e.target.closest('button, a, input, h1, h2, p, section, div, span, img') || e.target;
+      startDragHandler(e.clientX, e.clientY, target);
     }, true);
+
+    doc.addEventListener('mousemove', (e) => {
+      moveDragHandler(e.clientX, e.clientY);
+    });
+
+    doc.addEventListener('mouseup', () => { dragging = false; });
+
+    doc.addEventListener('touchstart', (e) => {
+      if(e.touches && e.touches[0]) {
+        let target = e.target.closest('button, a, input, h1, h2, p, section, div, span, img') || e.target;
+        startDragHandler(e.touches[0].clientX, e.touches[0].clientY, target);
+      }
+    }, {passive: true});
+
+    doc.addEventListener('touchmove', (e) => {
+      if(e.touches && e.touches[0]) {
+        moveDragHandler(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    }, {passive: true});
+
+    doc.addEventListener('touchend', () => { dragging = false; });
+
   } catch(err) {
     console.log('Frame access error:', err);
   }
 };
 
-// التعديل الآمن المباشر (يحافظ على تناسق الـ Flex والـ Grid بدون تداخل)
+function nudgeElement(dx, dy) {
+  if (!selectedElement) return;
+  posX += dx;
+  posY += dy;
+  selectedElement.style.position = 'relative';
+  selectedElement.style.transform = `translate(${posX}px, ${posY}px)`;
+}
+
+// التعديل الفوري
 document.querySelectorAll('#editorControls input, #editorControls select').forEach(input => {
   input.addEventListener('input', () => {
     if (!selectedElement) return;
@@ -277,8 +340,6 @@ document.querySelectorAll('#editorControls input, #editorControls select').forEa
     if (input.id === 'ctrlFontWeight') selectedElement.style.fontWeight = input.value;
     if (input.id === 'ctrlRadius') selectedElement.style.borderRadius = input.value + 'px';
     if (input.id === 'ctrlWidth') selectedElement.style.width = input.value;
-    if (input.id === 'ctrlPadding') selectedElement.style.padding = input.value + 'px';
-    if (input.id === 'ctrlMargin') selectedElement.style.margin = input.value + 'px';
     if (input.id === 'ctrlColor') selectedElement.style.color = input.value;
     if (input.id === 'ctrlBgColor') selectedElement.style.backgroundColor = input.value;
   });
@@ -297,7 +358,7 @@ saveBtn.addEventListener('click', async () => {
       body: JSON.stringify({ layout: currentLayout })
     });
     if (res.ok) alert('✅ تم الحفظ في قاعدة البيانات بنجاح!');
-    else alert('❌ فشل الحفظ، تأكد من تسجيل الدخول كأدمن.');
+    else alert('❌ فشل الحفظ، تأكد من تسجيل دخولك كأدمن.');
   } catch (err) {
     alert('❌ خطأ في الاتصال بالسيرفر.');
   } finally {
