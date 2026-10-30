@@ -263,11 +263,22 @@ function installBridge(){
  let style=doc.getElementById('sonaa-editor-style');if(style)style.remove();style=doc.createElement('style');style.id='sonaa-editor-style';
  style.textContent='html[data-sonaa-edit-mode="true"] *{cursor:crosshair!important}html[data-sonaa-edit-mode="true"] .sonaa-editor-selected{outline:2px solid #16a34a!important;outline-offset:2px!important}';
  doc.head.appendChild(style);
- doc.addEventListener('click',event=>{
-  if(!editMode)return;let target=event.target;if(!target||!target.closest)return;
+ // Capture at the iframe window level so page-level capture handlers cannot
+ // run before the editor intercepts the interaction.
+ const view=doc.defaultView||previewFrame.contentWindow;
+ view.addEventListener('click',event=>{
+  if(!editMode)return;
+  let target=event.target;
+  if(!target||!target.closest)return;
   if(target.closest('script,style,link,meta,noscript'))return;
-  const icon=target.closest('svg,i,[class*="fa-"]');if(icon){const interactive=icon.closest('button,a,[role="button"],label');if(interactive)target=interactive;}
-  event.preventDefault();event.stopPropagation();selectElement(target);
+  // Clicking text, an icon, or a nested span inside a control selects the
+  // whole actionable control rather than its inner decorative element.
+  const interactive=target.closest('button,a,[role="button"],[role="tab"],[role="menuitem"],label,input,select,textarea,[onclick],[data-action]');
+  if(interactive)target=interactive;
+  event.preventDefault();
+  event.stopPropagation();
+  event.stopImmediatePropagation();
+  selectElement(target);
  },true);
  doc.addEventListener('submit',event=>{if(editMode){event.preventDefault();event.stopPropagation();}},true);
  doc.documentElement.dataset.sonaaEditMode=editMode?'true':'false';
