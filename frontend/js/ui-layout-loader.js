@@ -20,6 +20,10 @@
   };
   var page = pageMap[location.pathname.replace(/\/+$/, '')] || location.pathname.split('/').pop().replace(/\.html$/, '');
   if (!/^(admin|client|fanni|password|support)$/.test(page)) return;
+  // The admin dashboard is dynamically rebuilt with innerHTML after actions and data refreshes.
+  // Applying saved editor geometry/text styles to that transient DOM causes delayed layout shifts.
+  // Keep the admin dashboard on its own stable CSS; other pages continue using saved layouts.
+  if (page === 'admin') return;
   // Keep the existing page splash visible while the saved layout is fetched/applied.
   // If a page has no splash, add a small temporary one; always release it within 3 seconds.
   var splashSelectors = '#splash, #splash-screen, #loading, .splash-screen, .splash, #app-loading, [class*="loading-screen"]';
