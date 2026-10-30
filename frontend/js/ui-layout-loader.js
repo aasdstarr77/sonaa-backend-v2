@@ -231,13 +231,8 @@
           el.style.boxShadow = '0 ' + depth + 'px ' + (depth * 2) + 'px ' + shadowColor + ',inset 0 1px 0 #ffffff88';
         }
       }
-      if (cfg.buttonHover || cfg.hoverTextColor) {
-        var hoverStyleId = 'sonaa-layout-hover-style';
-        var hoverStyle = document.getElementById(hoverStyleId);
-        if (!hoverStyle) { hoverStyle = document.createElement('style'); hoverStyle.id = hoverStyleId; document.head.appendChild(hoverStyle); }
-        var hoverSelector = '[data-editor-id="' + String(key).replace(/["\\]/g, '\\$&') + '"]';
-        hoverStyle.textContent += hoverSelector + ':hover{' + (cfg.buttonHover ? 'background-color:' + String(cfg.buttonHover) + '!important;' : '') + (cfg.hoverTextColor ? 'color:' + String(cfg.hoverTextColor) + '!important;' : '') + '}';
-      }
+      // Do not synthesize hover colors from saved layout metadata. Hover appearance
+      // remains controlled by the page's own CSS; size/position edits never recolor buttons.
       var container = getContainer(cfg.containerId, el);
       // Keep edited elements in normal document/Flex flow; never apply absolute positioning.
       el.classList.remove('sonaa-pos-layer');
