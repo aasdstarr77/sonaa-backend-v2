@@ -144,6 +144,9 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
 ::-webkit-scrollbar{width:5px;height:5px} ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:99px}
   .global-refresh.is-refreshing svg{animation:global-refresh-spin .8s linear infinite}@keyframes global-refresh-spin{to{transform:rotate(360deg)}}
 
+
+/* Prevent transient unstyled flashes while the Tailwind CDN observes newly rendered admin markup. */
+#app.admin-rendering{visibility:hidden!important}
 </style>
 
 </head>
@@ -271,6 +274,17 @@ function confirmPending(key){
 
 function render(){
   if(!getToken()){renderLogin();return;}
+  const appRoot=document.getElementById('app');
+  if(appRoot){
+    appRoot.classList.add('admin-rendering');
+    if(window.__sonaaAdminRenderRevealTimer)clearTimeout(window.__sonaaAdminRenderRevealTimer);
+    window.__sonaaAdminRenderRevealTimer=setTimeout(()=>{
+      requestAnimationFrame(()=>requestAnimationFrame(()=>{
+        appRoot.classList.remove('admin-rendering');
+        window.__sonaaAdminRenderRevealTimer=null;
+      }));
+    },180);
+  }
   if(!canReadTab(state.tab)){const first=ADMIN_SECTIONS.flatMap(section=>section.tabs).find(item=>canReadTab(item.id));state.tab=first?.id||'dashboard';}
   const visibleSections=ADMIN_SECTIONS.filter(section=>section.tabs.some(item=>canReadTab(item.id)));
   const isAuth=true;
