@@ -3,19 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>محرر صُنَّاع الاحترافي الشامل المعتمد</title>
+<title>محرر صُنَّاع الاحترافي الشامل (النسخة النهائية المستقرة)</title>
+<!-- Tailwind CSS للوحة التحكم الخاصة بالمحرر -->
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 <style>
   * { box-sizing: border-box; }
   body { margin: 0; background: #07090e; color: #f8fafc; font-family: Cairo, Tajawal, sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
   
-  /* هيدر رفيع وصغير جداً لتوفير مساحة المعاينة */
-  header { background: #0f172a; border-bottom: 1px solid #1e293b; padding: 5px 10px; display: flex; justify-content: space-between; align-items: center; min-height: 38px; }
-  h1 { font-size: 12px; margin: 0; color: #38bdf8; font-weight: bold; }
+  /* هيدر فائق الصغر لتوفير مساحة المعاينة */
+  header { background: #0f172a; border-bottom: 1px solid #1e293b; padding: 4px 10px; display: flex; justify-content: space-between; align-items: center; min-height: 36px; }
+  h1 { font-size: 11px; margin: 0; color: #38bdf8; font-weight: bold; }
   
-  /* التخطيط الرئيسي للشاشة */
-  main { flex: 1; display: grid; grid-template-columns: 290px 1fr; overflow: hidden; height: calc(100vh - 38px); }
+  main { flex: 1; display: grid; grid-template-columns: 280px 1fr; overflow: hidden; height: calc(100vh - 36px); }
   
-  /* لوحة التحكم مع شريط سحب مستقل */
+  /* لوحة التحكم الجانبية ذات السحب المستقل */
   aside { background: #0f172a; border-left: 1px solid #1e293b; display: flex; flex-direction: column; overflow-y: auto; padding: 6px; gap: 6px; max-height: 100%; scrollbar-width: thin; }
   aside::-webkit-scrollbar { width: 4px; }
   aside::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
@@ -25,14 +26,14 @@
   
   label { display: block; font-size: 9px; color: #cbd5e1; margin: 3px 0 1px; font-weight: bold; }
   input, select, button { width: 100%; padding: 4px 6px; border-radius: 3px; border: 1px solid #334155; background: #1e293b; color: #fff; font-family: inherit; font-size: 10px; }
-  input[type=color] { height: 24px; padding: 0; cursor: pointer; }
+  input[type=color] { height: 22px; padding: 0; cursor: pointer; }
   
   .row { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
   .row-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; }
   .row-4 button { padding: 4px 2px; font-size: 9px; background: #0284c7; border: 0; font-weight: bold; cursor: pointer; border-radius: 3px; }
   .row-4 button:hover { background: #0369a1; }
 
-  /* مساحة المعاينة الواسعة */
+  /* منطقة المعاينة */
   .preview-container { background: #1e293b; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4px; overflow: hidden; position: relative; height: 100%; }
   .device-bar { background: #0f172a; padding: 2px 8px; border-radius: 4px 4px 0 0; display: flex; justify-content: space-between; width: 100%; align-items: center; border: 1px solid #0f172a; border-bottom: 0; min-height: 24px; }
   
@@ -48,15 +49,15 @@
 
   @media(max-width: 800px) {
     main { grid-template-columns: 1fr; overflow: auto; }
-    aside { max-height: 200px; border-left: 0; border-bottom: 1px solid #1e293b; }
-    .preview-container { height: calc(100vh - 240px); }
+    aside { max-height: 180px; border-left: 0; border-bottom: 1px solid #1e293b; }
+    .preview-container { height: calc(100vh - 220px); }
   }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>🎨 محرر صُنَّاع المعتمد الشامل</h1>
+  <h1>🎨 محرر صُنَّاع الاحترافي (المعتمد)</h1>
   <button id="saveBtn" class="btn-success">💾 حفظ في MongoDB</button>
 </header>
 
@@ -64,7 +65,7 @@
   <!-- لوحة التحكم الجانبية -->
   <aside>
     <div class="panel-section">
-      <h3>📁 اختيار الصفحة والقسم الفرعي</h3>
+      <h3>📁 الصفحة والقسم الفرعي</h3>
       <div class="row">
         <div>
           <label>الصفحة</label>
@@ -107,7 +108,7 @@
       اضغط على أي عنصر في المعاينة لتعديله
     </div>
 
-    <!-- لوحة الخصائص والتعديل -->
+    <!-- لوحة الخصائص -->
     <div id="editorControls" style="display: none; flex-direction: column; gap: 5px;">
       
       <div class="panel-section">
@@ -133,8 +134,8 @@
       </div>
 
       <div class="panel-section">
-        <h3>🎯 الضبط الدقيق (4 أسهم) والسحب</h3>
-        <label>تحريك بالبيكسل (بدون تعليق)</label>
+        <h3>🎯 الضبط الدقيق (بدون طيران مع السكرول)</h3>
+        <label>التحريك بالبيكسل</label>
         <div class="row-4">
           <button type="button" onclick="nudgeElement(0, -3)">⬆️ فوق</button>
           <button type="button" onclick="nudgeElement(0, 3)">⬇️ تحت</button>
@@ -178,6 +179,13 @@
 </main>
 
 <script>
+// التحقق الأمني من صلاحيات الأدمن
+const token = localStorage.getItem('admin_token') || localStorage.getItem('token');
+if (!token) {
+  alert('⚠️ يجدر تسجيل الدخول كأدمن أولاً لفتح المحرر.');
+  window.location.href = '/frontend/admin.html';
+}
+
 const pageSelect = document.getElementById('pageSelect');
 const subPageSelect = document.getElementById('subPageSelect');
 const previewFrame = document.getElementById('previewFrame');
@@ -188,7 +196,8 @@ const saveBtn = document.getElementById('saveBtn');
 
 let selectedElement = null;
 let currentLayout = { elements: {} };
-let posX = 0, posY = 0;
+let currentTranslateX = 0;
+let currentTranslateY = 0;
 
 const pagesMap = {
   client: 'client.html',
@@ -247,87 +256,65 @@ subPageSelect.addEventListener('change', () => {
   }
 });
 
-// تفعيل السحب والافلات الخالي من التعليق واللمس المزدوج
+// حقن سكريبت التحديد ومنع التنقل والأخطاء داخل الـ iframe
 previewFrame.onload = () => {
   try {
     const doc = previewFrame.contentDocument || previewFrame.contentWindow.document;
     
     const style = doc.createElement('style');
     style.textContent = `
-      * { cursor: grab !important; user-select: none; }
-      .editor-active-target { outline: 2px solid #16a34a !important; outline-offset: 1px !important; background-color: rgba(22, 163, 74, 0.05) !important; }
+      * { cursor: pointer !important; }
+      .editor-active-target { outline: 2px solid #16a34a !important; outline-offset: 1px !important; background-color: rgba(22, 163, 74, 0.08) !important; }
     `;
     doc.head.appendChild(style);
 
-    let dragging = false;
-    let startX = 0, startY = 0;
-
-    const startDragHandler = (clientX, clientY, targetElem) => {
+    // منع الروابط والأزرار من فتح صفحات أو تنفيذ الوظائف أثناء التحرير
+    doc.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      let target = e.target.closest('button, a, input, h1, h2, p, section, div, span, img') || e.target;
       if (selectedElement) selectedElement.classList.remove('editor-active-target');
-      selectedElement = targetElem;
+      
+      selectedElement = target;
       selectedElement.classList.add('editor-active-target');
       
-      selectionNotice.textContent = 'تم تحديد: ' + targetElem.tagName.toLowerCase();
+      selectionNotice.textContent = 'تم تحديد: ' + target.tagName.toLowerCase();
       editorControls.style.display = 'flex';
 
-      dragging = true;
-      startX = clientX - posX;
-      startY = clientY - posY;
+      currentTranslateX = 0;
+      currentTranslateY = 0;
 
-      const computed = previewFrame.contentWindow.getComputedStyle(targetElem);
-      document.getElementById('ctrlText').value = targetElem.tagName === 'INPUT' ? targetElem.value : (targetElem.innerText || '');
+      const computed = previewFrame.contentWindow.getComputedStyle(target);
+      document.getElementById('ctrlText').value = target.tagName === 'INPUT' ? target.value : (target.innerText || '');
       document.getElementById('ctrlFontSize').value = parseInt(computed.fontSize) || 16;
-    };
-
-    const moveDragHandler = (clientX, clientY) => {
-      if (!dragging || !selectedElement) return;
-      posX = clientX - startX;
-      posY = clientY - startY;
-      selectedElement.style.position = 'relative';
-      selectedElement.style.transform = `translate(${posX}px, ${posY}px)`;
-    };
-
-    // دعم الماوس والتاتش (لمس الشاشة) بدون أي تعليق
-    doc.addEventListener('mousedown', (e) => {
-      let target = e.target.closest('button, a, input, h1, h2, p, section, div, span, img') || e.target;
-      startDragHandler(e.clientX, e.clientY, target);
+      document.getElementById('ctrlRadius').value = parseInt(computed.borderRadius) || 0;
     }, true);
 
-    doc.addEventListener('mousemove', (e) => {
-      moveDragHandler(e.clientX, e.clientY);
-    });
-
-    doc.addEventListener('mouseup', () => { dragging = false; });
-
-    doc.addEventListener('touchstart', (e) => {
-      if(e.touches && e.touches[0]) {
-        let target = e.target.closest('button, a, input, h1, h2, p, section, div, span, img') || e.target;
-        startDragHandler(e.touches[0].clientX, e.touches[0].clientY, target);
-      }
-    }, {passive: true});
-
-    doc.addEventListener('touchmove', (e) => {
-      if(e.touches && e.touches[0]) {
-        moveDragHandler(e.touches[0].clientX, e.touches[0].clientY);
-      }
-    }, {passive: true});
-
-    doc.addEventListener('touchend', () => { dragging = false; });
+    doc.addEventListener('submit', (e) => { e.preventDefault(); e.stopPropagation(); }, true);
 
   } catch(err) {
     console.log('Frame access error:', err);
   }
 };
 
+// الضبط الدقيق بالأسهم حصرياً لعدم طيران العناصر مع السكرول
 function nudgeElement(dx, dy) {
   if (!selectedElement) return;
-  posX += dx;
-  posY += dy;
+  currentTranslateX += dx;
+  currentTranslateY += dy;
   selectedElement.style.position = 'relative';
-  selectedElement.style.transform = `translate(${posX}px, ${posY}px)`;
+  selectedElement.style.transform = `translate(${currentTranslateX}px, ${currentTranslateY}px)`;
+  
+  // حفظ مؤقت في الذاكرة
+  let elemId = selectedElement.id || selectedElement.className || 'el_' + Math.random().toString(36.substring(2));
+  currentLayout.elements[elemId] = {
+    transform: `translate(${currentTranslateX}px, ${currentTranslateY}px)`,
+    text: selectedElement.innerText || ''
+  };
 }
 
-// التعديل الفوري
+// التعديل الفوري للخصائص الآمنة
 document.querySelectorAll('#editorControls input, #editorControls select').forEach(input => {
   input.addEventListener('input', () => {
     if (!selectedElement) return;
@@ -340,16 +327,15 @@ document.querySelectorAll('#editorControls input, #editorControls select').forEa
     if (input.id === 'ctrlFontWeight') selectedElement.style.fontWeight = input.value;
     if (input.id === 'ctrlRadius') selectedElement.style.borderRadius = input.value + 'px';
     if (input.id === 'ctrlWidth') selectedElement.style.width = input.value;
-    if (input.id === 'ctrlColor') selectedElement.style.color = input.value;
-    if (input.id === 'ctrlBgColor') selectedElement.style.backgroundColor = input.value;
+    if (input.id === 'ctrlColor' && input.value) selectedElement.style.color = input.value;
+    if (input.id === 'ctrlBgColor' && input.value) selectedElement.style.backgroundColor = input.value;
   });
 });
 
-// الحفظ المباشر في MongoDB
+// الحفظ الآمن في MongoDB Atlas (بدون استهلاك ليميت Vercel)
 saveBtn.addEventListener('click', async () => {
-  const token = localStorage.getItem('admin_token') || localStorage.getItem('token') || '';
   saveBtn.disabled = true;
-  saveBtn.textContent = '⏳ جاري الحفظ...';
+  saveBtn.textContent = '⏳ جاري الحفظ في القاعدة...';
 
   try {
     const res = await fetch('/api/admin/ui-layout/' + pageSelect.value, {
@@ -357,10 +343,13 @@ saveBtn.addEventListener('click', async () => {
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
       body: JSON.stringify({ layout: currentLayout })
     });
-    if (res.ok) alert('✅ تم الحفظ في قاعدة البيانات بنجاح!');
-    else alert('❌ فشل الحفظ، تأكد من تسجيل دخولك كأدمن.');
+    if (res.ok) {
+      alert('✅ تم حفظ التخطيط في MongoDB Atlas بنجاح وبدون أي Deploys!');
+    } else {
+      alert('❌ فشل الحفظ، تأكد من صلاحيات الأدمن.');
+    }
   } catch (err) {
-    alert('❌ خطأ في الاتصال بالسيرفر.');
+    alert('❌ خطأ في الاتصال بالخادم.');
   } finally {
     saveBtn.disabled = false;
     saveBtn.textContent = '💾 حفظ في MongoDB';
