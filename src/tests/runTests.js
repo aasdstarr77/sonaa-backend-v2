@@ -129,7 +129,7 @@ async function run() {
       assert.ok(!reportOnly.includes("script-src 'self' 'unsafe-inline'"));
       const report = await request(app).post('/api/csp-report')
         .set('Content-Type', 'application/csp-report')
-        .send({ 'csp-report': { 'violated-directive': 'script-src-elem', 'document-uri': 'https://sonaa-backend-v2.vercel.app/client.html' } });
+        .send(JSON.stringify({ 'csp-report': { 'violated-directive': 'script-src-elem', 'document-uri': 'https://sonaa-backend-v2.vercel.app/client.html' } }));
       assert.equal(report.status, 204);
     });
 
@@ -589,15 +589,21 @@ async function run() {
 
   console.log('\nIntegration/security tests: ' + passed + ' passed, ' + failures.length + ' failed.');
   if (failures.length) {
-    process.exitCode = 1;
     for (const failure of failures) {
       console.error('\nFAILED: ' + failure.name);
       console.error(failure.error?.stack || failure.error);
     }
   }
+
+  // All tests and MongoDB cleanup have completed. Do not let unrelated
+  // background handles keep the CI process alive.
+  const exitCode = failures.length ? 1 : 0;
+  process.exitCode = exitCode;
+  await new Promise(resolve => process.stdout.write('', resolve));
+  process.exit(exitCode);
 }
 
 run().catch(error => {
   console.error('Test runner failed before completing:', error);
-  process.exitCode = 1;
+  process.stdout.write('', () => process.exit(1));
 });
