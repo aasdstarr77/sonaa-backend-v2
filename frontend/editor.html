@@ -3,69 +3,81 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>محرر صُنّاع الشامل الاحترافي</title>
+<title>محرر صُنَّاع الاحترافي المعتمد</title>
+<!-- Tailwind CSS للتحكم في اللوحة -->
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 <style>
   * { box-sizing: border-box; }
-  body { margin: 0; background: #0f172a; color: #f8fafc; font-family: Cairo, Tajawal, sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  body { margin: 0; background: #07090e; color: #f8fafc; font-family: Cairo, Tajawal, sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
   
-  header { background: #1e293b; border-bottom: 1px solid #334155; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
-  h1 { font-size: 16px; margin: 0; color: #38bdf8; display: flex; align-items: center; gap: 6px; }
+  /* هيدر صغير ورفيع جداً عشان يوفر مساحة الشاشة للمعاينة */
+  header { background: #0f172a; border-bottom: 1px solid #1e293b; padding: 5px 10px; display: flex; justify-content: space-between; align-items: center; min-height: 38px; }
+  h1 { font-size: 12px; margin: 0; color: #38bdf8; font-weight: bold; }
   
-  main { flex: 1; display: grid; grid-template-columns: 340px 1fr; overflow: hidden; height: calc(100vh - 55px); }
+  /* هيكل الشاشة الرئيسي */
+  main { flex: 1; display: grid; grid-template-columns: 280px 1fr; overflow: hidden; height: calc(100vh - 38px); }
   
-  aside { background: #1e293b; border-left: 1px solid #334155; display: flex; flex-direction: column; overflow-y: auto; padding: 12px; gap: 10px; }
-  .panel-section { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 10px; }
-  .panel-section h3 { margin: 0 0 8px 0; font-size: 12px; color: #94a3b8; border-bottom: 1px solid #334155; padding-bottom: 4px; }
+  /* لوحة التحكم الجانبية ذات السحب المستقل */
+  aside { background: #0f172a; border-left: 1px solid #1e293b; display: flex; flex-direction: column; overflow-y: auto; padding: 6px; gap: 6px; max-height: 100%; scrollbar-width: thin; }
+  aside::-webkit-scrollbar { width: 4px; }
+  aside::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+
+  .panel-section { background: #111827; border: 1px solid #1f2937; border-radius: 4px; padding: 5px; }
+  .panel-section h3 { margin: 0 0 4px 0; font-size: 10px; color: #94a3b8; border-bottom: 1px solid #1f2937; padding-bottom: 2px; }
   
-  label { display: block; font-size: 11px; color: #cbd5e1; margin: 6px 0 3px; font-weight: bold; }
-  input, select, button { width: 100%; padding: 7px; border-radius: 6px; border: 1px solid #475569; background: #334155; color: #fff; font-family: inherit; font-size: 11px; }
-  input[type=color] { height: 32px; padding: 2px; cursor: pointer; }
+  label { display: block; font-size: 9px; color: #cbd5e1; margin: 3px 0 1px; font-weight: bold; }
+  input, select, button { width: 100%; padding: 4px 6px; border-radius: 3px; border: 1px solid #334155; background: #1e293b; color: #fff; font-family: inherit; font-size: 10px; }
+  input[type=color] { height: 22px; padding: 0; cursor: pointer; }
   
-  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
   
-  .preview-container { background: #334155; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px; overflow: hidden; position: relative; }
-  .device-bar { background: #0f172a; padding: 6px 12px; border-radius: 6px 6px 0 0; display: flex; justify-content: space-between; width: 100%; max-width: 100%; align-items: center; border: 1px solid #334155; border-bottom: 0; }
-  .iframe-wrapper { width: 100%; height: 100%; transition: all 0.3s ease; background: #fff; border-radius: 0 0 6px 6px; overflow: hidden; border: 1px solid #334155; }
+  /* منطقة المعاينة الواسعة والمطابقة للواقع */
+  .preview-container { background: #1e293b; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4px; overflow: hidden; position: relative; height: 100%; }
+  .device-bar { background: #0f172a; padding: 2px 8px; border-radius: 4px 4px 0 0; display: flex; justify-content: space-between; width: 100%; align-items: center; border: 1px solid #1e293b; border-bottom: 0; min-height: 24px; }
+  
+  /* حاوية المعاينة (تتغير ديناميكياً بين الكمبيوتر والموبايل الحقيقي) */
+  .iframe-wrapper { width: 100%; flex: 1; background: #fff; border-radius: 0 0 4px 4px; overflow: hidden; border: 1px solid #1e293b; transition: width 0.3s ease; }
   iframe { width: 100%; height: 100%; border: 0; background: white; }
   
-  .btn-success { background: #16a34a; color: white; border: 0; font-weight: bold; cursor: pointer; padding: 8px 15px; border-radius: 6px; font-size: 12px; }
+  .btn-success { background: #16a34a; color: white; border: 0; font-weight: bold; cursor: pointer; padding: 3px 10px; border-radius: 3px; font-size: 10px; width: auto; }
   .btn-success:hover { background: #15803d; }
-  .btn-mode { width: auto; padding: 4px 10px; background: #1e293b; border: 1px solid #475569; cursor: pointer; font-size: 11px; color: #cbd5e1; border-radius: 4px; }
+  .btn-mode { width: auto; padding: 2px 6px; background: #1e293b; border: 1px solid #334155; cursor: pointer; font-size: 9px; color: #cbd5e1; border-radius: 2px; }
   .btn-mode.active { background: #0284c7; border-color: #38bdf8; color: #fff; }
   
-  .selected-badge { background: #0284c7; color: #fff; padding: 6px; border-radius: 6px; font-weight: bold; font-size: 11px; text-align: center; }
+  .selected-badge { background: #0d9488; color: #fff; padding: 3px; border-radius: 3px; font-weight: bold; font-size: 9px; text-align: center; }
 
   @media(max-width: 800px) {
-    main { grid-template-columns: 1fr; height: auto; overflow: auto; }
-    .preview-container { height: 350px; }
+    main { grid-template-columns: 1fr; overflow: auto; }
+    aside { max-height: 200px; border-left: 0; border-bottom: 1px solid #1e293b; }
+    .preview-container { height: calc(100vh - 240px); }
   }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>🎨 محرر صُنّاع الشامل</h1>
-  <button id="saveBtn" class="btn-success">💾 حفظ ونشر في MongoDB</button>
+  <h1>🎨 محرر صُنَّاع المعتمد</h1>
+  <button id="saveBtn" class="btn-success">💾 حفظ في MongoDB</button>
 </header>
 
 <main>
+  <!-- لوحة التحكم الجانبية -->
   <aside>
-    <!-- اختيار الصفحات والأقسام الأصلية التفصيلية -->
     <div class="panel-section">
-      <h3>📁 اختيار الصفحة والاقسام الفرعية</h3>
+      <h3>📁 الصفحة والقسم الفرعي</h3>
       <div class="row">
         <div>
-          <label>الصفحة الرئيسية</label>
+          <label>الصفحة</label>
           <select id="pageSelect">
             <option value="client">صفحة العميل</option>
             <option value="fanni">صفحة الفني</option>
             <option value="admin">لوحة الإدارة</option>
-            <option value="password">الحساب وكلمة المرور</option>
+            <option value="password">كلمة المرور</option>
             <option value="support">الدعم</option>
           </select>
         </div>
         <div>
-          <label>القسم الفرعي</label>
+          <label>القسم</label>
           <select id="subPageSelect">
             <option value="">اختر القسم</option>
             <optgroup label="العميل">
@@ -91,26 +103,26 @@
       </div>
     </div>
 
-    <div id="selectionNotice" class="selected-badge" style="background: #334155; color: #94a3b8;">
+    <div id="selectionNotice" class="selected-badge">
       اضغط على أي عنصر في المعاينة لتعديله
     </div>
 
-    <!-- لوحة التحكم بالخصائص -->
-    <div id="editorControls" style="display: none; flex-direction: column; gap: 10px;">
+    <!-- لوحة الخصائص الآمنة (بدون كسر تراكيب الـ Flex والـ Grid) -->
+    <div id="editorControls" style="display: none; flex-direction: column; gap: 5px;">
       
       <div class="panel-section">
-        <h3>🔤 النص والكتابة</h3>
-        <label>محتوى النص</label>
+        <h3>🔤 النص والخطوط</h3>
+        <label>المحتوى</label>
         <input type="text" id="ctrlText">
         <div class="row">
           <div>
             <label>حجم الخط (PX)</label>
-            <input type="number" id="ctrlFontSize" min="8" max="100" value="16">
+            <input type="number" id="ctrlFontSize" min="8" max="70" value="16">
           </div>
           <div>
             <label>وزن الخط</label>
             <select id="ctrlFontWeight">
-              <option value="">عادي</option>
+              <option value="400">عادي</option>
               <option value="700">عريض (Bold)</option>
               <option value="900">ثقيل جداً</option>
             </select>
@@ -121,35 +133,31 @@
       </div>
 
       <div class="panel-section">
-        <h3>📐 الحجم والأيقونات والتدوير</h3>
+        <h3>📏 المسافات والهوامش (Padding & Margin)</h3>
         <div class="row">
           <div>
-            <label>عرض العنصر (PX)</label>
-            <input type="number" id="ctrlWidth" placeholder="تلقائي">
+            <label>الهامش الداخلي (Padding)</label>
+            <input type="number" id="ctrlPadding" min="0" max="50" value="0">
           </div>
           <div>
-            <label>استدارة الحواف</label>
-            <input type="number" id="ctrlRadius" min="0" max="50" value="8">
+            <label>الهامش الخارجي (Margin)</label>
+            <input type="number" id="ctrlMargin" min="0" max="50" value="0">
           </div>
         </div>
       </div>
 
       <div class="panel-section">
-        <h3>↕️ الموضع والتحريك (رفع/نزول الهيدر)</h3>
+        <h3>📐 الحجم والخلفية</h3>
         <div class="row">
           <div>
-            <label>إزاحة رأسية Y</label>
-            <input type="number" id="ctrlTranslateY" value="0">
+            <label>عرض العنصر (Width)</label>
+            <input type="text" id="ctrlWidth" placeholder="مثال: 100% أو 200px">
           </div>
           <div>
-            <label>إزاحة أفقية X</label>
-            <input type="number" id="ctrlTranslateX" value="0">
+            <label>استدارة الحواف (Radius)</label>
+            <input type="number" id="ctrlRadius" min="0" max="40" value="4">
           </div>
         </div>
-      </div>
-
-      <div class="panel-section">
-        <h3>🎨 خلفية العنصر</h3>
         <label>لون الخلفية</label>
         <input type="color" id="ctrlBgColor" value="#ffffff">
       </div>
@@ -157,15 +165,16 @@
     </div>
   </aside>
 
+  <!-- مساحة المعاينة -->
   <div class="preview-container">
     <div class="device-bar">
-      <span id="previewTitle" style="font-size: 11px; font-weight: bold; color: #38bdf8;">صفحة العميل</span>
-      <div style="display: flex; gap: 4px;">
+      <span id="previewTitle" style="font-size: 9px; font-weight: bold; color: #38bdf8;">صفحة العميل</span>
+      <div style="display: flex; gap: 3px;">
         <button class="btn-mode active" onclick="setDevice('desktop', this)">💻 كمبيوتر</button>
-        <button class="btn-mode" onclick="setDevice('mobile', this)">📱 موبايل</button>
+        <button class="btn-mode" onclick="setDevice('mobile', this)">📱 موبايل حقيقي</button>
       </div>
     </div>
-    <div id="wrapper" class="iframe-wrapper">
+    <div id="wrapper" class="iframe-wrapper" style="width: 100%;">
       <iframe id="previewFrame"></iframe>
     </div>
   </div>
@@ -191,29 +200,26 @@ const pagesMap = {
   support: 'support.html'
 };
 
+// محاكاة حقيقية للموبايل أو الكمبيوتر
 function setDevice(mode, btn) {
   document.querySelectorAll('.btn-mode').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   if (mode === 'mobile') {
-    wrapper.style.width = '375px';
-    wrapper.style.height = '100%';
+    wrapper.style.width = '375px'; // عرض إطار الموبايل القياسي الحقيقي
+    wrapper.style.margin = '0 auto';
   } else {
     wrapper.style.width = '100%';
-    wrapper.style.height = '100%';
+    wrapper.style.margin = '0';
   }
 }
 
 function loadPage(pageKey) {
   const fileName = pagesMap[pageKey] || 'client.html';
-  const url = '/frontend/' + fileName + '?preview=true&t=' + Date.now();
-  previewFrame.src = url;
+  previewFrame.src = '/frontend/' + fileName + '?preview=true&t=' + Date.now();
   document.getElementById('previewTitle').textContent = pageSelect.options[pageSelect.selectedIndex].text;
 }
 
-pageSelect.addEventListener('change', () => {
-  loadPage(pageSelect.value);
-});
-
+pageSelect.addEventListener('change', () => loadPage(pageSelect.value));
 subPageSelect.addEventListener('change', () => {
   const val = subPageSelect.value;
   if(val) {
@@ -223,50 +229,46 @@ subPageSelect.addEventListener('change', () => {
   }
 });
 
-// منع فتح الروابط داخل المعاينة وتفعيل التحديد الدقيق
+// تحديد عناصر الصفحة بدقة آمنة لا تكسر التخطيط
 previewFrame.onload = () => {
   try {
     const doc = previewFrame.contentDocument || previewFrame.contentWindow.document;
     
     const style = doc.createElement('style');
     style.textContent = `
-      * { cursor: crosshair !important; }
-      .editor-selected-box { outline: 3px solid #0d9488 !important; outline-offset: 2px !important; }
+      * { cursor: pointer !important; }
+      .editor-active-target { outline: 2px solid #16a34a !important; outline-offset: 1px !important; background-color: rgba(22, 163, 74, 0.05) !important; }
     `;
     doc.head.appendChild(style);
 
     doc.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      e.stopImmediatePropagation();
       
-      let target = e.target.closest('button, a, input, h1, h2, p, section, div, span') || e.target;
-      if (selectedElement) selectedElement.classList.remove('editor-selected-box');
+      let target = e.target.closest('button, a, input, h1, h2, p, section, div, span, img') || e.target;
+      if (selectedElement) selectedElement.classList.remove('editor-active-target');
       
       selectedElement = target;
-      selectedElement.classList.add('editor-selected-box');
-
-      selectionNotice.style.background = '#0d9488';
-      selectionNotice.style.color = '#fff';
+      selectedElement.classList.add('editor-active-target');
+      
       selectionNotice.textContent = 'تم تحديد: ' + target.tagName.toLowerCase();
       editorControls.style.display = 'flex';
 
       const computed = previewFrame.contentWindow.getComputedStyle(target);
-      document.getElementById('ctrlText').value = target.innerText || target.value || '';
+      document.getElementById('ctrlText').value = target.tagName === 'INPUT' ? target.value : (target.innerText || '');
       document.getElementById('ctrlFontSize').value = parseInt(computed.fontSize) || 16;
-      document.getElementById('ctrlFontWeight').value = computed.fontWeight || '';
       document.getElementById('ctrlRadius').value = parseInt(computed.borderRadius) || 0;
     }, true);
   } catch(err) {
-    console.log('Frame load restriction:', err);
+    console.log('Frame access error:', err);
   }
 };
 
-// التعديل اللحظي
+// التعديل الآمن المباشر (يحافظ على تناسق الـ Flex والـ Grid بدون تداخل)
 document.querySelectorAll('#editorControls input, #editorControls select').forEach(input => {
   input.addEventListener('input', () => {
     if (!selectedElement) return;
-
+    
     if (input.id === 'ctrlText') {
       if (selectedElement.tagName === 'INPUT') selectedElement.value = input.value;
       else selectedElement.innerText = input.value;
@@ -274,12 +276,9 @@ document.querySelectorAll('#editorControls input, #editorControls select').forEa
     if (input.id === 'ctrlFontSize') selectedElement.style.fontSize = input.value + 'px';
     if (input.id === 'ctrlFontWeight') selectedElement.style.fontWeight = input.value;
     if (input.id === 'ctrlRadius') selectedElement.style.borderRadius = input.value + 'px';
-    if (input.id === 'ctrlWidth') selectedElement.style.width = input.value + 'px';
-    if (input.id === 'ctrlTranslateY' || input.id === 'ctrlTranslateX') {
-      const x = document.getElementById('ctrlTranslateX').value || 0;
-      const y = document.getElementById('ctrlTranslateY').value || 0;
-      selectedElement.style.transform = `translate(${x}px, ${y}px)`;
-    }
+    if (input.id === 'ctrlWidth') selectedElement.style.width = input.value;
+    if (input.id === 'ctrlPadding') selectedElement.style.padding = input.value + 'px';
+    if (input.id === 'ctrlMargin') selectedElement.style.margin = input.value + 'px';
     if (input.id === 'ctrlColor') selectedElement.style.color = input.value;
     if (input.id === 'ctrlBgColor') selectedElement.style.backgroundColor = input.value;
   });
@@ -287,32 +286,23 @@ document.querySelectorAll('#editorControls input, #editorControls select').forEa
 
 // الحفظ المباشر في MongoDB
 saveBtn.addEventListener('click', async () => {
-  const token = localStorage.getItem('admin_token') || localStorage.getItem('token') || localStorage.getItem('admin_token_v3') || '';
-  const page = pageSelect.value;
-  
+  const token = localStorage.getItem('admin_token') || localStorage.getItem('token') || '';
   saveBtn.disabled = true;
   saveBtn.textContent = '⏳ جاري الحفظ...';
 
   try {
-    const res = await fetch('/api/admin/ui-layout/' + page, {
+    const res = await fetch('/api/admin/ui-layout/' + pageSelect.value, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + token
-      },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
       body: JSON.stringify({ layout: currentLayout })
     });
-
-    if (res.ok) {
-      alert('✅ تم الحفظ في قاعدة البيانات (MongoDB) بنجاح!');
-    } else {
-      alert('❌ فشل الحفظ، تأكد من تسجيل دخولك كأدمن.');
-    }
+    if (res.ok) alert('✅ تم الحفظ في قاعدة البيانات بنجاح!');
+    else alert('❌ فشل الحفظ، تأكد من تسجيل الدخول كأدمن.');
   } catch (err) {
-    alert('❌ خطأ في الاتصال بالباك إند.');
+    alert('❌ خطأ في الاتصال بالسيرفر.');
   } finally {
     saveBtn.disabled = false;
-    saveBtn.textContent = '💾 حفظ ونشر في MongoDB';
+    saveBtn.textContent = '💾 حفظ في MongoDB';
   }
 });
 
