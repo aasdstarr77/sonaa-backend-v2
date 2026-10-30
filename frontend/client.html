@@ -444,6 +444,7 @@ body #app header.app-header a[href="https://aasdstarr77.github.io/sonaa-download
 }
 
 
+.client-support-float{position:fixed;left:16px;bottom:calc(86px + env(safe-area-inset-bottom));z-index:80;width:50px;height:50px;border-radius:18px;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#fff,#cbd5e1);color:#0b1b3a;border:2px solid #fff;box-shadow:0 5px 0 #64748b,0 10px 24px #0b1b3a35,inset 0 2px 3px #fff}.client-support-float svg{width:24px;height:24px}
 </style>
 
 
@@ -965,7 +966,7 @@ function render(){
     </div>
   ${notificationPanel()}
   </header>
-  <button id="global-refresh" type="button" onclick="handleGlobalRefresh()" aria-label="تحديث البيانات" title="تحديث البيانات" class="global-refresh global-refresh-float ${globalRefreshInProgress?'is-refreshing':''}"><svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7v5h-5"/><path d="M4 17v-5h5"/><path d="M5.6 9A7 7 0 0 1 17 5l3 7M4 12l3 7a7 7 0 0 0 11.4-2"/></svg></button>
+  <a href="support.html?role=client" aria-label="خدمة العملاء" title="خدمة العملاء" class="client-support-float"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 13v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="12" width="4" height="7" rx="2"/><rect x="17" y="12" width="4" height="7" rx="2"/><path d="M17 19a5 5 0 0 1-5 2h-1"/></svg></a><button id="global-refresh" type="button" onclick="handleGlobalRefresh()" aria-label="تحديث البيانات" title="تحديث البيانات" class="global-refresh global-refresh-float ${globalRefreshInProgress?'is-refreshing':''}"><svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7v5h-5"/><path d="M4 17v-5h5"/><path d="M5.6 9A7 7 0 0 1 17 5l3 7M4 12l3 7a7 7 0 0 0 11.4-2"/></svg></button>
   ${renderPublicContent()}
   <main class="mx-auto w-full max-w-[640px] px-3 sm:px-4 pb-[160px] safe-bottom">
     <div class="client-section-tabs sticky top-0 z-40 mt-0 flex p-1 bg-white/95 rounded-[15px] shadow-sm border border-slate-200 gap-1 backdrop-blur-xl">
@@ -1310,7 +1311,7 @@ ${state.tracked.acceptedOfferId && String(state.tracked.acceptedOfferId)===offer
           <span class="text-[10px] font-extrabold">${t.label}</span>
           ${state.tab===t.id?'<span class="w-5 h-0.5 rounded-full bg-blue-700"></span>':''}
         </button>`).join('')}
-      <a href="support.html?role=client" aria-label="الدعم" title="الدعم" class="rounded-xl flex flex-col items-center justify-center gap-1 text-teal-700"><svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 14v-3a9 9 0 0 1 18 0v3"/><path d="M5 14h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H6a3 3 0 0 1-3-3v-2a1 1 0 0 1 1-1Zm14 0h-2a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h1a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1Z"/></svg><span class="text-[9px] font-extrabold">الدعم</span></a>
+      
       
     </div>
   </nav>`;
