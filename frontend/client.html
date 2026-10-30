@@ -1874,6 +1874,36 @@ render();
  #app .app-header .dashboard-download-btn{padding-left:2px!important;padding-right:2px!important;font-size:8px!important}
 }
 
+
+/* Raised 3D controls: preserve each button's existing palette and behavior. */
+#app .app-header a[href*="password.html?role=client&mode=account"],
+#app .app-header button[onclick="toggleNotifications()"],
+#app .app-header .client-home-main-btn{
+ box-shadow:0 3px 0 #cbd8e9,0 6px 10px #0b1b3a18,inset 0 1px 0 #fff!important;
+ transition:transform .16s,box-shadow .16s,filter .16s!important;
+}
+#app .app-header a[href*="password.html?role=client&mode=account"]{
+ box-shadow:0 3px 0 #bfdbfe,0 6px 10px #1e3a8a18,inset 0 1px 0 #fff!important;
+}
+#app .app-header button[onclick="toggleNotifications()"]{
+ box-shadow:0 3px 0 #e8cf91,0 6px 10px #92400e18,inset 0 1px 0 #fff!important;
+}
+#app .app-header .client-home-main-btn{
+ box-shadow:0 3px 0 #dbeafe,0 6px 10px #1e3a8a18,inset 0 1px 0 #fff!important;
+}
+#app .app-header a[href*="password.html?role=client&mode=account"]:active{
+ transform:translateY(3px)!important;filter:brightness(.98)!important;
+ box-shadow:0 1px 0 #bfdbfe,0 3px 6px #1e3a8a18,inset 0 1px 0 #fff!important;
+}
+#app .app-header button[onclick="toggleNotifications()"]:active{
+ transform:translateY(3px)!important;filter:brightness(.98)!important;
+ box-shadow:0 1px 0 #e8cf91,0 3px 6px #92400e18,inset 0 1px 0 #fff!important;
+}
+#app .app-header .client-home-main-btn:active{
+ transform:translateY(3px)!important;filter:brightness(.98)!important;
+ box-shadow:0 1px 0 #dbeafe,0 3px 6px #1e3a8a18,inset 0 1px 0 #fff!important;
+}
+
 </style>
 
 
