@@ -132,6 +132,7 @@
   function applySavedText(el, value) {
     if (typeof value !== 'string') return;
     if (el.matches('input,textarea')) { el.value = value; return; }
+    if (el.children.length > 0 || el.matches('html,body,main,header,nav,section,article,form')) return;
     var walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
     var nodes = [], node;
     while ((node = walker.nextNode())) {
@@ -165,8 +166,8 @@
       var mobile = window.matchMedia('(max-width: 767px)').matches;
       var ov = mobile && (item.mobile || item.mobileOverride || item.mobileOverrides) || {};
       var cfg = Object.assign({}, item, ov);
-      if (Object.prototype.hasOwnProperty.call(cfg, 'text')) applySavedText(el, cfg.text);
       var isContainer = isLayoutContainer(el);
+      if (!isContainer && Object.prototype.hasOwnProperty.call(cfg, 'text')) applySavedText(el, cfg.text);
       // A saved editor position must never pull a page/form container out of normal flow.
       if (isContainer) {
         el.classList.remove('sonaa-pos-layer');
