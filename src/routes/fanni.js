@@ -29,7 +29,8 @@ const registerSchema = Joi.object({
     .items(Joi.string().trim().min(2).max(60))
     .min(1)
     .max(30)
-    .required()
+    .required(),
+  guidelinesAccepted: Joi.boolean().valid(true).required()
 });
 
 const profileUpdateSchema = Joi.object({
@@ -119,6 +120,8 @@ router.post(
         passwordHash,
         specialties: req.body.specialties,
         areas: req.body.areas || [],
+        technicianGuidelinesAcceptedAt: new Date(),
+        technicianGuidelinesVersion: TECHNICIAN_GUIDELINES_VERSION,
         status: 'قيد المراجعة',
         role: 'fanni'
       });
