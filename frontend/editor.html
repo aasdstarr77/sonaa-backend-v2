@@ -271,7 +271,7 @@ function installBridge(){
   let drag=null;
   const findDraggable=target=>{
    if(!target||!target.closest)return null;
-   return target.closest('button,a,[role="button"],[role="tab"],[role="menuitem"],label,[onclick],[data-action],img,svg')||target;
+   return target.closest('button,a,[role="button"],[role="tab"],[role="menuitem"],label,[onclick],[data-action]')||target.closest('img,svg')||target;
   };
   view.addEventListener('pointerdown',event=>{
    if(!editMode||event.button!==0)return;
