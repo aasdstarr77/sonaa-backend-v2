@@ -146,7 +146,16 @@ router.post('/change/admin', adminSelfAuth, async (req, res, next) => {
 });
 
 // Recovery requests are anonymous, but only registered accounts may open a support conversation.
-const recoveryLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 5, standardHeaders: true, legacyHeaders: false, message: { message: 'طلبات كثيرة. حاول مرة أخرى بعد قليل.' } });
+const recoveryLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Invalid numbers and role mismatches are validation failures, not recovery attempts.
+  // Do not lock users out because they selected the wrong account type.
+  skipFailedRequests: true,
+  message: { message: 'تم تجاوز عدد طلبات الاستعادة الصحيحة. حاول مرة أخرى بعد قليل.' }
+});
 router.post('/request', recoveryLimiter, async (req, res, next) => {
   try {
     const role = clean(req.body?.role, 20);
