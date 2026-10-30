@@ -263,9 +263,52 @@ function installBridge(){
  let style=doc.getElementById('sonaa-editor-style');if(style)style.remove();style=doc.createElement('style');style.id='sonaa-editor-style';
  style.textContent='html[data-sonaa-edit-mode="true"] *{cursor:crosshair!important}html[data-sonaa-edit-mode="true"] .sonaa-editor-selected{outline:2px solid #16a34a!important;outline-offset:2px!important}';
  doc.head.appendChild(style);
- // Capture at the iframe window level so page-level capture handlers cannot
- // run before the editor intercepts the interaction.
+ // Capture drag gestures inside the preview. Offsets use the same pixel
+ // translateX/translateY fields as the existing arrow controls and saved layouts.
  const view=doc.defaultView||previewFrame.contentWindow;
+ if(!view.__sonaaEditorDragBridge){
+  view.__sonaaEditorDragBridge=true;
+  let drag=null;
+  const findDraggable=target=>{
+   if(!target||!target.closest)return null;
+   return target.closest('button,a,[role="button"],[role="tab"],[role="menuitem"],label,[onclick],[data-action],img,svg')||target;
+  };
+  view.addEventListener('pointerdown',event=>{
+   if(!editMode||event.button!==0)return;
+   const target=findDraggable(event.target);
+   if(!target||!target.closest||target.closest('script,style,link,meta,noscript'))return;
+   event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+   selectElement(target);
+   if(!selectedElement)return;
+   const data=getSelectedData();
+   drag={pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,
+    originX:Number(data.translateX)||0,originY:Number(data.translateY)||0,
+    moved:false,element:selectedElement};
+   try{target.setPointerCapture(event.pointerId)}catch(_){}
+  },true);
+  view.addEventListener('pointermove',event=>{
+   if(!editMode||!drag||event.pointerId!==drag.pointerId)return;
+   const dx=event.clientX-drag.startX,dy=event.clientY-drag.startY;
+   if(Math.abs(dx)+Math.abs(dy)<2)return;
+   drag.moved=true;
+   const x=Math.round(drag.originX+dx),y=Math.round(drag.originY+dy);
+   const data=currentLayout.elements[selectedKey];
+   if(!data||selectedElement!==drag.element)return;
+   selectedElement.style.translate=x+'px '+y+'px';
+   data.translateX=x;data.translateY=y;
+   selectionNotice.textContent='تحريك العنصر: '+x+'px أفقي، '+y+'px رأسي';
+   event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+  },true);
+  const finishDrag=event=>{
+   if(!drag||event.pointerId!==drag.pointerId)return;
+   const moved=drag.moved;drag=null;
+   if(moved)markDirty();
+   event.stopPropagation();event.stopImmediatePropagation();
+  };
+  view.addEventListener('pointerup',finishDrag,true);
+  view.addEventListener('pointercancel',finishDrag,true);
+ }
+ // Capture clicks too, so a click without dragging still selects the element.
  view.addEventListener('click',event=>{
   if(!editMode)return;
   let target=event.target;
