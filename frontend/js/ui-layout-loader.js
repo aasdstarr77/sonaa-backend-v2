@@ -30,6 +30,13 @@
   var splashStartedAt = Date.now();
   var splashReleased = false;
   var splashFallbackTimer = null;
+  var layoutCacheKey = 'sonaa-ui-layout-cache-v1:' + page;
+  function readCachedLayout() {
+    try { var raw = localStorage.getItem(layoutCacheKey); if (!raw) return null; var value = JSON.parse(raw); return value && typeof value === 'object' && value.elements && typeof value.elements === 'object' ? value : null; } catch (_) { return null; }
+  }
+  function writeCachedLayout(layout) {
+    try { if (layout && typeof layout === 'object' && layout.elements && typeof layout.elements === 'object') localStorage.setItem(layoutCacheKey, JSON.stringify(layout)); } catch (_) {}
+  }
   function getSplash() {
     return document.getElementById('clientLoadingOverlay') ||
       document.getElementById('fanniLoadingOverlay') ||
@@ -76,7 +83,7 @@
   // Start before requesting the layout to prevent a flash of unstyled content.
   function beginLayoutSplash() {
     showSplash();
-    splashFallbackTimer = window.setTimeout(hideSplash, 3000);
+    splashFallbackTimer = window.setTimeout(hideSplash, 15000);
   }
   if (!isEditorPreview) beginLayoutSplash();
 
@@ -346,24 +353,32 @@
     console.warn('[Sonaa editor] Section not found on ' + page + ':', section);
   }
   function load() {
-    // Avoid a duplicate API request and avoid applying persisted styles over the editor's live draft.
     if (isEditorPreview) return Promise.resolve();
-    // Do not flash the splash again on resize-triggered layout refreshes.
-    if (splashReleased) {
-      return fetch('/api/admin/ui-layout/' + encodeURIComponent(page), {
-        method: 'GET', credentials: 'same-origin',
-        headers: getToken() ? { Authorization: 'Bearer ' + getToken() } : {}
-      }).then(function (r) { if (!r.ok) throw new Error('layout HTTP ' + r.status); return r.json(); })
-        .then(function (data) { apply(data.layout || data.uiLayout || data); })
-        .catch(function (err) { console.warn('[Sonaa UI layout] Could not load layout for ' + page, err); });
+    // Paint the last successfully saved layout immediately, then refresh it from MongoDB.
+    // This prevents the old/default design from flashing while the API request is slow.
+    var cachedLayout = readCachedLayout();
+    if (cachedLayout) {
+      apply(cachedLayout);
+      hideSplash();
+    }
+    var token = getToken();
+    if (!token) {
+      if (!cachedLayout) hideSplash();
+      return Promise.resolve();
     }
     return fetch('/api/admin/ui-layout/' + encodeURIComponent(page), {
-      method: 'GET', credentials: 'same-origin',
-      headers: getToken() ? { Authorization: 'Bearer ' + getToken() } : {}
+      method: 'GET', credentials: 'same-origin', cache: 'no-store',
+      headers: { Authorization: 'Bearer ' + token, 'Cache-Control': 'no-cache' }
     }).then(function (r) { if (!r.ok) throw new Error('layout HTTP ' + r.status); return r.json(); })
-      .then(function (data) { apply(data.layout || data.uiLayout || data); })
-      .catch(function (err) { console.warn('[Sonaa UI layout] Could not load layout for ' + page, err); })
-      .finally(function () { hideSplash(); });
+      .then(function (data) {
+        var freshLayout = data.layout || data.uiLayout || data;
+        if (!freshLayout || typeof freshLayout !== 'object') return;
+        writeCachedLayout(freshLayout);
+        // Reapply only when the server copy differs from the instant cache.
+        if (!cachedLayout || JSON.stringify(cachedLayout) !== JSON.stringify(freshLayout)) apply(freshLayout);
+      })
+      .catch(function (err) { console.warn('[Sonaa UI layout] Could not refresh layout for ' + page, err); })
+      .finally(function () { if (!cachedLayout) hideSplash(); });
   }
   function getToken() {
     var keys = ['admin_token_v3', 'adminToken', 'token', 'authToken'];
