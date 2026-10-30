@@ -113,6 +113,28 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
 .glass-header button[onclick="logout()"]{background:linear-gradient(145deg,#dc2626,#991b1b)!important;border-color:#fca5a5!important;box-shadow:0 4px 0 #7f1d1d,0 7px 12px #02061735,inset 0 1px 0 #ffffff45!important}
 @media(max-width:380px){.glass-header>div{min-height:102px!important}.glass-header .admin-logo-frame{width:72px!important;height:72px!important}.glass-header .admin-header-title h1{font-size:12px!important;line-height:1.25!important}.glass-header .admin-header-title .admin-role{font-size:9px!important}}
 
+
+/* Compact, aligned admin header controls */
+.glass-header>div{min-height:76px!important;padding:4px 10px!important;align-items:center!important}
+.glass-header .admin-logo-frame{width:58px!important;height:58px!important;align-self:center!important;margin:0!important;border-radius:13px!important}
+.glass-header .admin-header-title{align-self:center!important;padding:0!important}
+.glass-header .admin-header-title h1{font-size:12px!important;line-height:1.3!important}
+.glass-header .admin-header-title .admin-role{font-size:9px!important;margin-top:1px!important}
+.glass-header .admin-header-actions{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:5px!important;width:auto!important;max-width:210px!important;align-self:center!important}
+.glass-header .admin-header-actions>a,.glass-header .admin-header-actions>button{height:29px!important;min-height:29px!important;width:100%!important;margin:0!important;padding:4px 6px!important;border-radius:9px!important;font-size:9px!important;line-height:1.1!important;white-space:nowrap!important}
+.glass-header .admin-header-actions>#visualEditorLink{display:flex!important;align-items:center!important;justify-content:center!important;padding:4px 5px!important;font-size:9px!important}
+.glass-header button[onclick="goBack()"]{height:29px!important;min-height:29px!important;margin:3px 0 0!important;padding:0 9px!important;border-radius:9px!important;font-size:10px!important}
+.glass-header a[href="password.html?role=admin&amp;mode=account"]{transform:none!important}
+@media(max-width:380px){
+ .glass-header>div{min-height:68px!important;padding:3px 7px!important;grid-template-columns:minmax(0,1fr) 48px minmax(0,1fr)!important;gap:3px!important}
+ .glass-header .admin-logo-frame{width:48px!important;height:48px!important}
+ .glass-header .admin-header-title h1{font-size:10px!important;line-height:1.2!important}
+ .glass-header .admin-header-title .admin-role{font-size:8px!important}
+ .glass-header .admin-header-actions{gap:4px!important;max-width:174px!important}
+ .glass-header .admin-header-actions>a,.glass-header .admin-header-actions>button{height:26px!important;min-height:26px!important;padding:3px 4px!important;font-size:8px!important}
+ .glass-header button[onclick="goBack()"]{height:26px!important;min-height:26px!important;font-size:9px!important}
+}
+
 .dropdown-menu{position:absolute;top:calc(100% + 8px);right:0;min-width:190px;background:#fff;border:1px solid #e6eefc;border-radius:16px;box-shadow:0 16px 32px #0f234b18;z-index:50;padding:6px;animation:fadeUp .18s ease}
 .dropdown-item{width:100%;text-align:right;padding:10px 12px;border-radius:10px;font-size:11px;font-weight:800;display:flex;align-items:center;gap:8px}
 .dropdown-item:hover{background:#f1f5f9}
@@ -265,7 +287,7 @@ function render(){
       <div class="admin-logo-frame h-[84px] w-[84px] justify-self-center rounded-2xl bg-[#F8FAFC] border-2 border-[#14B8A6] flex items-center justify-center shadow-lg overflow-hidden">
         <img class="sonaa-logo-svg admin-header-logo h-full w-full object-contain" src="/images/LOGO_UPLOAD_HERE/logo.png" alt="شعار صُنّاع" width="120" height="120" decoding="async">
       </div>
-      <div class="flex flex-col gap-1 shrink-0 items-stretch justify-self-end w-[104px]">
+      <div class="admin-header-actions grid grid-cols-2 gap-1 shrink-0 items-center justify-self-end w-auto max-w-[210px]">
         ${isAuth?'<a href="/frontend/editor.html" target="_blank" id="visualEditorLink" style="background:#7C3AED;color:#fff;padding:8px 14px;border-radius:8px;text-decoration:none;margin-right:10px;display:inline-block;">🎨 تحرير الواجهة</a>':''}
         
         <a href="password.html?role=admin&amp;mode=account" class="h-8 w-full rounded-lg bg-white/10 hover:bg-white/20 border border-white/15 text-[10px] font-black text-white inline-flex items-center justify-center gap-1 no-underline leading-none"><span aria-hidden="true">👤</span><span>حسابي</span></a>
