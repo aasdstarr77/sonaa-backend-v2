@@ -205,7 +205,7 @@ function selectElement(el){
  const style=previewFrame.contentWindow.getComputedStyle(el);
  $('ctrlText').value=el.matches('input,textarea')?el.value:getEditableTextNodes(el).map(n=>n.textContent).join('');
  $('ctrlFontSize').value=hasOwn(data,'fontSize')?data.fontSize:(parseInt(style.fontSize)||16);
- $('ctrlFontWeight').value=String(data.fontWeight||style.fontWeight||'400').includes('700')||Number(data.fontWeight||style.fontWeight)>=800?'900':(Number(data.fontWeight||style.fontWeight)>=600?'700':'400');
+ const selectedWeight=Number(data.fontWeight||style.fontWeight)||400;$('ctrlFontWeight').value=selectedWeight>=800?'900':(selectedWeight>=600?'700':'400');
  $('ctrlColor').value=data.color||colorToHex(style.color);
  $('ctrlBgColor').value=data.elementBg||colorToHex(style.backgroundColor);
  $('ctrlRadius').value=hasOwn(data,'radius')?data.radius:(parseInt(style.borderRadius)||0);
@@ -236,7 +236,7 @@ Object.entries(binds).forEach(([id,property])=>$(id).addEventListener('input',ev
  if(['fontSize','radius','hPercent','opacity'].includes(property)){
   if(value===''){updateElement(property,'');return;}
   const number=Number(value);if(!Number.isFinite(number))return;
-  const limits={fontSize:[10,72],radius:[0,50],hPercent:[0,100],opacity:[0,100]}[property];
+  const limits={fontSize:[10,72],radius:[0,50],hPercent:[1,100],opacity:[0,100]}[property];
   if(number<limits[0]||number>limits[1])return;value=number;
  }
  if(property==='width'&&value!==''&&!/^(\d+(?:\.\d{1,2})?)(px|%)$/.test(value.trim()))return;
