@@ -1546,7 +1546,10 @@ function sanitizeAdminUiLayout(input) {
       if (Object.keys(item).length) elements[key] = item;
     }
   }
-  return { sectionOrder, tabOrder, tabGroups, sizes, elements };
+  const version = Number.isInteger(source.version) && source.version >= 1 && source.version <= 10
+    ? source.version
+    : 3;
+  return { version, sectionOrder, tabOrder, tabGroups, sizes, elements };
 }
 const UI_LAYOUT_FIELDS = {
   admin: 'adminUiLayout',

@@ -50,6 +50,45 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
+// Stage a stricter CSP in report-only mode first. Keep the enforced policy
+// unchanged while real traffic identifies inline scripts and event handlers.
+const cspReportLimiter = rateLimit({
+  windowMs: 60 * 1000, limit: 30, standardHeaders: true, legacyHeaders: false
+});
+app.use((req, res, next) => {
+  res.setHeader('Content-Security-Policy-Report-Only', [
+    "default-src 'self'",
+    "script-src 'self' https://cdn.tailwindcss.com",
+    "script-src-attr 'none'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com data:",
+    "img-src 'self' data: https:",
+    "media-src 'self' blob: data:",
+    "connect-src 'self' https://sonaa-backend-v2.vercel.app",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'self'",
+    "report-uri /api/csp-report"
+  ].join('; '));
+  next();
+});
+
+// Receive CSP reports before the database middleware; log only the directive
+// and page path, never the full report URL or potentially sensitive data.
+app.post('/api/csp-report', cspReportLimiter,
+  express.json({ type: ['application/csp-report', 'application/reports+json', 'application/json'], limit: '32kb' }),
+  (req, res) => {
+    const body = req.body && (req.body['csp-report'] || req.body);
+    if (body && typeof body === 'object') {
+      const directive = String(body['violated-directive'] || body.effectiveDirective || '').slice(0, 120);
+      let page = '/';
+      try { page = new URL(String(body['document-uri'] || body.documentURL || '')).pathname.slice(0, 200) || '/'; } catch (_) {}
+      if (directive) console.warn('[CSP report-only]', directive, page);
+    }
+    return res.status(204).end();
+  });
+
 // Restrict browser access to explicitly configured origins. Requests without
 // an Origin header (for example native apps/server-to-server calls) remain valid.
 const configuredOrigins = String(process.env.ALLOWED_ORIGINS || '')
