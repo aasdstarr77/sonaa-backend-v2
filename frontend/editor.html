@@ -1,428 +1,319 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0A2342">
-<title>محرر صُنّاع الشامل</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>محرر صُنّاع الاحترافي - Visual Builder</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#edf2f7;color:#142b43;font-family:Cairo,Tajawal,Tahoma,Arial,sans-serif}header{background:#0a2342;color:white;padding:13px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}h1{font-size:19px;margin:0}main{display:grid;grid-template-columns:minmax(300px,390px) minmax(0,1fr);gap:12px;padding:12px;height:calc(100vh - 62px)}aside,.preview{background:#fff;border:1px solid #d5dfeb;border-radius:13px;overflow:hidden;min-height:0}.controls{height:100%;overflow:auto;padding:13px}label{display:block;font-size:12px;font-weight:700;margin:9px 0 4px}input,select{width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:8px;font:inherit;background:#fff;color:#142b43}input[type=color]{height:38px;padding:2px}input[type=checkbox]{width:auto}input[type=range]{padding:0;accent-color:#0d9488}button{border:0;border-radius:8px;padding:9px 11px;background:#0a2342;color:white;font:inherit;font-weight:700;cursor:pointer}button:disabled{opacity:.55;cursor:wait}.secondary{background:#e8eef5;color:#17344f}.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.tabs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;margin:12px 0}.tab{font-size:11px;padding:8px 2px;background:#e8eef5;color:#17344f}.tab[aria-selected=true]{background:#0a2342;color:white}.panel{display:none}.panel.active{display:block}.panel h2{font-size:14px;margin:10px 0}.check{display:flex;align-items:center;gap:8px;margin:9px 0}.check label{margin:0}.picked{outline:3px solid #ff9f1c!important;outline-offset:2px!important}.elementName{background:#f1f5f9;padding:9px;border-radius:8px;font-size:13px;font-weight:bold}.actions{position:sticky;bottom:0;background:white;border-top:1px solid #e2e8f0;padding:10px 0 0;margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:7px}.apply{background:#0d9488}.save{background:linear-gradient(135deg,#2876ed,#1749bc);box-shadow:0 3px 0 #153e8a}.status{white-space:pre-wrap;font-size:12px;line-height:1.7;color:#52677d;margin-top:9px}.preview{display:flex;flex-direction:column}.bar{padding:10px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;gap:8px}.frame{flex:1;min-height:0;background:#dce5ee}iframe{width:100%;height:100%;display:block;border:0;background:white}.hint{font-size:11px;color:#64748b;line-height:1.6;margin-top:8px}@media(max-width:800px){main{height:auto;min-height:calc(100vh - 62px);grid-template-columns:1fr}.preview{height:42vh;min-height:270px;order:-1}.controls{height:auto;overflow:visible}.tabs{position:sticky;top:0;background:#fff;z-index:3}}@media(max-width:420px){.tabs{grid-template-columns:repeat(3,1fr)}}
-</style></head>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0f172a; color: #f8fafc; font-family: Cairo, Tajawal, sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  
+  /* Header */
+  header { background: #1e293b; border-bottom: 1px solid #334155; padding: 10px 20px; display: flex; justify-between: space-between; align-items: center; gap: 15px; }
+  h1 { font-size: 18px; margin: 0; color: #38bdf8; display: flex; align-items: center; gap: 8px; }
+  
+  /* Layout */
+  main { flex: 1; display: grid; grid-template-columns: 360px 1fr; overflow: hidden; }
+  
+  /* Sidebar / Controls */
+  aside { background: #1e293b; border-left: 1px solid #334155; display: flex; flex-direction: column; overflow-y: auto; padding: 15px; gap: 15px; }
+  .panel-section { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 12px; }
+  .panel-section h3 { margin: 0 0 10px 0; font-size: 13px; color: #94a3b8; border-bottom: 1px solid #334155; padding-bottom: 5px; }
+  
+  label { display: block; font-size: 11px; color: #cbd5e1; margin: 8px 0 4px; font-weight: bold; }
+  input, select, button { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #475569; background: #334155; color: #fff; font-family: inherit; font-size: 12px; }
+  input[type=range] { padding: 0; accent-color: #38bdf8; }
+  input[type=color] { height: 35px; padding: 2px; cursor: pointer; }
+  
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  
+  /* Canvas / Preview */
+  .preview-container { background: #475569; display: flex; flex-direction: column; items-center; justify-content: center; padding: 15px; overflow: hidden; position: relative; }
+  .device-bar { background: #0f172a; padding: 8px 15px; border-radius: 8px 8px 0 0; display: flex; gap: 10px; width: 100%; max-width: 100%; justify-content: space-between; align-items: center; border: 1px solid #334155; border-bottom: 0; }
+  .iframe-wrapper { width: 100%; height: 100%; transition: all 0.3s ease; background: #fff; border-radius: 0 0 8px 8px; overflow: hidden; border: 1px solid #334155; }
+  iframe { width: 100%; height: 100%; border: 0; }
+  
+  /* Buttons */
+  .btn-primary { background: #0284c7; color: white; border: 0; font-weight: bold; cursor: pointer; padding: 10px; border-radius: 6px; }
+  .btn-primary:hover { background: #0369a1; }
+  .btn-success { background: #16a34a; color: white; border: 0; font-weight: bold; cursor: pointer; padding: 10px; border-radius: 6px; }
+  .btn-success:hover { background: #15803d; }
+  .btn-mode { width: auto; padding: 5px 12px; background: #334155; border: 1px solid #475569; cursor: pointer; }
+  .btn-mode.active { background: #0284c7; border-color: #38bdf8; }
+  
+  .selected-badge { background: #38bdf8; color: #0f172a; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; margin-bottom: 10px; display: block; text-align: center; }
+</style>
+</head>
 <body>
+
+<header>
+  <h1>🎨 محرر صُنّاع الذكي (تحكم كامل بدون اللجوء لـ Vercel)</h1>
+  <div style="display: flex; gap: 10px; width: auto;">
+    <button id="saveBtn" class="btn-success" style="width: auto; padding: 8px 20px;">💾 حفظ ونشر في MongoDB</button>
+  </div>
+</header>
+
+<main>
+  <!-- لوحة التحكم الجانبية -->
+  <aside>
+    <div class="panel-section">
+      <h3>📄 اختيار الصفحة والقسم</h3>
+      <label>الصفحة الرئيسية</label>
+      <select id="pageSelect">
+        <option value="client">صفحة العميل (client.html)</option>
+        <option value="fanni">صفحة الفني (fanni.html)</option>
+        <option value="admin">لوحة الإدارة (admin.html)</option>
+        <option value="password">كلمة المرور (password.html)</option>
+        <option value="support">الدعم (support.html)</option>
+      </select>
+    </div>
+
+    <div id="selectionNotice" class="selected-badge" style="background: #475569; color: #94a3b8;">
+      اضغط على أي عنصر في المعاينة لتعديله
+    </div>
+
+    <!-- أدوات التعديل الفردية -->
+    <div id="editorControls" style="display: none; flex-direction: column; gap: 12px;">
+      
+      <!-- النصوص والخطوط -->
+      <div class="panel-section">
+        <h3>🔤 النص والخطوط</h3>
+        <label>محتوى النص / الكتابة</label>
+        <input type="text" id="ctrlText">
+        
+        <div class="row">
+          <div>
+            <label>حجم الخط (PX)</label>
+            <input type="number" id="ctrlFontSize" min="8" max="100" value="16">
+          </div>
+          <div>
+            <label>وزن الخط</label>
+            <select id="ctrlFontWeight">
+              <option value="">افتراضي</option>
+              <option value="300">رفيع (Light)</option>
+              <option value="400">عادي (Normal)</option>
+              <option value="700">عريض (Bold)</option>
+              <option value="900">ثقيل جداً (Black)</option>
+            </select>
+          </div>
+        </div>
+        
+        <label>لون النص</label>
+        <input type="color" id="ctrlColor" value="#ffffff">
+      </div>
+
+      <!-- الأيقونات والأحجام -->
+      <div class="panel-section">
+        <h3>📐 الحجم والأيقونات</h3>
+        <div class="row">
+          <div>
+            <label>حجم الأيقونة/العنصر (PX)</label>
+            <input type="number" id="ctrlIconSize" min="10" max="200" placeholder="مثال: 24">
+          </div>
+          <div>
+            <label>استدارة الحواف (Radius)</label>
+            <input type="number" id="ctrlRadius" min="0" max="100" value="0">
+          </div>
+        </div>
+      </div>
+
+      <!-- الموضع والمسافات (الهيدر والأزرار) -->
+      <div class="panel-section">
+        <h3>↕️ رفع/نزل العنصر والمساحات (Margin & Padding)</h3>
+        <div class="row">
+          <div>
+            <label>إزاحة رأسية Y (PX)</label>
+            <input type="number" id="ctrlTranslateY" value="0">
+          </div>
+          <div>
+            <label>إزاحة أفقية X (PX)</label>
+            <input type="number" id="ctrlTranslateX" value="0">
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>المساحة الداخلية (Padding)</label>
+            <input type="number" id="ctrlPadding" min="0" max="100" value="0">
+          </div>
+          <div>
+            <label>الترتيب (z-index)</label>
+            <input type="number" id="ctrlZIndex" value="1">
+          </div>
+        </div>
+      </div>
+
+      <!-- الألوان والخلفية -->
+      <div class="panel-section">
+        <h3>🎨 الخلفيات والألوان</h3>
+        <label>لون الخلفية</label>
+        <input type="color" id="ctrlBgColor" value="#000000">
+      </div>
+
+    </div>
+  </aside>
+
+  <!-- منطقة المعاينة (Canvas) -->
+  <div class="preview-container">
+    <div class="device-bar">
+      <span id="targetName" style="font-size: 12px; font-weight: bold; color: #38bdf8;">معاينة الشاشة</span>
+      <div style="display: flex; gap: 5px;">
+        <button class="btn-mode active" onclick="setDevice('desktop')">💻 كمبيوتر</button>
+        <button class="btn-mode" onclick="setDevice('mobile')">📱 تليفون</button>
+      </div>
+    </div>
+    <div id="wrapper" class="iframe-wrapper">
+      <iframe id="previewFrame"></iframe>
+    </div>
+  </div>
+</main>
+
 <script>
-(function checkAdmin() {
-  const possibleKeys = ['admin_token', 'token', 'auth_token', 'jwt', 'adminToken', 'authToken', 'sonaa_token', 'admin_jwt'];
-  let token = null;
-  let foundKey = null;
+const pageSelect = document.getElementById('pageSelect');
+const previewFrame = document.getElementById('previewFrame');
+const wrapper = document.getElementById('wrapper');
+const editorControls = document.getElementById('editorControls');
+const selectionNotice = document.getElementById('selectionNotice');
+const saveBtn = document.getElementById('saveBtn');
 
-  for (const key of possibleKeys) {
-    const val = localStorage.getItem(key);
-    if (val && val.length > 20) {
-      token = val;
-      foundKey = key;
-      break;
-    }
-  }
+let selectedElement = null;
+let currentLayout = { elements: {} };
 
-  console.log('Admin check, key:', foundKey, 'exists:', !!token);
+// 1. تغيير الشاشة (كمبيوتر / موبايل)
+function setDevice(mode) {
+  document.querySelectorAll('.btn-mode').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  if (mode === 'mobile') {
+    wrapper.style.width = '375px';
+    wrapper.style.height = '667px';
+  } else {
+    wrapper.style.width = '100%';
+    wrapper.style.height = '100%';
+  }
+}
 
-  if (!token) {
-    const goLogin = confirm('يجب تسجيل الدخول كأدمن أولاً. هل تريد الذهاب لصفحة تسجيل دخول الأدمن؟');
-    if (goLogin) {
-      window.location.href = '/frontend/admin.html';
-    }
-    return;
-  }
+// 2. تحميل الصفحة داخل الـ Iframe ومنع الضغط التفاعلي
+function loadPage(pageKey) {
+  const url = '/frontend/' + pageKey + '.html?preview=true&t=' + Date.now();
+  previewFrame.src = url;
+}
 
-  fetch('/api/admin/me', {
-    headers: { Authorization: 'Bearer ' + token }
-  }).then(r => {
-    if (!r.ok) console.warn('Admin verification failed, allowing anyway, status:', r.status);
-    else console.log('Admin verified');
-  }).catch(e => console.warn('Could not verify admin, allowing anyway:', e.message));
-})();
-</script><div style="background:#1f2937;color:white;text-align:center;padding:8px">محرر الواجهة الموحد · <a href="/frontend/admin.html" style="color:#93c5fd">العودة للإدارة</a></div>
-<header><div><h1>🎨 محرر صُنّاع الشامل</h1><small>اختار الصفحة ثم اضغط على أي عنصر في المعاينة لتعديله</small></div><button id="reload" class="secondary" type="button">إعادة تحميل المعاينة</button></header>
-<main><aside><div class="controls">
-<div class="row"><div><label for="page">الصفحة</label><select id="page"><option value="client">صفحة العميل</option><option value="fanni">صفحة الفني</option><option value="admin">لوحة الإدارة</option><option value="password">الحساب وكلمة المرور</option><option value="support">الدعم</option></select></div><div><label for="subPage">القسم</label><select id="subPage"><option value="">اختر القسم</option><optgroup label="العميل"><option value="client:login">تسجيل الدخول</option><option value="client:register">تسجيل جديد</option><option value="client:new-order">طلب جديد</option><option value="client:my-orders">طلباتي</option><option value="client:details">تفاصيل الطلب</option><option value="client:complaint-form">شكوى</option><option value="client:track-complaint">تتبع شكوى</option><option value="client:support">الدعم</option><option value="client:profile">حسابي</option></optgroup><optgroup label="الفني"><option value="fanni:login">تسجيل الدخول</option><option value="fanni:register">تسجيل جديد</option><option value="fanni:available">الطلبات المتاحة</option><option value="fanni:my-orders">طلباتي</option><option value="fanni:wallet">المحفظة</option><option value="fanni:profile">حسابي</option></optgroup><optgroup label="الإدارة"><option value="admin:dashboard">الرئيسية</option><option value="admin:orders">الطلبات</option><option value="admin:technicians">الفنيون</option><option value="admin:clients">العملاء</option><option value="admin:support">الدعم</option><option value="admin:password-recovery">استعادة كلمة المرور</option><option value="admin:settings">الإعدادات</option><option value="admin:notifications">الإشعارات</option></optgroup><optgroup label="أخرى"><option value="password:profile">بيانات الحساب</option><option value="password:change-password">تغيير كلمة المرور</option><option value="support:my-cases">طلبات الدعم</option><option value="support:new-case">طلب دعم جديد</option></optgroup></select></div></div>
-<label>العنصر المحدد</label><div id="elementName" class="elementName">اضغط عنصرًا في المعاينة</div>
-<div class="tabs"><button class="tab" data-tab="text" aria-selected="true" type="button">النص</button><button class="tab" data-tab="button" aria-selected="false" type="button">الأزرار</button><button class="tab" data-tab="colors" aria-selected="false" type="button">الألوان</button><button class="tab" data-tab="position" aria-selected="false" type="button">الموضع</button><button class="tab" data-tab="effects" aria-selected="false" type="button">التأثيرات</button></div>
-<section class="panel active" data-panel="text"><h2>النص والكتابة</h2><label for="textValue">النص المكتوب</label><input id="textValue" maxlength="200"><label for="fontFamily">نوع الخط</label><select id="fontFamily"><option value="">الأصلي</option><option>Cairo</option><option>Tajawal</option><option>Amiri</option><option>Almarai</option><option>IBM Plex Sans Arabic</option><option>Arial</option><option>Tahoma</option></select><label for="fontSize">حجم الخط: <span id="fontSizeLabel">16px</span></label><input id="fontSize" type="range" min="10" max="48" value="16"><div class="row"><div><label for="fontWeight">وزن الخط</label><select id="fontWeight"><option value="">الأصلي</option><option value="400">عادي</option><option value="700">عريض</option><option value="900">عريض جدًا</option></select></div><div><label for="textAlign">المحاذاة</label><select id="textAlign"><option value="">الأصلية</option><option value="right">يمين</option><option value="center">وسط</option><option value="left">يسار</option></select></div><div><label for="color">لون النص</label><input id="color" type="color" value="#142b43"></div><div><label for="hoverTextColor">لون النص عند المرور</label><input id="hoverTextColor" type="color" value="#0d9488"></div></div></section>
-<section class="panel" data-panel="button"><h2>الأزرار</h2><div class="row"><div><label for="buttonBg">لون الخلفية</label><input id="buttonBg" type="color" value="#0d9488"></div><div><label for="buttonBgAlpha">شفافية الخلفية %</label><input id="buttonBgAlpha" type="range" min="0" max="100" value="100"></div><div><label for="buttonTextColor">لون نص الزر</label><input id="buttonTextColor" type="color" value="#ffffff"></div><div><label for="buttonHover">لون الخلفية عند المرور</label><input id="buttonHover" type="color" value="#0f766e"></div></div><label for="buttonSize">حجم الزر</label><select id="buttonSize"><option value="">بدون تغيير</option><option value="small">صغير</option><option value="medium">متوسط</option><option value="large">كبير</option></select><div class="row"><div><label for="buttonWidth">العرض %</label><input id="buttonWidth" type="range" min="20" max="100" value="100"></div><div><label for="buttonHeight">الارتفاع %</label><input id="buttonHeight" type="range" min="50" max="180" value="100"></div></div><label for="radius">استدارة الحواف: <span id="radiusLabel">10px</span></label><input id="radius" type="range" min="0" max="50" value="10"><div class="check"><input id="shadowEnabled" type="checkbox" checked><label for="shadowEnabled">تشغيل الظل</label></div><label for="shadowColor">لون الظل</label><input id="shadowColor" type="color" value="#0a2342"><label for="buttonIcon">أيقونة الزر</label><select id="buttonIcon"><option value="">بدون تغيير</option><option value="🔧">🔧 صيانة</option><option value="➕">➕ إضافة</option><option value="✓">✓ تأكيد</option><option value="←">← رجوع</option><option value="☎️">☎️ اتصال</option><option value="💬">💬 محادثة</option><option value="🔔">🔔 إشعارات</option><option value="💾">💾 حفظ</option></select></section>
-<section class="panel" data-panel="colors"><h2>الألوان والخلفيات</h2><div class="row"><div><label for="elementBg">خلفية العنصر</label><input id="elementBg" type="color" value="#ffffff"></div><div><label for="sectionBg">خلفية القسم المحيط</label><input id="sectionBg" type="color" value="#ffffff"></div><div><label for="gradientStart">بداية التدرج</label><input id="gradientStart" type="color" value="#0d9488"></div><div><label for="gradientEnd">نهاية التدرج</label><input id="gradientEnd" type="color" value="#2563eb"></div></div><label for="gradientDirection">اتجاه التدرج</label><select id="gradientDirection"><option value="135deg">مائل</option><option value="90deg">أفقي</option><option value="180deg">رأسي</option></select><label for="backgroundImage">رفع صورة خلفية (PNG/JPG/WebP)</label><input id="backgroundImage" type="file" accept="image/png,image/jpeg,image/webp"><label for="imageOpacity">شفافية صورة الخلفية %</label><input id="imageOpacity" type="range" min="0" max="100" value="100"><div class="check"><input id="useGradient" type="checkbox"><label for="useGradient">تفعيل التدرج اللوني</label></div><div class="check"><input id="useSectionBg" type="checkbox"><label for="useSectionBg">تطبيق لون الخلفية على القسم المحيط</label></div><button id="removeImage" type="button" class="secondary">إزالة الصورة</button></section>
-<section class="panel" data-panel="position"><h2>الموضع والحجم والترتيب</h2><div class="row"><div><label for="translateX">الإزاحة الأفقية X (px)</label><input id="translateX" type="number" min="-2000" max="2000" value="0"></div><div><label for="translateY">الإزاحة الرأسية Y (px)</label><input id="translateY" type="number" min="-2000" max="2000" value="0"></div><div><label for="wPercent">العرض %</label><input id="wPercent" type="number" min="0" max="100"></div><div><label for="hPercent">الارتفاع %</label><input id="hPercent" type="number" min="0" max="100"></div></div><label for="zIndex">الترتيب فوق العناصر (z-index)</label><input id="zIndex" type="number" min="0" max="999999" value="1"><label>نقطة الارتكاز</label><div class="row" style="grid-template-columns:repeat(3,minmax(0,1fr))"><button type="button" class="secondary anchor" data-anchor="top-left">↖ أعلى يسار</button><button type="button" class="secondary anchor" data-anchor="top-center">↑ أعلى وسط</button><button type="button" class="secondary anchor" data-anchor="top-right">↗ أعلى يمين</button><button type="button" class="secondary anchor" data-anchor="center-left">← وسط يسار</button><button type="button" class="secondary anchor" data-anchor="center">● الوسط</button><button type="button" class="secondary anchor" data-anchor="center-right">→ وسط يمين</button><button type="button" class="secondary anchor" data-anchor="bottom-left">↙ أسفل يسار</button><button type="button" class="secondary anchor" data-anchor="bottom-center">↓ أسفل وسط</button><button type="button" class="secondary anchor" data-anchor="bottom-right">↘ أسفل يمين</button></div><div class="check"><input id="hideDesktop" type="checkbox"><label for="hideDesktop">إخفاء في الكمبيوتر</label></div><div class="check"><input id="hideMobile" type="checkbox"><label for="hideMobile">إخفاء في الموبايل</label></div><div class="check"><input id="hidden" type="checkbox"><label for="hidden">إخفاء العنصر بالكامل</label></div></section>
-<section class="panel" data-panel="effects"><h2>التأثيرات والـ 3D</h2><div class="check"><input id="threeD" type="checkbox" checked><label for="threeD">تفعيل 3D</label></div><label for="scale">البروز والعمق: <span id="scaleLabel">1x</span></label><input id="scale" type="range" min=".5" max="1.5" step=".05" value="1"><label for="rotateY">دوران Y: <span id="rotateYLabel">0°</span></label><input id="rotateY" type="range" min="-20" max="20" value="0"><label for="entrance">حركة الظهور</label><select id="entrance"><option value="none">بدون</option><option value="zoom">تكبير</option><option value="slide">انزلاق</option></select><label for="opacity">الشفافية %: <span id="opacityLabel">100%</span></label><input id="opacity" type="range" min="0" max="100" value="100"><label for="shadowDepth">عمق الظل</label><input id="shadowDepth" type="range" min="0" max="30" value="8"></section>
-<div class="actions"><button id="apply" class="apply" type="button">👁️ تطبيق على المعاينة</button><button id="save" class="save" type="button">💾 حفظ ونشر على الموقع</button><button id="clear" class="secondary" type="button">مسح تعديل العنصر</button><button id="reloadLayout" class="secondary" type="button">إعادة تحميل التخطيط</button></div><div id="status" class="status">اختر عنصرًا من المعاينة لبدء التعديل.</div><div class="hint">التعديلات تحفظ ضمن تخطيط الصفحة المحددة. راجع المعاينة قبل الحفظ.</div>
-</div></aside><section class="preview"><div class="bar"><strong id="previewTitle">صفحة العميل</strong><small>انقر عنصرًا لتحديده</small></div><div class="frame"><iframe id="previewFrame" title="معاينة الصفحة" sandbox="allow-same-origin allow-scripts allow-forms allow-popups"></iframe></div></section></main>
-<script>
-(function(){
-'use strict';
-const $=id=>document.getElementById(id),frame=$('previewFrame'),API='/api/admin/ui-layout/';
-const pages={client:{title:'صفحة العميل',url:'/frontend/client.html'},fanni:{title:'صفحة الفني',url:'/frontend/fanni.html'},admin:{title:'لوحة الإدارة',url:'/frontend/admin.html'},password:{title:'الحساب وكلمة المرور',url:'/frontend/password.html'},support:{title:'الدعم',url:'/frontend/support.html'}};
-// أسماء الأقسام تُوجّه إلى صفحاتها الفعلية الموجودة. بعض الأقسام (مثل الشكوى والطلب الجديد)
-// هي واجهات داخل client.html وليست ملفات HTML مستقلة.
-const PAGE_MAP={
-  'client':'client.html','client.html':'client.html',
-  'client-login':'client.html','client-register':'client.html',
-  'client-dashboard':'client.html','client-orders':'client.html',
-  'my-orders':'client.html','orders':'client.html',
-  'new-order':'client.html','new-order-form':'client.html',
-  'complaint':'client.html','complaints':'client.html','شكوى':'client.html',
-  'طلب جديد':'client.html','طلباتي':'client.html','profile':'client.html','الملف الشخصي':'client.html',
-  'fanni':'fanni.html','fanni.html':'fanni.html',
-  'fanni-login':'fanni.html','fanni-dashboard':'fanni.html',
-  'fanni-orders':'fanni.html','admin':'admin.html','admin.html':'admin.html',
-  'password':'password.html','password.html':'password.html',
-  'support':'support.html','support.html':'support.html'
-};
-const PAGE_ALIAS_SECTION={
-  'client-login':'client:login','client-register':'client:register',
-  'client-dashboard':'client:login','client-orders':'client:my-orders',
-  'my-orders':'client:my-orders','orders':'client:my-orders',
-  'new-order':'client:new-order','new-order-form':'client:new-order',
-  'complaint':'client:complaint-form','complaints':'client:complaint-form','شكوى':'client:complaint-form',
-  'طلب جديد':'client:new-order','طلباتي':'client:my-orders','profile':'client:profile','الملف الشخصي':'client:profile',
-  'fanni-login':'fanni:login','fanni-dashboard':'fanni:login','fanni-orders':'fanni:my-orders'
-};
-const sections={'client:login':'login','client:register':'register','client:new-order':'new','client:my-orders':'orders','client:details':'track','client:complaint-form':'complaint','client:track-complaint':'track','client:support':'support','client:profile':'profile','fanni:login':'login','fanni:register':'register','fanni:available':'available','fanni:my-orders':'myOffers','fanni:wallet':'wallet','fanni:profile':'profile','admin:dashboard':'dashboard','admin:orders':'orders','admin:technicians':'fannis','admin:clients':'clients','admin:support':'support','admin:password-recovery':'__passwordRecovery','admin:settings':'settings','admin:notifications':'notifications','password:profile':'profile','password:change-password':'changePassword','support:my-cases':'main','support:new-case':'new-title'};
-let layouts={},selected=null,selectedId='',anchor='top-left',imageData='',selectedControlSnapshot={};
-function token(){for(const k of ['admin_token_v3','adminToken','sonaa_admin_token','token','admin_token','sonaaAdminToken','authToken','accessToken','sonaa_token'])try{const t=localStorage.getItem(k)||sessionStorage.getItem(k);if(t)return t}catch(_){}return''}
-function status(s){$('status').textContent=s}
-function safe(s){return String(s||'').replace(/[^a-zA-Z0-9_-]/g,'-').slice(0,100)}
-function layout(){return layouts[$('page').value]||(layouts[$('page').value]={sectionOrder:[],tabOrder:{},tabGroups:{},sizes:{},elements:{}})}
-function key(el){return el.dataset.editorId||stable(el)}
-function stable(el){if(el.id)return'id-'+safe(el.id);let parts=[],n=el;while(n&&n.nodeType===1&&n!==n.ownerDocument.body){let p=n.tagName.toLowerCase();if(n.classList.length)p+='.'+[...n.classList].slice(0,2).map(safe).join('.');const par=n.parentElement;if(par){const same=[...par.children].filter(x=>x.tagName===n.tagName);if(same.length>1)p+='-'+(same.indexOf(n)+1)}parts.unshift(p);n=par;if(parts.length>8)break}return'auto-'+safe(parts.join('_')).slice(0,94)}
-function displayName(el){const text=(el.getAttribute('aria-label')||el.title||el.innerText||el.textContent||'').trim().replace(/\s+/g,' ').slice(0,45);if(text)return text;return({BUTTON:'زر',A:'رابط',INPUT:'حقل إدخال',SECTION:'قسم',MAIN:'محتوى الصفحة',FORM:'نموذج',H1:'عنوان الصفحة',IMG:'صورة'})[el.tagName]||'عنصر واجهة'}
-function safeColor(v,fallback){
-  if(!v||v===''||v==='transparent'||v==='rgba(0, 0, 0, 0)')return fallback;
-  let hex=typeof rgbToHex==='function'?rgbToHex(v):v;
-  if(!hex||hex===''||!/^#([0-9a-fA-F]{6})$/.test(hex))return fallback;
-  return hex;
-}
-function setVal(id,v){
-  const el=$(id);
-  if(!el||v===undefined||v===null||typeof v==='object')return;
-  if(el.type==='color'){
-    const fallback=/^(color|textAlign)$/.test(id)?'#142b43':
-      (id==='buttonTextColor'?'#ffffff':
-      (id==='buttonBg'||id==='buttonHover'||id==='gradientStart'?'#0d9488':
-      (id==='gradientEnd'?'#2563eb':(id==='shadowColor'?'#0a2342':'#ffffff'))));
-    el.value=safeColor(v,fallback);
-    return;
-  }
-  el.value=v;
-}
-function setCheck(id,v){if($(id))$(id).checked=!!v}
-function loadControls(o){anchor=o.anchor||'top-left';imageData=o.backgroundImage||'';const map={text:'textValue'};Object.entries(map).forEach(([k,id])=>setVal(id,o[k]));['fontFamily','fontSize','fontWeight','textAlign','color','hoverTextColor','buttonBg','buttonBgAlpha','buttonTextColor','buttonHover','buttonSize','buttonWidth','buttonHeight','radius','shadowColor','buttonIcon','elementBg','sectionBg','gradientStart','gradientEnd','gradientDirection','imageOpacity','translateX','translateY','wPercent','hPercent','zIndex','scale','rotateY','entrance','opacity','shadowDepth'].forEach(k=>setVal(k,o[k]));['threeD','shadowEnabled','useGradient','useSectionBg','hideDesktop','hideMobile','hidden'].forEach(k=>setCheck(k,o[k]));setVal('translateX',o.translateX??0);setVal('translateY',o.translateY??0);setVal('fontSize',o.fontSize??16);setVal('color',o.color||'#142b43');setVal('buttonBg',o.buttonBg||'#0d9488');setVal('buttonBgAlpha',o.buttonBgAlpha??100);setVal('buttonTextColor',o.buttonTextColor||'#ffffff');setVal('buttonHover',o.buttonHover??'');setVal('elementBg',o.elementBg||'#ffffff');setVal('sectionBg',o.sectionBg||'#ffffff');setVal('gradientStart',o.gradientStart||'#0d9488');setVal('gradientEnd',o.gradientEnd||'#2563eb');setVal('buttonWidth',o.buttonWidth??100);setVal('buttonHeight',o.buttonHeight??100);setVal('radius',o.radius??10);setVal('imageOpacity',o.imageOpacity??100);setVal('scale',o.scale??1);setVal('rotateY',o.rotateY??0);setVal('opacity',o.opacity??100);setVal('shadowDepth',o.shadowDepth??8);setVal('zIndex',o.zIndex??1);setVal('entrance',o.entrance||'none');if(o.text===undefined&&selected)setVal('textValue',(selected.value!==undefined?selected.value:selected.innerText||selected.textContent||'').trim().slice(0,200));updateLabels()}
-function readControls(){const o={anchor,translateX:Number($('translateX').value)||0,translateY:Number($('translateY').value)||0,threeD:$('threeD').checked,scale:Number($('scale').value)||1,rotateY:Number($('rotateY').value)||0,opacity:Number($('opacity').value),shadowDepth:Number($('shadowDepth').value)||0,entrance:$('entrance').value,hideDesktop:$('hideDesktop').checked,hideMobile:$('hideMobile').checked,hidden:$('hidden').checked};const ids=['textValue','fontFamily','fontSize','fontWeight','textAlign','color','hoverTextColor','buttonBg','buttonBgAlpha','buttonTextColor','buttonHover','buttonSize','buttonWidth','buttonHeight','radius','shadowColor','buttonIcon','elementBg','sectionBg','gradientStart','gradientEnd','gradientDirection','imageOpacity','useGradient','useSectionBg','shadowEnabled','zIndex','wPercent','hPercent'];const names={textValue:'text'};ids.forEach(id=>{const e=$(id);if(!e)return;const name=names[id]||id;let v=e.type==='checkbox'?e.checked:(e.type==='range'||e.type==='number')?Number(e.value):e.value;if(e.type==='number'&&e.value==='')return;if(v!==''&&v!==undefined)o[name]=v});if(imageData)o.backgroundImage=imageData;return o}
-function applyItem(el,o){if(!el||!o)return;const s=el.style;if(o.text!==undefined){if(/^(INPUT|TEXTAREA)$/.test(el.tagName))el.value=o.text;else if(!el.children.length)el.textContent=o.text}if(o.fontFamily)s.fontFamily='"'+o.fontFamily+'"';if(o.fontSize)s.fontSize=o.fontSize+'px';if(o.fontWeight)s.fontWeight=o.fontWeight;if(o.textAlign)s.textAlign=o.textAlign;if(o.color)s.color=o.color;if(o.buttonBg)s.backgroundColor=alphaColor(o.buttonBg,o.buttonBgAlpha??100);if(o.elementBg)s.backgroundColor=o.elementBg;if(o.buttonTextColor&&/^(BUTTON|A)$/.test(el.tagName))s.color=o.buttonTextColor;if(o.radius!==undefined)s.borderRadius=o.radius+'px';if(o.opacity!==undefined)s.opacity=String(o.opacity/100);if(o.wPercent!==undefined){s.width=Math.max(1,Math.min(100,Number(o.wPercent)||100))+'%';s.maxWidth='100%';s.boxSizing='border-box'}else if(o.buttonWidth!==undefined&&/^(BUTTON|A)$/.test(el.tagName)){s.width=Math.max(20,Math.min(100,Number(o.buttonWidth)||100))+'%';s.maxWidth='100%';s.minWidth='80px';s.boxSizing='border-box';s.flex='0 1 auto';const p=el.parentElement;if(p&&['flex','inline-flex'].includes(getComputedStyle(p).display)){p.style.flexWrap='wrap';if(!p.style.gap)p.style.gap='8px'}}if(o.hPercent!==undefined&&!isProtectedLayoutContainer(el))s.height=o.hPercent+'%';if(!isProtectedLayoutContainer(el)&&(o.translateX!==undefined||o.translateY!==undefined)){s.position='relative';s.translate=(Number(o.translateX)||0)+'px '+(Number(o.translateY)||0)+'px';s.maxWidth='100%';}if(o.zIndex!==undefined)s.zIndex=o.zIndex;if(o.hidden||(o.hideDesktop&&innerWidth>767)||(o.hideMobile&&innerWidth<=767))s.display='none';if(o.useSectionBg&&o.sectionBg&&el.parentElement)el.parentElement.style.backgroundColor=o.sectionBg;if(o.useGradient)s.backgroundImage='linear-gradient('+(o.gradientDirection||'135deg')+','+(o.gradientStart||'#0d9488')+','+(o.gradientEnd||'#2563eb')+')';if(o.backgroundImage)s.backgroundImage='linear-gradient(rgba(0,0,0,'+(1-(o.imageOpacity??100)/100)+'),rgba(0,0,0,'+(1-(o.imageOpacity??100)/100)+')),url("'+o.backgroundImage+'")';if(o.threeD!==false){s.scale=String(o.scale||1);s.transform='perspective(800px) rotateY('+(o.rotateY||0)+'deg)';s.boxShadow=o.shadowEnabled===false?'none':'0 '+(o.shadowDepth||8)+'px '+((o.shadowDepth||8)*2)+'px '+(o.shadowColor||'#0a2342')+'66,inset 0 1px 0 #ffffff88'}else{s.scale='1';s.transform='none';if(o.shadowEnabled===false)s.boxShadow='none'}if(o.buttonSize&&/^(BUTTON|A)$/.test(el.tagName))s.padding=o.buttonSize==='small'?'6px 10px':o.buttonSize==='large'?'14px 22px':'10px 16px';if(o.buttonHeight!==undefined&&/^(BUTTON|A)$/.test(el.tagName))s.minHeight=(36*o.buttonHeight/100)+'px';if(o.width)s.width=String(o.width);if(o.buttonIcon&&/^(BUTTON|A)$/.test(el.tagName)&&el.dataset.editorIconApplied!=='1'){el.insertBefore(el.ownerDocument.createTextNode(o.buttonIcon+' '),el.firstChild);el.dataset.editorIconApplied='1'}const d=el.ownerDocument;let st=d.getElementById('sonaa-editor-styles');if(!st){st=d.createElement('style');st.id='sonaa-editor-styles';d.head.appendChild(st)}const selector='[data-editor-id="'+key(el).replace(/["\\]/g,'\\$&')+'"]';st.textContent+=selector+':hover{'+(o.hoverTextColor?'color:'+o.hoverTextColor+'!important;':'')+(o.buttonHover?'background-color:'+o.buttonHover+'!important;':'')+'}'+(o.hideMobile?'@media(max-width:767px){'+selector+'{display:none!important}}':'')+(o.hideDesktop?'@media(min-width:768px){'+selector+'{display:none!important}}':'');if(o.entrance&&o.entrance!=='none'){el.style.animation=o.entrance==='zoom'?'sonaaEditorZoom .35s ease both':'sonaaEditorSlide .35s ease both';if(!d.getElementById('sonaa-editor-animations')){const anim=d.createElement('style');anim.id='sonaa-editor-animations';anim.textContent='@keyframes sonaaEditorZoom{from{opacity:0;transform:scale(.85)}to{opacity:1}}@keyframes sonaaEditorSlide{from{opacity:0;translate:0 16px}to{opacity:1}}';d.head.appendChild(anim)}}}
-function alphaColor(hex,a){const n=parseInt(String(hex).replace('#',''),16);return'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+(Math.max(0,Math.min(100,a))/100)+')'}
-function rgbToHex(rgb){if(!rgb||rgb==='transparent'||rgb==='rgba(0, 0, 0, 0)')return '#000000';if(rgb.startsWith('#'))return rgb;const vals=rgb.match(/[\\d.]+/g);if(!vals||vals.length<3)return '#000000';return '#'+vals.slice(0,3).map(x=>Math.max(0,Math.min(255,Math.round(Number(x)))).toString(16).padStart(2,'0')).join('')}
-function selectElement(el){
-  console.log('Selected:',el);
-  if(dragHandle)dragHandle.style.display=isProtectedLayoutContainer(el)?'none':'';
-  if(selected)selected.classList.remove('sonaa-selected');
-  selected=el;selectedId=key(el);el.classList.add('sonaa-selected','picked');el.setAttribute('data-edited','true');
-  $('elementName').textContent=displayName(el)+' · '+el.tagName.toLowerCase();
-  if(typeof makeElementDraggable==='function')makeElementDraggable(el);
-  const doc=el.ownerDocument,computed=doc.defaultView.getComputedStyle(el),rect=el.getBoundingClientRect();
-  const parentWidth=Math.max(1,el.parentElement?.clientWidth||doc.body.clientWidth||rect.width||1);
-  const saved=layout().elements?.[selectedId]||{};
-  const shadow=computed.boxShadow;
-  const shadowDepthMatch=shadow.match(/(?:^|\\s)(\\d+(?:\\.\\d+)?)px\\s+(?:\\d+(?:\\.\\d+)?px\\s+)?(?:\\d+(?:\\.\\d+)?px)?/);
-  const bgParts=computed.backgroundColor.split(',');
-  const bgAlphaPart=bgParts[bgParts.length-1]?bgParts[bgParts.length-1].replace(')','').trim():'';
-  const bgAlpha=parseFloat(bgAlphaPart);
-  const current={
-    text:(/^(INPUT|TEXTAREA)$/.test(el.tagName)?el.value:(el.innerText||el.textContent||'')).trim(),
-    color:rgbToHex(computed.color),fontSize:parseInt(computed.fontSize,10)||16,
-    buttonBg:computed.backgroundColor==='rgba(0, 0, 0, 0)'?'':rgbToHex(computed.backgroundColor),
-    buttonBgAlpha:computed.backgroundColor.startsWith('rgba')?Math.round((Number.isFinite(bgAlpha)?bgAlpha:1)*100):100,
-    buttonTextColor:rgbToHex(computed.color),buttonHover:saved.buttonHover??'',hoverTextColor:saved.hoverTextColor??'',elementBg:computed.backgroundColor==='rgba(0, 0, 0, 0)'?'#ffffff':rgbToHex(computed.backgroundColor),
-    buttonWidth:Math.max(1,Math.min(100,Math.round(rect.width/parentWidth*100))),
-    buttonHeight:Math.max(1,Math.min(300,Math.round(rect.height/36*100))),
-    radius:parseInt(computed.borderRadius,10)||0,
-    threeD:saved.threeD!==undefined?saved.threeD:(computed.transform!=='none'&&computed.transform!=='matrix(1, 0, 0, 1, 0, 0)'),
-    shadowEnabled:saved.shadowEnabled!==undefined?saved.shadowEnabled:shadow!=='none',
-    shadowDepth:saved.shadowDepth!==undefined?saved.shadowDepth:(shadowDepthMatch?Number(shadowDepthMatch[1]):0),
-    opacity:Math.round((Number(computed.opacity)||1)*100),scale:saved.scale??1,rotateY:saved.rotateY??0,
-    textAlign:computed.textAlign,fontWeight:computed.fontWeight
-  };
-  el.dataset.originalStyle=el.getAttribute('style')||'';
-  loadControls({...current,...saved,text:saved.text!==undefined?saved.text:current.text,
-    color:saved.color||current.color,buttonBg:saved.buttonBg??current.buttonBg,
-    buttonTextColor:saved.buttonTextColor||current.buttonTextColor,buttonHover:saved.buttonHover??'',
-    fontSize:saved.fontSize??current.fontSize,radius:saved.radius??current.radius,
-    buttonWidth:saved.buttonWidth??current.buttonWidth,buttonHeight:saved.buttonHeight??current.buttonHeight});
-  selectedControlSnapshot={};
-  document.querySelectorAll('.controls input,.controls select,.controls textarea').forEach(input=>{
-    selectedControlSnapshot[input.id]=input.type==='checkbox'?input.checked:input.value;
-  });
-}
-let dragHandle=null,isDragging=false,dragTarget=null,dragDoc=null,startX=0,startY=0,startLeftPercent=0,startTopPercent=0,dragParent=null;
-function placeDragHandle(el){
-  if(!dragHandle||!el||!el.isConnected)return;
-  const r=el.getBoundingClientRect();
-  dragHandle.style.left=(r.left+r.width/2)+'px';
-  dragHandle.style.top=Math.max(2,r.top-30)+'px';
-}
-function isProtectedLayoutContainer(el){return !!el&&el.matches('main, .container, .main-box, .login-box, body > div, #app, form, .form-container, .card')||!!(el&&el.children&&el.children.length>5&&/container|wrapper|content|layout|login|form|card|main/i.test(String(el.className||'')+' '+String(el.id||'')))}
-function makeElementDraggable(el){
-  if(isProtectedLayoutContainer(el)){if(dragHandle)dragHandle.style.display='none';return}
-  const doc=el.ownerDocument;
-  if(!dragHandle||dragDoc!==doc){
-    if(dragHandle)dragHandle.remove();
-    dragDoc=doc;
-    dragHandle=doc.createElement('div');
-    dragHandle.className='drag-handle';
-    dragHandle.textContent='↔️ اسحب للتحريك';
-    dragHandle.style.cssText='position:fixed;top:2px;left:2px;transform:translateX(-50%);background:#7C3AED;color:#fff;padding:4px 9px;border-radius:5px;font-size:11px;font-family:Arial,sans-serif;cursor:grab;z-index:2147483647;user-select:none;touch-action:none;white-space:nowrap;box-shadow:0 2px 8px #0003;';
-    doc.body.appendChild(dragHandle);
-    dragHandle.addEventListener('mousedown',ev=>startDrag(ev,selected));
-    dragHandle.addEventListener('touchstart',ev=>{if(ev.touches[0])startDrag(ev.touches[0],selected,ev)},{passive:false});
-    doc.addEventListener('mousemove',onDrag);
-    doc.addEventListener('touchmove',ev=>{if(ev.touches[0])onDrag(ev.touches[0],ev)},{passive:false});
-    doc.addEventListener('mouseup',endDrag);
-    doc.addEventListener('touchend',endDrag);
-    doc.defaultView.addEventListener('scroll',()=>placeDragHandle(selected),true);
-    doc.defaultView.addEventListener('resize',()=>placeDragHandle(selected));
-  }
-  placeDragHandle(el);
-}
-function startDrag(e,el,originalEvent){
-  if(originalEvent){originalEvent.preventDefault();originalEvent.stopPropagation()}
-  else {e.preventDefault();e.stopPropagation()}
-  isDragging=true;dragTarget=el;
-  dragParent=el.parentElement;
-  if(!dragParent)return endDrag();
-  startX=e.clientX;startY=e.clientY;
-  const saved=layout().elements?.[selectedId]||{};
-  startLeftPercent=Number(saved.translateX)||0;
-  startTopPercent=Number(saved.translateY)||0;
-  dragHandle.style.cursor='grabbing';
-  dragDoc.body.style.userSelect='none';
-  dragDoc.body.style.cursor='grabbing';
-}
-function onDrag(e,originalEvent){
-  if(!isDragging||!dragTarget||!dragParent)return;
-  if(originalEvent)originalEvent.preventDefault();
-  const nextX=Math.round(startLeftPercent+(e.clientX-startX));
-  const nextY=Math.round(startTopPercent+(e.clientY-startY));
-  dragTarget.style.position='relative';
-  dragTarget.style.translate=nextX+'px '+nextY+'px';
-  dragTarget.style.maxWidth='100%';
-  dragTarget.style.zIndex=dragTarget.style.zIndex||'2';
-  const xInput=document.getElementById('translateX');
-  const yInput=document.getElementById('translateY');
-  if(xInput)xInput.value=nextX;
-  if(yInput)yInput.value=nextY;
-  placeDragHandle(dragTarget);
-}
-function endDrag(){
-  if(!isDragging)return;
-  isDragging=false;
-  if(dragDoc&&dragDoc.body){dragDoc.body.style.cursor='';dragDoc.body.style.userSelect=''}
-  if(dragHandle)dragHandle.style.cursor='grab';
-  dragTarget=null;dragParent=null;
-}
-function attachEditorListeners(){
-  const iframe=document.getElementById('previewFrame');
-  if(!iframe)return;
-  let doc,win;
-  try{doc=iframe.contentDocument||iframe.contentWindow.document;win=iframe.contentWindow}catch(e){console.warn('Cannot access editor iframe:',e);return}
-  if(!doc||!doc.body||!doc.head||!win)return;
-  const isEditorChrome=el=>!!el?.closest?.('.drag-handle,[data-sonaa-editor-ui="1"]');
-  const interactiveSelector='button,a,input[type="button"],input[type="submit"],input[type="reset"],[role="button"],[role="link"],[tabindex]:not([tabindex="-1"])';
-  const selectFromEvent=e=>{
-    const raw=e.target;
-    if(!raw||isDragging||isEditorChrome(raw))return;
-    let target=raw.closest?.(interactiveSelector);
-    if(!target)target=raw.closest?.('[data-editor-id]');
-    if(!target||target===doc.body||target===doc.documentElement)return;
-    // Cancel at pointer/touch start, before the browser synthesizes click.
-    // This prevents page-level click handlers from opening account panels or navigating.
-    if(e.cancelable)e.preventDefault();
-    e.stopPropagation();
-    e.stopImmediatePropagation();
-    selectElement(target);
-    if(typeof makeElementDraggable==='function')makeElementDraggable(target);
-    status('تم تحديد العنصر بدل تشغيله. غيّر حجمه أو خصائصه من المحرر دون فتح الصفحة.');
-  };
-  const stopSubmit=e=>{
-    if(e.cancelable)e.preventDefault();
-    e.stopPropagation();
-    e.stopImmediatePropagation();
-    const submitter=e.submitter;
-    if(submitter)selectElement(submitter);
-    status('تم إيقاف إرسال النموذج داخل المعاينة. حدّد الزر أو الحقل لتعديله.');
-  };
-  if(win.__sonaaEditorHandlers){
-    for(const [type,handler] of Object.entries(win.__sonaaEditorHandlers))win.removeEventListener(type,handler,true);
-  }
-  const handlers={
-    pointerdown:selectFromEvent,
-    mousedown:selectFromEvent,
-    touchstart:selectFromEvent,
-    click:selectFromEvent,
-    submit:stopSubmit
-  };
-  win.__sonaaEditorHandlers=handlers;
-  for(const [type,handler] of Object.entries(handlers))win.addEventListener(type,handler,{capture:true,passive:false});
-  // Neutralize inline handlers as a fallback; event listeners are blocked at pointer start.
-  doc.querySelectorAll('a,button,input[type="button"],input[type="submit"],input[type="reset"],[role="button"],[role="link"]').forEach(el=>{
-    el.removeAttribute('onclick');
-    el.removeAttribute('onmousedown');
-    el.removeAttribute('onmouseup');
-    el.removeAttribute('onpointerdown');
-    el.removeAttribute('ontouchstart');
-    try{el.onclick=null;el.onmousedown=null;el.onmouseup=null;el.onpointerdown=null;el.ontouchstart=null}catch(_){}
-  });
-  const all=[...doc.body.querySelectorAll('*')].filter(el=>!['SCRIPT','STYLE','LINK','META','NOSCRIPT'].includes(el.tagName));
-  all.forEach(el=>{
-    if(!el.dataset.editorId)el.dataset.editorId=stable(el);
-    const saved=layout().elements?.[key(el)];
-    if(saved)applyItem(el,saved);
-  });
-  let style=doc.getElementById('sonaa-editor-cursor-styles');
-  if(!style){style=doc.createElement('style');style.id='sonaa-editor-cursor-styles';doc.head.appendChild(style)}
-  style.textContent=`
-    [data-editor-id], [data-editor-id] *, button, a, input[type="button"], input[type="submit"],
-    input[type="reset"], [role="button"], [role="link"], [tabindex]:not([tabindex="-1"]) {
-      cursor: crosshair !important;
-      -webkit-tap-highlight-color: transparent !important;
-    }
-    [data-editor-id]:hover, button:hover, a:hover, input[type="button"]:hover,
-    input[type="submit"]:hover, [role="button"]:hover, [role="link"]:hover {
-      outline: 2px dashed #0d9488 !important;
-      outline-offset: 2px !important;
-      cursor: crosshair !important;
-    }
-    .sonaa-selected, .picked {
-      outline: 3px solid #0d9488 !important;
-      outline-offset: 3px !important;
-      cursor: move !important;
-    }
+pageSelect.addEventListener('change', () => loadPage(pageSelect.value));
+
+// 3. ربط الأحداث داخل الـ Iframe وإلغاء الـ Click الاصطناعي
+previewFrame.onload = () => {
+  const doc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+  
+  // شطب كل التفاعلات عشان ما يفتحش الصفحات لما تدوس على حاجة صغيرة
+  const style = doc.createElement('style');
+  style.textContent = `
+    * { cursor: pointer !important; }
+    .editor-selected { outline: 3px solid #38bdf8 !important; outline-offset: 2px !important; }
   `;
-  const chosen=$('subPage').value;
-  if(chosen&&chosen.split(':')[0]===$('page').value&&sections[chosen])win.postMessage({action:'openSection',section:sections[chosen]},location.origin);
-  console.log('Editor selection enabled: pointer/touch actions are intercepted before synthesized clicks');
-  status('المعاينة جاهزة. اضغط أو المس أي زر لتحديده دون تشغيله.');
-}
-function setupFrame(){attachEditorListeners()}
-async function loadLayout(){const p=$('page').value;layouts[p]={sectionOrder:[],tabOrder:{},tabGroups:{},sizes:{},elements:{}};const t=token();if(!t){status('المعاينة متاحة، لكن يلزم تسجيل الدخول للإدارة لتحميل وحفظ التخطيط.');return}try{const r=await fetch(API+encodeURIComponent(p),{headers:{Authorization:'Bearer '+t},cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.message||r.status);layouts[p]=d.layout||layouts[p]}catch(e){status('تعذر تحميل التخطيط المحفوظ: '+e.message)}}
-async function loadPage(pageKey){
-  const requested=typeof pageKey==='string'?pageKey:$('page').value;
-  const aliasSection=PAGE_ALIAS_SECTION[requested];
-  if(aliasSection)$('subPage').value=aliasSection;
-  let p=aliasSection?aliasSection.split(':')[0]:requested;
-  const mappedFile=PAGE_MAP[requested];
-  if(!pages[p]){
-    const targetFile=mappedFile||requested;
-    const found=Object.keys(pages).find(key=>pages[key].url.endsWith('/'+targetFile));
-    p=found||$('page').value;
-  }
-  if(!pages[p])p=$('page').value;
-  $('page').value=p;
-  const fileName=(PAGE_MAP[requested]&&(!aliasSection)&&requested!==p)?PAGE_MAP[requested]:pages[p].url.split('/').pop();
-  selected=null;selectedId='';
-  $('elementName').textContent='اضغط عنصرًا في المعاينة';
-  $('previewTitle').textContent=pages[p].title;
-  await loadLayout();
-  const chosen=$('subPage').value;
-  const section=chosen&&chosen.split(':')[0]===p?(sections[chosen]||''):'';
-  frame.onload=()=>{console.log('Iframe loaded:',fileName);status('تم تحميل المعاينة');setupFrame();[100,500,1500].forEach(delay=>setTimeout(attachEditorListeners,delay))};
-  frame.onerror=e=>{console.error('Iframe error:',e);status('فشل تحميل المعاينة')};
-  const url='/frontend/'+fileName+'?preview=true&section='+encodeURIComponent(section)+'&t='+Date.now()+'&page='+encodeURIComponent(requested);
-  console.log('Setting iframe src to:',url);
-  frame.src=url;
-}
-function loadPreviewWithSavedLayout(page){
-  const target=typeof page==='string'?page:$('page').value;
-  console.log('Reloading preview with saved layout:',target);
-  return loadPage(target);
-}
-function openSection(){
-  const v=$('subPage').value;
-  if(!v)return;
-  const p=v.split(':')[0];
-  if(!pages[p])return;
-  // Reload through loadPage so the selected section is applied only after its iframe has loaded.
-  loadPage(p);
-}
-function updateLabels(){$('fontSizeLabel').textContent=$('fontSize').value+'px';$('radiusLabel').textContent=$('radius').value+'px';$('scaleLabel').textContent=$('scale').value+'x';$('rotateYLabel').textContent=$('rotateY').value+'°';$('opacityLabel').textContent=$('opacity').value+'%'}
-$('page').addEventListener('change',loadPage);$('subPage').addEventListener('change',openSection);$('reload').addEventListener('click',()=>loadPreviewWithSavedLayout($('page').value));$('reloadLayout').addEventListener('click',()=>loadPreviewWithSavedLayout($('page').value));document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('[data-tab]').forEach(x=>x.setAttribute('aria-selected',String(x===b)));document.querySelectorAll('[data-panel]').forEach(x=>x.classList.toggle('active',x.dataset.panel===b.dataset.tab))}));document.querySelectorAll('[data-anchor]').forEach(b=>b.addEventListener('click',()=>{anchor=b.dataset.anchor;document.querySelectorAll('[data-anchor]').forEach(x=>x.style.outline=x===b?'2px solid #0d9488':'' )}));$('backgroundImage').addEventListener('change',ev=>{const f=ev.target.files&&ev.target.files[0];if(!f)return;if(f.size>70000){status('اختر صورة أقل من 70 كيلوبايت حتى لا يتضخم التخطيط.');ev.target.value='';return}const reader=new FileReader();reader.onload=()=>{imageData=reader.result;status('تم تحميل الصورة إلى المسودة. اضغط تطبيق ثم حفظ.')};reader.readAsDataURL(f)});$('removeImage').addEventListener('click',()=>{imageData='';$('backgroundImage').value=''});['fontSize','radius','scale','rotateY','opacity'].forEach(id=>$(id).addEventListener('input',updateLabels));$('apply').addEventListener('click',()=>{
-  if(!selected)return status('حدد عنصرًا أولًا من المعاينة.');
-  const changedIds=[];
-  document.querySelectorAll('.controls input,.controls select,.controls textarea').forEach(input=>{
-    const value=input.type==='checkbox'?input.checked:input.value;
-    if(String(value)!==String(selectedControlSnapshot[input.id]))changedIds.push(input.id);
-  });
-  if(!changedIds.length){status('لم تغيّر أي خاصية؛ لم يتم تعديل الزر أو ألوانه.');return;}
-  const values=readControls();
-  const keyMap={textValue:'text'};
-  const next={...(layout().elements[selectedId]||{})};
-  changedIds.forEach(id=>{
-    const key=keyMap[id]||id;
-    if(Object.prototype.hasOwnProperty.call(values,key))next[key]=values[key];
-  });
-  layout().elements[selectedId]=next;
-  applyItem(selected,next);
-  selectedControlSnapshot={};
-  document.querySelectorAll('.controls input,.controls select,.controls textarea').forEach(input=>{
-    selectedControlSnapshot[input.id]=input.type==='checkbox'?input.checked:input.value;
-  });
-  status('تم تطبيق '+changedIds.length+' خاصية تغيّرت فقط. اضغط حفظ ونشر لحفظها.');
-});$('clear').addEventListener('click',()=>{if(!selected)return status('حدد عنصرًا أولًا.');delete layout().elements[selectedId];selected.removeAttribute('style');selected.classList.remove('sonaa-selected');loadControls({});status('تم حذف تعديل العنصر من المسودة الحالية. لم يتم الحفظ بعد.')});async function saveLayout(){
-  console.log('Starting save...');
-  const btn=$('save');
-  btn.disabled=true;
-  try{
-    const t=token();
-    console.log('Save token found:',!!t);
-    if(!t){status('سجّل الدخول كأدمن في نفس النطاق ثم أعد المحاولة.');return}
-    const page=$('page').value;
-    const currentLayout=layout();
-    console.log('Save page:',page,'Selected element:',selected,'Selected key:',selectedId);
-    if(selected&&selectedId){
-      selected.classList.add('picked');
-      selected.setAttribute('data-edited','true');
-      const savedControls=readControls();
-      const currentWidth=selected.style&&selected.style.width?String(selected.style.width).trim():'';
-      if(currentWidth){
-        savedControls.width=currentWidth;
-        if(/^(BUTTON|A)$/.test(selected.tagName)&&/%$/.test(currentWidth)){
-          savedControls.buttonWidth=Math.min(100,Math.max(20,parseFloat(currentWidth)||100));
-        }else if(/%$/.test(currentWidth)){
-          savedControls.wPercent=Math.min(100,Math.max(0,parseFloat(currentWidth)||0));
-        }
-      }
-      currentLayout.elements[selectedId]={...(currentLayout.elements[selectedId]||{}),...savedControls};
+  doc.head.appendChild(style);
+
+  doc.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    let target = e.target;
+    if (selectedElement) selectedElement.classList.remove('editor-selected');
+    
+    selectedElement = target;
+    selectedElement.classList.add('editor-selected');
+
+    // إظهار لوحة التعديل وتعبئة البيانات
+    selectionNotice.style.background = '#0284c7';
+    selectionNotice.style.color = '#fff';
+    selectionNotice.textContent = 'العنصر المحدد: ' + (target.tagName.toLowerCase());
+    editorControls.style.display = 'flex';
+
+    // قراءة الخصائص والحجم
+    const computed = previewFrame.contentWindow.getComputedStyle(target);
+    document.getElementById('ctrlText').value = target.innerText || target.value || '';
+    document.getElementById('ctrlFontSize').value = parseInt(computed.fontSize) || 16;
+    document.getElementById('ctrlFontWeight').value = computed.fontWeight || '';
+    document.getElementById('ctrlRadius').value = parseInt(computed.borderRadius) || 0;
+    document.getElementById('ctrlTranslateY').value = parseInt(target.style.translateY) || 0;
+    document.getElementById('ctrlTranslateX').value = parseInt(target.style.translateX) || 0;
+  }, true);
+};
+
+// 4. تطبيق التعديلات فوراً على العنصر داخل المعاينة
+document.querySelectorAll('#editorControls input, #editorControls select').forEach(input => {
+  input.addEventListener('input', () => {
+    if (!selectedElement) return;
+
+    const id = selectedElement.dataset.editorId || selectedElement.id || selectedElement.tagName;
+    
+    // التعديلات المباشرة
+    if (input.id === 'ctrlText') {
+      if (selectedElement.tagName === 'INPUT') selectedElement.value = input.value;
+      else selectedElement.innerText = input.value;
     }
-    console.log('Final layout payload:',JSON.stringify({layout:currentLayout}));
-    if(!Object.keys(currentLayout.elements||{}).length){
-      status('لم أجد عناصر معدلة للحفظ. حدّد العنصر وعدّل قيمته ثم حاول مرة أخرى.');
-      return;
+    if (input.id === 'ctrlFontSize') selectedElement.style.fontSize = input.value + 'px';
+    if (input.id === 'ctrlFontWeight') selectedElement.style.fontWeight = input.value;
+    if (input.id === 'ctrlRadius') selectedElement.style.borderRadius = input.value + 'px';
+    if (input.id === 'ctrlIconSize') {
+      selectedElement.style.width = input.value + 'px';
+      selectedElement.style.height = input.value + 'px';
     }
-    const apiUrl=API+encodeURIComponent(page);
-    console.log('Sending layout PUT:',apiUrl);
-    status('جارٍ حفظ التخطيط...');
-    const r=await fetch(apiUrl,{
-      method:'PUT',
-      headers:{'Content-Type':'application/json',Authorization:'Bearer '+t},
-      body:JSON.stringify({layout:currentLayout})
+    if (input.id === 'ctrlTranslateY' || input.id === 'ctrlTranslateX') {
+      const x = document.getElementById('ctrlTranslateX').value || 0;
+      const y = document.getElementById('ctrlTranslateY').value || 0;
+      selectedElement.style.transform = `translate(${x}px, ${y}px)`;
+    }
+    if (input.id === 'ctrlPadding') selectedElement.style.padding = input.value + 'px';
+    if (input.id === 'ctrlZIndex') selectedElement.style.zIndex = input.value;
+    if (input.id === 'ctrlColor') selectedElement.style.color = input.value;
+    if (input.id === 'ctrlBgColor') selectedElement.style.backgroundColor = input.value;
+
+    // حفظ في الكائن المحلي
+    if (!currentLayout.elements[id]) currentLayout.elements[id] = {};
+    currentLayout.elements[id] = {
+      text: document.getElementById('ctrlText').value,
+      fontSize: document.getElementById('ctrlFontSize').value,
+      fontWeight: document.getElementById('ctrlFontWeight').value,
+      color: document.getElementById('ctrlColor').value,
+      bgColor: document.getElementById('ctrlBgColor').value,
+      translateY: document.getElementById('ctrlTranslateY').value,
+      translateX: document.getElementById('ctrlTranslateX').value
+    };
+  });
+});
+
+// 5. الحفظ في الـ Backend و MongoDB بدون Vercel
+saveBtn.addEventListener('click', async () => {
+  const token = localStorage.getItem('admin_token') || localStorage.getItem('token') || '';
+  const page = pageSelect.value;
+  
+  saveBtn.disabled = true;
+  saveBtn.textContent = '⏳ جاري الحفظ في MongoDB...';
+
+  try {
+    const res = await fetch('/api/admin/ui-layout/' + page, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({ layout: currentLayout })
     });
-    const responseText=await r.text();
-    console.log('Save response status:',r.status,responseText);
-    let d={};try{d=JSON.parse(responseText)}catch(_){}
-    if(!r.ok)throw Error(d.message||responseText||'فشل الحفظ ('+r.status+')');
-    layouts[page]=d.layout||currentLayout;
-    status('تم حفظ التخطيط بنجاح. تم حفظ تعديلات العنصر المحدد ضمن تخطيط الصفحة.');
-  }catch(e){
-    status('فشل الحفظ: '+(e&&e.message||e));
-    console.error('Layout save failed:',e);
-  }finally{
-    btn.disabled=false;
+
+    if (res.ok) {
+      alert('✅ تم حفظ التعديلات ونشرها على الموقع بنجاح!');
+    } else {
+      alert('❌ حدث خطأ أثناء الحفظ في قاعدة البيانات.');
+    }
+  } catch (err) {
+    alert('❌ تعذر الاتصال بالباك إند.');
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = '💾 حفظ ونشر في MongoDB';
   }
-}
-$('save').addEventListener('click',saveLayout);loadPage();
-})();
-</script></body></html>
-<!-- Deployment trigger: harmless marker, no runtime behavior change (2026-10-29) -->
+});
+
+// بدء التحميل لأول مرة
+loadPage('client');
+</script>
+</body>
+</html>
