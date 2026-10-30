@@ -30,7 +30,7 @@ const registerSchema = Joi.object({
     .min(1)
     .max(30)
     .required(),
-  guidelinesAccepted: Joi.boolean().valid(true).required()
+  guidelinesAccepted: Joi.boolean().valid(true).optional()
 });
 
 const profileUpdateSchema = Joi.object({
@@ -120,8 +120,10 @@ router.post(
         passwordHash,
         specialties: req.body.specialties,
         areas: req.body.areas || [],
-        technicianGuidelinesAcceptedAt: new Date(),
-        technicianGuidelinesVersion: TECHNICIAN_GUIDELINES_VERSION,
+        ...(req.body.guidelinesAccepted === true ? {
+          technicianGuidelinesAcceptedAt: new Date(),
+          technicianGuidelinesVersion: TECHNICIAN_GUIDELINES_VERSION
+        } : {}),
         status: 'قيد المراجعة',
         role: 'fanni'
       });
