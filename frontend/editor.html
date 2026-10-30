@@ -28,8 +28,9 @@ input:focus,select:focus{border-color:#38bdf8}input[type=color]{height:29px;padd
 .preview{min-width:0;min-height:0;background:#1e293b;display:flex;flex-direction:column;padding:5px;overflow:hidden}
 .device-bar{min-height:32px;display:flex;justify-content:space-between;align-items:center;gap:5px;background:#0f172a;border-radius:5px 5px 0 0;padding:4px 7px}
 .device-actions{display:flex;align-items:center;gap:4px}
-.frame-wrapper{width:100%;flex:1;min-height:0;background:white;overflow:hidden;margin:auto;transition:width .2s ease;border:1px solid #334155}
-iframe{width:100%;height:100%;border:0;background:white}
+.frame-wrapper{width:100%;height:100%;flex:1 1 auto;min-width:0;min-height:0;background:white;overflow:hidden;margin:auto;transition:width .2s ease,height .2s ease;border:1px solid #334155}
+.frame-wrapper.mobile-viewport{width:360px;height:min(800px,100%);max-width:100%;flex:0 0 auto}
+iframe{display:block;width:100%;height:100%;border:0;background:white}
 #editorControls[hidden]{display:none!important}
 .help{color:#94a3b8;font-size:9px;line-height:1.6;margin-top:5px}
 @media(max-width:700px){main{grid-template-columns: minmax(0,1fr) minmax(0,1.35fr)}aside{padding:5px}.panel{padding:5px}}
@@ -360,10 +361,18 @@ async function reloadPreview(){
  }catch(error){setStatus('❌ '+error.message,'error');alert(error.message);}
 }
 $('reloadPreviewBtn').addEventListener('click',reloadPreview);
-document.querySelectorAll('[data-device]').forEach(btn=>btn.addEventListener('click',()=>{
- const mobile=btn.dataset.device==='mobile';document.querySelectorAll('[data-device]').forEach(item=>item.classList.toggle('active',item===btn));
- wrapper.style.width=mobile?'min(375px,100%)':'100%';
-}));
+let previewDevice='desktop';
+function setPreviewDevice(device){
+ previewDevice=device==='mobile'?'mobile':'desktop';
+ const mobile=previewDevice==='mobile';
+ document.querySelectorAll('[data-device]').forEach(item=>item.classList.toggle('active',item.dataset.device===previewDevice));
+ wrapper.classList.toggle('mobile-viewport',mobile);
+ wrapper.style.width=mobile?'360px':'100%';
+ wrapper.style.height=mobile?'min(800px,100%)':'100%';
+ wrapper.style.maxWidth='100%';
+}
+document.querySelectorAll('[data-device]').forEach(btn=>btn.addEventListener('click',()=>setPreviewDevice(btn.dataset.device)));
+setPreviewDevice('desktop');
 previewFrame.addEventListener('load',()=>{
  try{frameReady=true;originalState=new Map();installBridge();if(layoutReady){applyLayout();setStatus(dirty?'⚠️ تعديلات غير محفوظة':'✅ جاهز',dirty?'dirty':'saved');}}
  catch(error){setStatus('خطأ معاينة: '+error.message,'error');}
