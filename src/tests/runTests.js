@@ -119,6 +119,20 @@ async function run() {
       assert.equal(r.headers['x-frame-options'], 'SAMEORIGIN');
     });
 
+    await test('CSP report-only audits inline scripts without weakening the enforced CSP', async () => {
+      const r = await request(app).get('/');
+      const enforced = r.headers['content-security-policy'] || '';
+      const reportOnly = r.headers['content-security-policy-report-only'] || '';
+      assert.ok(enforced.includes("script-src 'self' 'unsafe-inline'"));
+      assert.ok(reportOnly.includes("script-src 'self' https://cdn.tailwindcss.com"));
+      assert.ok(reportOnly.includes("script-src-attr 'none'"));
+      assert.ok(!reportOnly.includes("script-src 'self' 'unsafe-inline'"));
+      const report = await request(app).post('/api/csp-report')
+        .set('Content-Type', 'application/csp-report')
+        .send({ 'csp-report': { 'violated-directive': 'script-src-elem', 'document-uri': 'https://sonaa-backend-v2.vercel.app/client.html' } });
+      assert.equal(report.status, 204);
+    });
+
     await test('CORS allows configured production origin', async () => {
       const r = await request(app).options('/api/test')
         .set('Origin', 'https://sonaa-backend-v2.vercel.app')
@@ -370,6 +384,33 @@ async function run() {
       assert.equal(loaded.status, 200);
       assert.deepEqual(loaded.body.layout, saved.body.layout);
       assert.equal(loaded.body.layout.elements['auto-div-1_button-'].width, '29%');
+    });
+
+    await test('all five visual-editor layouts preserve version and survive MongoDB save/read round-trips', async () => {
+      const AdminConfig = require('../models/AdminConfig');
+      for (const page of ['admin', 'client', 'fanni', 'password', 'support']) {
+        assert.ok(AdminConfig.schema.paths[page + 'UiLayout'], 'missing MongoDB schema field for ' + page);
+        const payload = {
+          version: 3, sectionOrder: [], tabOrder: {}, tabGroups: {}, sizes: {},
+          elements: {
+            ['roundtrip-' + page]: {
+              x: 12, y: -8, width: '73%', fontSize: 18,
+              color: '#123456', text: 'حفظ واختبار ' + page,
+              mobile: { x: 4, y: 6, width: 88, text: 'موبايل' }
+            }
+          }
+        };
+        const saved = await request(app).put('/api/admin/ui-layout/' + page)
+          .set('Authorization', 'Bearer ' + adminToken).send({ layout: payload });
+        assert.equal(saved.status, 200, page + ' save failed: ' + JSON.stringify(saved.body));
+        assert.equal(saved.body.layout.version, 3, page + ' version was dropped by sanitizer');
+        const loaded = await request(app).get('/api/admin/ui-layout/' + page)
+          .set('Authorization', 'Bearer ' + adminToken);
+        assert.equal(loaded.status, 200);
+        assert.deepEqual(loaded.body.layout, saved.body.layout, page + ' PUT/GET round-trip mismatch');
+        const persisted = await AdminConfig.findOne({ key: 'main' }).lean();
+        assert.equal(persisted[page + 'UiLayout'].elements['roundtrip-' + page].mobile.width, 88);
+      }
     });
 
     await test('admin API rejects requests without a token', async () => {

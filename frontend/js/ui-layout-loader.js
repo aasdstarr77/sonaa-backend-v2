@@ -20,10 +20,10 @@
   };
   var page = pageMap[location.pathname.replace(/\/+$/, '')] || location.pathname.split('/').pop().replace(/\.html$/, '');
   if (!/^(admin|client|fanni|password|support)$/.test(page)) return;
-  // The admin dashboard is dynamically rebuilt with innerHTML after actions and data refreshes.
-  // Applying saved editor geometry/text styles to that transient DOM causes delayed layout shifts.
-  // Keep the admin dashboard on its own stable CSS; other pages continue using saved layouts.
-  if (page === 'admin') return;
+  // Admin content is rebuilt dynamically; reapply saved layout after each render.
+  var activeLayout = null;
+  var adminApplyQueued = false;
+
   // Keep the existing page splash visible while the saved layout is fetched/applied.
   // If a page has no splash, add a small temporary one; always release it within 3 seconds.
   var splashSelectors = '#splash, #splash-screen, #loading, .splash-screen, .splash, #app-loading, [class*="loading-screen"]';
@@ -112,7 +112,9 @@
     if (root && root.querySelectorAll) nodes = nodes.concat(Array.from(root.querySelectorAll('*')));
     nodes.forEach(function (el) {
       if (['SCRIPT','STYLE','LINK','META','NOSCRIPT','SVG','PATH'].indexOf(el.tagName) !== -1) return;
-      if (!el.hasAttribute('data-editor-id')) el.setAttribute('data-editor-id', stablePath(el));
+      var key = el.getAttribute('data-sonaa-id') || el.getAttribute('data-editor-id') || stablePath(el);
+      if (!el.hasAttribute('data-sonaa-id')) el.setAttribute('data-sonaa-id', key);
+      if (!el.hasAttribute('data-editor-id')) el.setAttribute('data-editor-id', key);
     });
   }
   function ensureStyle() {
@@ -139,7 +141,7 @@
   function applySavedText(el, value) {
     if (typeof value !== 'string') return;
     if (el.matches('input,textarea')) { el.value = value; return; }
-    if (el.children.length > 0 || el.matches('html,body,main,header,nav,section,article,form')) return;
+    if (el.matches('html,body,main,header,nav,section,article,form')) return;
     var walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
     var nodes = [], node;
     while ((node = walker.nextNode())) {
@@ -161,13 +163,15 @@
     marker.textContent = value;
   }
   function apply(layout) {
+    activeLayout = layout;
     ensureStyle(); assignEditorIds(document.body);
     var elements = layout && (layout.elements || layout.items || layout.layout || layout);
     if (!elements || typeof elements !== 'object') return;
     Object.keys(elements).forEach(function (key) {
       var item = elements[key]; if (!item || typeof item !== 'object') return;
       var escaped = window.CSS && CSS.escape ? CSS.escape(key) : key.replace(/["\\]/g, '\\$&');
-      var el = document.querySelector('[data-editor-id="' + escaped + '"]') || document.getElementById(key);
+      var el = document.querySelector('[data-sonaa-id="' + escaped + '"]') ||
+        document.querySelector('[data-editor-id="' + escaped + '"]') || document.getElementById(key);
       if (!el) return;
       if (!el.hasAttribute('data-editor-id')) el.setAttribute('data-editor-id', key);
       var mobile = window.matchMedia('(max-width: 767px)').matches;
@@ -393,7 +397,19 @@
   else { assignEditorIds(document.body); load(); }
   if (window.MutationObserver) {
     var observer = new MutationObserver(function (records) {
-      records.forEach(function (record) { record.addedNodes.forEach(function (node) { if (node.nodeType === 1) assignEditorIds(node); }); });
+      var addedElement = false;
+      records.forEach(function (record) {
+        record.addedNodes.forEach(function (node) {
+          if (node.nodeType === 1) { assignEditorIds(node); addedElement = true; }
+        });
+      });
+      if (page === 'admin' && addedElement && activeLayout && !adminApplyQueued) {
+        adminApplyQueued = true;
+        window.setTimeout(function () {
+          adminApplyQueued = false;
+          if (activeLayout) apply(activeLayout);
+        }, 0);
+      }
     });
     if (document.body) observer.observe(document.body, { childList: true, subtree: true });
   }

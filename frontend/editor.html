@@ -134,23 +134,27 @@ function stablePath(el){
  return 'auto-'+safeId(parts.join('_')).slice(0,94);
 }
 function getElementKey(el){
- let key=el.getAttribute('data-editor-id');
- if(!key){key=stablePath(el);el.setAttribute('data-editor-id',key);}
- return /^[a-zA-Z0-9_-]{1,100}$/.test(key)?key:null;
+ let key=el.getAttribute('data-sonaa-id')||el.getAttribute('data-editor-id');
+ if(!key)key=stablePath(el);
+ if(!/^[a-zA-Z0-9_-]{1,100}$/.test(key))return null;
+ el.setAttribute('data-sonaa-id',key);
+ el.setAttribute('data-editor-id',key);
+ return key;
 }
 function canEditElementText(el){
  if(!el||el.nodeType!==1)return false;
  if(el.matches('input,textarea'))return true;
+ if(el.matches('button,a')&&el.querySelector('svg'))return true;
  return el.children.length===0&&!el.matches('html,body,main,header,nav,section,article,form');
 }
 function getEditableTextNodes(el){
- if(!el||el.matches('input,textarea')||el.children.length>0)return [];
+ if(!el||el.matches('input,textarea'))return [];
  return Array.from(el.childNodes).filter(node=>node.nodeType===3&&node.textContent.trim());
 }
 function captureOriginalState(el){
  if(originalState.has(el))return originalState.get(el);
  const textNodes=getEditableTextNodes(el);
- const state={styleAttribute:el.getAttribute('style'),textNodes:textNodes.slice(),textValues:textNodes.map(n=>n.textContent),createdTextNode:null,inputValue:el.matches('input,textarea')?el.value:null};
+ const state={styleAttribute:el.getAttribute('style'),textNodes:textNodes.slice(),textValues:textNodes.map(n=>n.textContent),createdTextNode:null,createdTextSpan:null,inputValue:el.matches('input,textarea')?el.value:null};
  originalState.set(el,state);return state;
 }
 function setElementText(el,value){
@@ -158,14 +162,19 @@ function setElementText(el,value){
  if(el.matches('input,textarea')){el.value=value;return;}
  if(!canEditElementText(el))return;
  const nodes=getEditableTextNodes(el);
- if(nodes.length){nodes[0].textContent=value;}
- else{const textNode=el.ownerDocument.createTextNode(value);el.appendChild(textNode);state.createdTextNode=textNode;}
+ if(nodes.length){nodes[0].textContent=value;for(let i=1;i<nodes.length;i++)nodes[i].textContent='';}
+ else if(el.matches('button,a')&&el.querySelector('svg')){
+  let span=el.querySelector(':scope > [data-sonaa-editor-text="true"]');
+  if(!span){span=el.ownerDocument.createElement('span');span.setAttribute('data-sonaa-editor-text','true');el.appendChild(span);state.createdTextSpan=span;}
+  span.textContent=value;
+ }else{const textNode=el.ownerDocument.createTextNode(value);el.appendChild(textNode);state.createdTextNode=textNode;}
 }
 function restoreOriginalState(el){
  const state=originalState.get(el);if(!state)return;
  if(state.styleAttribute===null)el.removeAttribute('style');else el.setAttribute('style',state.styleAttribute);
  state.textNodes.forEach((node,index)=>{if(node.parentNode)node.textContent=state.textValues[index];});
  if(state.createdTextNode&&state.createdTextNode.parentNode)state.createdTextNode.remove();
+ if(state.createdTextSpan&&state.createdTextSpan.parentNode)state.createdTextSpan.remove();
  if(el.matches('input,textarea'))el.value=state.inputValue??'';
 }
 function colorToHex(color){

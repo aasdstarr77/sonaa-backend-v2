@@ -2,6 +2,7 @@
 
 const express = require('express');
 const mongoose = require('mongoose');
+const rateLimit = require('express-rate-limit');
 const SupportCase = require('../models/SupportCase');
 const { notifyAdmins } = require('../utils/notifications');
 const { auth, canAccessAdmin, isRootAdmin } = require('../middleware/auth');
@@ -15,6 +16,14 @@ const supportAdminAuth = (req, res, next) => auth()(req, res, () => {
   return next();
 });
 const CASE_STATUSES = ['جديدة', 'بانتظار الدعم', 'قيد المعالجة', 'بانتظار رد المستخدم', 'تم الحل', 'مغلقة'];
+// Limit support writes to reduce spam while keeping authenticated polling unaffected.
+const supportMessageLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'تم تجاوز عدد رسائل الدعم المسموح به مؤقتًا. حاول بعد قليل.' }
+});
 
 function cleanText(value, max = 2000) {
   return typeof value === 'string' ? value.trim().slice(0, max) : '';
@@ -85,7 +94,7 @@ async function sendOwnerMessage(req, res, role) {
   return res.json({ message: 'تم إرسال الرسالة.', supportCase: publicCase(item) });
 }
 
-router.post('/client', clientAuth, async (req, res, next) => {
+router.post('/client', clientAuth, supportMessageLimiter, async (req, res, next) => {
   try { return await createCase(req, res, 'client'); } catch (e) { return next(e); }
 });
 router.get('/client', clientAuth, async (req, res, next) => {
@@ -94,11 +103,11 @@ router.get('/client', clientAuth, async (req, res, next) => {
 router.get('/client/:id', clientAuth, async (req, res, next) => {
   try { const item = await getOwnedCase(req, res, 'client'); return item ? res.json({ supportCase: publicCase(item) }) : undefined; } catch (e) { return next(e); }
 });
-router.post('/client/:id/messages', clientAuth, async (req, res, next) => {
+router.post('/client/:id/messages', clientAuth, supportMessageLimiter, async (req, res, next) => {
   try { return await sendOwnerMessage(req, res, 'client'); } catch (e) { return next(e); }
 });
 
-router.post('/fanni', auth('fanni'), async (req, res, next) => {
+router.post('/fanni', auth('fanni'), supportMessageLimiter, async (req, res, next) => {
   try { return await createCase(req, res, 'fanni'); } catch (e) { return next(e); }
 });
 router.get('/fanni', auth('fanni'), async (req, res, next) => {
@@ -107,7 +116,7 @@ router.get('/fanni', auth('fanni'), async (req, res, next) => {
 router.get('/fanni/:id', auth('fanni'), async (req, res, next) => {
   try { const item = await getOwnedCase(req, res, 'fanni'); return item ? res.json({ supportCase: publicCase(item) }) : undefined; } catch (e) { return next(e); }
 });
-router.post('/fanni/:id/messages', auth('fanni'), async (req, res, next) => {
+router.post('/fanni/:id/messages', auth('fanni'), supportMessageLimiter, async (req, res, next) => {
   try { return await sendOwnerMessage(req, res, 'fanni'); } catch (e) { return next(e); }
 });
 
