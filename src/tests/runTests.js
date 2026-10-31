@@ -87,10 +87,11 @@ async function run() {
       const assignStart = adminSource.indexOf("router.post('/orders/:sn/assign'");
       const assignEnd = adminSource.indexOf("router.get('/wallet/transactions", assignStart);
       assert.match(adminSource.slice(assignStart, assignEnd), /requireRootAdmin\(req, res\)/);
-      const adminRootSource = fs.readFileSync(path.join(__dirname, '../routes/admin.js'), 'utf8');
-      const freezeStart = adminRootSource.indexOf("router.post('/wallet/freeze/:id'");
-      const freezeEnd = adminRootSource.indexOf("router.post('/clients/:phone/block'", freezeStart);
-      assert.match(adminRootSource.slice(freezeStart, freezeEnd), /valid\('freeze', 'unfreeze'\)/);
+      const walletSource = fs.readFileSync(path.join(__dirname, '../routes/admin/wallet.js'), 'utf8');
+      const freezeStart = walletSource.indexOf("router.post('/wallet/freeze/:id'");
+      const freezeEnd = walletSource.indexOf("\n  return router;", freezeStart);
+      assert.notEqual(freezeStart, -1);
+      assert.match(walletSource.slice(freezeStart, freezeEnd), /valid\('freeze', 'unfreeze'\)/);
       assert.equal(canAccessAdmin(user, { path: '/notifications/admin/read-all', method: 'PATCH' }), false);
       const noNotificationRead = { role: 'fanni', adminRole: 'مشرف', adminPermissions: { __customOverrides: true, notifications: { read: false, write: false } } };
       assert.equal(canAccessAdmin(noNotificationRead, { path: '/notifications/admin', method: 'GET' }), false);
