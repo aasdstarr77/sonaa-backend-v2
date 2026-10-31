@@ -340,6 +340,87 @@ async function run() {
       assert.equal(await PushToken.countDocuments({ token: expoToken }), 0);
     });
 
+    await test('wallet top-up requests remain pending and never credit balance before admin review', async () => {
+      const Fanni = require('../models/Fanni');
+      const TopupRequest = require('../models/TopupRequest');
+      const jwt = require('jsonwebtoken');
+      const fanni = await Fanni.findOne({ phone: '01012345681', role: 'fanni' });
+      assert.ok(fanni, 'technician registration fixture must exist');
+      const token = jwt.sign({
+        id: String(fanni._id), role: 'fanni', tokenVersion: Number(fanni.tokenVersion || 0)
+      }, process.env.JWT_SECRET, { expiresIn: '30d' });
+
+      const pending = await request(app).post('/api/fanni/wallet/topup')
+        .set('Authorization', 'Bearer ' + token)
+        .send({ fromPhone: '01012345682', amount: 100, method: 'vodafone_cash' });
+      assert.equal(pending.status, 403, 'pending technicians must not use the wallet');
+
+      fanni.status = 'معتمد';
+      await fanni.save();
+      const beforeBalance = Number(fanni.walletBalance || 0);
+      const invalidSender = await request(app).post('/api/fanni/wallet/topup')
+        .set('Authorization', 'Bearer ' + token)
+        .send({ fromPhone: 'not-a-phone', amount: 100, method: 'vodafone_cash' });
+      assert.equal(invalidSender.status, 400);
+
+      const submitted = await request(app).post('/api/fanni/wallet/topup')
+        .set('Authorization', 'Bearer ' + token)
+        .send({ fromPhone: '01012345682', amount: 100, method: 'vodafone_cash', reference: 'PHASE2-TEST' });
+      assert.equal(submitted.status, 201);
+      assert.equal(submitted.body.request.status, 'قيد المراجعة');
+      assert.equal(submitted.body.request.isCredited, undefined);
+      assert.equal(submitted.body.walletBalance, beforeBalance);
+
+      const storedRequest = await TopupRequest.findById(submitted.body.request.id).lean();
+      assert.ok(storedRequest);
+      assert.equal(storedRequest.status, 'قيد المراجعة');
+      assert.equal(storedRequest.isCredited, false);
+      const afterFanni = await Fanni.findById(fanni._id).lean();
+      assert.equal(afterFanni.walletBalance, beforeBalance, 'creating a top-up request must not change the wallet balance');
+
+      const history = await request(app).get('/api/fanni/wallet/history')
+        .set('Authorization', 'Bearer ' + token);
+      assert.equal(history.status, 200);
+      assert.ok(history.body.requests.some(item => item.id === String(storedRequest._id)));
+    });
+
+    await test('client notifications support unread counts, single-read, read-all, and role isolation', async () => {
+      const Notification = require('../models/Notification');
+      const own = await Notification.create({
+        recipientRole: 'client', recipientId: clientId, type: 'test', title: 'إشعار اختبار',
+        message: 'رسالة اختبار', link: '/?tab=orders', readAt: null
+      });
+      await Notification.create({
+        recipientRole: 'fanni', recipientId: clientId, type: 'test', title: 'إشعار فني',
+        message: 'يجب ألا يظهر للعميل', link: '/fanni', readAt: null
+      });
+      const initial = await request(app).get('/api/notifications/client')
+        .set('Authorization', 'Bearer ' + clientToken);
+      assert.equal(initial.status, 200);
+      assert.equal(initial.body.unreadCount, 1);
+      assert.ok(initial.body.notifications.some(item => item.id === String(own._id)));
+      assert.equal(initial.body.notifications.some(item => item.title === 'إشعار فني'), false);
+
+      const readOne = await request(app).patch('/api/notifications/client/' + own._id + '/read')
+        .set('Authorization', 'Bearer ' + clientToken);
+      assert.equal(readOne.status, 200);
+      const afterSingle = await request(app).get('/api/notifications/client')
+        .set('Authorization', 'Bearer ' + clientToken);
+      assert.equal(afterSingle.body.unreadCount, 0);
+
+      await Notification.create([
+        { recipientRole: 'client', recipientId: clientId, type: 'test', title: 'إشعار 2', message: 'رسالة 2' },
+        { recipientRole: 'client', recipientId: clientId, type: 'test', title: 'إشعار 3', message: 'رسالة 3' }
+      ]);
+      const readAll = await request(app).patch('/api/notifications/client/read-all')
+        .set('Authorization', 'Bearer ' + clientToken);
+      assert.equal(readAll.status, 200);
+      assert.equal(readAll.body.modified, 2);
+      const afterAll = await request(app).get('/api/notifications/client')
+        .set('Authorization', 'Bearer ' + clientToken);
+      assert.equal(afterAll.body.unreadCount, 0);
+    });
+
     await test('second client receives a distinct account', async () => {
       const r = await request(app).post('/api/client/register').send({
         name: 'عميل اختبار ثان', phone: '01012345679',
@@ -523,6 +604,27 @@ async function run() {
       assert.equal(r.status, 200);
       assert.ok(r.body.supportCase.messages.some(m => m.text === 'هذه رسالة متابعة للاختبار'));
       assert.equal(r.body.supportCase.needsHuman, true, 'owner follow-up should return the case to the human-support queue');
+    });
+
+    await test('support admin replies return the case to the user and duplicate opens reuse the same case', async () => {
+      const reply = await request(app).post('/api/support/admin/' + supportCaseId + '/reply')
+        .set('Authorization', 'Bearer ' + adminToken)
+        .send({ text: 'تم استلام طلبك وجارٍ متابعة المشكلة.' });
+      assert.equal(reply.status, 200);
+      assert.equal(reply.body.supportCase.status, 'بانتظار رد المستخدم');
+      assert.equal(reply.body.supportCase.needsHuman, false);
+
+      const ownerView = await request(app).get('/api/support/client/' + supportCaseId)
+        .set('Authorization', 'Bearer ' + clientToken);
+      assert.equal(ownerView.status, 200);
+      assert.ok(ownerView.body.supportCase.messages.some(item => item.text === 'تم استلام طلبك وجارٍ متابعة المشكلة.'));
+
+      const duplicate = await request(app).post('/api/support/client')
+        .set('Authorization', 'Bearer ' + clientToken)
+        .send({ subject: 'طلب دعم مكرر', text: 'رسالة جديدة على المحادثة المفتوحة' });
+      assert.equal(duplicate.status, 200);
+      assert.equal(duplicate.body.existing, true);
+      assert.equal(String(duplicate.body.supportCase._id), String(supportCaseId));
     });
 
     await test('admin button layout is shared, persisted, and safely sanitized', async () => {
