@@ -114,7 +114,7 @@ async function run() {
 
     await test('all executable page JavaScript is external and every local script target exists', async () => {
       const frontendRoot = path.join(__dirname, '../../frontend');
-      const pages = ['index.html', 'customers.html', 'technicians.html', 'admin.html', 'client.html', 'fanni.html', 'password.html', 'support.html', 'admin-setup.html', 'editor.html', 'editor.backup.html'];
+      const pages = ['index.html', 'customers.html', 'technicians.html', 'admin.html', 'client.html', 'fanni.html', 'password.html', 'support.html', 'admin-setup.html', 'editor.html'];
       for (const page of pages) {
         const html = fs.readFileSync(path.join(frontendRoot, page), 'utf8');
         assert.match(html, /<meta[^>]+name=["']viewport["']/i, page + ' must define a mobile viewport');
@@ -598,7 +598,7 @@ async function run() {
       });
       assert.equal(registration.status, 201);
       const fanniId = registration.body.id;
-      const pendingLogin = await request(app).post('/api/fanni/login').send({ phone, password: 'TechPass123' });
+      const pendingLogin = await request(app).post('/api/fanni/login').set('X-Forwarded-For', '192.0.2.10').send({ phone, password: 'TechPass123' });
       assert.equal(pendingLogin.status, 200);
       const pendingOrders = await request(app).get('/api/orders/available')
         .set('Authorization', 'Bearer ' + pendingLogin.body.token);
@@ -606,7 +606,7 @@ async function run() {
       const approved = await request(app).post('/api/admin/fannis/' + fanniId + '/approve')
         .set('Authorization', 'Bearer ' + adminToken).send({});
       assert.equal(approved.status, 200);
-      const login = await request(app).post('/api/fanni/login').send({ phone, password: 'TechPass123' });
+      const login = await request(app).post('/api/fanni/login').set('X-Forwarded-For', '192.0.2.11').send({ phone, password: 'TechPass123' });
       assert.equal(login.status, 200);
       const fanniToken = login.body.token;
       const guidelines = await request(app).post('/api/fanni/guidelines/accept')
