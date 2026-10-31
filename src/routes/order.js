@@ -6,6 +6,7 @@ const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 
 const Order = require('../models/Order');
+const Client = require('../models/Client');
 const { createNotification, notifyAdmins } = require('../utils/notifications');
 const Fanni = require('../models/Fanni');
 const Rating = require('../models/Rating');
@@ -258,24 +259,30 @@ function clientTokenFrom(req) {
   return String(req.body?.clientToken || req.query?.clientToken || '');
 }
 
-function verifyClientToken(req, order) {
+async function verifyClientToken(req, order) {
   const token = clientTokenFrom(req);
-
   if (!token || !process.env.JWT_SECRET) return false;
-
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-
-    if (payload.role === 'client') {
-      return Boolean(order.clientAccount) &&
-        String(payload.id) === String(order.clientAccount);
+    const tokenMatchesOrder = payload.purpose === 'client-order'
+      && String(payload.orderId) === String(order._id)
+      && String(payload.sn).toUpperCase() === String(order.sn).toUpperCase();
+    if (order.clientAccount) {
+      const activeClient = await Client.findOne({ _id: order.clientAccount, status: 'نشط' }).select('_id tokenVersion').lean();
+      if (!activeClient) return false;
+      if (payload.role === 'client') {
+        return String(payload.id) === String(order.clientAccount)
+          && Number(payload.tokenVersion || 0) === Number(activeClient.tokenVersion || 0);
+      }
+      if (!tokenMatchesOrder) return false;
+      if (payload.accountId) {
+        return String(payload.accountId) === String(order.clientAccount)
+          && Number(payload.tokenVersion || 0) === Number(activeClient.tokenVersion || 0);
+      }
+      // Old order tokens are valid only until this order is linked to an account.
+      return !order.clientAccountLinkedAt;
     }
-
-    return (
-      payload.purpose === 'client-order' &&
-      String(payload.orderId) === String(order._id) &&
-      String(payload.sn).toUpperCase() === String(order.sn).toUpperCase()
-    );
+    return tokenMatchesOrder;
   } catch {
     return false;
   }
