@@ -76,6 +76,23 @@ function apiResponse(pathname) {
             overflow.push(target.name + '/' + viewport.name + ': ' + dimensions.document + 'px content in ' + dimensions.viewport + 'px viewport');
           }
 
+          if (viewport.name === 'desktop') {
+            if (target.name === 'client') {
+              await page.locator('#accountPhone').fill('123');
+              await page.locator('#accountPassword').fill('x');
+              await page.locator('.account-submit').click();
+              await page.getByText('رقم الموبايل غير صحيح؛ اكتب 11 رقمًا يبدأ بـ 01.').waitFor({ state: 'visible', timeout: 3000 });
+            } else if (target.name === 'technician') {
+              await page.locator('#fanniLoginPhone').fill('123');
+              await page.locator('#fanniLoginPassword').fill('x');
+              await page.getByRole('button', { name: 'دخول إلى حسابي' }).click();
+              await page.getByText('رقم التليفون غير صحيح').waitFor({ state: 'visible', timeout: 3000 });
+            } else if (target.name === 'admin') {
+              await page.locator('#login-btn').click();
+              await page.getByText('اكتب البيانات').waitFor({ state: 'visible', timeout: 3000 });
+            }
+          }
+
           if (pageErrors.length) failures.push(target.name + '/' + viewport.name + ': ' + pageErrors.join(' | '));
           if (badLocalResponses.length) failures.push(target.name + '/' + viewport.name + ': ' + badLocalResponses.join(', '));
         } catch (error) {
