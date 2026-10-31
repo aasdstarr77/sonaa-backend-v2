@@ -5,6 +5,8 @@ const rateLimit = require('express-rate-limit');
 const PageVisit = require('../models/PageVisit');
 
 const router = express.Router();
+const TRACKABLE_PAGES = new Set(['home','client-app','technician-app','customer-registration-info','technician-registration-info','client-login','client-register','technician-login','technician-register','client-dashboard','technician-dashboard','admin-login','admin-dashboard','password-recovery']);
+
 const pageVisitLimiter = rateLimit({
   windowMs: 60000,
   limit: 60,
