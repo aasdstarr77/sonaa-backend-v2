@@ -22,6 +22,7 @@ const clientSchema = new mongoose.Schema({
     required: true,
     select: false
   },
+  tokenVersion: { type: Number, default: 0, min: 0 },
   status: {
     type: String,
     enum: ['نشط', 'معلق'],
@@ -43,6 +44,7 @@ const clientSchema = new mongoose.Schema({
 clientSchema.methods.toSafeJSON = function () {
   const data = this.toObject();
   delete data.passwordHash;
+  delete data.tokenVersion;
   delete data.__v;
   return data;
 };
