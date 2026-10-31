@@ -330,6 +330,7 @@ async function run() {
       assert.equal(oldLogin.status, 401);
       const newLogin = await request(app).post('/api/client/login').send({ phone: '01012345678', password: 'RecoveredPass123' });
       assert.equal(newLogin.status, 200);
+      clientToken = newLogin.body.token;
     });
 
     await test('support endpoints reject unauthenticated users', async () => {
