@@ -9,6 +9,9 @@ const role=roleAliases[rawRole]||(mode==='account'||mode==='change'?inferAccount
 const recoveryStorageKeys={token:'sonaa_recovery_token_'+role,id:'sonaa_recovery_id_'+role};
 const token=()=>{try{return localStorage.getItem(tokenKeys[role])||''}catch(_){return ''}};
 const $=id=>document.getElementById(id);
+$('password-back-button')?.addEventListener('click',()=>history.back());
+$('password-home-button')?.addEventListener('click',()=>{location.href=role==='admin'?'/admin.html':'/'});
+$('change-password-button')?.addEventListener('click',()=>{location.search='?role='+encodeURIComponent(role)+'&mode=change'});
 let recoveryToken='',recoveryId='',selectedId='',selectedRecovery=null,busy=false,pollTimer=null,recoveryPollBusy=false,recoveryReplyBusy=false,recoveryRequestBusy=false;
 const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 function notice(text,ok=false){$('notice').innerHTML=text?'<div class="'+(ok?'ok':'error')+'">'+esc(text)+'</div>':''}

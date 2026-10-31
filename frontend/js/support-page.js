@@ -100,6 +100,7 @@ async function refresh(){
  }catch(e){if(!cases.length)showError(e.message)}finally{pollBusy=false}
 }
 function init(){
+ $('retry-login-button')?.addEventListener('click',()=>location.reload());
  const authenticated=!!token();
  $('back-btn').addEventListener('click',()=>{if(role==='fanni')location.href='fanni.html';else if(role==='admin')location.href='admin.html';else location.href='client.html'});
  $('login-link').href=role==='fanni'?'fanni.html':role==='admin'?'admin.html':'client.html';
