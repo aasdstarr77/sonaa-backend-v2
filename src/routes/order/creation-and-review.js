@@ -88,6 +88,7 @@ router.post('/', clientAuth, async (req, res, next) => {
         order = await Order.create({
           sn: generateSN(),
           clientAccount: req.clientId,
+      clientAccountLinkedAt: new Date(),
           service: value.service,
           area,
           address,
