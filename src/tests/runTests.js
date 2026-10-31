@@ -588,10 +588,25 @@ async function run() {
         const currentRead = await request(app).get('/api/orders/' + orderSN + '/chat')
           .set('Authorization', 'Bearer ' + currentToken);
         assert.equal(currentRead.status, 200, 'a current technician session must retain chat access');
+
+        const originalAssignedFanni = order.assignedFanni;
+        order.status = 'تم الانتهاء';
+        order.assignedFanni = fanni._id;
+        await order.save();
+        const revokedRating = await request(app).post('/api/orders/' + orderSN + '/rating')
+          .set('Authorization', 'Bearer ' + oldToken)
+          .send({ stars: 1, comment: 'تقييم بجلسة ملغاة' });
+        assert.equal(revokedRating.status, 401, 'revoked technician sessions must not submit ratings');
+
+        const currentRating = await request(app).post('/api/orders/' + orderSN + '/rating')
+          .set('Authorization', 'Bearer ' + currentToken)
+          .send({ stars: 5, comment: 'تقييم بجلسة سارية' });
+        assert.equal(currentRating.status, 201, 'the assigned technician with a current session can still rate');
       } finally {
         const orderToRestore = await Order.findOne({ sn: orderSN });
         if (orderToRestore) {
           orderToRestore.status = originalStatus;
+          orderToRestore.assignedFanni = originalAssignedFanni;
           orderToRestore.offers = originalOffers;
           orderToRestore.chatMessages = originalMessages;
           await orderToRestore.save();

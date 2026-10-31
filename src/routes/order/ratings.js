@@ -60,13 +60,16 @@ router.post('/:sn/rating', async (req, res, next) => {
       let payload;
       try { payload = jwt.verify(token, process.env.JWT_SECRET); }
       catch { return res.status(401).json({ message: 'جلسة غير صالحة أو منتهية' }); }
-      if (!payload.id) {
+      if (payload.role !== 'fanni' || !payload.id) {
         return res.status(403).json({ message: 'هذه الجلسة لا تسمح بتقييم المهمة' });
       }
-      const fanni = await Fanni.findById(payload.id).select('_id role status name');
+      const fanni = await Fanni.findById(payload.id).select('_id role status name tokenVersion');
       if (!fanni || fanni.role !== 'fanni' || fanni.status !== 'معتمد' ||
           String(fanni._id) !== String(order.assignedFanni)) {
         return res.status(403).json({ message: 'التقييم متاح للفني المعيّن على هذه المهمة فقط' });
+      }
+      if (Number(payload.tokenVersion || 0) !== Number(fanni.tokenVersion || 0)) {
+        return res.status(401).json({ message: 'انتهت صلاحية الجلسة بعد تغيير كلمة المرور. سجّل الدخول مرة أخرى.' });
       }
       reviewerRole = 'fanni';
       reviewerId = fanni._id;
