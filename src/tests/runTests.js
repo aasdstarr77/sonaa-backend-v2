@@ -328,10 +328,13 @@ async function run() {
         .set('X-Recovery-Token', opened.body.recoveryToken).send({ code: issued.body.code });
       assert.equal(verified.status, 200);
 
+      const staleSessionToken = clientToken;
       const reset = await request(app).post('/api/password-recovery/request/' + opened.body.requestId + '/reset-password')
         .set('X-Recovery-Token', opened.body.recoveryToken)
         .send({ newPassword: 'RecoveredPass123', confirmPassword: 'RecoveredPass123' });
       assert.equal(reset.status, 200);
+      const staleSession = await request(app).get('/api/support/client').set('Authorization', 'Bearer ' + staleSessionToken);
+      assert.equal(staleSession.status, 401, 'password recovery must revoke all previously issued sessions');
 
       const oldLogin = await request(app).post('/api/client/login').send({ phone: '01012345678', password: 'NewPass12345' });
       assert.equal(oldLogin.status, 401);
@@ -579,6 +582,10 @@ async function run() {
       assert.equal(Object.prototype.hasOwnProperty.call(r.body.order, 'commissionAmount'), false);
       assert.equal(Object.prototype.hasOwnProperty.call(r.body.order, 'commissionCharged'), false);
       assert.equal(Object.prototype.hasOwnProperty.call(r.body.order, 'commissionChargedAt'), false);
+      const jwt = require('jsonwebtoken');
+      const legacyOrderToken = jwt.sign({ purpose: 'client-order', orderId: String(r.body.order._id), sn: orderSN }, process.env.JWT_SECRET, { expiresIn: '1h' });
+      const legacyAccess = await request(app).get('/api/orders/' + orderSN).query({ clientToken: legacyOrderToken });
+      assert.equal(legacyAccess.status, 403, 'legacy tracking tokens must stop working once the order is linked to a client account');
       // Acceptance and price-change decisions were moved into separate feature modules.
       const lifecycleSource = fs.readFileSync(path.join(__dirname, '../routes/order/lifecycle.js'), 'utf8');
       const acceptStart = lifecycleSource.indexOf("router.post('/:sn/accept'");
