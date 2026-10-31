@@ -121,6 +121,8 @@ router.post('/', clientAuth, async (req, res, next) => {
     const clientToken = jwt.sign(
       {
         purpose: 'client-order',
+        accountId: String(order.clientAccount),
+        tokenVersion: Number(req.client?.tokenVersion || 0),
         orderId: String(order._id),
         sn: order.sn
       },
