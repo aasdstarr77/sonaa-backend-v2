@@ -17,27 +17,7 @@
 <meta name="twitter:title" content="تسجيل فني جديد | صُنّاع">
 <meta name="twitter:description" content="أنشئ حساب فني جديد على منصة صُنّاع وابدأ في استقبال طلبات الخدمات.">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script>
-(function(){
- const params=new URLSearchParams(window.location.search);
- const isPreview=params.has('preview')||window.self!==window.top;
- window.IS_EDITOR_PREVIEW=isPreview;
- if(!isPreview)return;
- const requested=params.get('section')||params.get('page')||'';
- const tabs={
-  'available':'available','fanni-dashboard':'available','الطلبات المتاحة':'available',
-  'myOffers':'myOffers','my':'myOffers','fanni-orders':'myOffers','طلباتي':'myOffers',
-  'wallet':'wallet','المحفظة':'wallet',
-  'profile':'profile','حسابي':'profile',
-  'completed':'completed','المهام المكتملة':'completed',
-  'login':'login','fanni-login':'login','fanni':'login','تسجيل دخول الفني':'login',
-  'register':'register','fanni-register':'register','تسجيل جديد':'register'
- };
- window.PREVIEW_REQUESTED_TAB=tabs[requested]||tabs[requested.toLowerCase()]||'login';
- window.SONAA_FORCE_PREVIEW_TAB=true;
- console.log('Fanni Preview - will show tab:',window.PREVIEW_REQUESTED_TAB);
-})();
-</script>
+<script src="/js/preview-bootstrap.js" data-sonaa-page="fanni"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
 :root{--navy:#0b1b3a;--navy-light:#163b70;--blue:#2563eb;--blue-dark:#1d4ed8;--page:#f4f7fc;--border:#e2e8f0}
