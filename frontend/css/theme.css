@@ -464,3 +464,16 @@
 @media(prefers-reduced-motion:reduce){
   .sonaa-brand-shimmer{animation:none;background-position:50% 50%}
 }
+
+/* Keep dashboard brand lettering solid and legible beneath the animated highlight. */
+#app .app-header h1 .sonaa-brand-shimmer,
+#app .fanni-app-header h1 .sonaa-brand-shimmer{
+  color:#173c6c!important;
+  background-image:linear-gradient(108deg,#173c6c 0%,#173c6c 38%,rgba(22,166,161,.72) 46%,#fff 50%,#a5f3fc 54%,#173c6c 63%,#173c6c 100%);
+  background-size:240% 100%;
+  background-position:100% 50%;
+  background-clip:text;
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  text-shadow:none;
+}
