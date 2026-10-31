@@ -82,6 +82,8 @@ ref: 'Client',
 default: null,
 index: true
 },
+// Timestamp marks when a legacy tracking token was invalidated by account linking.
+clientAccountLinkedAt: { type: Date, default: null },
 
 service: {
 type: String,
