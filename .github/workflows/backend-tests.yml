@@ -18,7 +18,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
       - name: Checkout repository
@@ -26,7 +26,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
       - name: Install dependencies
         run: npm ci
@@ -45,8 +45,12 @@ jobs:
           /tmp/sonaa-playwright/node_modules/.bin/playwright install --with-deps chromium
       - name: Run frontend browser smoke tests
         run: |
-          python3 -m http.server 4173 --directory frontend >/tmp/sonaa-http.log 2>&1 &
+          PORT=4173 NODE_ENV=test JWT_SECRET=sonaa-browser-smoke-test-secret-0123456789 node src/server.js >/tmp/sonaa-http.log 2>&1 &
           SERVER_PID=$!
           trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
-          sleep 2
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4173/index.html >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:4173/index.html >/dev/null
           NODE_PATH=/tmp/sonaa-playwright/node_modules node scripts/ui-smoke.cjs
