@@ -44,6 +44,10 @@ async function main() {
 
   fs.rmSync(output, { recursive: true, force: true });
   fs.cpSync(source, output, { recursive: true });
+  // Keep archival backups in the source repository, never publish them as live pages.
+  for (const file of walk(output).filter(file => /\.backup\.html$/i.test(file))) {
+    fs.rmSync(file, { force: true });
+  }
 
   const sourceFiles = walk(output);
   let before = 0;

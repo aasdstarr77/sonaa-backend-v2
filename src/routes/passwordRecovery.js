@@ -3,6 +3,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const Joi = require('joi');
 const rateLimit = require('express-rate-limit');
 const Client = require('../models/Client');
@@ -116,8 +117,10 @@ router.post('/change/client', clientAuth, async (req, res, next) => {
     if (valid.error || newPassword !== confirmPassword || newPassword === currentPassword) return res.status(400).json({ message: 'كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل، والتأكيد مطابقًا، وألا تكون هي القديمة.' });
     const user = await Client.findById(req.client._id).select('+passwordHash');
     user.passwordHash = await bcrypt.hash(newPassword, 12);
+    user.tokenVersion = Number(user.tokenVersion || 0) + 1;
     await user.save();
-    return res.json({ message: 'تم تغيير كلمة المرور بنجاح.' });
+    const token = jwt.sign({ id: String(user._id), role: 'client', tokenVersion: user.tokenVersion }, process.env.JWT_SECRET, { expiresIn: '7d', issuer: 'sonaa-backend-v2', audience: 'sonaa-client' });
+    return res.json({ message: 'تم تغيير كلمة المرور بنجاح.', token });
   } catch (e) { return next(e); }
 });
 router.post('/change/fanni', auth('fanni'), async (req, res, next) => {
@@ -128,8 +131,10 @@ router.post('/change/fanni', auth('fanni'), async (req, res, next) => {
     const valid = passwordSchema.validate(newPassword);
     if (valid.error || newPassword !== confirmPassword || newPassword === currentPassword) return res.status(400).json({ message: 'كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل، والتأكيد مطابقًا، وألا تكون هي القديمة.' });
     user.passwordHash = await bcrypt.hash(newPassword, 12);
+    user.tokenVersion = Number(user.tokenVersion || 0) + 1;
     await user.save();
-    return res.json({ message: 'تم تغيير كلمة المرور بنجاح.' });
+    const token = jwt.sign({ id: String(user._id), role: 'fanni', tokenVersion: user.tokenVersion }, process.env.JWT_SECRET, { expiresIn: '30d' });
+    return res.json({ message: 'تم تغيير كلمة المرور بنجاح.', token });
   } catch (e) { return next(e); }
 });
 router.post('/change/admin', adminSelfAuth, async (req, res, next) => {
@@ -140,8 +145,10 @@ router.post('/change/admin', adminSelfAuth, async (req, res, next) => {
     const valid = passwordSchema.validate(newPassword);
     if (valid.error || newPassword !== confirmPassword || newPassword === currentPassword) return res.status(400).json({ message: 'كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل، والتأكيد مطابقًا، وألا تكون هي القديمة.' });
     user.passwordHash = await bcrypt.hash(newPassword, 12);
+    user.tokenVersion = Number(user.tokenVersion || 0) + 1;
     await user.save();
-    return res.json({ message: 'تم تغيير كلمة المرور بنجاح.' });
+    const token = jwt.sign({ id: String(user._id), role: user.role, adminRole: user.adminRole || null, tokenVersion: user.tokenVersion }, process.env.JWT_SECRET, { expiresIn: '1d' });
+    return res.json({ message: 'تم تغيير كلمة المرور بنجاح.', token });
   } catch (e) { return next(e); }
 });
 
@@ -267,6 +274,7 @@ router.post('/request/:id/reset-password', async (req, res, next) => {
     else account = await Fanni.findById(item.accountId).select('+passwordHash');
     if (!account) return res.status(404).json({ message: 'الحساب غير موجود.' });
     account.passwordHash = await bcrypt.hash(newPassword, 12);
+    account.tokenVersion = Number(account.tokenVersion || 0) + 1;
     await account.save();
     item.status = 'تمت الاستعادة';
     item.accessTokenHash = digest(randomToken());
