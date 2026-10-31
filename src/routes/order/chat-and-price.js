@@ -3,6 +3,13 @@
 module.exports = function registerOrderChatAndPrice(router, context) {
   const { express, Joi, mongoose, jwt, Order, createNotification, notifyAdmins, Fanni, Rating, WalletTransaction, AdminConfig, AdminAuditLog, writeOrderAdminAudit, createOrderTrackingController, auth, canAccessAdmin, isRootAdmin, clientAuth, generateSN, normalizePhone, ALL_SERVICES, CATEGORIES, normalizeServiceName, ACTIVE_STATUSES, ORDER_EXPIRY_HOURS, DEFAULT_COMMISSION_RATE, ARABIC_DIGITS, PERSIAN_DIGITS, createSchema, PROFESSIONAL_LEVEL_RANK, trackOrder, toWesternDigits, containsEgyptianMobile, sanitizeText, findPhoneContainingField, sanitizeOffer, publicOrder, fanniCanHandleService, validSN, clientTokenFrom, verifyClientToken, publicRatings, hasRatingBlock, currentPricing, money, autoPromoteFanni, getAcceptedOffer, hasAcceptedGuidelines, hasContactDetails } = context;
 
+  async function getActiveTechnicianId(payload) {
+    if (!payload?.id || payload.role !== 'fanni') return null;
+    const account = await Fanni.findOne({ _id: payload.id, role: 'fanni', status: 'معتمد' }).select('_id tokenVersion').lean();
+    if (!account || Number(payload.tokenVersion || 0) !== Number(account.tokenVersion || 0)) return null;
+    return String(account._id);
+  }
+
 router.get('/:sn/chat', async (req, res, next) => {
   try {
     const sn = String(req.params.sn || '').toUpperCase();
@@ -12,7 +19,7 @@ router.get('/:sn/chat', async (req, res, next) => {
     const isClient = await verifyClientToken(req, order);
     const token = String(req.headers.authorization || '').startsWith('Bearer ') ? req.headers.authorization.slice(7).trim() : '';
     let fanniId = null;
-    if (token && process.env.JWT_SECRET) { try { const payload = jwt.verify(token, process.env.JWT_SECRET); if (payload.id) fanniId = payload.id; } catch (_) {} }
+    if (token && process.env.JWT_SECRET) { try { fanniId = await getActiveTechnicianId(jwt.verify(token, process.env.JWT_SECRET)); } catch (_) {} }
     const technicianOffer = fanniId && (order.offers || []).find(o => String(o.fanni) === String(fanniId));
     if (!isClient && !technicianOffer) return res.status(403).json({ message: 'غير مسموح بعرض محادثة هذا الطلب.' });
     if (!isClient && !(await hasAcceptedGuidelines(fanniId))) return res.status(428).json({ code: 'TECHNICIAN_GUIDELINES_REQUIRED', message: 'يجب الموافقة على ميثاق التعامل المهني أولًا.' });
@@ -39,9 +46,8 @@ router.post('/:sn/chat', async (req, res, next) => {
     if (!order) return res.status(404).json({ message: 'الطلب غير موجود' });
     const isClient = await verifyClientToken(req, order);
     const token = String(req.headers.authorization || '').startsWith('Bearer ') ? req.headers.authorization.slice(7).trim() : '';
-    let payload = null;
-    if (token && process.env.JWT_SECRET) { try { payload = jwt.verify(token, process.env.JWT_SECRET); } catch (_) {} }
-    const fanniId = payload?.id;
+    let fanniId = null;
+    if (token && process.env.JWT_SECRET) { try { fanniId = await getActiveTechnicianId(jwt.verify(token, process.env.JWT_SECRET)); } catch (_) {} }
     const ownOffer = fanniId && (order.offers || []).find(o => String(o.fanni) === String(fanniId));
     if (!isClient && !ownOffer) return res.status(403).json({ message: 'غير مسموح بإرسال رسالة لهذا الطلب.' });
     if (!isClient && !(await hasAcceptedGuidelines(fanniId))) return res.status(428).json({ code: 'TECHNICIAN_GUIDELINES_REQUIRED', message: 'يجب الموافقة على ميثاق التعامل المهني أولًا.' });
