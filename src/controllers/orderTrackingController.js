@@ -20,7 +20,7 @@ module.exports = function createOrderTrackingController(dependencies) {
       });
     }
 
-    const isOrderOwner = verifyClientToken(req, order);
+    const isOrderOwner = await verifyClientToken(req, order);
     if (!isOrderOwner) {
       return res.status(403).json({ message: 'سجّل الدخول بحسابك لمتابعة الطلب؛ رقم الطلب وحده لا يكفي لعرض بياناته.' });
     }
