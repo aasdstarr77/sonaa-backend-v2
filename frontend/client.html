@@ -459,7 +459,7 @@ body #app header.app-header a[href="https://aasdstarr77.github.io/sonaa-download
 <script src="/js/client-render.js"></script>
 <script src="/js/client-actions.js"></script>
 
-<script>async function handleGlobalRefresh(){let button=document.getElementById('global-refresh');if(globalRefreshInProgress||button?.disabled)return;globalRefreshInProgress=true;if(button){button.disabled=true;button.classList.add('is-refreshing');}try{if(!state.account){await Promise.allSettled([loadServices(),loadPublicContent()]);showToast('تم تحديث البيانات','success');}else{await refreshClientPage();}}finally{globalRefreshInProgress=false;button=document.getElementById('global-refresh');if(button){button.disabled=false;button.classList.remove('is-refreshing');}}}</script>
+<script src="/js/page-behaviors.js" data-sonaa-feature="client-global-refresh"></script>
 
 
 <style>
@@ -809,35 +809,7 @@ body #app header.app-header a[href="https://aasdstarr77.github.io/sonaa-download
 
 <script src="/web-push.js" defer></script>
 <script src="/page-visit.js" defer></script>
-<script>
-(function(){
-  let observedHeader=null;
-  let headerResizeObserver=null;
-  function syncStickyTabs(){
-    const header=document.querySelector('#app .app-header');
-    if(!header)return;
-    if(header!==observedHeader){
-      observedHeader=header;
-      if(headerResizeObserver)headerResizeObserver.disconnect();
-      if('ResizeObserver' in window){
-        headerResizeObserver=new ResizeObserver(syncStickyTabs);
-        headerResizeObserver.observe(header);
-      }
-    }
-    const height=Math.ceil(header.getBoundingClientRect().height);
-    if(!height)return;
-    document.documentElement.style.setProperty('--sonaa-sticky-header-height',height+'px');
-    document.querySelectorAll('.client-section-tabs,.fanni-dashboard-tabs').forEach(function(tabs){
-      tabs.style.top=height+'px';
-      tabs.style.zIndex='30';
-    });
-  }
-  const app=document.getElementById('app');
-  if(app)new MutationObserver(syncStickyTabs).observe(app,{childList:true,subtree:true});
-  window.addEventListener('resize',syncStickyTabs,{passive:true});
-  syncStickyTabs();
-})();
-</script>
+<script src="/js/page-behaviors.js" data-sonaa-feature="sticky-tabs"></script>
 
 
 
