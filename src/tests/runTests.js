@@ -632,9 +632,9 @@ async function run() {
     });
 
     await test('offer submission uses an atomic guard against concurrent duplicate offers', async () => {
-      const source = fs.readFileSync(path.join(__dirname, '../routes/order.js'), 'utf8');
+      const source = fs.readFileSync(path.join(__dirname, '../routes/order/offers.js'), 'utf8');
       const offerStart = source.indexOf("router.post('/:sn/offer'");
-      const offerEnd = source.indexOf("\nrouter.post('/:sn/accept'", offerStart);
+      const offerEnd = source.indexOf("\n  return router;", offerStart);
       assert.notEqual(offerStart, -1);
       assert.notEqual(offerEnd, -1);
       const offerRoute = source.slice(offerStart, offerEnd);
