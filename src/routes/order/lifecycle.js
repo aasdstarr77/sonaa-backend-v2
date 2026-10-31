@@ -42,7 +42,7 @@ router.post('/:sn/accept', async (req, res, next) => {
       });
     }
 
-    if (!verifyClientToken(req, order)) {
+    if (!(await verifyClientToken(req, order))) {
       await session.abortTransaction();
       return res.status(403).json({
         message: 'لازم تستخدم رابط أو جلسة العميل صاحب الطلب لقبول العرض'
@@ -291,7 +291,7 @@ router.post('/:sn/cancel', async (req, res, next) => {
 
     const order = await Order.findOne({ sn });
     if (!order) return res.status(404).json({ message: 'الطلب غير موجود.' });
-    if (!verifyClientToken(req, order)) {
+    if (!(await verifyClientToken(req, order))) {
       return res.status(403).json({ message: 'لا يمكن إلغاء طلب لا يخص حسابك.' });
     }
     if (order.assignedFanni || ['تم اختيار فني', 'تم الانتهاء'].includes(order.status)) {
@@ -493,7 +493,7 @@ router.post('/:sn/rating', async (req, res, next) => {
     let reviewerRole = '';
     let reviewerId = null;
 
-    if (verifyClientToken({ ...req, body: { ...(req.body || {}), clientToken: token }, headers: {} }, order)) {
+    if (await verifyClientToken({ ...req, body: { ...(req.body || {}), clientToken: token }, headers: {} }, order)) {
       reviewerRole = 'client';
     } else {
       if (!token || !process.env.JWT_SECRET) {
