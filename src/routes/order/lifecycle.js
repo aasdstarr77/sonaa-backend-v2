@@ -10,6 +10,8 @@ router.post('/:sn/accept', async (req, res, next) => {
   let notificationFanniId = null;
   let notificationClientId = null;
   let notificationOrderId = null;
+  let notificationCommissionAmount = 0;
+  let notificationCommissionRate = 0;
 
   try {
     session = await mongoose.startSession();
@@ -89,6 +91,8 @@ router.post('/:sn/accept', async (req, res, next) => {
     const pricing = await currentPricing();
     const commissionRate = Number.isFinite(Number(pricing.commission)) ? Number(pricing.commission) : DEFAULT_COMMISSION_RATE;
     const commissionAmount = money(price * commissionRate / 100);
+    notificationCommissionAmount = commissionAmount;
+    notificationCommissionRate = commissionRate;
 
     if (
       !Number.isFinite(commissionAmount) ||
@@ -252,7 +256,7 @@ router.post('/:sn/accept', async (req, res, next) => {
       recipientId: notificationFanniId,
       type: 'commission_deducted',
       title: 'تم خصم عمولة المنصة',
-      message: 'تم خصم عمولة قدرها ' + Number(responsePayload.commission?.amount || 0) + ' جنيه (' + Number(responsePayload.commission?.rate || 0) + '%) من محفظتك عند قبول الطلب ' + acceptedOrder.sn + '.',
+      message: 'تم خصم عمولة قدرها ' + notificationCommissionAmount + ' جنيه (' + notificationCommissionRate + '%) من محفظتك عند قبول الطلب ' + acceptedOrder.sn + '.',
       link: '/fanni',
       dedupeKey: 'commission-deducted:' + String(notificationOrderId || acceptedOrder.sn)
     });

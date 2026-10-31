@@ -10,7 +10,8 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const request = require('supertest');
-const { MongoMemoryServer } = require('mongodb-memory-server');
+const { MongoMemoryReplSet } = require('mongodb-memory-server');
+const vm = require('node:vm');
 const errorHandler = require('../middleware/error');
 const { canAccessAdmin, isRootAdmin, defaultAdminPermissions } = require('../middleware/auth');
 
@@ -40,7 +41,7 @@ async function run() {
   }
 
   try {
-    mongo = await MongoMemoryServer.create();
+    mongo = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
     process.env.MONGO_URI = mongo.getUri('sonaa_test');
     app = require('../server');
     mongoose = require('mongoose');
@@ -108,6 +109,32 @@ async function run() {
       const r = await request(app).get('/');
       assert.equal(r.status, 200);
       assert.equal(r.headers['x-powered-by'], undefined);
+    });
+
+
+    await test('all executable page JavaScript is external and every local script target exists', async () => {
+      const frontendRoot = path.join(__dirname, '../../frontend');
+      const pages = ['index.html', 'customers.html', 'technicians.html', 'admin.html', 'client.html', 'fanni.html', 'password.html', 'support.html', 'admin-setup.html', 'editor.html', 'editor.backup.html'];
+      for (const page of pages) {
+        const html = fs.readFileSync(path.join(frontendRoot, page), 'utf8');
+        assert.match(html, /<meta[^>]+name=["']viewport["']/i, page + ' must define a mobile viewport');
+        const scripts = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)];
+        for (const match of scripts) {
+          const attrs = match[1] || '';
+          const src = attrs.match(/\bsrc=["']([^"']+)["']/i)?.[1];
+          if (!src && /\btype=["']application\/ld\+json["']/i.test(attrs)) continue;
+          assert.ok(src, page + ' contains executable inline JavaScript');
+          if (src.startsWith('/')) {
+            const localPath = path.join(frontendRoot, src.slice(1));
+            assert.ok(fs.existsSync(localPath), page + ' references missing script ' + src);
+          }
+        }
+      }
+      const scriptDir = path.join(frontendRoot, 'js');
+      for (const file of fs.readdirSync(scriptDir).filter(name => name.endsWith('.js'))) {
+        const source = fs.readFileSync(path.join(scriptDir, file), 'utf8');
+        assert.doesNotThrow(() => new vm.Script(source, { filename: file }), file + ' must parse as a classic browser script');
+      }
     });
 
     await test('security headers include CSP and disable object embedding', async () => {
@@ -349,6 +376,27 @@ async function run() {
       assert.equal(r.body.supportCase.needsHuman, true, 'owner follow-up should return the case to the human-support queue');
     });
 
+
+    await test('admin can answer and close a client support conversation', async () => {
+      const queue = await request(app).get('/api/support/admin?needsHuman=true')
+        .set('Authorization', 'Bearer ' + adminToken);
+      assert.equal(queue.status, 200);
+      assert.ok(queue.body.supportCases.some(item => String(item._id) === String(supportCaseId)));
+      const reply = await request(app).post('/api/support/admin/' + supportCaseId + '/reply')
+        .set('Authorization', 'Bearer ' + adminToken)
+        .send({ text: 'تمت مراجعة طلبك، ونحن نتابع المشكلة.' });
+      assert.equal(reply.status, 200);
+      assert.equal(reply.body.supportCase.status, 'بانتظار رد المستخدم');
+      assert.equal(reply.body.supportCase.needsHuman, false);
+      const closed = await request(app).patch('/api/support/admin/' + supportCaseId + '/status')
+        .set('Authorization', 'Bearer ' + adminToken).send({ status: 'مغلقة' });
+      assert.equal(closed.status, 200);
+      assert.equal(closed.body.supportCase.status, 'مغلقة');
+      const lateMessage = await request(app).post('/api/support/client/' + supportCaseId + '/messages')
+        .set('Authorization', 'Bearer ' + clientToken).send({ text: 'رسالة بعد إغلاق المحادثة' });
+      assert.equal(lateMessage.status, 409);
+    });
+
     await test('admin button layout is shared, persisted, and safely sanitized', async () => {
       const unauthorized = await request(app).get('/api/admin/ui-layout/admin');
       assert.equal(unauthorized.status, 401);
@@ -534,6 +582,120 @@ async function run() {
       assert.match(acceptRoute, /message: 'تم قبول العرض بنجاح'/);
       const priceSource = fs.readFileSync(path.join(__dirname, '../routes/order/chat-and-price.js'), 'utf8');
       assert.match(priceSource, /تمت الموافقة على السعر الجديد\./);
+    });
+
+
+    await test('technician registration through offer, chat, acceptance, wallet, and price adjustment', async () => {
+      const { ALL_SERVICES } = require('../config/professions');
+      const Fanni = require('../models/Fanni');
+      const Order = require('../models/Order');
+      const WalletTransaction = require('../models/WalletTransaction');
+      const Notification = require('../models/Notification');
+      const phone = '01012345680';
+      const registration = await request(app).post('/api/fanni/register').send({
+        name: 'فني تكامل شامل', phone, password: 'TechPass123',
+        specialties: [ALL_SERVICES[0]], areas: ['المعادي']
+      });
+      assert.equal(registration.status, 201);
+      const fanniId = registration.body.id;
+      const pendingLogin = await request(app).post('/api/fanni/login').send({ phone, password: 'TechPass123' });
+      assert.equal(pendingLogin.status, 200);
+      const pendingOrders = await request(app).get('/api/orders/available')
+        .set('Authorization', 'Bearer ' + pendingLogin.body.token);
+      assert.equal(pendingOrders.status, 403);
+      const approved = await request(app).post('/api/admin/fannis/' + fanniId + '/approve')
+        .set('Authorization', 'Bearer ' + adminToken).send({});
+      assert.equal(approved.status, 200);
+      const login = await request(app).post('/api/fanni/login').send({ phone, password: 'TechPass123' });
+      assert.equal(login.status, 200);
+      const fanniToken = login.body.token;
+      const guidelines = await request(app).post('/api/fanni/guidelines/accept')
+        .set('Authorization', 'Bearer ' + fanniToken)
+        .send({ accepted: true, version: '2026-10-20-v1' });
+      assert.equal(guidelines.status, 200);
+      const balance = await request(app).post('/api/admin/fannis/' + fanniId + '/set-balance')
+        .set('Authorization', 'Bearer ' + adminToken)
+        .send({ amount: 1000, reason: 'رصيد تجهيز اختبار التكامل' });
+      assert.equal(balance.status, 200);
+      const created = await request(app).post('/api/orders')
+        .set('Authorization', 'Bearer ' + clientToken)
+        .send({
+          service: ALL_SERVICES[0], area: 'المعادي', address: 'شارع الاختبار 10',
+          description: 'أحتاج فني لتنفيذ خدمة واختبار دورة الطلب كاملة'
+        });
+      assert.equal(created.status, 201);
+      const order = await Order.findOne({ sn: created.body.sn });
+      assert.ok(order);
+      order.status = 'تم النشر';
+      order.expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      await order.save();
+      const available = await request(app).get('/api/orders/available')
+        .set('Authorization', 'Bearer ' + fanniToken);
+      assert.equal(available.status, 200);
+      assert.ok(available.body.orders.some(item => item.sn === created.body.sn));
+      const offer = await request(app).post('/api/orders/' + created.body.sn + '/offer')
+        .set('Authorization', 'Bearer ' + fanniToken)
+        .send({ price: 200, message: 'أستطيع تنفيذ العمل بجودة عالية' });
+      assert.equal(offer.status, 201, JSON.stringify(offer.body));
+      assert.equal(offer.body.requiredCommission, 20);
+      const offerOrder = await Order.findOne({ sn: created.body.sn });
+      const offerId = String(offerOrder.offers[0]._id);
+      assert.equal(Number((await Fanni.findById(fanniId)).walletBalance), 1000);
+      const duplicateOffer = await request(app).post('/api/orders/' + created.body.sn + '/offer')
+        .set('Authorization', 'Bearer ' + fanniToken)
+        .send({ price: 210, message: 'هذا عرض مكرر للاختبار' });
+      assert.equal(duplicateOffer.status, 409);
+      const clientMessage = await request(app).post('/api/orders/' + created.body.sn + '/chat')
+        .send({ clientToken: created.body.clientToken, offerId, text: 'هل السعر شامل؟' });
+      assert.equal(clientMessage.status, 201, JSON.stringify(clientMessage.body));
+      const technicianMessage = await request(app).post('/api/orders/' + created.body.sn + '/chat')
+        .set('Authorization', 'Bearer ' + fanniToken)
+        .send({ offerId, text: 'نعم' });
+      assert.equal(technicianMessage.status, 201, JSON.stringify(technicianMessage.body));
+      const conversation = await request(app).get('/api/orders/' + created.body.sn + '/chat')
+        .query({ clientToken: created.body.clientToken, offerId });
+      assert.equal(conversation.status, 200);
+      assert.equal(conversation.body.messages.length, 2);
+      assert.equal(conversation.body.messages[0].senderRole, 'client');
+      assert.equal(conversation.body.messages[1].senderRole, 'fanni');
+      const accepted = await request(app).post('/api/orders/' + created.body.sn + '/accept')
+        .send({ clientToken: created.body.clientToken, offerId });
+      assert.equal(accepted.status, 200, JSON.stringify(accepted.body));
+      assert.equal(accepted.body.order.status, 'تم اختيار فني');
+      assert.equal(Number((await Fanni.findById(fanniId)).walletBalance), 980);
+      const acceptedOrder = await Order.findOne({ sn: created.body.sn });
+      assert.equal(Number(acceptedOrder.commissionAmount), 20);
+      assert.equal(acceptedOrder.commissionCharged, true);
+      assert.equal(await WalletTransaction.countDocuments({ order: acceptedOrder._id, type: 'commission' }), 1);
+      const commissionNotice = await Notification.findOne({ recipientRole: 'fanni', recipientId: fanniId, type: 'commission_deducted' }).lean();
+      assert.ok(commissionNotice);
+      assert.match(commissionNotice.message, /20 جنيه/);
+      assert.match(commissionNotice.message, /10%/);
+      const repeatedAccept = await request(app).post('/api/orders/' + created.body.sn + '/accept')
+        .send({ clientToken: created.body.clientToken, offerId });
+      assert.equal(repeatedAccept.status, 409);
+      assert.equal(Number((await Fanni.findById(fanniId)).walletBalance), 980);
+      const priceRequest = await request(app).post('/api/orders/' + created.body.sn + '/price-change')
+        .set('Authorization', 'Bearer ' + fanniToken)
+        .send({ newPrice: 300, reason: 'تم اكتشاف قطع إضافية أثناء العمل' });
+      assert.equal(priceRequest.status, 201, JSON.stringify(priceRequest.body));
+      const requestId = String(priceRequest.body.request._id);
+      const decision = await request(app).post('/api/orders/' + created.body.sn + '/price-change/' + requestId + '/decision')
+        .send({ clientToken: created.body.clientToken, approved: true });
+      assert.equal(decision.status, 200, JSON.stringify(decision.body));
+      assert.equal(Number((await Fanni.findById(fanniId)).walletBalance), 970);
+      const finalOrder = await Order.findOne({ sn: created.body.sn });
+      assert.equal(Number(finalOrder.acceptedOfferPrice), 300);
+      assert.equal(Number(finalOrder.commissionAmount), 30);
+      assert.equal(finalOrder.priceChangeRequests[0].status, 'مقبول');
+      assert.equal(await WalletTransaction.countDocuments({ order: finalOrder._id, type: 'commission' }), 2);
+      const technicianOffers = await request(app).get('/api/orders/my-offers')
+        .set('Authorization', 'Bearer ' + fanniToken);
+      assert.equal(technicianOffers.status, 200);
+      const ownOffer = technicianOffers.body.offers.find(item => item.orderSn === created.body.sn);
+      assert.ok(ownOffer);
+      assert.equal(ownOffer.accepted, true);
+      assert.equal(ownOffer.client.phone, '01012345678');
     });
 
     await test('only the order owner can cancel a pending order', async () => {
