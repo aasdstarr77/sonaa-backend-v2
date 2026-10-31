@@ -1,6 +1,5 @@
 <!doctype html>
-<html lang="ar" dir="rtl">
-<head>
+<html lang="ar" dir="rtl" data-sonaa-theme="customers"><head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0b1b3a">
@@ -18,38 +17,38 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
-    :root{color-scheme:light;--navy:#0b1b3a;--blue:#2563eb;--gold:#f5b928;--ink:#172744;--muted:#64748b;--line:#e5ebf3;--paper:#f5f8fd}
+    :root{color-scheme:light;--navy:var(--sonaa-color-0b1b3a);--blue:var(--sonaa-color-2563eb);--gold:var(--sonaa-color-f5b928);--ink:var(--sonaa-color-172744);--muted:var(--sonaa-color-64748b);--line:var(--sonaa-color-e5ebf3);--paper:var(--sonaa-color-f5f8fd)}
     *{box-sizing:border-box}
     body{margin:0;background:var(--paper);color:var(--ink);font-family:'Cairo',system-ui,sans-serif;line-height:1.9}
     a{color:inherit;text-decoration:none}
     .shell{width:min(1060px,calc(100% - 28px));margin:auto}
     header{height:76px;display:flex;align-items:center;justify-content:space-between;gap:12px}
     .brand{display:flex;align-items:center;gap:10px;font-size:24px;font-weight:900;color:var(--navy)}
-    .mark{width:42px;height:42px;display:grid;place-items:center;border:2px solid #14b8a6;border-radius:14px;background:#fff;font-size:26px}
-    .navlink{padding:8px 13px;border:1px solid var(--line);border-radius:12px;background:#fff;font-size:13px;font-weight:800}
-    .hero{position:relative;overflow:hidden;border-radius:27px;padding:clamp(27px,6vw,62px);color:#fff;background:radial-gradient(circle at 8% 0,#28528a 0,transparent 35%),linear-gradient(125deg,#0b1b3a,#123568 70%,#19477d);box-shadow:0 24px 55px #0b1b3a20}
-    .pill{display:inline-block;padding:6px 13px;border:1px solid #ffffff35;border-radius:99px;color:#ffe08a;font-size:13px;font-weight:800}
+    .mark{width:42px;height:42px;display:grid;place-items:center;border:2px solid var(--sonaa-color-14b8a6);border-radius:14px;background:var(--sonaa-color-fff);font-size:26px}
+    .navlink{padding:8px 13px;border:1px solid var(--line);border-radius:12px;background:var(--sonaa-color-fff);font-size:13px;font-weight:800}
+    .hero{position:relative;overflow:hidden;border-radius:27px;padding:clamp(27px,6vw,62px);color:var(--sonaa-color-fff);background:radial-gradient(circle at 8% 0,var(--sonaa-color-28528a) 0,transparent 35%),linear-gradient(125deg,var(--sonaa-color-0b1b3a),var(--sonaa-color-123568) 70%,var(--sonaa-color-19477d));box-shadow:0 24px 55px var(--sonaa-color-0b1b3a20)}
+    .pill{display:inline-block;padding:6px 13px;border:1px solid var(--sonaa-color-ffffff35);border-radius:99px;color:var(--sonaa-color-ffe08a);font-size:13px;font-weight:800}
     h1{max-width:760px;margin:18px 0 12px;font-size:clamp(31px,5.4vw,54px);line-height:1.4;font-weight:900}
-    h1 span{color:#ffd45e}
-    .hero p{max-width:730px;margin:0;color:#dbe7f8;font-size:clamp(15px,2vw,18px)}
+    h1 span{color:var(--sonaa-color-ffd45e)}
+    .hero p{max-width:730px;margin:0;color:var(--sonaa-color-dbe7f8);font-size:clamp(15px,2vw,18px)}
     .actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:25px}
     .btn{display:inline-flex;justify-content:center;align-items:center;padding:12px 20px;border-radius:13px;font-weight:900}
-    .primary{background:var(--gold);color:#172744}
-    .secondary{border:1px solid #ffffff65;color:#fff;background:#ffffff0b}
+    .primary{background:var(--gold);color:var(--sonaa-color-172744)}
+    .secondary{border:1px solid var(--sonaa-color-ffffff65);color:var(--sonaa-color-fff);background:var(--sonaa-color-ffffff0b)}
     section{padding:35px 0 8px}
     .heading{text-align:center;margin-bottom:20px}
     .heading h2{margin:0;color:var(--navy);font-size:clamp(23px,3vw,30px);font-weight:900}
     .heading p{margin:5px 0 0;color:var(--muted);font-size:14px}
     .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
-    .card{padding:21px;background:#fff;border:1px solid var(--line);border-radius:19px}
-    .num{display:grid;place-items:center;width:43px;height:43px;border-radius:14px;background:#e8f1ff;color:#2459b6;font-weight:900;font-size:18px}
+    .card{padding:21px;background:var(--sonaa-color-fff);border:1px solid var(--line);border-radius:19px}
+    .num{display:grid;place-items:center;width:43px;height:43px;border-radius:14px;background:var(--sonaa-color-e8f1ff);color:var(--sonaa-color-2459b6);font-weight:900;font-size:18px}
     h3{margin:12px 0 5px;color:var(--navy);font-size:18px}
     .card p{margin:0;color:var(--muted);font-size:14px}
-    .note{margin:23px 0 32px;padding:15px 18px;border-right:4px solid var(--gold);border-radius:12px;background:#fff9e8;color:#604c19;font-size:13px}
+    .note{margin:23px 0 32px;padding:15px 18px;border-right:4px solid var(--gold);border-radius:12px;background:var(--sonaa-color-fff9e8);color:var(--sonaa-color-604c19);font-size:13px}
     .service-card h3{margin-top:0}.service-list{margin:8px 0 0;padding-right:20px;color:var(--muted);font-size:13px}.service-list li{margin:3px 0}.bottom{text-align:center;padding:24px 10px 34px;border-top:1px solid var(--line)}
     .bottom h2{margin:0;color:var(--navy);font-size:25px}
     .bottom p{margin:5px 0 17px;color:var(--muted);font-size:14px}
-    footer{text-align:center;padding:17px;color:#8995a7;font-size:12px;border-top:1px solid var(--line)}
+    footer{text-align:center;padding:17px;color:var(--sonaa-color-8995a7);font-size:12px;border-top:1px solid var(--line)}
     @media(max-width:680px){header{height:68px}.brand{font-size:21px}.mark{width:38px;height:38px}.hero{border-radius:22px;padding:28px 20px}.grid{grid-template-columns:1fr}.card{padding:18px}.btn{flex:1}}
     @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
   </style>
@@ -63,6 +62,7 @@
     "description":"صفحة صُنّاع لطلب الخدمات المنزلية والصيانة، بما يشمل السباكة والكهرباء والنجارة والنقاشة والتنظيف والدش والرسيفرات وكاميرات المراقبة والألوميتال والتكييف والتشطيبات."
   }
   </script>
+<link rel="stylesheet" href="/css/theme.css">
 </head>
 <body>
   <header class="shell">
@@ -110,7 +110,7 @@
     </section>
     <section aria-labelledby="areas-title">
       <div class="heading"><h2 id="areas-title">محتاج صنايعي أو فني لخدمة معينة؟</h2><p>سواء كنت بتدور على سباك لإصلاح تسريب، أو نجار لتصليح الأثاث، أو نقاش لتجديد الشقة، أو عامل نظافة، أو فني دش ورسيفر وكاميرات مراقبة، ابدأ طلبك واكتب وصف المشكلة بوضوح.</p></div>
-      <div class="actions" style="justify-content:center"><a class="btn primary" href="/client">اختار الخدمة واطلبها</a><a class="btn" style="background:#fff;border:1px solid var(--line)" href="/technicians">أنا فني وبدور على شغل</a></div>
+      <div class="actions" style="justify-content:center"><a class="btn primary" href="/client">اختار الخدمة واطلبها</a><a class="btn" style="background:var(--sonaa-color-fff);border:1px solid var(--line)" href="/technicians">أنا فني وبدور على شغل</a></div>
     </section>
     <section class="bottom" aria-labelledby="start-title">
       <h2 id="start-title">ابدأ من نموذج الطلب</h2>
