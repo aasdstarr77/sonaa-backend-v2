@@ -53,7 +53,7 @@
     try{
       if(await Notification.requestPermission()!=='granted')throw Error('لم يتم السماح بإشعارات المتصفح.');
       const kr=await fetch('/api/notifications/web-push-public-key',{cache:'no-store'}),kd=await kr.json();
-      if(!kr.ok||!kd.publicKey)throw Error(kd.message||'إشعارات الويب غير مهيأة على الخادم.');
+      if(!kr.ok||!kd.publicKey)throw Error('خدمة إشعارات المتصفح غير متاحة حاليًا. حاول مرة أخرى لاحقًا.');
       const reg=await navigator.serviceWorker.register('/service-worker.js',{scope:'/'});
       await navigator.serviceWorker.ready;
       let s=await reg.pushManager.getSubscription();

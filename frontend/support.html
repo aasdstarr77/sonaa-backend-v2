@@ -125,7 +125,7 @@ input[type=checkbox]{width:18px;height:18px;accent-color:#0d9488;filter:drop-sha
   <label for="new-message">رسالتك</label>
   <textarea class="field" id="new-message" maxlength="2000" placeholder="اشرح المشكلة أو الاستفسار..."></textarea>
   <button class="btn" id="create-btn" style="width:100%;margin-top:10px">إرسال وفتح محادثة</button>
-  <div class="notice">رسالتك محفوظة داخل صُنّاع. في هذه المرحلة يتابعها فريق الدعم من لوحة الإدارة؛ الرد الآلي وتنبيه واتساب سيتم تفعليهما بعد إعداد خدمات الربط المطلوبة.</div>
+  <div class="notice">بعد إرسال رسالتك، يمكنك متابعة رد فريق الدعم من خلال هذه الصفحة.</div>
  </div>
  <div class="cols">
   <section class="card">
@@ -180,9 +180,9 @@ const dateLabel=v=>{if(!v)return '';const d=new Date(v);return Number.isNaN(d.ge
 let cases=[],selected=null,busy=false,pollBusy=false;
 const $=id=>document.getElementById(id);
 async function request(path,options){
- let response;try{response=await fetch(API_ROOT+path,{method:options&&options.method||'GET',headers:{Accept:'application/json','Content-Type':'application/json',Authorization:'Bearer '+token()},body:options&&options.body?JSON.stringify(options.body):undefined,cache:'no-store'});}catch(_){throw new Error('تعذر الاتصال بالخادم. راجع الإنترنت وحاول مرة أخرى.')}
+ let response;try{response=await fetch(API_ROOT+path,{method:options&&options.method||'GET',headers:{Accept:'application/json','Content-Type':'application/json',Authorization:'Bearer '+token()},body:options&&options.body?JSON.stringify(options.body):undefined,cache:'no-store'});}catch(_){throw new Error('تعذر الاتصال. تحقق من الإنترنت وحاول مرة أخرى.')}
  let data={};try{data=await response.json()}catch(_){}
- if(!response.ok)throw new Error(data.message||'تعذر تنفيذ الطلب.');return data;
+ if(!response.ok)throw new Error(response.status===404||response.status>=500?'تعذر تنفيذ طلبك حاليًا. حاول مرة أخرى.':(data.message||'تعذر تنفيذ الطلب.'));return data;
 }
 function showError(message){$('error-area').innerHTML=message?'<div class="error">'+esc(message)+'</div>':''}
 function showNotice(message,success){$('notice-area').innerHTML=message?'<div class="'+(success?'success':'error')+'">'+esc(message)+'</div>':''}
@@ -235,7 +235,7 @@ async function openCase(id){
 async function createCase(){
  if(busy)return;const text=$('new-message').value.trim();if(!text){showError('اكتب رسالتك الأول.');return}
  busy=true;$('create-btn').disabled=true;showError('');
- try{const data=await request('/'+role,{method:'POST',body:{subject:$('subject').value.trim()||'استفسار عام',text}});selected=data.supportCase;cases=[selected,...cases.filter(c=>String(c._id)!==String(selected._id))];$('new-message').value='';$('subject').value='';showNotice('تم فتح محادثة الدعم وحفظ رسالتك. فريق الدعم يراجع الحالات من لوحة الإدارة.',true);renderOwner()}
+ try{const data=await request('/'+role,{method:'POST',body:{subject:$('subject').value.trim()||'استفسار عام',text}});selected=data.supportCase;cases=[selected,...cases.filter(c=>String(c._id)!==String(selected._id))];$('new-message').value='';$('subject').value='';showNotice('تم إرسال رسالتك بنجاح. يمكنك متابعة رد فريق الدعم من هنا.',true);renderOwner()}
  catch(e){showError(e.message)}finally{busy=false;$('create-btn').disabled=false}
 }
 async function sendOwnerMessage(needsHuman){

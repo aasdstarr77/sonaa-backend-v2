@@ -689,8 +689,8 @@ async function api(path,options={}){
  try{
   response=await fetch(buildUrl(path),{...fetchOptions,...(controller?{signal:controller.signal}:{}),headers,credentials:'omit',mode:'cors'});
  }catch(e){
-  if(controller&&controller.signal.aborted)throw new Error('السيرفر لم يرد خلال 15 ثانية. جرّب مرة أخرى؛ لو تكررت المشكلة سنحتاج فحص استجابة تسجيل دخول الفني في السيرفر.');
-  throw new Error('تعذر الاتصال بالسيرفر. تحقق من الإنترنت ورابط الباك إند.');
+  if(controller&&controller.signal.aborted)throw new Error('استغرق الاتصال وقتًا أطول من المعتاد. حاول مرة أخرى بعد قليل.');
+  throw new Error('تعذر الاتصال. تحقق من الإنترنت وحاول مرة أخرى.');
  }finally{
   if(timeoutId!==null)clearTimeout(timeoutId);
  }
@@ -698,16 +698,16 @@ async function api(path,options={}){
  const raw=await response.text();
  let data={};
 
- try{data=raw?JSON.parse(raw):{}}catch{data={message:'استجابة غير صالحة من السيرفر'};}
+ try{data=raw?JSON.parse(raw):{}}catch{data={message:'تعذر قراءة البيانات. حاول مرة أخرى.'};}
 
  if(!response.ok){
-  const message=data.message||data.error||(
-   response.status===404?'مسار API غير موجود في السيرفر':
+  const message=response.status===404||response.status>=500?'تعذر تنفيذ طلبك حاليًا. حاول مرة أخرى.':(data.message||data.error||(
+   response.status===404?'الخدمة المطلوبة غير متاحة حاليًا.':
    response.status===401?'انتهت الجلسة أو بيانات الدخول غير صحيحة':
    response.status===403?'الحساب غير مصرح له بتنفيذ العملية':
    response.status===429?'محاولات كثيرة. انتظر قليلًا ثم حاول مجددًا':
-   `فشل الطلب (${response.status})`
-  );
+   `حدثت مشكلة أثناء تنفيذ الطلب. حاول مرة أخرى.`
+  ));
 
   const error=new Error(message);
   error.status=response.status;
@@ -754,7 +754,7 @@ async function loadServices(){
   const data=await apiGet('/api/services');
   const cats=Array.isArray(data.categories)?data.categories:[];
   const srvs=Array.isArray(data.services)?data.services:[];
-  if(!cats.length||!srvs.length)throw new Error('قائمة الخدمات فارغة من الخادم.');
+  if(!cats.length||!srvs.length)throw new Error('قائمة الخدمات غير متاحة حاليًا. حاول مرة أخرى بعد قليل.');
   for(const c of cats){
     if(!c||typeof c.label!=='string'||!Array.isArray(c.services))throw new Error('بيانات الأقسام غير سليمة.');
   }
@@ -1002,7 +1002,7 @@ function renderAcceptedClient(o){
  const client=o?.client;
 
  if(!client||typeof client!=='object'){
-  return '<div class="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[11px] leading-6 text-amber-800">تم قبول العرض، لكن بيانات العميل لم تصل من الخادم. حدّث العروض أو راجع استجابة API.</div>';
+  return '<div class="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[11px] leading-6 text-amber-800">تم قبول العرض، لكن تعذر عرض بيانات العميل حاليًا. حدّث العروض وحاول مرة أخرى.</div>';
  }
 
  return `<section class="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 space-y-3">
@@ -1092,9 +1092,9 @@ function render(){
     <div class="rounded-2xl border p-3">
      <div class="font-extrabold text-[12px] mb-3">التخصصات * ${SERVICES_LOADING?'<span class="text-blue-600">(جاري التحميل...)</span>':SERVICES_ERROR?'<span class="text-red-600">(فشل التحميل)</span>':''}</div>
      ${SERVICES_LOADING?`
-       <div class="py-6 text-center"><div class="inline-block h-6 w-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div><p class="mt-2 text-[11px] font-bold text-slate-600">جاري تحميل التخصصات من الخادم...</p></div>
+       <div class="py-6 text-center"><div class="inline-block h-6 w-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div><p class="mt-2 text-[11px] font-bold text-slate-600">جاري تحميل التخصصات...</p></div>
      `:SERVICES_ERROR?`
-       <div class="rounded-xl bg-red-50 border border-red-200 p-3 text-center"><p class="text-[11px] font-bold text-red-700">${esc(SERVICES_ERROR)}</p><button onclick="loadServices()" class="mt-2 secondary-btn px-4 py-2 text-[11px]">إعادة المحاولة</button><p class="mt-2 text-[10px] text-slate-500">المصدر الرسمي هو /api/services</p></div>
+       <div class="rounded-xl bg-red-50 border border-red-200 p-3 text-center"><p class="text-[11px] font-bold text-red-700">${esc(SERVICES_ERROR)}</p><button onclick="loadServices()" class="mt-2 secondary-btn px-4 py-2 text-[11px]">إعادة المحاولة</button><p class="mt-2 text-[10px] text-slate-500">إذا لم تظهر التخصصات، اضغط على إعادة المحاولة.</p></div>
      `:CATEGORIES.map((cat,index)=>{
       const selectedCount=cat.services.filter(s=>state.regSpecialties.includes(s)).length;
       const categoryId='specialty-category-'+index;
@@ -1158,7 +1158,7 @@ function render(){
      <div class="fanni-detail-line flex items-center justify-between gap-2 rounded-xl px-3 py-2.5"><span class="text-[11px] font-bold">حالة الاعتماد</span><b class="text-[11px]">${esc(status)}</b></div>
      <div class="fanni-detail-line flex items-center justify-between gap-2 rounded-xl px-3 py-2.5"><span class="text-[11px] font-bold">المستوى المهني</span><b class="text-[11px]">${esc(user?.level||'مبتدئ')}</b></div>
      ${!approved?'<div class="fanni-approval-note rounded-xl px-3 py-2.5 text-[11px] leading-6">حسابك لم يُعتمد بعد. يمكنك مراجعة بياناتك، لكن إرسال العروض وشحن المحفظة متاحان بعد اعتماد الإدارة.</div>':''}
-     <div class="fanni-detail-line rounded-xl px-3 py-2.5"><div class="flex items-center justify-between gap-2"><b class="text-[11px]">تخصصاتك</b><span class="text-[10px]">${specialties.length} تخصص</span></div><div class="mt-2 flex flex-wrap gap-1.5">${specialties.map(s=>'<span class="fanni-detail-chip rounded-full px-2.5 py-1 text-[10px]">'+esc(s)+'</span>').join('')||'<span class="text-[10px]">لم يتم إرجاع التخصصات من الخادم</span>'}</div></div>
+     <div class="fanni-detail-line rounded-xl px-3 py-2.5"><div class="flex items-center justify-between gap-2"><b class="text-[11px]">تخصصاتك</b><span class="text-[10px]">${specialties.length} تخصص</span></div><div class="mt-2 flex flex-wrap gap-1.5">${specialties.map(s=>'<span class="fanni-detail-chip rounded-full px-2.5 py-1 text-[10px]">'+esc(s)+'</span>').join('')||'<span class="text-[10px]">لا توجد تخصصات مسجلة حاليًا.</span>'}</div></div>
      <div class="fanni-detail-line rounded-xl px-3 py-2.5"><b class="text-[11px]">مناطق العمل</b><p class="mt-1 text-[11px] leading-5">${esc(areas.join('، ')||'غير محددة')}</p></div>
      <button type="button" onclick="setTab('wallet')" class="fanni-wallet-shortcut w-full rounded-xl px-3 py-2.5 text-[11px] font-extrabold">فتح المحفظة</button>
     </div>
@@ -1406,8 +1406,8 @@ async function doLogin(){
   const token=extractToken(data);
   const user=extractUser(data);
 
-  if(!token)throw new Error('السيرفر لم يرجع رمز الدخول. راجع استجابة تسجيل الدخول في الباك إند.');
-  if(!user)throw new Error('تم الدخول لكن بيانات الفني غير موجودة في الاستجابة.');
+  if(!token)throw new Error('تعذر إتمام تسجيل الدخول. حاول مرة أخرى.');
+  if(!user)throw new Error('تعذر تحميل بيانات الحساب. حدّث الصفحة وحاول مرة أخرى.');
 
   // A registration URL may keep ?tab=register after switching to login.
   // Once login succeeds, remove that URL-only gate so the dashboard can render.
@@ -1515,7 +1515,7 @@ async function saveProfileChanges(){
  try{
   const result=await API.updateProfile({phone,specialties:state.editSpecialties,areas});
   const updated=extractUser(result)||result?.data||result?.fanni||null;
-  if(!updated||typeof updated!=='object')throw new Error('تم الحفظ لكن بيانات الحساب لم تصل من السيرفر. حدّث الصفحة للتأكد.');
+  if(!updated||typeof updated!=='object')throw new Error('تم إرسال طلب التعديل، لكن تعذر تحديث البيانات المعروضة. حدّث الصفحة للتأكد.');
   currentUser={...(currentUser||{}),...updated};setAuth(getToken(),currentUser);
   state.editProfileMode=false;state.editSaving=false;state.error='';state.success='';render();
   toast(result.message||'تم إرسال طلب تعديل البيانات للإدارة للمراجعة');
