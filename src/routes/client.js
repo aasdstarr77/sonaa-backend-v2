@@ -29,7 +29,7 @@ const loginSchema = Joi.object({
 function issueToken(client) {
   if (!process.env.JWT_SECRET) throw new Error('JWT_SECRET_MISSING');
   return jwt.sign(
-    { id: String(client._id), role: 'client' },
+    { id: String(client._id), role: 'client', tokenVersion: Number(client.tokenVersion || 0) },
     process.env.JWT_SECRET,
     { expiresIn: '7d', issuer: 'sonaa-backend-v2', audience: 'sonaa-client' }
   );
@@ -224,12 +224,16 @@ router.post('/orders/claim', clientAuth, async (req, res, next) => {
       return res.status(409).json({ message: 'الطلب مرتبط بالفعل بحساب عميل آخر' });
     }
     if (String(order.clientAccount || '') === String(req.clientId)) {
+      if (!order.clientAccountLinkedAt) {
+        order.clientAccountLinkedAt = new Date();
+        await order.save();
+      }
       return res.json({ message: 'الطلب مرتبط بحسابك بالفعل', order: safeOrder(order) });
     }
 
     const linked = await Order.findOneAndUpdate(
       { _id: order._id, $or: [{ clientAccount: null }, { clientAccount: { $exists: false } }] },
-      { $set: { clientAccount: req.clientId } },
+      { $set: { clientAccount: req.clientId, clientAccountLinkedAt: new Date() } },
       { new: true, runValidators: true }
     );
     if (!linked) return res.status(409).json({ message: 'تعذر ربط الطلب؛ قد يكون مرتبطًا بحساب آخر بالفعل' });
