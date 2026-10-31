@@ -37,7 +37,7 @@ async function doLogin(){
   setAuth(token,user);
   currentUser=user;
   state.loading=false;
-  state.tab='myOffers';
+  state.tab='available';
   state.loginPass='';
   render();
 

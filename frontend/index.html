@@ -83,6 +83,9 @@
     .section-head{text-align:center;margin:0 auto 22px}
     .section-head h2{margin:0;color:var(--navy);font-size:clamp(23px,2.5vw,27px);font-weight:900}
     .section-head p{margin:6px 0 0;color:var(--muted);font-size:13.5px}
+    .choose-cue-hand{display:inline-block;margin-inline-start:7px;font-size:1.15em;vertical-align:-.08em;filter:drop-shadow(0 3px 0 rgba(10,35,66,.24)) drop-shadow(0 5px 5px rgba(23,78,166,.2));transform-origin:50% 70%;animation:sonaaHandCue 1.25s ease-in-out infinite}
+    @keyframes sonaaHandCue{0%,100%{transform:translateY(0) rotate(-5deg) scale(1)}50%{transform:translateY(6px) rotate(2deg) scale(1.08)}}
+    @media(prefers-reduced-motion:reduce){.choose-cue-hand{animation:none}}
     
     .cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:820px;margin:0 auto}
     .entry{position:relative;display:flex;flex-direction:column;min-height:248px;padding:24px 24px 20px;border-radius:22px;background:linear-gradient(155deg,var(--sonaa-color-fff) 0%,var(--sonaa-color-f7f9fd) 100%);border:1px solid var(--sonaa-color-dce5f2);box-shadow:0 7px 0 var(--sonaa-color-dce4f0),0 14px 28px var(--sonaa-color-15254412),inset 0 1px 0 var(--sonaa-color-fff);transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}
@@ -153,7 +156,7 @@
     </a>
     <span class="top-note">كل خدمة تبدأ بخطوة</span>
   </header>
-  <nav class="shell home-nav"><a href="/" aria-current="page">⌂ الرئيسية</a><a href="https://aasdstarr77.github.io/sonaa-download/" class="download-link">⬇ تحميل التطبيق</a></nav>
+  <nav class="shell home-nav"><a href="https://aasdstarr77.github.io/sonaa-download/" class="download-link">⬇ تحميل التطبيق</a></nav>
 
   <main class="shell">
     <section class="hero">
@@ -191,7 +194,7 @@
 
     <section class="choose">
       <div class="section-head">
-        <h2>تحب تدخل بصفتك إيه؟</h2>
+        <h2>تحب تدخل بصفتك إيه؟ <span class="choose-cue-hand" aria-hidden="true">👇</span></h2>
         <p>اختار عشان نوصّلك للمكان الصح</p>
       </div>
       <div class="cards">
