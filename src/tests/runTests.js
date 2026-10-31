@@ -83,7 +83,7 @@ async function run() {
       assert.equal(canAccessAdmin(noDashboardRead, { path: '/reports', method: 'POST' }), false, 'report generation still respects dashboard read permission');
       assert.equal(canAccessAdmin(user, { path: '/admin-users/123/permissions', method: 'PATCH' }), false);
       assert.equal(canAccessAdmin(user, { path: '/notifications/admin', method: 'GET' }), true);
-      const adminSource = fs.readFileSync(path.join(__dirname, '../routes/admin.js'), 'utf8');
+      const adminSource = fs.readFileSync(path.join(__dirname, '../routes/admin/orders.js'), 'utf8');
       const assignStart = adminSource.indexOf("router.post('/orders/:sn/assign'");
       const assignEnd = adminSource.indexOf("router.get('/wallet/transactions", assignStart);
       assert.match(adminSource.slice(assignStart, assignEnd), /requireRootAdmin\(req, res\)/);
@@ -656,7 +656,7 @@ async function run() {
       assert.equal(Object.prototype.hasOwnProperty.call(r.body.order, 'commissionAmount'), false);
       assert.equal(Object.prototype.hasOwnProperty.call(r.body.order, 'commissionCharged'), false);
       assert.equal(Object.prototype.hasOwnProperty.call(r.body.order, 'commissionChargedAt'), false);
-      const source = fs.readFileSync(path.join(__dirname, '../routes/order.js'), 'utf8');
+      const source = fs.readFileSync(path.join(__dirname, '../routes/order/lifecycle.js'), 'utf8');
       const acceptStart = source.indexOf("router.post('/:sn/accept'");
       const acceptEnd = source.indexOf("router.post('/:sn/cancel'", acceptStart);
       assert.notEqual(acceptStart, -1);
