@@ -558,6 +558,7 @@ async function run() {
       const order = await Order.findOne({ sn: orderSN });
       assert.ok(order);
       const originalStatus = order.status;
+      const originalAssignedFanni = order.assignedFanni;
       const originalOffers = order.offers.map(item => item.toObject());
       const originalMessages = order.chatMessages.map(item => item.toObject());
       try {
@@ -589,7 +590,6 @@ async function run() {
           .set('Authorization', 'Bearer ' + currentToken);
         assert.equal(currentRead.status, 200, 'a current technician session must retain chat access');
 
-        const originalAssignedFanni = order.assignedFanni;
         order.status = 'تم الانتهاء';
         order.assignedFanni = fanni._id;
         await order.save();
