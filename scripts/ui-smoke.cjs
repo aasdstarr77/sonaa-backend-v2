@@ -43,19 +43,21 @@ function apiResponse(pathname) {
         page.on('pageerror', error => pageErrors.push(error.message));
         page.on('response', response => {
           const url = new URL(response.url());
-          if (url.origin === BASE && response.status() >= 400) {
+          if (url.origin === BASE && (response.status() === 404 || response.status() >= 500)) {
             badLocalResponses.push(response.status() + ' ' + url.pathname);
           }
         });
 
-        await page.route('**/api/**', async route => {
-          const url = new URL(route.request().url());
-          await route.fulfill({
-            status: 200,
-            contentType: 'application/json; charset=utf-8',
-            body: JSON.stringify(apiResponse(url.pathname))
+        if (process.env.SONAA_SMOKE_REAL_API !== '1') {
+          await page.route('**/api/**', async route => {
+            const url = new URL(route.request().url());
+            await route.fulfill({
+              status: 200,
+              contentType: 'application/json; charset=utf-8',
+              body: JSON.stringify(apiResponse(url.pathname))
+            });
           });
-        });
+        }
 
         try {
           const response = await page.goto(BASE + target.path, { waitUntil: 'domcontentloaded', timeout: 20000 });
@@ -82,11 +84,23 @@ function apiResponse(pathname) {
               await page.locator('#accountPassword').fill('x');
               await page.locator('.account-submit').click();
               await page.getByText('رقم الموبايل غير صحيح؛ اكتب 11 رقمًا يبدأ بـ 01.').waitFor({ state: 'visible', timeout: 3000 });
+              if (process.env.SONAA_SMOKE_REAL_API === '1') {
+                await page.locator('#accountPhone').fill('01012345670');
+                await page.locator('#accountPassword').fill('ClientSmokePass123');
+                await page.locator('.account-submit').click();
+                await page.waitForFunction(() => !!localStorage.getItem('sonaa_client_account_token'), { timeout: 10000 });
+              }
             } else if (target.name === 'technician') {
               await page.locator('#fanniLoginPhone').fill('123');
               await page.locator('#fanniLoginPassword').fill('x');
               await page.getByRole('button', { name: 'دخول إلى حسابي' }).click();
               await page.getByText('رقم التليفون غير صحيح').waitFor({ state: 'visible', timeout: 3000 });
+              if (process.env.SONAA_SMOKE_REAL_API === '1') {
+                await page.locator('#fanniLoginPhone').fill('01012345671');
+                await page.locator('#fanniLoginPassword').fill('FanniSmokePass123');
+                await page.getByRole('button', { name: 'دخول إلى حسابي' }).click();
+                await page.waitForFunction(() => !!localStorage.getItem('fanni_token_v4'), { timeout: 10000 });
+              }
             } else if (target.name === 'admin') {
               await page.locator('#login-btn').click();
               await page.getByText('اكتب البيانات').waitFor({ state: 'visible', timeout: 3000 });
