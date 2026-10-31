@@ -330,26 +330,6 @@ app.use('/api/admin', adminRouter);
 app.use('/api/admins', adminRouter);
 app.use('/api/auth/admin', adminRouter);
 
-// قائمة الطلبات للأدمن المصرح له فقط.
-const Order = require('./models/Order');
-
-app.get('/api/admin/orders', auth('admin'), async (req, res, next) => {
-  try {
-    const [orders, voiceOrders] = await Promise.all([
-      Order.find({})
-        .populate('assignedFanni', 'name phone specialties areas')
-        .sort({ createdAt: -1 })
-        .limit(500)
-        .lean(),
-      Order.find({ voiceRecordingData: { $exists: true, $ne: '' } }).select('sn').lean()
-    ]);
-    const voiceOrderSNs = new Set(voiceOrders.map(order => String(order.sn || '').toUpperCase()));
-    const safeOrders = orders.map(order => ({ ...order, hasVoiceRecording: voiceOrderSNs.has(String(order.sn || '').toUpperCase()) }));
-    return res.json({ orders: safeOrders, data: safeOrders });
-  } catch (err) {
-    return next(err);
-  }
-});
 
 function sendHtml(res, filename) {
   const candidates = [
