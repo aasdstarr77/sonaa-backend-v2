@@ -104,6 +104,13 @@ function apiResponse(pathname) {
             } else if (target.name === 'admin') {
               await page.locator('#login-btn').click();
               await page.getByText('اكتب البيانات').waitFor({ state: 'visible', timeout: 3000 });
+              if (process.env.SONAA_SMOKE_REAL_API === '1') {
+                await page.locator('#login-phone').fill('01012345678');
+                await page.locator('#login-pass').fill('AdminSmokePass123');
+                await page.locator('#login-btn').click();
+                await page.waitForFunction(() => !!localStorage.getItem('admin_token_v3'), { timeout: 10000 });
+                await page.waitForTimeout(1200);
+              }
             }
           }
 

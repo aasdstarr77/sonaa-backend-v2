@@ -3,6 +3,10 @@
 process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'sonaa-browser-isolated-test-secret';
 process.env.ADMIN_PHONE = '01012345678';
+process.env.ADMIN_EMAIL = 'admin.smoke@example.com';
+process.env.ADMIN_PASSWORD = 'AdminSmokePass123';
+process.env.ADMIN_NAME = 'إدارة اختبار المتصفح';
+process.env.ADMIN_SETUP_SECRET = 'sonaa-browser-setup-secret-at-least-32-chars';
 process.env.ALLOWED_ORIGINS = 'http://127.0.0.1:4173';
 process.env.PORT = process.env.PORT || '4173';
 
@@ -35,6 +39,11 @@ const request = require('supertest');
     areas: ['المعادي']
   });
   if (technician.status !== 201) throw new Error('Unable to seed browser-test technician: HTTP ' + technician.status);
+
+  const admin = await request(app).post('/api/admin/bootstrap').send({
+    secret: process.env.ADMIN_SETUP_SECRET
+  });
+  if (admin.status !== 201) throw new Error('Unable to seed browser-test admin: HTTP ' + admin.status);
 
   const server = app.listen(Number(process.env.PORT), () => {
     console.log('Isolated Sonaa browser-test server ready on port ' + process.env.PORT);
