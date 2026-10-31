@@ -110,7 +110,7 @@ app.use(cors({
     return callback(null, false);
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Recovery-Token'],
   optionsSuccessStatus: 204
 }));
 
