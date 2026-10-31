@@ -1,0 +1,1 @@
+(function(){var urlParams=new URLSearchParams(window.location.search);if(urlParams.has("preview") || window.self !== window.top){window.IS_EDITOR_PREVIEW=true;}})();

@@ -9,7 +9,7 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <title>صُنّاع | لوحة الإدارة</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<script>(function(){var urlParams=new URLSearchParams(window.location.search);if(urlParams.get("preview")==="true"){window.IS_EDITOR_PREVIEW=true;}})();</script>
+<script src="/js/admin-inline-01.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
 :root{
@@ -172,7 +172,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
 <script src="/js/admin-actions-people.js"></script>
 <script src="/js/admin-actions-platform.js"></script>
 <script src="/js/admin-page.js"></script>
-<script>(function(){'use strict';let busy=false,lastToken='';function token(){if(window.IS_EDITOR_PREVIEW)return '';try{return localStorage.getItem('admin_token_v3')||''}catch(_){return ''}}async function refreshCount(){const t=token();if(!t||busy)return;busy=true;try{const path='/api/password-recovery/admin/requests';const url=location.hostname.includes('sonaa-backend-v2')&&location.hostname.endsWith('vercel.app')?path:'https://sonaa-backend-v2.vercel.app'+path;const r=await fetch(url,{method:'GET',headers:{Authorization:'Bearer '+t,Accept:'application/json'},cache:'no-store',credentials:'omit'});if(!r.ok)return;const data=await r.json();if(!Array.isArray(data.recoveries))return;const badge=document.getElementById('sonaa-recovery-count');if(!badge)return;const count=data.recoveries.filter(item=>['بانتظار الدعم','قيد التحقق','جديدة','pending'].includes(String(item.status||''))).length;badge.textContent=String(count);badge.setAttribute('aria-label','عدد طلبات استعادة كلمة المرور: '+count)}catch(_){}finally{busy=false}}function sync(){const t=token();if(t!==lastToken){lastToken=t;if(t)refreshCount()}}sync();refreshCount();window.addEventListener('storage',sync);setInterval(function(){sync();refreshCount()},5000)})();</script>
+<script src="/js/admin-inline-02.js"></script>
 <script src="/web-push.js" defer></script>
 <script src="/page-visit.js" defer></script>
 

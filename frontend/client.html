@@ -19,29 +19,7 @@
 <meta name="twitter:title" content="تسجيل عميل جديد | صُنّاع">
 <meta name="twitter:description" content="أنشئ حساب عميل جديد على منصة صُنّاع واطلب الخدمات التي تحتاجها بسهولة.">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script>
-(function(){
-  const params=new URLSearchParams(window.location.search);
-  const isPreviewMode=params.has('preview') || window.self !== window.top;
-  window.IS_EDITOR_PREVIEW=isPreviewMode;
-  window.SONAA_SKIP_AUTH_REDIRECT=isPreviewMode;
-  if(!isPreviewMode)return;
-  const requested=params.get('section') || params.get('page') || '';
-  const pageToTab={
-    'new':'new','new-order':'new','طلب جديد':'new',
-    'orders':'orders','my-orders':'orders','طلباتي':'orders',
-    'complaint':'complaint','complaint-form':'complaint','شكوى':'complaint',
-    'track-complaint':'complaint','track':'complaint',
-    'profile':'orders','الملف الشخصي':'orders',
-    'login':'login','client-login':'login','client':'login','تسجيل الدخول':'login',
-    'register':'register','client-register':'register','تسجيل جديد':'register'
-  };
-  const key=String(requested).trim().toLowerCase();
-  window.PREVIEW_REQUESTED_TAB=pageToTab[key] || pageToTab[String(requested).trim()] || 'login';
-  console.log('Preview mode - requested section:',requested,'tab:',window.PREVIEW_REQUESTED_TAB);
-  window.SONAA_FORCE_PREVIEW_TAB=true;
-})();
-</script>
+<script src="/js/client-inline-01.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
 :root{--navy:#0b1b3a;--navy2:#173c6c;--blue:#2563eb;--blue-dark:#1d4ed8;--page:#f4f7fb;--border:#e2e8f0;--text:#0f172a;--muted:#64748b}
@@ -462,7 +440,7 @@ body #app header.app-header a[href="https://aasdstarr77.github.io/sonaa-download
 <script src="/js/client-order-chat.js"></script>
 <script src="/js/client-page.js"></script>
 
-<script>async function handleGlobalRefresh(){let button=document.getElementById('global-refresh');if(globalRefreshInProgress||button?.disabled)return;globalRefreshInProgress=true;if(button){button.disabled=true;button.classList.add('is-refreshing');}try{if(!state.account){await Promise.allSettled([loadServices(),loadPublicContent()]);showToast('تم تحديث البيانات','success');}else{await refreshClientPage();}}finally{globalRefreshInProgress=false;button=document.getElementById('global-refresh');if(button){button.disabled=false;button.classList.remove('is-refreshing');}}}</script>
+<script src="/js/client-inline-02.js"></script>
 
 
 <style>
@@ -812,35 +790,7 @@ body #app header.app-header a[href="https://aasdstarr77.github.io/sonaa-download
 
 <script src="/web-push.js" defer></script>
 <script src="/page-visit.js" defer></script>
-<script>
-(function(){
-  let observedHeader=null;
-  let headerResizeObserver=null;
-  function syncStickyTabs(){
-    const header=document.querySelector('#app .app-header');
-    if(!header)return;
-    if(header!==observedHeader){
-      observedHeader=header;
-      if(headerResizeObserver)headerResizeObserver.disconnect();
-      if('ResizeObserver' in window){
-        headerResizeObserver=new ResizeObserver(syncStickyTabs);
-        headerResizeObserver.observe(header);
-      }
-    }
-    const height=Math.ceil(header.getBoundingClientRect().height);
-    if(!height)return;
-    document.documentElement.style.setProperty('--sonaa-sticky-header-height',height+'px');
-    document.querySelectorAll('.client-section-tabs,.fanni-dashboard-tabs').forEach(function(tabs){
-      tabs.style.top=height+'px';
-      tabs.style.zIndex='30';
-    });
-  }
-  const app=document.getElementById('app');
-  if(app)new MutationObserver(syncStickyTabs).observe(app,{childList:true,subtree:true});
-  window.addEventListener('resize',syncStickyTabs,{passive:true});
-  syncStickyTabs();
-})();
-</script>
+<script src="/js/client-inline-03.js"></script>
 
 
 
