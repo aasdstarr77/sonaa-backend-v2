@@ -64,7 +64,7 @@ function apiResponse(pathname) {
           }
           await page.waitForTimeout(900);
 
-          if (target.name !== 'home' && !await page.locator('#app, #setupForm, #main').count()) {
+          if (target.name !== 'home' && !await page.locator('#app, #setupForm, #main, main.wrap').count()) {
             failures.push(target.name + '/' + viewport.name + ': expected page root was not rendered');
           }
 
