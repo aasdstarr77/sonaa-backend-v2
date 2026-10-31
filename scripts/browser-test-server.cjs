@@ -45,6 +45,14 @@ const request = require('supertest');
   });
   if (admin.status !== 201) throw new Error('Unable to seed browser-test admin: HTTP ' + admin.status);
 
+  const adminLogin = await request(app).post('/api/admin/login').send({
+    phone: process.env.ADMIN_PHONE,
+    password: process.env.ADMIN_PASSWORD
+  });
+  if (adminLogin.status !== 200 || !adminLogin.body.token) {
+    throw new Error('Seeded browser-test admin login failed: HTTP ' + adminLogin.status);
+  }
+
   const server = app.listen(Number(process.env.PORT), () => {
     console.log('Isolated Sonaa browser-test server ready on port ' + process.env.PORT);
   });
