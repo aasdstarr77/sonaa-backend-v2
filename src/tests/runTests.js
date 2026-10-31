@@ -10,7 +10,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const request = require('supertest');
-const { MongoMemoryServer } = require('mongodb-memory-server');
+const { MongoMemoryReplSet } = require('mongodb-memory-server');
 const errorHandler = require('../middleware/error');
 const { canAccessAdmin, isRootAdmin, defaultAdminPermissions } = require('../middleware/auth');
 
@@ -40,7 +40,7 @@ async function run() {
   }
 
   try {
-    mongo = await MongoMemoryServer.create();
+    mongo = await MongoMemoryReplSet.create({ replSet: { count: 1, storageEngine: 'wiredTiger' } });
     process.env.MONGO_URI = mongo.getUri('sonaa_test');
     app = require('../server');
     mongoose = require('mongoose');
@@ -643,6 +643,88 @@ async function run() {
       assert.equal(r.body.order.status, 'قيد المراجعة');
       orderSN = r.body.sn;
       orderClientToken = r.body.clientToken;
+    });
+
+    await test('published order offer, client acceptance, wallet commission ledger, and accepted chat work end to end', async () => {
+      const { ALL_SERVICES } = require('../config/professions');
+      const Fanni = require('../models/Fanni');
+      const Order = require('../models/Order');
+      const WalletTransaction = require('../models/WalletTransaction');
+      const jwt = require('jsonwebtoken');
+      const service = ALL_SERVICES[0];
+      const fanni = await Fanni.findOne({ phone: '01012345680', role: 'fanni' });
+      assert.ok(fanni, 'approved technician fixture must exist');
+      fanni.status = 'معتمد';
+      fanni.specialties = [service];
+      fanni.walletBalance = 1000;
+      fanni.technicianGuidelinesAcceptedAt = new Date();
+      fanni.technicianGuidelinesVersion = '2026-10-20-v1';
+      await fanni.save();
+      const fanniToken = jwt.sign({
+        id: String(fanni._id),
+        role: 'fanni',
+        tokenVersion: Number(fanni.tokenVersion || 0)
+      }, process.env.JWT_SECRET, { expiresIn: '30d' });
+
+      const created = await request(app).post('/api/orders')
+        .set('Authorization', 'Bearer ' + clientToken)
+        .send({
+          service, area: 'المعادي', address: 'شارع الاختبار 12',
+          description: 'طلب مستقل لاختبار العرض والقبول والمحادثة'
+        });
+      assert.equal(created.status, 201);
+      const order = await Order.findOne({ sn: created.body.sn });
+      assert.ok(order);
+      order.status = 'تم النشر';
+      order.expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
+      await order.save();
+
+      const offer = await request(app).post('/api/fanni/orders/' + order.sn + '/offer')
+        .set('Authorization', 'Bearer ' + fanniToken)
+        .send({ price: 500, message: 'أستطيع تنفيذ الخدمة في الموعد المناسب.' });
+      assert.equal(offer.status, 201);
+      assert.equal(offer.body.orderSn, order.sn);
+      assert.equal(offer.body.walletBalance, 1000, 'submitting an offer must not deduct commission');
+      const savedOrder = await Order.findOne({ sn: order.sn });
+      assert.equal(savedOrder.status, 'وصلتك عروض');
+      assert.equal(savedOrder.offers.length, 1);
+      const offerId = String(savedOrder.offers[0]._id);
+      assert.equal(savedOrder.offers[0].fanniPhone, undefined, 'public offer responses must not expose technician phone numbers');
+
+      const accepted = await request(app).post('/api/orders/' + order.sn + '/accept')
+        .set('Authorization', 'Bearer ' + clientToken)
+        .send({ offerId });
+      assert.equal(accepted.status, 200);
+      assert.equal(accepted.body.order.status, 'تم اختيار فني');
+      assert.equal(accepted.body.order.commissionAmount, undefined, 'commission internals must not leak in the client response');
+
+      const updatedFanni = await Fanni.findById(fanni._id).lean();
+      assert.equal(updatedFanni.walletBalance, 950, 'acceptance must atomically deduct the 10% commission');
+      const transaction = await WalletTransaction.findOne({ order: order._id, type: 'commission' }).lean();
+      assert.ok(transaction);
+      assert.equal(transaction.amount, -50);
+      assert.equal(transaction.balanceBefore, 1000);
+      assert.equal(transaction.balanceAfter, 950);
+
+      const clientChat = await request(app).get('/api/orders/' + order.sn + '/chat')
+        .set('Authorization', 'Bearer ' + clientToken);
+      assert.equal(clientChat.status, 200);
+      const fanniChat = await request(app).get('/api/orders/' + order.sn + '/chat')
+        .set('Authorization', 'Bearer ' + fanniToken);
+      assert.equal(fanniChat.status, 200);
+
+      const sentByFanni = await request(app).post('/api/orders/' + order.sn + '/chat')
+        .set('Authorization', 'Bearer ' + fanniToken)
+        .send({ text: 'تم تحديد موعد الزيارة.' });
+      assert.equal(sentByFanni.status, 201);
+      const sentByClient = await request(app).post('/api/orders/' + order.sn + '/chat')
+        .set('Authorization', 'Bearer ' + clientToken)
+        .send({ text: 'شكرًا، في انتظارك.' });
+      assert.equal(sentByClient.status, 201);
+      const finalChat = await request(app).get('/api/orders/' + order.sn + '/chat')
+        .set('Authorization', 'Bearer ' + clientToken);
+      assert.ok(finalChat.body.messages.some(message => message.text === 'تم تحديد موعد الزيارة.'));
+      assert.ok(finalChat.body.messages.some(message => message.text === 'شكرًا، في انتظارك.'));
     });
 
     await test('order chat rejects revoked technician sessions after password changes', async () => {
