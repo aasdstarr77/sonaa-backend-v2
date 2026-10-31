@@ -68,6 +68,7 @@ const fanniSchema = new mongoose.Schema({
     required: true,
     select: false
   },
+  tokenVersion: { type: Number, default: 0, min: 0 },
   specialties: {
     type: [String],
     validate: [arr => arr.length > 0, 'التخصص مطلوب']
@@ -223,6 +224,7 @@ fanniSchema.index({ createdAt: -1 });
 fanniSchema.methods.toSafeJSON = function() {
   const obj = this.toObject();
   delete obj.passwordHash;
+  delete obj.tokenVersion;
   return obj;
 };
 

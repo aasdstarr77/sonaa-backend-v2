@@ -110,7 +110,7 @@ app.use(cors({
     return callback(null, false);
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Recovery-Token'],
   optionsSuccessStatus: 204
 }));
 
@@ -246,7 +246,7 @@ if (req.path === '/health') {
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 10,
+  limit: process.env.NODE_ENV === 'test' ? 100 : 10,
   standardHeaders: true,
   legacyHeaders: false,
   message: {

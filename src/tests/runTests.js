@@ -67,6 +67,10 @@ async function run() {
       assert.equal(defaultAdminPermissions('مشرف').orders.write, true);
       assert.equal(defaultAdminPermissions('مشرف').settings.write, false);
       assert.equal(defaultAdminPermissions('مشرف أول').services.write, true);
+      assert.equal(canAccessAdmin({ role: 'fanni', adminRole: 'مدير' }, { path: '/fanni-profile-edits', method: 'GET' }), true);
+      assert.equal(canAccessAdmin({ role: 'fanni', adminRole: 'مدير' }, { path: '/fanni-profile-edits/507f1f77bcf86cd799439011/approve', method: 'POST' }), true);
+      assert.equal(canAccessAdmin({ role: 'fanni', adminRole: 'مشرف' }, { path: '/fanni-profile-edits', method: 'GET' }), true);
+      assert.equal(canAccessAdmin({ role: 'fanni', adminRole: 'مشرف' }, { path: '/fanni-profile-edits/507f1f77bcf86cd799439011/approve', method: 'POST' }), false);
     });
 
     await test('custom admin permissions separate reading from execution and protect permission management', async () => {
@@ -78,6 +82,17 @@ async function run() {
       const noDashboardRead = { role: 'fanni', adminRole: 'مشرف', adminPermissions: { __customOverrides: true, dashboard: { read: false, write: false } } };
       assert.equal(canAccessAdmin(noDashboardRead, { path: '/reports', method: 'POST' }), false, 'report generation still respects dashboard read permission');
       assert.equal(canAccessAdmin(user, { path: '/admin-users/123/permissions', method: 'PATCH' }), false);
+      assert.equal(canAccessAdmin(user, { path: '/notifications/admin', method: 'GET' }), true);
+      const adminSource = fs.readFileSync(path.join(__dirname, '../routes/admin.js'), 'utf8');
+      const assignStart = adminSource.indexOf("router.post('/orders/:sn/assign'");
+      const assignEnd = adminSource.indexOf("router.get('/wallet/transactions", assignStart);
+      assert.match(adminSource.slice(assignStart, assignEnd), /requireRootAdmin\(req, res\)/);
+      const freezeStart = adminSource.indexOf("router.post('/wallet/freeze/:id'");
+      const freezeEnd = adminSource.indexOf("router.post('/clients/:phone/block'", freezeStart);
+      assert.match(adminSource.slice(freezeStart, freezeEnd), /valid\('freeze', 'unfreeze'\)/);
+      assert.equal(canAccessAdmin(user, { path: '/notifications/admin/read-all', method: 'PATCH' }), false);
+      const noNotificationRead = { role: 'fanni', adminRole: 'مشرف', adminPermissions: { __customOverrides: true, notifications: { read: false, write: false } } };
+      assert.equal(canAccessAdmin(noNotificationRead, { path: '/notifications/admin', method: 'GET' }), false);
     });
 
     await test('wallet balance mutations are governed by wallet permissions, not technician-list permissions', async () => {
@@ -94,6 +109,17 @@ async function run() {
       const worker = fs.readFileSync(path.join(__dirname, '../../frontend/service-worker.js'), 'utf8');
       const delivery = fs.readFileSync(path.join(__dirname, '../utils/notifications.js'), 'utf8');
       assert.match(webPush, /aes-128-gcm/); assert.match(webPush, /VAPID_PUBLIC_KEY/);
+      const { isAllowedPushEndpoint } = require('../utils/webPush');
+      assert.equal(isAllowedPushEndpoint('https://fcm.googleapis.com/fcm/send/example'), true);
+      assert.equal(isAllowedPushEndpoint('https://updates.push.services.mozilla.com/wpush/v2/example'), true);
+      assert.equal(isAllowedPushEndpoint('https://web.push.apple.com/example'), true);
+      assert.equal(isAllowedPushEndpoint('https://wns2-example.notify.windows.com/w/?token=example'), true);
+      assert.equal(isAllowedPushEndpoint('https://127.0.0.1/admin'), false);
+      assert.equal(isAllowedPushEndpoint('https://example.com/push'), false);
+      assert.equal(isAllowedPushEndpoint('https://fcm.googleapis.com.evil.test/push'), false);
+      assert.equal(isAllowedPushEndpoint('http://fcm.googleapis.com/push'), false);
+      assert.equal(isAllowedPushEndpoint('https://fcm.googleapis.com:8443/push'), false);
+      assert.match(route, /isAllowedPushEndpoint\(endpoint\)/);
       assert.match(route, /web-subscription/); assert.match(browser, /PushManager/);
       assert.match(worker, /addEventListener\('push'/); assert.match(delivery, /sendPushNotification/);
       assert.match(delivery, /sendWebPushNotification/);
@@ -232,6 +258,11 @@ async function run() {
         .set('Authorization', 'Bearer ' + clientToken)
         .send({ currentPassword: 'TestPass123', newPassword: 'NewPass12345', confirmPassword: 'NewPass12345' });
       assert.equal(changed.status, 200);
+      assert.ok(changed.body.token);
+      const oldSession = await request(app).get('/api/client/me').set('Authorization', 'Bearer ' + clientToken);
+      assert.equal(oldSession.status, 401, 'changing a password must revoke the previous client session');
+      const returnedSession = await request(app).get('/api/client/me').set('Authorization', 'Bearer ' + changed.body.token);
+      assert.equal(returnedSession.status, 200, 'the active device receives a replacement session');
       const login = await request(app).post('/api/client/login').send({ phone: '01012345678', password: 'NewPass12345' });
       assert.equal(login.status, 200);
       clientToken = login.body.token;
@@ -247,11 +278,52 @@ async function run() {
       });
       adminToken = jwt.sign({ id: String(admin._id), role: 'admin' }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
+      const adminPasswordChange = await request(app).post('/api/password-recovery/change/admin')
+        .set('Authorization', 'Bearer ' + adminToken)
+        .send({ currentPassword: 'AdminTestPass123', newPassword: 'AdminChangedPass123', confirmPassword: 'AdminChangedPass123' });
+      assert.equal(adminPasswordChange.status, 200);
+      assert.ok(adminPasswordChange.body.token);
+      const oldAdminSession = await request(app).get('/api/admin/me').set('Authorization', 'Bearer ' + adminToken);
+      assert.equal(oldAdminSession.status, 401);
+      adminToken = adminPasswordChange.body.token;
+
+      const fanni = await Fanni.create({
+        name: 'فني اختبار', phone: '01012345680', passwordHash: await bcrypt.hash('FanniOldPass123', 12),
+        specialties: ['صيانة تكييف'], areas: ['القاهرة'], status: 'معتمد', role: 'fanni'
+      });
+      const oldFanniToken = jwt.sign({ id: String(fanni._id), role: 'fanni' }, process.env.JWT_SECRET, { expiresIn: '30d' });
+      const fanniPasswordReset = await request(app).patch('/api/admin/fannis/' + fanni._id + '/password')
+        .set('Authorization', 'Bearer ' + adminToken)
+        .send({ newPassword: 'FanniNewPass123', confirmPassword: 'FanniNewPass123' });
+      assert.equal(fanniPasswordReset.status, 200);
+      const revokedFanniSession = await request(app).get('/api/fanni/me').set('Authorization', 'Bearer ' + oldFanniToken);
+      assert.equal(revokedFanniSession.status, 401);
+      const fanniNewLogin = await request(app).post('/api/fanni/login').send({ phone: '01012345680', password: 'FanniNewPass123' });
+      assert.equal(fanniNewLogin.status, 200);
+      const activeFanniSession = await request(app).get('/api/fanni/me').set('Authorization', 'Bearer ' + fanniNewLogin.body.token);
+      assert.equal(activeFanniSession.status, 200);
+
+      const oldClientSessionBeforeAdminReset = clientToken;
+      const clientAdminReset = await request(app).patch('/api/admin/clients/01012345678/password')
+        .set('Authorization', 'Bearer ' + adminToken)
+        .send({ newPassword: 'AdminResetPass123', confirmPassword: 'AdminResetPass123' });
+      assert.equal(clientAdminReset.status, 200);
+      const clientSessionAfterAdminReset = await request(app).get('/api/client/me').set('Authorization', 'Bearer ' + oldClientSessionBeforeAdminReset);
+      assert.equal(clientSessionAfterAdminReset.status, 401);
+      const clientLoginAfterAdminReset = await request(app).post('/api/client/login').send({ phone: '01012345678', password: 'AdminResetPass123' });
+      assert.equal(clientLoginAfterAdminReset.status, 200);
+      clientToken = clientLoginAfterAdminReset.body.token;
+
       const opened = await request(app).post('/api/password-recovery/request')
         .send({ role: 'client', phone: '01012345678' });
       assert.equal(opened.status, 201);
       assert.ok(opened.body.recoveryToken);
       assert.ok(opened.body.requestId);
+
+      const duplicateRequest = await request(app).post('/api/password-recovery/request')
+        .send({ role: 'client', phone: '01012345678' });
+      assert.equal(duplicateRequest.status, 409);
+      assert.equal(duplicateRequest.body.recoveryToken, undefined, 'a phone-number-only retry must never reveal the existing ticket bearer token');
 
       const queue = await request(app).get('/api/password-recovery/admin/requests')
         .set('Authorization', 'Bearer ' + adminToken);
@@ -298,11 +370,14 @@ async function run() {
         .set('X-Recovery-Token', opened.body.recoveryToken)
         .send({ newPassword: 'RecoveredPass123', confirmPassword: 'RecoveredPass123' });
       assert.equal(reset.status, 200);
+      const staleSessionAfterRecovery = await request(app).get('/api/client/me').set('Authorization', 'Bearer ' + clientToken);
+      assert.equal(staleSessionAfterRecovery.status, 401, 'support recovery must revoke every previous client session');
 
-      const oldLogin = await request(app).post('/api/client/login').send({ phone: '01012345678', password: 'NewPass12345' });
+      const oldLogin = await request(app).post('/api/client/login').send({ phone: '01012345678', password: 'AdminResetPass123' });
       assert.equal(oldLogin.status, 401);
       const newLogin = await request(app).post('/api/client/login').send({ phone: '01012345678', password: 'RecoveredPass123' });
       assert.equal(newLogin.status, 200);
+      clientToken = newLogin.body.token;
     });
 
     await test('support endpoints reject unauthenticated users', async () => {
@@ -469,6 +544,60 @@ async function run() {
       orderClientToken = r.body.clientToken;
     });
 
+    await test('order chat rejects revoked technician sessions after password changes', async () => {
+      const Fanni = require('../models/Fanni');
+      const Order = require('../models/Order');
+      const jwt = require('jsonwebtoken');
+      const fanni = await Fanni.findOne({ phone: '01012345680', role: 'fanni' });
+      assert.ok(fanni, 'technician fixture must exist');
+      fanni.technicianGuidelinesAcceptedAt = new Date();
+      fanni.technicianGuidelinesVersion = 'test-v1';
+      await fanni.save();
+
+      const order = await Order.findOne({ sn: orderSN });
+      assert.ok(order);
+      const originalStatus = order.status;
+      const originalOffers = order.offers.map(item => item.toObject());
+      const originalMessages = order.chatMessages.map(item => item.toObject());
+      try {
+        order.status = 'وصلتك عروض';
+        order.offers.push({ fanni: fanni._id, fanniName: fanni.name, price: '500', priceNum: 500 });
+        await order.save();
+        const offerId = String(order.offers[order.offers.length - 1]._id);
+        const oldTokenVersion = Number(fanni.tokenVersion || 0);
+        const oldToken = jwt.sign({ id: String(fanni._id), role: 'fanni', tokenVersion: oldTokenVersion }, process.env.JWT_SECRET, { expiresIn: '30d' });
+
+        const beforeRevocation = await request(app).get('/api/orders/' + orderSN + '/chat')
+          .set('Authorization', 'Bearer ' + oldToken);
+        assert.equal(beforeRevocation.status, 200);
+        const sentBeforeRevocation = await request(app).post('/api/orders/' + orderSN + '/chat')
+          .set('Authorization', 'Bearer ' + oldToken).send({ offerId, text: 'نعم' });
+        assert.equal(sentBeforeRevocation.status, 201);
+
+        fanni.tokenVersion = oldTokenVersion + 1;
+        await fanni.save();
+        const staleRead = await request(app).get('/api/orders/' + orderSN + '/chat')
+          .set('Authorization', 'Bearer ' + oldToken);
+        assert.equal(staleRead.status, 403, 'revoked technician token must not read chat history');
+        const staleWrite = await request(app).post('/api/orders/' + orderSN + '/chat')
+          .set('Authorization', 'Bearer ' + oldToken).send({ offerId, text: 'نعم' });
+        assert.equal(staleWrite.status, 403, 'revoked technician token must not send chat messages');
+
+        const currentToken = jwt.sign({ id: String(fanni._id), role: 'fanni', tokenVersion: Number(fanni.tokenVersion || 0) }, process.env.JWT_SECRET, { expiresIn: '30d' });
+        const currentRead = await request(app).get('/api/orders/' + orderSN + '/chat')
+          .set('Authorization', 'Bearer ' + currentToken);
+        assert.equal(currentRead.status, 200, 'a current technician session must retain chat access');
+      } finally {
+        const orderToRestore = await Order.findOne({ sn: orderSN });
+        if (orderToRestore) {
+          orderToRestore.status = originalStatus;
+          orderToRestore.offers = originalOffers;
+          orderToRestore.chatMessages = originalMessages;
+          await orderToRestore.save();
+        }
+      }
+    });
+
     await test('client order responses collapse historical duplicate offers from the same technician', async () => {
       const { ALL_SERVICES } = require('../config/professions');
       const created = await request(app).post('/api/orders')
@@ -515,10 +644,13 @@ async function run() {
       assert.match(offerRoute, /سبق أن أرسلت عرضًا لهذا الطلب/);
     });
 
-    await test('matching tracking token can retrieve its order without exposing platform commission', async () => {
+    await test('account owner can retrieve linked orders without exposing platform commission', async () => {
       const r = await request(app).get('/api/orders/' + orderSN)
-        .query({ clientToken: orderClientToken });
+        .set('Authorization', 'Bearer ' + clientToken);
       assert.equal(r.status, 200);
+      const staleStandaloneToken = await request(app).get('/api/orders/' + orderSN)
+        .query({ clientToken: orderClientToken });
+      assert.equal(staleStandaloneToken.status, 200, 'a token issued for this account-bound order remains compatible with the client UI');
       assert.equal(r.body.order.sn, orderSN);
       assert.equal(Object.prototype.hasOwnProperty.call(r.body.order, 'commissionRate'), false);
       assert.equal(Object.prototype.hasOwnProperty.call(r.body.order, 'commissionAmount'), false);
@@ -532,7 +664,73 @@ async function run() {
       const acceptRoute = source.slice(acceptStart, acceptEnd);
       assert.doesNotMatch(acceptRoute, /responsePayload\s*=\s*\{[\s\S]{0,250}commission\s*:/);
       assert.match(acceptRoute, /message: 'تم قبول العرض بنجاح'/);
-      assert.match(source, /تمت الموافقة على السعر الجديد\./);
+      assert.match(acceptRoute, /notificationCommissionAmount = commissionAmount/);
+      assert.match(acceptRoute, /notificationCommissionRate = commissionRate/);
+      assert.doesNotMatch(acceptRoute, /responsePayload\.commission\?\./);
+      const chatSource = fs.readFileSync(path.join(__dirname, '../routes/order/chat.js'), 'utf8');
+      assert.match(chatSource, /تمت الموافقة على السعر الجديد\./);
+      assert.match(chatSource, /typeof req\.body\?\.approved !== 'boolean'/);
+      assert.match(chatSource, /const chatMessageLimiter = rateLimit/);
+      assert.match(chatSource, /router\.post\('\/:sn\/chat', chatMessageLimiter,/);
+    });
+
+    await test('suspended clients lose access through old JWTs and order-bound tokens', async () => {
+      const Client = require('../models/Client');
+      const client = await Client.findById(clientId);
+      assert.ok(client);
+      client.status = 'معلق';
+      await client.save();
+
+      const trackedWithOldSession = await request(app).get('/api/orders/' + orderSN)
+        .set('Authorization', 'Bearer ' + clientToken);
+      assert.equal(trackedWithOldSession.status, 403);
+
+      const chatWithOldSession = await request(app).get('/api/orders/' + orderSN + '/chat')
+        .set('Authorization', 'Bearer ' + clientToken);
+      assert.equal(chatWithOldSession.status, 403);
+
+      const claimedOrderToken = await request(app).get('/api/orders/' + orderSN)
+        .query({ clientToken: orderClientToken });
+      assert.equal(claimedOrderToken.status, 403, 'a standalone tracking token must stop working after the order is linked to an account');
+
+      client.status = 'نشط';
+      await client.save();
+    });
+
+    await test('claiming a legacy order revokes its standalone tracking token', async () => {
+      const Order = require('../models/Order');
+      const jwt = require('jsonwebtoken');
+      const legacy = await Order.create({
+        sn: 'SN999998',
+        service: 'صيانة تكييف',
+        area: 'مدينة نصر',
+        clientName: 'عميل اختبار قديم',
+        clientPhone: '01012345678',
+        description: 'طلب قديم لاختبار ربطه بحساب العميل',
+        status: 'قيد المراجعة'
+      });
+      const legacyToken = jwt.sign({
+        purpose: 'client-order',
+        orderId: String(legacy._id),
+        sn: legacy.sn
+      }, process.env.JWT_SECRET, { expiresIn: '30d' });
+
+      const beforeClaim = await request(app).get('/api/orders/' + legacy.sn)
+        .query({ clientToken: legacyToken });
+      assert.equal(beforeClaim.status, 200, 'legacy standalone token remains usable before account claim');
+
+      const claimed = await request(app).post('/api/client/orders/claim')
+        .set('Authorization', 'Bearer ' + clientToken)
+        .send({ sn: legacy.sn, clientToken: legacyToken });
+      assert.equal(claimed.status, 200);
+
+      const oldTokenAccess = await request(app).get('/api/orders/' + legacy.sn)
+        .query({ clientToken: legacyToken });
+      assert.equal(oldTokenAccess.status, 403);
+
+      const accountAccess = await request(app).get('/api/orders/' + legacy.sn)
+        .set('Authorization', 'Bearer ' + clientToken);
+      assert.equal(accountAccess.status, 200);
     });
 
     await test('only the order owner can cancel a pending order', async () => {
@@ -541,18 +739,27 @@ async function run() {
       assert.equal(denied.status, 403);
 
       const cancelled = await request(app).post('/api/orders/' + orderSN + '/cancel')
-        .set('Authorization', 'Bearer ' + orderClientToken);
+        .set('Authorization', 'Bearer ' + clientToken);
       assert.equal(cancelled.status, 200);
       assert.equal(cancelled.body.order.status, 'ملغي');
 
       const repeated = await request(app).post('/api/orders/' + orderSN + '/cancel')
-        .set('Authorization', 'Bearer ' + orderClientToken);
+        .set('Authorization', 'Bearer ' + clientToken);
       assert.equal(repeated.status, 409);
     });
 
     await test('tracking code alone does not expose order details', async () => {
       const r = await request(app).get('/api/orders/' + orderSN);
       assert.equal(r.status, 403);
+    });
+
+    await test('CORS preflight permits the recovery-ticket header for configured frontend origins', async () => {
+      const r = await request(app).options('/api/password-recovery/request/test/messages')
+        .set('Origin', 'https://sonaa-backend-v2.vercel.app')
+        .set('Access-Control-Request-Method', 'POST')
+        .set('Access-Control-Request-Headers', 'content-type,x-recovery-token');
+      assert.equal(r.status, 204);
+      assert.match(String(r.headers['access-control-allow-headers'] || ''), /x-recovery-token/i);
     });
 
     await test('unknown API route returns JSON 404', async () => {
