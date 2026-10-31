@@ -505,8 +505,8 @@ router.post('/:sn/rating', async (req, res, next) => {
       if (!payload.id) {
         return res.status(403).json({ message: 'هذه الجلسة لا تسمح بتقييم المهمة' });
       }
-      const fanni = await Fanni.findById(payload.id).select('_id role status name');
-      if (!fanni || fanni.role !== 'fanni' || fanni.status !== 'معتمد' ||
+      const fanni = await Fanni.findById(payload.id).select('_id role status name tokenVersion');
+      if (!fanni || fanni.role !== 'fanni' || fanni.status !== 'معتمد' || Number(payload.tokenVersion || 0) !== Number(fanni.tokenVersion || 0) ||
           String(fanni._id) !== String(order.assignedFanni)) {
         return res.status(403).json({ message: 'التقييم متاح للفني المعيّن على هذه المهمة فقط' });
       }
