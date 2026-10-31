@@ -443,3 +443,24 @@
   --tw-gradient-to:rgb(18 58 114 / 0)!important;
   --tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)!important;
 }
+
+
+/* Shared animated shimmer for the Sonaa brand name beside its logo in web headers. */
+.sonaa-brand-shimmer{
+  display:inline-block;
+  color:currentColor;
+  background-image:linear-gradient(108deg,currentColor 0%,currentColor 38%,rgba(165,243,252,.58) 46%,#fff 50%,#a5f3fc 54%,currentColor 63%,currentColor 100%);
+  background-size:240% 100%;
+  background-position:100% 50%;
+  background-clip:text;
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  animation:sonaa-brand-shimmer 2.1s ease-in-out .35s infinite alternate;
+}
+@keyframes sonaa-brand-shimmer{
+  from{background-position:100% 50%}
+  to{background-position:0% 50%}
+}
+@media(prefers-reduced-motion:reduce){
+  .sonaa-brand-shimmer{animation:none;background-position:50% 50%}
+}

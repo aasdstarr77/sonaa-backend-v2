@@ -11,7 +11,7 @@ function render(){
   document.getElementById('app').innerHTML=`
   <header class="sticky top-0 z-40 glass-header text-white shadow-[0_6px_18px_rgba(11,27,58,.20)]"><div class="mx-auto max-w-[800px] px-3 py-1 grid grid-cols-[minmax(0,1fr)_56px_minmax(0,1fr)] items-center gap-1 min-h-[64px]">
       <div class="admin-header-title min-w-0 text-right self-start">
-        <h1 class="font-black text-[14px] leading-5">صُنّاع | لوحة الإدارة</h1>
+        <h1 class="font-black text-[14px] leading-5"><span class="sonaa-brand-shimmer">صُنّاع</span> | لوحة الإدارة</h1>
         ${isAuth&&currentAdminRoleLabel()?'<div class="mt-0.5 text-[10px] text-blue-100 font-bold"><span>المنصب الإداري:</span><span>'+escHtml(currentAdminRoleLabel())+'</span></div>':''}
         <button type="button" onclick="goBack()" class="mt-1 h-6 px-3 rounded-lg border border-white/20 bg-white/10 text-white text-[11px] font-extrabold">← رجوع</button>
       </div>
