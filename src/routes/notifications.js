@@ -5,7 +5,7 @@ const mongoose = require('mongoose');
 const Notification = require('../models/Notification');
 const PushToken = require('../models/PushToken');
 const WebPushSubscription = require('../models/WebPushSubscription');
-const { getVapidKeys } = require('../utils/webPush');
+const { getVapidKeys, isAllowedPushEndpoint } = require('../utils/webPush');
 const { auth, canAccessAdmin, isRootAdmin } = require('../middleware/auth');
 const { clientAuth } = require('../middleware/clientAuth');
 
