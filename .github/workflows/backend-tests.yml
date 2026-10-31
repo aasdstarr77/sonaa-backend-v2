@@ -12,13 +12,14 @@ on:
       - 'frontend/js/**'
       - 'package.json'
       - 'package-lock.json'
+      - 'scripts/**'
       - '.github/workflows/backend-tests.yml'
   workflow_dispatch:
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -38,3 +39,14 @@ jobs:
         run: npm audit --audit-level=high
       - name: Run backend integration and security tests
         run: npm test
+      - name: Install isolated browser test runner
+        run: |
+          npm install --prefix /tmp/sonaa-playwright --no-save --ignore-scripts playwright@1.55.0
+          /tmp/sonaa-playwright/node_modules/.bin/playwright install --with-deps chromium
+      - name: Run frontend browser smoke tests
+        run: |
+          python3 -m http.server 4173 --directory frontend >/tmp/sonaa-http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          sleep 2
+          NODE_PATH=/tmp/sonaa-playwright/node_modules node scripts/ui-smoke.cjs
