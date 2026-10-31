@@ -454,7 +454,10 @@ body #app header.app-header a[href="https://aasdstarr77.github.io/sonaa-download
 <div id="app"></div>
 <div id="toast" class="fixed bottom-[88px] left-3 right-3 z-[200] pointer-events-none"></div>
 
-<script src="/js/client-page.js"></script>
+<script src="/js/client-core.js"></script>
+<script src="/js/client-account.js"></script>
+<script src="/js/client-render.js"></script>
+<script src="/js/client-actions.js"></script>
 
 <script>async function handleGlobalRefresh(){let button=document.getElementById('global-refresh');if(globalRefreshInProgress||button?.disabled)return;globalRefreshInProgress=true;if(button){button.disabled=true;button.classList.add('is-refreshing');}try{if(!state.account){await Promise.allSettled([loadServices(),loadPublicContent()]);showToast('تم تحديث البيانات','success');}else{await refreshClientPage();}}finally{globalRefreshInProgress=false;button=document.getElementById('global-refresh');if(button){button.disabled=false;button.classList.remove('is-refreshing');}}}</script>
 

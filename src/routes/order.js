@@ -24,6 +24,20 @@ const {
 
 const router = express.Router();
 
+const {
+  toWesternDigits,
+  containsEgyptianMobile,
+  sanitizeText,
+  findPhoneContainingField,
+  sanitizeOffer,
+  publicOrder,
+  createFanniCanHandleService
+} = require('../utils/orderPresentation');
+const fanniCanHandleService = createFanniCanHandleService({ CATEGORIES, normalizeServiceName });
+const createOrderChatRouter = require('./order/chat');
+const createOrderTrackingRouter = require('./order/tracking');
+
+
 async function writeOrderAdminAudit(req, action, target, details) {
   try {
     await AdminAuditLog.create({
@@ -49,192 +63,6 @@ const DEFAULT_COMMISSION_RATE = 10;
  * مع الاحتفاظ بالأسماء القديمة المقبولة سابقًا.
  */
 
-
-const ARABIC_DIGITS = '٠١٢٣٤٥٦٧٨٩';
-const PERSIAN_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
-
-function toWesternDigits(value) {
-  return String(value).replace(/[٠-٩۰-۹]/g, digit => {
-    const arabicIndex = ARABIC_DIGITS.indexOf(digit);
-    if (arabicIndex !== -1) return String(arabicIndex);
-    return String(PERSIAN_DIGITS.indexOf(digit));
-  });
-}
-
-function containsEgyptianMobile(value) {
-  if (typeof value !== 'string' || !value.trim()) return false;
-
-  const normalized = toWesternDigits(value);
-  const chunks =
-    normalized.match(/\d(?:[\s().+-_/\،,؛:]*\d){9,15}/g) || [];
-
-  return chunks.some(chunk => {
-    const digits = chunk.replace(/\D/g, '');
-    return (
-      /01[0125]\d{8}/.test(digits) ||
-      /201[0125]\d{8}/.test(digits) ||
-      /00201[0125]\d{8}/.test(digits)
-    );
-  });
-}
-
-function sanitizeText(value) {
-  if (typeof value !== 'string') return value;
-  if (containsEgyptianMobile(value)) {
-    return '[تم إخفاء التفاصيل لاحتوائها على رقم تواصل]';
-  }
-  return value;
-}
-
-function findPhoneContainingField(fields) {
-  for (const [fieldName, value] of Object.entries(fields)) {
-    if (
-      typeof value === 'string' &&
-      containsEgyptianMobile(value)
-    ) {
-      return fieldName;
-    }
-  }
-  return null;
-}
-
-function sanitizeOffer(offer) {
-  const safeOffer =
-    typeof offer.toObject === 'function'
-      ? offer.toObject()
-      : { ...offer };
-
-  delete safeOffer.fanniPhone;
-  delete safeOffer.phone;
-  delete safeOffer.fanniId;
-  delete safeOffer.fanni;
-
-  if (typeof safeOffer.message === 'string') {
-    safeOffer.message = sanitizeText(safeOffer.message);
-  }
-
-  return safeOffer;
-}
-
-function publicOrder(order, options = {}) {
-  const {
-    includeAddress = true,
-    includeAssignedFanniPhone = false,
-    includeClientName = true
-  } = options;
-
-  if (!order) return null;
-
-  const data =
-    typeof order.toObject === 'function'
-      ? order.toObject()
-      : { ...order };
-
-  const assignedFanniId = data.assignedFanni;
-  data.hasVoiceRecording = Boolean(data.voiceRecordingData);
-  delete data.voiceRecordingData;
-
-  if (!includeAddress) delete data.address;
-  if (!includeClientName) delete data.clientName;
-
-  delete data.clientPhone;
-  delete data.phone;
-  delete data.clientAccount;
-  delete data.assignedFanni;
-  delete data.assignedFanniPhone;
-  // Platform commission is internal financial data and must never be exposed in client-facing order payloads.
-  delete data.commissionRate;
-  delete data.commissionAmount;
-  delete data.commissionCharged;
-  delete data.commissionChargedAt;
-
-  if (
-    includeAssignedFanniPhone &&
-    data.status === 'تم اختيار فني' &&
-    assignedFanniId
-  ) {
-    const acceptedOffer = Array.isArray(data.offers)
-      ? data.offers.find(
-          offer =>
-            (data.acceptedOfferId &&
-              String(offer._id) === String(data.acceptedOfferId)) ||
-            (!data.acceptedOfferId &&
-              String(offer.fanni) === String(assignedFanniId))
-        )
-      : null;
-
-    if (
-      acceptedOffer &&
-      typeof acceptedOffer.fanniPhone === 'string' &&
-      acceptedOffer.fanniPhone.trim()
-    ) {
-      data.assignedFanniPhone = acceptedOffer.fanniPhone;
-    }
-  }
-
-  if (typeof data.description === 'string') {
-    data.description = sanitizeText(data.description);
-  }
-
-  if (typeof data.desc === 'string') {
-    data.desc = sanitizeText(data.desc);
-  }
-
-  if (Array.isArray(data.offers)) {
-    // A technician is allowed one offer per order. Hide historical duplicates
-    // at the API boundary as well as preventing new concurrent duplicates.
-    const seenTechnicians = new Set();
-    const uniqueOffers = [];
-    for (const offer of data.offers) {
-      const technicianId = String(offer?.fanni?._id || offer?.fanni || offer?.fanniId || '').trim();
-      const offerId = String(offer?._id || offer?.id || '').trim();
-      const key = technicianId ? `fanni:${technicianId}` : offerId ? `offer:${offerId}` : '';
-      if (key && seenTechnicians.has(key)) continue;
-      if (key) seenTechnicians.add(key);
-      uniqueOffers.push(offer);
-    }
-    data.offers = uniqueOffers.map(sanitizeOffer);
-  }
-
-  return data;
-}
-
-/*
- * التحقق من تخصص الفني في الباك إند.
- *
- * لو تخصص الفني اسم قسم كامل، مثل "دش وكاميرات وشاشات"،
- * يُسمح له بخدمات القسم.
- *
- * ولو تخصصه اسم خدمة محددة، مثل "تركيب دش"،
- * يُسمح له بالخدمة المحددة فقط.
- */
-function fanniCanHandleService(specialties, serviceName) {
-  if (!Array.isArray(specialties) || !serviceName) return false;
-
-  const normalizedService = normalizeServiceName(serviceName);
-  if (!normalizedService) return false;
-
-  const normalizedSpecialties = specialties
-    .filter(value => typeof value === 'string')
-    .map(normalizeServiceName)
-    .filter(Boolean);
-
-  if (normalizedSpecialties.includes(normalizedService)) {
-    return true;
-  }
-
-  const category = CATEGORIES.find(item =>
-    item.services.some(
-      service => normalizeServiceName(service) === normalizedService
-    )
-  );
-
-  if (!category) return false;
-
-  return normalizedSpecialties.includes(
-    normalizeServiceName(category.label)
-  );
-}
 
 const createSchema = Joi.object({
   service: Joi.string()
@@ -1632,274 +1460,35 @@ router.post('/:sn/rating', async (req, res, next) => {
   }
 });
 
-router.get('/:sn/chat', async (req, res, next) => {
-  try {
-    const sn = String(req.params.sn || '').toUpperCase();
-    if (!validSN(sn)) return res.status(400).json({ message: 'كود الطلب غير صحيح' });
-    const order = await Order.findOne({ sn });
-    if (!order) return res.status(404).json({ message: 'الطلب غير موجود' });
-    const isClient = verifyClientToken(req, order);
-    const token = String(req.headers.authorization || '').startsWith('Bearer ') ? req.headers.authorization.slice(7).trim() : '';
-    let fanniId = null;
-    if (token && process.env.JWT_SECRET) { try { const payload = jwt.verify(token, process.env.JWT_SECRET); if (payload.id) fanniId = payload.id; } catch (_) {} }
-    const technicianOffer = fanniId && (order.offers || []).find(o => String(o.fanni) === String(fanniId));
-    if (!isClient && !technicianOffer) return res.status(403).json({ message: 'غير مسموح بعرض محادثة هذا الطلب.' });
-    if (!isClient && !(await hasAcceptedGuidelines(fanniId))) return res.status(428).json({ code: 'TECHNICIAN_GUIDELINES_REQUIRED', message: 'يجب الموافقة على ميثاق التعامل المهني أولًا.' });
-    const accepted = ['تم اختيار فني', 'تم الانتهاء'].includes(order.status);
-    if (!isClient && accepted && String(order.assignedFanni || '') !== String(fanniId)) return res.status(403).json({ message: 'المحادثة بعد القبول متاحة للفني المعيّن فقط.' });
-    const requestedOfferId = String(req.query?.offerId || '').trim();
-    const visibleMessages = (order.chatMessages || []).filter(m => {
-      if (accepted) return isClient ? (!m.targetOfferId || String(m.targetOfferId) === String(order.acceptedOfferId || '')) : String(m.targetOfferId || '') === String(order.acceptedOfferId || '');
-      if (isClient) return Boolean(m.targetOfferId) && (!requestedOfferId || String(m.targetOfferId) === requestedOfferId);
-      return String(m.targetOfferId || '') === String(technicianOffer._id);
-    }).map(m => ({ senderRole: m.senderRole, text: m.text, targetOfferId: m.targetOfferId || '', createdAt: m.createdAt }));
-    return res.json({ messages: visibleMessages, priceChangeRequests: accepted ? (order.priceChangeRequests || []) : [] });
-  } catch (err) { next(err); }
-});
-router.post('/:sn/chat', async (req, res, next) => {
-  try {
-    const sn = String(req.params.sn || '').toUpperCase();
-    if (!validSN(sn)) return res.status(400).json({ message: 'كود الطلب غير صحيح' });
-    const text = String(req.body?.text || req.body?.reply || '').trim().slice(0, 1000);
-    if (!text) return res.status(400).json({ message: 'اكتب الرسالة أولًا.' });
-    if (hasContactDetails(text)) return res.status(400).json({ message: 'ممنوع تبادل أرقام الهاتف أو الروابط داخل المحادثة.' });
-    const order = await Order.findOne({ sn });
-    if (!order) return res.status(404).json({ message: 'الطلب غير موجود' });
-    const isClient = verifyClientToken(req, order);
-    const token = String(req.headers.authorization || '').startsWith('Bearer ') ? req.headers.authorization.slice(7).trim() : '';
-    let payload = null;
-    if (token && process.env.JWT_SECRET) { try { payload = jwt.verify(token, process.env.JWT_SECRET); } catch (_) {} }
-    const fanniId = payload?.id;
-    const ownOffer = fanniId && (order.offers || []).find(o => String(o.fanni) === String(fanniId));
-    if (!isClient && !ownOffer) return res.status(403).json({ message: 'غير مسموح بإرسال رسالة لهذا الطلب.' });
-    if (!isClient && !(await hasAcceptedGuidelines(fanniId))) return res.status(428).json({ code: 'TECHNICIAN_GUIDELINES_REQUIRED', message: 'يجب الموافقة على ميثاق التعامل المهني أولًا.' });
-    if (order.status === 'تم الانتهاء') return res.status(409).json({ message: 'المهمة مكتملة؛ المحادثة للقراءة فقط.' });
-    const accepted = order.status === 'تم اختيار فني';
-    const targetOfferId = String(req.body?.offerId || (accepted ? order.acceptedOfferId || '' : '')).trim();
-    if (accepted) {
-      if (!order.acceptedOfferId || targetOfferId !== String(order.acceptedOfferId)) return res.status(409).json({ message: 'المحادثة متاحة للعرض المقبول فقط.' });
-      if (!isClient && String(order.assignedFanni || '') !== String(fanniId || '')) return res.status(403).json({ message: 'المحادثة بعد القبول متاحة للفني المعيّن فقط.' });
-    } else {
-      if (!ACTIVE_STATUSES.includes(order.status)) return res.status(409).json({ message: 'المحادثة غير متاحة في حالة الطلب الحالية.' });
-      if (!mongoose.isValidObjectId(targetOfferId)) return res.status(400).json({ message: 'حدد العرض الذي تخصه المحادثة.' });
-      const targetOffer = (order.offers || []).find(o => String(o._id) === targetOfferId);
-      if (!targetOffer) return res.status(404).json({ message: 'العرض غير موجود في هذا الطلب.' });
-      if (!isClient && String(targetOffer.fanni) !== String(fanniId)) return res.status(403).json({ message: 'لا يمكنك الرد إلا على استفسارات العرض الخاص بك.' });
-      if (isClient && !['هل السعر شامل؟', 'متى تقدر تيجي؟', 'هل في تكلفة إضافية؟'].includes(text)) return res.status(400).json({ message: 'قبل قبول العرض، استخدم أحد أزرار الاستفسارات السريعة.' });
-      if (!isClient && !['نعم', 'لا', 'حسب الاتفاق'].includes(text)) return res.status(400).json({ message: 'قبل قبول العرض، ردود الفني المسموحة فقط: نعم، لا، حسب الاتفاق.' });
-    }
-    order.chatMessages.push({ senderRole: isClient ? 'client' : 'fanni', senderId: isClient ? String(order.clientAccount || order._id) : String(fanniId), targetOfferId, text, createdAt: new Date() });
-    await order.save();
-
-    // Notify the other participant for every newly sent order-chat message.
-    // Before acceptance, a client message is routed only to the technician who owns that offer.
-    const targetOffer = (order.offers || []).find(o => String(o._id) === targetOfferId);
-    const recipientRole = isClient ? 'fanni' : 'client';
-    const recipientId = isClient
-      ? (accepted ? order.assignedFanni : targetOffer?.fanni)
-      : order.clientAccount;
-    if (recipientId) {
-      await createNotification({
-        recipientRole,
-        recipientId,
-        type: 'order_message',
-        title: isClient ? 'رسالة جديدة من العميل' : 'رسالة جديدة من الفني',
-        message: 'طلب ' + order.sn + ': ' + text.slice(0, 140),
-        link: '/?tab=orders'
-      });
-    }
-
-    return res.status(201).json({ message: 'تم إرسال الرسالة.', messages: order.chatMessages.filter(m => accepted ? (!m.targetOfferId || String(m.targetOfferId) === targetOfferId) : String(m.targetOfferId || '') === targetOfferId) });
-  } catch (err) { next(err); }
-});
-router.post('/:sn/price-change', auth(), async (req, res, next) => {
-  try {
-    if (req.user.role !== 'fanni') return res.status(403).json({ message: 'طلب تعديل السعر متاح للفني المعيّن فقط.' });
-    if (!(await hasAcceptedGuidelines(req.userId))) return res.status(428).json({ code: 'TECHNICIAN_GUIDELINES_REQUIRED', message: 'يجب الموافقة على ميثاق التعامل المهني أولًا.' });
-    const sn = String(req.params.sn || '').toUpperCase(), newPrice = money(req.body?.newPrice), reason = String(req.body?.reason || '').trim().slice(0, 500);
-    if (!validSN(sn) || !Number.isFinite(newPrice) || newPrice <= 0 || reason.length < 5) return res.status(400).json({ message: 'اكتب سعرًا جديدًا صحيحًا وسببًا واضحًا للتعديل.' });
-    const order = await Order.findOne({ sn }); if (!order) return res.status(404).json({ message: 'الطلب غير موجود.' });
-    if (order.status !== 'تم اختيار فني' || String(order.assignedFanni) !== String(req.userId) || !order.acceptedOfferPrice) return res.status(409).json({ message: 'لا يمكن طلب تعديل السعر إلا للطلب المسند إليك قبل إنهائه.' });
-    const currentPrice = money(order.acceptedOfferPrice);
-    if (newPrice <= currentPrice) return res.status(400).json({ message: 'السعر الجديد لازم يكون أعلى من السعر الحالي (' + currentPrice + ' جنيه). لا يمكن تخفيض السعر بعد قبول العرض.' });
-    if ((order.priceChangeRequests || []).some(r => r.status === 'قيد الموافقة')) return res.status(409).json({ message: 'يوجد طلب تعديل سعر ينتظر موافقة العميل بالفعل.' });
-    order.priceChangeRequests.push({ fanniId: req.userId, oldPrice: order.acceptedOfferPrice, newPrice, reason, status: 'قيد الموافقة', requestedAt: new Date() }); await order.save();
-    await createNotification({
-      recipientRole: 'client',
-      recipientId: order.clientAccount,
-      type: 'price_change_requested',
-      title: 'الفني طلب زيادة السعر',
-      message: 'طلب الفني تعديل سعر الطلب ' + order.sn + ' من ' + currentPrice + ' إلى ' + newPrice + ' جنيه. راجع السبب ووافق أو ارفض من المحادثة.',
-      link: '/?tab=orders',
-      dedupeKey: 'price-change-request:' + String(order._id) + ':' + String(order.priceChangeRequests[order.priceChangeRequests.length - 1]._id)
-    });
-    return res.status(201).json({ message: 'تم إرسال طلب تعديل السعر للعميل؛ لا تنفذ الزيادة قبل موافقته.', request: order.priceChangeRequests[order.priceChangeRequests.length - 1] });
-  } catch (err) { next(err); }
-});
-router.post('/:sn/price-change/:requestId/decision', async (req, res, next) => {
-  let session;
-  try {
-    const sn = String(req.params.sn || '').toUpperCase();
-    if (!validSN(sn)) return res.status(400).json({ message: 'كود الطلب غير صحيح.' });
-    session = await mongoose.startSession();
-    await session.startTransaction();
-    const order = await Order.findOne({ sn }).session(session);
-    if (!order) { await session.abortTransaction(); return res.status(404).json({ message: 'الطلب غير موجود.' }); }
-    if (!verifyClientToken(req, order)) { await session.abortTransaction(); return res.status(403).json({ message: 'غير مسموح بتعديل سعر هذا الطلب.' }); }
-    if (order.status === 'تم الانتهاء') { await session.abortTransaction(); return res.status(409).json({ message: 'المهمة مكتملة؛ لا يمكن اتخاذ قرار جديد بشأن تعديل السعر.' }); }
-    const request = order.priceChangeRequests.id(req.params.requestId);
-    if (!request || request.status !== 'قيد الموافقة') { await session.abortTransaction(); return res.status(409).json({ message: 'طلب تعديل السعر غير متاح أو تم اتخاذ قرار بشأنه.' }); }
-    const approved = req.body?.approved === true;
-    if (approved) {
-      if (!order.commissionCharged || !order.acceptedOfferPrice || !request.fanniId) { await session.abortTransaction(); return res.status(409).json({ message: 'تعذر اعتماد تعديل السعر قبل تثبيت العرض والعمولة.' }); }
-      const rate = Number.isFinite(Number(order.commissionRate)) ? Number(order.commissionRate) : DEFAULT_COMMISSION_RATE;
-      const oldCommission = money(Number(order.commissionAmount || 0));
-      const newCommission = money(Number(request.newPrice) * rate / 100);
-      const delta = money(newCommission - oldCommission);
-      const fanni = await Fanni.findOne({ _id: request.fanniId, role: 'fanni' }).session(session);
-      if (!fanni) { await session.abortTransaction(); return res.status(409).json({ message: 'تعذر العثور على محفظة الفني لتنفيذ تسوية العمولة.' }); }
-      const balanceBefore = Number(fanni.walletBalance || 0);
-      if (!Number.isFinite(balanceBefore) || balanceBefore < 0 || (delta > 0 && balanceBefore < delta)) { await session.abortTransaction(); return res.status(409).json({ message: 'رصيد الفني لا يكفي لتسوية عمولة السعر الجديد؛ لم يتم اعتماد التعديل.' }); }
-      let balanceAfter = balanceBefore;
-      if (delta !== 0) {
-        const updatedFanni = await Fanni.findOneAndUpdate(
-          { _id: fanni._id, role: 'fanni', ...(delta > 0 ? { walletBalance: { $gte: delta } } : {}) },
-          { $inc: { walletBalance: -delta } },
-          { new: true, session, runValidators: true }
-        );
-        if (!updatedFanni) { await session.abortTransaction(); return res.status(409).json({ message: 'تغير رصيد الفني؛ لم يتم اعتماد تعديل السعر.' }); }
-        balanceAfter = Number(updatedFanni.walletBalance);
-        const transaction = new WalletTransaction({
-          fanni: fanni._id, order: order._id, orderSN: order.sn, type: 'commission',
-          amount: -delta, balanceBefore, balanceAfter,
-          description: 'تسوية عمولة بعد موافقة العميل على تعديل سعر الطلب ' + order.sn,
-          idempotencyKey: 'commission-adjustment:' + String(order._id) + ':' + String(request._id)
-        });
-        await transaction.save({ session });
-      }
-      order.acceptedOfferPrice = Number(request.newPrice);
-      order.commissionAmount = newCommission;
-      order.commissionRate = rate;
-    }
-    request.status = approved ? 'مقبول' : 'مرفوض';
-    request.decidedAt = new Date();
-    request.decidedByRole = 'client';
-    order.chatMessages.push({
-      senderRole: 'client',
-      senderId: String(order.clientAccount || order._id),
-      targetOfferId: String(order.acceptedOfferId || ''),
-      text: approved
-        ? 'وافقت على زيادة العرض إلى ' + Number(request.newPrice) + ' جنيه.'
-        : 'رفضت زيادة العرض؛ السعر السابق ' + Number(request.oldPrice) + ' جنيه ما زال ساريًا.',
-      createdAt: new Date()
-    });
-    await order.save({ session });
-    await session.commitTransaction();
-    await createNotification({
-      recipientRole: 'fanni',
-      recipientId: request.fanniId,
-      type: approved ? 'price_change_approved' : 'price_change_rejected',
-      title: approved ? 'وافق العميل على زيادة السعر' : 'رفض العميل زيادة السعر',
-      message: approved
-        ? 'وافق العميل على تعديل سعر الطلب ' + order.sn + ' إلى ' + order.acceptedOfferPrice + ' جنيه.'
-        : 'رفض العميل تعديل سعر الطلب ' + order.sn + '. يظل السعر السابق ساريًا.',
-      link: '/fanni',
-      dedupeKey: 'price-change-decision:' + String(order._id) + ':' + String(request._id)
-    });
-    return res.json({ message: approved ? 'تمت الموافقة على السعر الجديد.' : 'تم رفض تعديل السعر؛ يظل السعر السابق ساريًا.', acceptedOfferPrice: order.acceptedOfferPrice, request });
-  } catch (err) {
-    if (session && session.inTransaction()) { try { await session.abortTransaction(); } catch (_) {} }
-    if (err && err.code === 11000) return res.status(409).json({ message: 'تمت معالجة تسوية العمولة بالفعل.' });
-    next(err);
-  } finally {
-    if (session) await session.endSession();
-  }
-});
-
-async function trackOrder(req, res, next) {
-  try {
-    const sn = String(req.params.sn || '').toUpperCase();
-
-    if (!validSN(sn)) {
-      return res.status(400).json({
-        message: 'كود الطلب غير صحيح'
-      });
-    }
-
-    const order = await Order.findOne({ sn });
-
-    if (!order) {
-      return res.status(404).json({
-        message: 'الطلب غير موجود'
-      });
-    }
-
-    const isOrderOwner = verifyClientToken(req, order);
-    if (!isOrderOwner) {
-      return res.status(403).json({ message: 'سجّل الدخول بحسابك لمتابعة الطلب؛ رقم الطلب وحده لا يكفي لعرض بياناته.' });
-    }
-
-    // ملء مستوى وشارات الفني للعروض القديمة دون كشف رقم الهاتف أو بيانات الحساب.
-    const fanniIds = [...new Set((order.offers || []).map(offer => String(offer.fanni || '')).filter(Boolean))];
-    if (fanniIds.length) {
-      const objectIds = fanniIds.filter(mongoose.isValidObjectId).map(id => new mongoose.Types.ObjectId(id));
-      const [fannis, ratingStats, completedStats] = await Promise.all([
-        Fanni.find({ _id: { $in: objectIds } }).select('_id level badges').lean(),
-        Rating.aggregate([
-          { $match: { fanniId: { $in: objectIds }, reviewerRole: 'client' } },
-          { $group: { _id: '$fanniId', average: { $avg: '$stars' }, count: { $sum: 1 } } }
-        ]),
-        Order.aggregate([
-          { $match: { assignedFanni: { $in: objectIds }, status: 'تم الانتهاء' } },
-          { $group: { _id: '$assignedFanni', count: { $sum: 1 } } }
-        ])
-      ]);
-      const fannisById = new Map(fannis.map(fanni => [String(fanni._id), fanni]));
-      const ratingsById = new Map(ratingStats.map(item => [String(item._id), item]));
-      const completedById = new Map(completedStats.map(item => [String(item._id), item.count]));
-      for (const offer of order.offers || []) {
-        const id = String(offer.fanni || '');
-        const fanni = fannisById.get(id);
-        const rating = ratingsById.get(id);
-        offer.fanniLevel = fanni?.level || offer.fanniLevel || 'مبتدئ';
-        offer.fanniBadges = Array.isArray(fanni?.badges) ? fanni.badges : (offer.fanniBadges || []);
-        offer.fanniRatingAverage = rating ? Math.round(rating.average * 100) / 100 : 0;
-        offer.fanniRatingCount = rating?.count || 0;
-        offer.fanniCompletedJobs = completedById.get(id) || 0;
-      }
-    }
-
-    const safe = publicOrder(order, {
-      includeAddress: isOrderOwner,
-      includeAssignedFanniPhone: isOrderOwner
-    });
-    safe.acceptedOfferId = order.acceptedOfferId ? String(order.acceptedOfferId) : null;
-    safe.acceptedOfferPrice = order.acceptedOfferPrice ?? null;
-    // Platform commission is internal financial data and must not be returned to clients.
-    if (Array.isArray(safe.offers) && order.acceptedOfferId && ['تم اختيار فني', 'تم الانتهاء'].includes(order.status)) safe.offers = safe.offers.map(offer => ({ ...offer, offerStatus: String(offer._id) === String(order.acceptedOfferId) ? 'تم قبول العرض' : 'تم رفض العرض' }));
-    safe.chatMessages = (order.chatMessages || []).map(m => ({ senderRole: m.senderRole, text: m.text, targetOfferId: m.targetOfferId || '', createdAt: m.createdAt }));
-    safe.priceChangeRequests = (order.priceChangeRequests || []).map(r => ({ _id: String(r._id), oldPrice: r.oldPrice, newPrice: r.newPrice, reason: r.reason, status: r.status, requestedAt: r.requestedAt, decidedAt: r.decidedAt }));
-
-    if (isOrderOwner && order.status === 'تم الانتهاء') {
-      const ratings = await Rating.find({ orderId: order._id }).sort({ createdAt: 1 }).lean();
-      safe.ratings = publicRatings(ratings);
-      safe.myRating = publicRatings(ratings.filter(rating => rating.reviewerRole === 'client'))[0] || null;
-      safe.canRate = !safe.myRating;
-      safe.acceptedOfferPrice = order.acceptedOfferPrice ?? null;
-      safe.assignedFanniName = order.assignedFanniName || safe.assignedFanniName || '';
-    }
-
-    return res.json({
-      order: safe,
-      data: safe
-    });
-  } catch (err) {
-    next(err);
-  }
-}
-
-router.get('/:sn/voice', auth(), async (req,res,next)=>{try{const sn=String(req.params.sn||'').toUpperCase();if(!validSN(sn))return res.status(400).json({message:'كود الطلب غير صحيح'});const order=await Order.findOne({sn}).select('+voiceRecordingData status service assignedFanni expiresAt').lean();if(!order||!order.voiceRecordingData)return res.status(404).json({message:'لا يوجد تسجيل صوتي لهذا الطلب.'});let permitted=false;const adminAccount=req.user?.role==='admin'||Boolean(req.user?.adminRole);if(adminAccount){const scopedReq={...req,path:'/'+sn+'/voice',method:'GET'};if(!isRootAdmin(req.user)&&!canAccessAdmin(req.user,scopedReq))return res.status(403).json({message:'ليس لديك صلاحية قراءة التسجيلات الصوتية.'});permitted=true;}if(!permitted&&req.user?.role==='fanni'&&req.user?.status==='معتمد'){const fanni=await Fanni.findOne({_id:req.userId,role:'fanni',status:'معتمد'}).select('specialties technicianGuidelinesAcceptedAt technicianGuidelinesVersion').lean();const assigned=order.status==='تم اختيار فني'&&String(order.assignedFanni)===String(req.userId);const available=ACTIVE_STATUSES.includes(order.status)&&order.expiresAt&&new Date(order.expiresAt)>new Date()&&fanni?.technicianGuidelinesAcceptedAt&&fanni?.technicianGuidelinesVersion&&fanniCanHandleService(fanni?.specialties||[],order.service);permitted=Boolean(assigned||available)}if(!permitted)return res.status(403).json({message:'التسجيل الصوتي غير متاح لهذا الحساب.'});const match=/^data:(audio\/(?:webm|ogg|mp4|mpeg|wav)(?:;codecs=[a-zA-Z0-9.-]+)?);base64,([A-Za-z0-9+/]+={0,2})$/.exec(order.voiceRecordingData);if(!match)return res.status(415).json({message:'صيغة التسجيل الصوتي غير مدعومة.'});const audio=Buffer.from(match[2],'base64');res.set('Content-Type',match[1].split(';')[0]);res.set('Content-Length',String(audio.length));res.set('Cache-Control','private, no-store');return res.send(audio)}catch(err){return next(err)}});
-router.get('/by-sn/:sn', trackOrder);
-router.get('/:sn', trackOrder);
+router.use(createOrderChatRouter({
+  Order,
+  Fanni,
+  WalletTransaction,
+  mongoose,
+  createNotification,
+  auth,
+  ACTIVE_STATUSES,
+  validSN,
+  verifyClientToken,
+  fanniCanHandleService,
+  hasAcceptedGuidelines,
+  money,
+  DEFAULT_COMMISSION_RATE
+}));
+router.use(createOrderTrackingRouter({
+  Order,
+  Rating,
+  Fanni,
+  mongoose,
+  ACTIVE_STATUSES,
+  validSN,
+  verifyClientToken,
+  publicOrder,
+  publicRatings,
+  auth,
+  isRootAdmin,
+  canAccessAdmin,
+  fanniCanHandleService
+}));
 
 module.exports = router;
