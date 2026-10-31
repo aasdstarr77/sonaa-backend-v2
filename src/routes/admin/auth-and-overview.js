@@ -68,7 +68,7 @@ router.post('/login', validate(loginSchema), async (req, res, next) => {
     if (admin.status === 'معلق' || admin.status === 'مرفوض') {
       return res.status(403).json({ message: 'حساب الإدارة غير مسموح له بالدخول' });
     }
-    const token = jwt.sign({ id: admin._id, role: admin.role, adminRole: admin.adminRole || null }, process.env.JWT_SECRET, { expiresIn: ADMIN_TOKEN_EXPIRY });
+    const token = jwt.sign({ id: admin._id, role: admin.role, adminRole: admin.adminRole || null, tokenVersion: Number(admin.tokenVersion || 0) }, process.env.JWT_SECRET, { expiresIn: ADMIN_TOKEN_EXPIRY });
     return res.json({ token, user: { id: String(admin._id), name: admin.name, phone: admin.phone, role: admin.role, adminRole: admin.adminRole || null } });
   } catch (err) { next(err); }
 });
@@ -150,6 +150,7 @@ router.patch('/fannis/:id/password', auth('admin'), async (req, res, next) => {
     const fanni = await Fanni.findOne({ _id: req.params.id, role: 'fanni' }).select('+passwordHash');
     if (!fanni) return res.status(404).json({ message: 'حساب الفني غير موجود.' });
     fanni.passwordHash = await bcrypt.hash(value.newPassword, 12);
+    fanni.tokenVersion = Number(fanni.tokenVersion || 0) + 1;
     await fanni.save();
     await writeAdminAudit(req, 'تغيير كلمة سر فني', 'fannis', String(fanni._id), 'تغيير كلمة سر الحساب من لوحة الإدارة دون تسجيل كلمة السر');
     return res.json({ message: 'تم تغيير كلمة سر الفني بنجاح.' });
