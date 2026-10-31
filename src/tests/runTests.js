@@ -503,12 +503,11 @@ async function run() {
     });
 
     await test('offer submission uses an atomic guard against concurrent duplicate offers', async () => {
-      const source = fs.readFileSync(path.join(__dirname, '../routes/order.js'), 'utf8');
+      // Offer submission now lives in its feature module after the route split.
+      const source = fs.readFileSync(path.join(__dirname, '../routes/order/technician-discovery.js'), 'utf8');
       const offerStart = source.indexOf("router.post('/:sn/offer'");
-      const offerEnd = source.indexOf("\nrouter.post('/:sn/accept'", offerStart);
       assert.notEqual(offerStart, -1);
-      assert.notEqual(offerEnd, -1);
-      const offerRoute = source.slice(offerStart, offerEnd);
+      const offerRoute = source.slice(offerStart);
       assert.match(offerRoute, /Order\.findOneAndUpdate\(/);
       assert.match(offerRoute, /'offers\.fanni': \{ \$ne: req\.userId \}/);
       assert.match(offerRoute, /\$push: \{ offers: offerPayload \}/);
@@ -524,15 +523,17 @@ async function run() {
       assert.equal(Object.prototype.hasOwnProperty.call(r.body.order, 'commissionAmount'), false);
       assert.equal(Object.prototype.hasOwnProperty.call(r.body.order, 'commissionCharged'), false);
       assert.equal(Object.prototype.hasOwnProperty.call(r.body.order, 'commissionChargedAt'), false);
-      const source = fs.readFileSync(path.join(__dirname, '../routes/order.js'), 'utf8');
-      const acceptStart = source.indexOf("router.post('/:sn/accept'");
-      const acceptEnd = source.indexOf("router.post('/:sn/cancel'", acceptStart);
+      // Acceptance and price-change decisions were moved into separate feature modules.
+      const lifecycleSource = fs.readFileSync(path.join(__dirname, '../routes/order/lifecycle.js'), 'utf8');
+      const acceptStart = lifecycleSource.indexOf("router.post('/:sn/accept'");
+      const acceptEnd = lifecycleSource.indexOf("router.post('/:sn/cancel'", acceptStart);
       assert.notEqual(acceptStart, -1);
       assert.notEqual(acceptEnd, -1);
-      const acceptRoute = source.slice(acceptStart, acceptEnd);
+      const acceptRoute = lifecycleSource.slice(acceptStart, acceptEnd);
       assert.doesNotMatch(acceptRoute, /responsePayload\s*=\s*\{[\s\S]{0,250}commission\s*:/);
       assert.match(acceptRoute, /message: 'تم قبول العرض بنجاح'/);
-      assert.match(source, /تمت الموافقة على السعر الجديد\./);
+      const priceSource = fs.readFileSync(path.join(__dirname, '../routes/order/chat-and-price.js'), 'utf8');
+      assert.match(priceSource, /تمت الموافقة على السعر الجديد\./);
     });
 
     await test('only the order owner can cancel a pending order', async () => {
