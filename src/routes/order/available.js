@@ -33,11 +33,16 @@ router.get('/available', auth(), async (req, res, next) => {
         role: 'fanni',
         status: 'معتمد'
       }).select('specialties technicianGuidelinesAcceptedAt technicianGuidelinesVersion').lean();
-      if (!fanni?.technicianGuidelinesAcceptedAt || !fanni?.technicianGuidelinesVersion) return res.status(428).json({ code: 'TECHNICIAN_GUIDELINES_REQUIRED', message: 'يجب الموافقة على ميثاق التعامل المهني أولًا.' });
-
       if (!fanni) {
         return res.status(403).json({
           message: 'حساب الفني غير موجود أو غير معتمد'
+        });
+      }
+
+      if (!fanni.technicianGuidelinesAcceptedAt || !fanni.technicianGuidelinesVersion) {
+        return res.status(428).json({
+          code: 'TECHNICIAN_GUIDELINES_REQUIRED',
+          message: 'يجب الموافقة على ميثاق التعامل المهني أولًا.'
         });
       }
 

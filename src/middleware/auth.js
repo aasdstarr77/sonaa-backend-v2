@@ -88,6 +88,7 @@ function auth(requiredRole = null) {
     try {
       const header = req.headers.authorization;
       if (!header || !header.startsWith('Bearer ')) return res.status(401).json({ message: 'غير مصرح - Token مفقود' });
+      if (!process.env.JWT_SECRET) return res.status(503).json({ message: 'تسجيل الدخول غير متاح بسبب إعدادات الخادم' });
       const token = header.split(' ')[1];
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       const user = await Fanni.findById(decoded.id);

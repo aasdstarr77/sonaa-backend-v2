@@ -138,6 +138,24 @@ async function run() {
       assert.equal(r.headers['x-powered-by'], undefined);
     });
 
+    await test('authentication fails safely when JWT_SECRET is missing and missing technician records are checked before guidelines', async () => {
+      const originalSecret = process.env.JWT_SECRET;
+      try {
+        delete process.env.JWT_SECRET;
+        const r = await request(app).get('/api/fanni/me')
+          .set('Authorization', 'Bearer invalid-token');
+        assert.equal(r.status, 503);
+      } finally {
+        process.env.JWT_SECRET = originalSecret;
+      }
+
+      const availableSource = fs.readFileSync(path.join(__dirname, '../routes/order/available.js'), 'utf8');
+      assert.ok(
+        availableSource.indexOf('if (!fanni)') < availableSource.indexOf('if (!fanni.technicianGuidelinesAcceptedAt'),
+        'missing technician record must return 403 before guideline validation'
+      );
+    });
+
     await test('security headers include CSP and disable object embedding', async () => {
       const r = await request(app).get('/');
       const csp = r.headers['content-security-policy'] || '';
