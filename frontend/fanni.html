@@ -495,6 +495,12 @@ body:has(.fanni-login-gate) .fanni-app-header,body:has(.fanni-login-gate) nav.fi
 <div id="toast" class="fixed bottom-[88px] left-3 right-3 z-[200] pointer-events-none"></div>
 
 
+<script src="/js/fanni-core.js"></script>
+<script src="/js/fanni-dashboard.js"></script>
+<script src="/js/fanni-render.js"></script>
+<script src="/js/fanni-auth-profile.js"></script>
+<script src="/js/fanni-orders-wallet.js"></script>
+<script src="/js/fanni-live.js"></script>
 <script src="/js/fanni-page.js"></script>
 
 <script>async function handleGlobalRefresh(){const button=document.getElementById('global-refresh');if(globalRefreshInProgress||button?.disabled)return;globalRefreshInProgress=true;if(button){button.disabled=true;button.classList.add('is-refreshing');}try{await refreshTechnicianPage();}catch(e){toast('تعذر تحديث البيانات. حاول مرة أخرى.','error');}finally{hideFanniLoading();globalRefreshInProgress=false;const currentButton=document.getElementById('global-refresh');if(currentButton){currentButton.disabled=false;currentButton.classList.remove('is-refreshing');}}}</script>

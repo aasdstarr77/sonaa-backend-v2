@@ -162,6 +162,15 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
 <div id="app"></div>
 <div id="toast" class="fixed bottom-4 left-3 right-3 z-[200] pointer-events-none"></div>
 <button id="global-refresh" type="button" onclick="handleGlobalRefresh()" aria-label="تحديث البيانات" title="تحديث البيانات" class="global-refresh fixed bottom-4 left-4 z-[80] flex h-12 w-12 items-center justify-center rounded-full border border-white/70 bg-gradient-to-br from-[#0b1b3a] to-[#2563eb] text-white shadow-[0_8px_24px_rgba(11,27,58,.28)] ring-1 ring-blue-200/70 backdrop-blur transition hover:scale-105 active:scale-95 focus:outline-none focus:ring-4 focus:ring-blue-300/60"><svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.9-3L3 11"/><path d="M3 4v7h7"/><path d="M4 13a8 8 0 0 0 14.9 3L21 13"/><path d="M21 20v-7h-7"/></svg></button>
+<script src="/js/admin-core.js"></script>
+<script src="/js/admin-ui.js"></script>
+<script src="/js/admin-render-people.js"></script>
+<script src="/js/admin-render-orders.js"></script>
+<script src="/js/admin-render-platform.js"></script>
+<script src="/js/admin-navigation.js"></script>
+<script src="/js/admin-actions-orders-finance.js"></script>
+<script src="/js/admin-actions-people.js"></script>
+<script src="/js/admin-actions-platform.js"></script>
 <script src="/js/admin-page.js"></script>
 <script>(function(){'use strict';let busy=false,lastToken='';function token(){if(window.IS_EDITOR_PREVIEW)return '';try{return localStorage.getItem('admin_token_v3')||''}catch(_){return ''}}async function refreshCount(){const t=token();if(!t||busy)return;busy=true;try{const path='/api/password-recovery/admin/requests';const url=location.hostname.includes('sonaa-backend-v2')&&location.hostname.endsWith('vercel.app')?path:'https://sonaa-backend-v2.vercel.app'+path;const r=await fetch(url,{method:'GET',headers:{Authorization:'Bearer '+t,Accept:'application/json'},cache:'no-store',credentials:'omit'});if(!r.ok)return;const data=await r.json();if(!Array.isArray(data.recoveries))return;const badge=document.getElementById('sonaa-recovery-count');if(!badge)return;const count=data.recoveries.filter(item=>['بانتظار الدعم','قيد التحقق','جديدة','pending'].includes(String(item.status||''))).length;badge.textContent=String(count);badge.setAttribute('aria-label','عدد طلبات استعادة كلمة المرور: '+count)}catch(_){}finally{busy=false}}function sync(){const t=token();if(t!==lastToken){lastToken=t;if(t)refreshCount()}}sync();refreshCount();window.addEventListener('storage',sync);setInterval(function(){sync();refreshCount()},5000)})();</script>
 <script src="/web-push.js" defer></script>
