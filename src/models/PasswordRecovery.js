@@ -26,7 +26,7 @@ const passwordRecoverySchema = new mongoose.Schema({
   codeUsedAt: { type: Date, default: null },
   messages: { type: [recoveryMessageSchema], default: [] },
   lastMessageAt: { type: Date, default: Date.now, index: true },
-  expiresAt: { type: Date, required: true, index: true },
+  expiresAt: { type: Date, required: true },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 }, { versionKey: false });

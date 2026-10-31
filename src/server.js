@@ -22,6 +22,7 @@ const complaintRouter = require('./routes/Complaint');
 const notificationsRouter = require('./routes/notifications');
 const supportRouter = require('./routes/support');
 const passwordRecoveryRouter = require('./routes/passwordRecovery');
+const pageVisitsRouter = require('./routes/pageVisits');
 const { auth } = require('./middleware/auth');
 const errorHandler = require('./middleware/error');
 
@@ -110,7 +111,7 @@ app.use(cors({
     return callback(null, false);
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Recovery-Token'],
   optionsSuccessStatus: 204
 }));
 
@@ -246,7 +247,7 @@ if (req.path === '/health') {
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 10,
+  limit: process.env.NODE_ENV === 'test' ? 100 : 10,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -288,10 +289,7 @@ app.use(loginPaths, loginLimiter);
 // جميع مسارات API التي تعتمد على قاعدة البيانات تمر عبر هذا الوسيط.
 app.use('/api', ensureDatabase);
 
-const PageVisit = require('./models/PageVisit');
-const pageVisitLimiter = rateLimit({windowMs:60000,limit:60,standardHeaders:true,legacyHeaders:false});
-const TRACKABLE_PAGES = new Set(['home','client-app','technician-app','customer-registration-info','technician-registration-info','client-login','client-register','technician-login','technician-register','client-dashboard','technician-dashboard','admin-login','admin-dashboard','password-recovery']);
-app.post('/api/page-visits', pageVisitLimiter, async (req,res)=>{try{const pageKey=String(req.body?.pageKey||'').trim().slice(0,80),pageName=String(req.body?.pageName||'').trim().slice(0,160),rawPath=String(req.body?.path||'/').split('?')[0].slice(0,300),referrer=String(req.body?.referrer||'').slice(0,300),visitorId=String(req.body?.visitorId||'').replace(/[^a-zA-Z0-9_-]/g,'').slice(0,80);if(!TRACKABLE_PAGES.has(pageKey)||!pageName)return res.status(400).json({message:'بيانات الزيارة غير صالحة'});await PageVisit.create({pageKey,pageName,path:rawPath.startsWith('/')?rawPath:'/',referrer,visitorId});return res.status(202).json({ok:true});}catch(err){return res.status(202).json({ok:false});}});
+app.use('/api/page-visits', pageVisitsRouter);
 
 app.use(['/api/fanni/register', '/api/fannis/register', '/api/technician/register', '/api/technicians/register'], fanniRegistrationLimiter);
 
@@ -332,26 +330,6 @@ app.use('/api/admin', adminRouter);
 app.use('/api/admins', adminRouter);
 app.use('/api/auth/admin', adminRouter);
 
-// قائمة الطلبات للأدمن المصرح له فقط.
-const Order = require('./models/Order');
-
-app.get('/api/admin/orders', auth('admin'), async (req, res, next) => {
-  try {
-    const [orders, voiceOrders] = await Promise.all([
-      Order.find({})
-        .populate('assignedFanni', 'name phone specialties areas')
-        .sort({ createdAt: -1 })
-        .limit(500)
-        .lean(),
-      Order.find({ voiceRecordingData: { $exists: true, $ne: '' } }).select('sn').lean()
-    ]);
-    const voiceOrderSNs = new Set(voiceOrders.map(order => String(order.sn || '').toUpperCase()));
-    const safeOrders = orders.map(order => ({ ...order, hasVoiceRecording: voiceOrderSNs.has(String(order.sn || '').toUpperCase()) }));
-    return res.json({ orders: safeOrders, data: safeOrders });
-  } catch (err) {
-    return next(err);
-  }
-});
 
 function sendHtml(res, filename) {
   const candidates = [

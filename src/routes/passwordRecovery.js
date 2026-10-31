@@ -3,6 +3,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const Joi = require('joi');
 const rateLimit = require('express-rate-limit');
 const Client = require('../models/Client');
@@ -116,20 +117,29 @@ router.post('/change/client', clientAuth, async (req, res, next) => {
     if (valid.error || newPassword !== confirmPassword || newPassword === currentPassword) return res.status(400).json({ message: 'كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل، والتأكيد مطابقًا، وألا تكون هي القديمة.' });
     const user = await Client.findById(req.client._id).select('+passwordHash');
     user.passwordHash = await bcrypt.hash(newPassword, 12);
+    user.tokenVersion = Number(user.tokenVersion || 0) + 1;
     await user.save();
-    return res.json({ message: 'تم تغيير كلمة المرور بنجاح.' });
+    const token = jwt.sign(
+      { id: String(user._id), role: 'client', tokenVersion: user.tokenVersion },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d', issuer: 'sonaa-backend-v2', audience: 'sonaa-client' }
+    );
+    return res.json({ message: 'تم تغيير كلمة المرور بنجاح.', token });
   } catch (e) { return next(e); }
 });
 router.post('/change/fanni', auth('fanni'), async (req, res, next) => {
   try {
+    if (req.user.role !== 'fanni') return res.status(403).json({ message: 'هذا المسار مخصص لحساب الفني فقط.' });
     const user = await Fanni.findById(req.user._id).select('+passwordHash');
     const { currentPassword, newPassword, confirmPassword } = req.body || {};
     if (!user || typeof currentPassword !== 'string' || !(await bcrypt.compare(currentPassword, user.passwordHash || ''))) return res.status(400).json({ message: 'كلمة المرور الحالية غير صحيحة.' });
     const valid = passwordSchema.validate(newPassword);
     if (valid.error || newPassword !== confirmPassword || newPassword === currentPassword) return res.status(400).json({ message: 'كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل، والتأكيد مطابقًا، وألا تكون هي القديمة.' });
     user.passwordHash = await bcrypt.hash(newPassword, 12);
+    user.tokenVersion = Number(user.tokenVersion || 0) + 1;
     await user.save();
-    return res.json({ message: 'تم تغيير كلمة المرور بنجاح.' });
+    const token = jwt.sign({ id: String(user._id), role: 'fanni', tokenVersion: user.tokenVersion }, process.env.JWT_SECRET, { expiresIn: '30d' });
+    return res.json({ message: 'تم تغيير كلمة المرور بنجاح.', token });
   } catch (e) { return next(e); }
 });
 router.post('/change/admin', adminSelfAuth, async (req, res, next) => {
@@ -140,20 +150,19 @@ router.post('/change/admin', adminSelfAuth, async (req, res, next) => {
     const valid = passwordSchema.validate(newPassword);
     if (valid.error || newPassword !== confirmPassword || newPassword === currentPassword) return res.status(400).json({ message: 'كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل، والتأكيد مطابقًا، وألا تكون هي القديمة.' });
     user.passwordHash = await bcrypt.hash(newPassword, 12);
+    user.tokenVersion = Number(user.tokenVersion || 0) + 1;
     await user.save();
-    return res.json({ message: 'تم تغيير كلمة المرور بنجاح.' });
+    const token = jwt.sign({ id: String(user._id), role: user.role, adminRole: user.adminRole || null, tokenVersion: user.tokenVersion }, process.env.JWT_SECRET, { expiresIn: '1d' });
+    return res.json({ message: 'تم تغيير كلمة المرور بنجاح.', token });
   } catch (e) { return next(e); }
 });
 
 // Recovery requests are anonymous, but only registered accounts may open a support conversation.
 const recoveryLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 5,
+  limit: 10,
   standardHeaders: true,
   legacyHeaders: false,
-  // Invalid numbers and role mismatches are validation failures, not recovery attempts.
-  // Do not lock users out because they selected the wrong account type.
-  skipFailedRequests: true,
   message: { message: 'تم تجاوز عدد طلبات الاستعادة الصحيحة. حاول مرة أخرى بعد قليل.' }
 });
 router.post('/request', recoveryLimiter, async (req, res, next) => {
@@ -187,20 +196,17 @@ router.post('/request', recoveryLimiter, async (req, res, next) => {
       expiresAt: { $gt: new Date() }
     }).select('+accessTokenHash +accessTokenEncrypted').sort({ lastMessageAt: -1 });
     if (existing) {
-      const existingToken = decryptAccessToken(existing.accessTokenEncrypted);
-      if (!existingToken) {
-        return res.status(409).json({ message: 'عندك بالفعل طلب استعادة مفتوح. افتح طلبك السابق من نفس الجهاز لمتابعة رد الدعم، ولا تنشئ طلبًا جديدًا.' });
-      }
-      return res.status(200).json({
-        message: 'أنت قدمت طلب استعادة بالفعل. تم فتح طلبك السابق لمتابعة رد الدعم.',
-        recoveryToken: existingToken, requestId: String(existing._id), existing: true
+      // Never re-disclose an existing ticket's bearer token based only on a phone number.
+      // The original token is available only to the device that opened the recovery request.
+      return res.status(409).json({
+        message: 'يوجد طلب استعادة مفتوح بالفعل. افتح الطلب السابق من نفس الجهاز الذي بدأه. لأسباب أمنية لا يمكن إصدار رمز المتابعة مرة أخرى؛ إذا فقدته تواصل مع خدمة العملاء.'
       });
     }
 
     const token = randomToken();
     const item = await PasswordRecovery.create({
       ownerRole: role, accountId: account.user._id, accountName: account.user.name || '',
-      phone, accessTokenHash: digest(token), accessTokenEncrypted: encryptAccessToken(token), status: 'بانتظار الدعم',
+      phone, accessTokenHash: digest(token), status: 'بانتظار الدعم',
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
       messages: [{ senderRole: 'user', text: 'طلب استعادة كلمة المرور. يرجى التحقق من ملكية الحساب قبل إصدار رمز الاستعادة.' }]
     });
@@ -267,6 +273,7 @@ router.post('/request/:id/reset-password', async (req, res, next) => {
     else account = await Fanni.findById(item.accountId).select('+passwordHash');
     if (!account) return res.status(404).json({ message: 'الحساب غير موجود.' });
     account.passwordHash = await bcrypt.hash(newPassword, 12);
+    account.tokenVersion = Number(account.tokenVersion || 0) + 1;
     await account.save();
     item.status = 'تمت الاستعادة';
     item.accessTokenHash = digest(randomToken());

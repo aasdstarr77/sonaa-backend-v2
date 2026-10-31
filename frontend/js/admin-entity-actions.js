@@ -1,0 +1,85 @@
+'use strict';
+
+async function assignOrder(sn){
+  const order=state.orders.find(o=>String(o.sn||'').toUpperCase()===String(sn||'').toUpperCase());
+  const offers=Array.isArray(order?.offers)?order.offers:[];
+  if(!order||!offers.length)return showToast('لا توجد عروض فنيين على الطلب لتعيين أحدهم','error');
+  const choices=offers.map((o,i)=>(i+1)+') '+String(o.fanniName||'فني')+' — '+String(o.price||'')+' جنيه').join('\n');
+  const raw=prompt('اختار رقم العرض لتعيين الفني. سيتم خصم عمولة المنصة من محفظته بعد التأكيد:\n'+choices,'1');
+  if(raw===null)return;
+  const choice=Number(raw);
+  if(!Number.isInteger(choice)||choice<1||choice>offers.length)return showToast('رقم العرض غير صحيح','error');
+  const offer=offers[choice-1];
+  if(!offer._id)return showToast('معرّف العرض غير متاح؛ حدّث الطلب وحاول مرة أخرى','error');
+  const reason=prompt('سبب التعيين الإداري (مطلوب):','تعيين إداري بعد مراجعة العروض');
+  if(reason===null)return;
+  if(reason.trim().length<3)return showToast('اكتب سببًا واضحًا للتعيين','error');
+  if(!confirm('تأكيد تعيين '+String(offer.fanniName||'الفني')+' على الطلب '+sn+'؟ سيتم تسجيل عمولة المنصة من محفظة الفني.'))return;
+  try{
+    const data=await tryApi(['/api/admin/orders/'+encodeURIComponent(sn)+'/assign'],{method:'POST',body:JSON.stringify({offerId:String(offer._id),reason:reason.trim()})});
+    showToast(data.message||'تم تعيين الفني');
+    await loadOrders();await loadAll();
+  }catch(e){showToast(e.message||'تعذر تعيين الفني','error');}
+}
+async function saveOrderCorrection(sn){
+  sn=String(sn||'').trim().toUpperCase();
+  const getValue=(field)=>{const el=document.getElementById('edit-order-'+field+'-'+sn);return el?String(el.value||'').trim():'';};
+  const payload={clientName:getValue('name'),clientPhone:getValue('phone'),service:getValue('service'),area:getValue('area'),address:getValue('address'),description:getValue('description'),budget:getValue('budget')};
+  if(!payload.clientPhone||!payload.service||!payload.area){showToast('رقم العميل والخدمة والمنطقة حقول مطلوبة','error');return;}
+  if(!/^01[0-9]{9}$/.test(normalizePhoneInput(payload.clientPhone))){showToast('رقم الموبايل غير صحيح؛ اكتب رقمًا مصريًا من 11 رقمًا','error');return;}
+  try{
+    const result=await tryApi([`/api/admin/orders/${encodeURIComponent(sn)}/correct`],{method:'PATCH',body:JSON.stringify(payload)});
+    showToast(result.message||'تم حفظ تصحيح البيانات');
+    delete state.pendingActions['order:'+sn];
+    await loadOrders();
+  }catch(e){showToast(e.message||'تعذر حفظ التصحيح','error');}
+}
+async function publishOrder(sn){sn=String(sn||'').trim().toUpperCase(); if(!/^SN\d{6}$/.test(sn)){showToast('كود الطلب غير صحيح','error');return;} if(state.publishingOrders.includes(sn))return; const order=state.orders.find(o=>String(o.sn||'').toUpperCase()===sn); if(!order){showToast('لم يتم العثور على الطلب','error');return;} if(order.status!=='قيد المراجعة'){showToast('الطلب ليس قيد المراجعة','warning');return;} if(!confirm(`هل تريد نشر الطلب ${sn} للفنيين؟`))return; state.publishingOrders.push(sn); render(); try{const result=await tryApi([`/api/orders/admin/${encodeURIComponent(sn)}/publish`],{method:'POST',body:JSON.stringify({})}); showToast(result.message||'تم نشر الطلب'); await loadOrders();}catch(e){showToast(e.message||'تعذر نشر الطلب','error');}finally{state.publishingOrders=state.publishingOrders.filter(item=>item!==sn); if(state.tab==='orders')render();}}
+async function approveFanni(id){try{await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/approve`],{method:'POST',body:JSON.stringify({})}); showToast('تم قبول الفني'); await loadAll();}catch(e){showToast(e.message,'error')}}
+async function rejectFanni(id){if(!confirm('هل تريد رفض هذا الفني؟'))return; try{await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/reject`],{method:'POST',body:JSON.stringify({})}); showToast('تم رفض الفني'); await loadAll();}catch(e){showToast(e.message,'error')}}
+async function disableFanni(id){if(!confirm('هل تريد تعطيل هذا الفني؟'))return; try{await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/disable`],{method:'POST',body:JSON.stringify({})}); showToast('تم تعطيل الفني'); await loadAll();}catch(e){showToast(e.message,'error')}}
+async function enableFanni(id){if(!confirm('هل تريد استعادة هذا الفني؟'))return; try{await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/enable`],{method:'POST',body:JSON.stringify({})}); showToast('تمت استعادة الفني'); await loadAll();}catch(e){showToast(e.message,'error')}}
+async function deleteFanni(id,name){id=String(id||'').trim(); if(!id){showToast('معرّف الفني غير موجود','error');return;} if(state.deletingItems.includes('fanni:'+id))return; const fanni=state.fannis.find(item=>String(item._id||'')===id); if(!fanni){showToast('لم يتم العثور على الفني','error');return;} const balance=Number(fanni.balance??fanni.walletBalance??0); const displayName=String(name||fanni.name||'الفني'); const warning=`تأكيد حذف حساب الفني: ${displayName}\nرقم الحساب: ${id}\nرصيد المحفظة: ${balance} جنيه\nهل تريد المتابعة؟`; if(!confirm(warning))return; state.deletingItems.push('fanni:'+id); render(); try{const result=await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}`],{method:'DELETE'}); showToast(result.message||'تم تنفيذ الحذف'); await loadAll();}catch(e){showToast(e.message||'تعذر حذف الفني','error');}finally{state.deletingItems=state.deletingItems.filter(item=>item!=='fanni:'+id); render();}}
+async function cancelOrder(sn){
+  sn=String(sn||'').trim().toUpperCase();
+  if(!/^SN\d{6}$/.test(sn)){showToast('كود الطلب غير صحيح','error');return;}
+  const reason=prompt('سبب إلغاء الطلب (اختياري):','إلغاء إداري');
+  if(reason===null)return;
+  if(!confirm(`تأكيد إلغاء الطلب ${sn}؟`))return;
+  try{
+    const result=await tryApi([`/api/admin/orders/${encodeURIComponent(sn)}/cancel`],{method:'POST',body:JSON.stringify({reason:reason.trim()})});
+    showToast(result.message||'تم إلغاء الطلب');
+    await loadOrders();
+  }catch(e){showToast(e.message||'تعذر إلغاء الطلب','error');}
+}
+async function archiveOrder(sn){
+  sn=String(sn||'').trim().toUpperCase();
+  if(!/^SN\d{6}$/.test(sn)){showToast('كود الطلب غير صحيح','error');return;}
+  const reason=prompt('ملاحظة الأرشفة (اختياري):','أرشفة إدارية');
+  if(reason===null)return;
+  if(!confirm(`تأكيد أرشفة الطلب ${sn}؟`))return;
+  try{
+    const result=await tryApi([`/api/admin/orders/${encodeURIComponent(sn)}/archive`],{method:'POST',body:JSON.stringify({reason:reason.trim()})});
+    showToast(result.message||'تمت أرشفة الطلب');
+    await loadOrders();
+  }catch(e){showToast(e.message||'تعذرت أرشفة الطلب','error');}
+}
+async function deleteOrder(sn){sn=String(sn||'').trim().toUpperCase(); if(!/^SN\d{6}$/.test(sn)){showToast('كود الطلب غير صحيح','error');return;} if(state.deletingItems.includes('order:'+sn))return; const order=state.orders.find(item=>String(item.sn||'').trim().toUpperCase()===sn); if(!order){showToast('لم يتم العثور على الطلب','error');return;} if(!confirm(`تأكيد حذف الطلب ${sn} نهائي؟`))return; state.deletingItems.push('order:'+sn); render(); try{const result=await tryApi([`/api/admin/orders/${encodeURIComponent(sn)}`],{method:'DELETE'}); showToast(result.message||'تم حذف الطلب'); await loadOrders();}catch(e){showToast(e.message||'تعذر حذف الطلب','error');}finally{state.deletingItems=state.deletingItems.filter(item=>item!=='order:'+sn); if(state.tab==='orders')render();}}
+async function deleteClient(){const input=document.getElementById('delete-client-phone'); if(!input){showToast('خانة رقم الهاتف غير موجودة','error');return;} const rawPhone=String(input.value||'').trim(); const phone=normalizePhoneInput(rawPhone); if(!phone){showToast('اكتب رقم الموبايل','error');return;} if(!/^01[0-9]{9}$/.test(phone)){showToast('رقم الموبايل غير صحيح','error');return;} const deleteKey='client:'+phone; if(state.deletingItems.includes(deleteKey))return; if(!confirm(`حذف طلبات الرقم ${phone}؟`))return; state.deletingItems.push(deleteKey); try{const result=await tryApi([`/api/admin/clients/${encodeURIComponent(phone)}`],{method:'DELETE'}); showToast(result.message||'تم تنفيذ الحذف'); if(document.getElementById('delete-client-phone'))document.getElementById('delete-client-phone').value=''; await loadOrders();}catch(e){showToast(e.message||'تعذر الحذف','error');}finally{state.deletingItems=state.deletingItems.filter(item=>item!==deleteKey); if(state.tab==='orders')render();}}
+async function setBalance(id){const input=document.getElementById('bal-'+id); if(!input)return showToast('خانة الرصيد غير موجودة','error'); const amount=input.value; if(amount===''||!Number.isFinite(Number(amount))||Number(amount)<0){return showToast('اكتب مبلغًا صحيحًا','error');} if(!confirm(`تعيين رصيد الفني إلى ${amount} جنيه؟`))return; try{const res=await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/set-balance`],{method:'POST',body:JSON.stringify({amount:Number(amount)})}); showToast(res.message||`تم تعيين الرصيد`); await loadAll();}catch(e){showToast(e.message,'error')}}
+async function addBalance(id){const input=document.getElementById('bal-'+id); if(!input)return showToast('خانة الرصيد غير موجودة','error'); const amount=input.value; if(amount===''||!Number.isFinite(Number(amount))||Number(amount)<=0){return showToast('اكتب مبلغًا صحيحًا','error');} if(!confirm(`إضافة ${amount} جنيه؟`))return; try{const res=await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/add-balance`],{method:'POST',body:JSON.stringify({amount:Number(amount)})}); showToast(res.message||'تمت الإضافة'); await loadAll();}catch(e){showToast(e.message,'error')}}
+async function approveTopup(id){if(!confirm('تأكيد قبول طلب الشحن؟'))return; try{const res=await tryApi([`/api/admin/topup-requests/${encodeURIComponent(id)}/approve`],{method:'POST',body:JSON.stringify({})}); showToast(res.message||'تم قبول الشحن'); await loadAll();}catch(e){showToast(e.message,'error')}}
+async function rejectTopup(id){if(!confirm('هل تريد رفض طلب الشحن؟'))return; try{await tryApi([`/api/admin/topup-requests/${encodeURIComponent(id)}/reject`],{method:'POST',body:JSON.stringify({})}); showToast('تم رفض الشحن'); await loadAll();}catch(e){showToast(e.message,'error');}}
+function goBack(){if(state.pageMode==='section'){state.pageMode='home';state.dropdowns={};state.pendingActions={};render();return;}window.location.href='/';}
+function goFanni(){window.location.href='/fanni';}
+function logout(){clearToken(); state.pageMode='home'; state.fannis=[]; state.filtered=[]; state.topups=[]; state.filteredTopups=[]; state.orders=[]; state.filteredOrders=[]; state.complaints=[]; state.filteredComplaints=[]; state.services=[]; state.filteredServices=[]; state.clients=[]; state.filteredClients=[]; state.servicesLoading=false; state.servicesError=''; state.openServices={}; state.dropdowns={}; state.pendingActions={}; state.errors={fannis:'',topups:'',orders:'',complaints:'',services:'',clients:''}; state.error=''; state.loading=false; state.loadingOrders=false; state.publishingOrders=[]; state.deletingItems=[]; state.adminEmail=''; state.adminPass=''; state.search=''; state.tab='dashboard'; render();}
+async function loadComplaints(){if(!getToken())return; state.loadingComplaints=true; state.errors.complaints=''; render(); try{const data=await tryApi(['/api/admin/complaints'],{method:'GET'}); state.complaints=extractList(data,['complaints','items']); applyComplaintFilter();}catch(e){state.complaints=[]; state.filteredComplaints=[]; state.errors.complaints=e.message||'تعذر تحميل الشكاوى'; render();}finally{state.loadingComplaints=false; if(state.tab==='complaints')render();}}
+async function saveComplaint(id){id=String(id||'').trim(); if(!/^[a-f0-9]{24}$/i.test(id)){showToast('معرّف الشكوى غير صالح','error');return;} const statusEl=document.getElementById('complaint-status-'+id); const noteEl=document.getElementById('complaint-note-'+id); const responseEl=document.getElementById('complaint-response-'+id); if(!statusEl||!noteEl||!responseEl){showToast('تعذر قراءة بيانات الشكوى','error');return;} const status=statusEl.value; if(state.deletingItems.includes('complaint:'+id))return; state.deletingItems.push('complaint:'+id); render(); try{const result=await tryApi(['/api/admin/complaints/'+encodeURIComponent(id)],{method:'PATCH',body:JSON.stringify({status:status,adminNote:noteEl.value.trim(),adminResponse:responseEl.value.trim()})}); const updated=result.complaint||result.data||result; const index=state.complaints.findIndex(c=>String(c._id||c.id||'')===id); if(index>=0)state.complaints[index]={...state.complaints[index],...updated}; showToast(result.message||'تم تحديث الشكوى'); applyComplaintFilter();}catch(e){showToast(e.message||'تعذر تحديث الشكوى','error');}finally{state.deletingItems=state.deletingItems.filter(x=>x!=='complaint:'+id); if(state.tab==='complaints')render();}}
+
+// --- إدارة الفنيين: المستويات والشارات والملاحظات وحدود الاستقبال ---
+async function updateFanniLevel(id,level){try{const res=await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/level`],{method:'PATCH',body:JSON.stringify({level})}); showToast(res.message||'تم تحديث المستوى'); await loadAll();}catch(e){showToast(e.message||'تعذر تحديث المستوى','error');}}
+async function toggleTrustBadge(id){try{const res=await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/badge`],{method:'PATCH',body:JSON.stringify({badge:'trusted'})}); showToast(res.message||'تم تحديث الشارة'); await loadAll();}catch(e){showToast(e.message||'تعذر تحديث الشارة','error');}}
+async function saveFanniNote(id){const el=document.getElementById('note-'+id); if(!el)return; const note=String(el.value||'').trim(); if(!note)return showToast('اكتب الملاحظة قبل الحفظ','error'); try{const result=await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/note`],{method:'PATCH',body:JSON.stringify({note})}); showToast(result.message||'تم حفظ الملاحظة'); await loadAll();}catch(e){showToast(e.message||'تعذر حفظ الملاحظة','error');}}
+async function saveFanniLimit(id){const el=document.getElementById('limit-'+id);const dailyEl=document.getElementById('daily-limit-'+id);const blockEl=document.getElementById('limit-block-'+id);if(!el||!dailyEl||!blockEl)return showToast('حقول حدود الفني غير مكتملة','error');const raw=String(el.value||'').trim(),dailyRaw=String(dailyEl.value||'').trim();const maxOffers=Number(raw),dailyLimit=Number(dailyRaw),isLimited=blockEl.checked;if(raw===''||!Number.isInteger(maxOffers)||maxOffers<0||maxOffers>1000)return showToast('حد العروض النشطة لازم يكون رقمًا من 0 إلى 1000','error');if(dailyRaw===''||!Number.isInteger(dailyLimit)||dailyLimit<0||dailyLimit>100)return showToast('حد العروض خلال آخر 24 ساعة لازم يكون رقمًا من 0 إلى 100','error');const reason=prompt('سبب تحديث حدود استقبال العروض:','تعديل من لوحة الإدارة');if(reason===null)return;if(reason.trim().length<2)return showToast('اكتب سببًا واضحًا للتعديل','error');if(!confirm('حفظ حدود الفني؟ الحد النشط: '+maxOffers+' عرض، وحد آخر 24 ساعة: '+dailyLimit+' عرض، '+(isLimited?'مع إيقاف استقبال العروض بالكامل.':'مع السماح باستقبال العروض ضمن الحدود.')))return;try{const result=await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/limit`],{method:'PATCH',body:JSON.stringify({maxOffers,dailyLimit,isLimited,reason:reason.trim()})});showToast(result.message||'تم حفظ حدود الاستقبال');await loadAll();}catch(e){showToast(e.message||'تعذر حفظ حدود الاستقبال','error');}}
+async function saveFanniProfileControls(id){const scoreEl=document.getElementById('trust-score-'+id),verifiedEl=document.getElementById('verified-'+id),featuredEl=document.getElementById('featured-'+id),untilEl=document.getElementById('featured-until-'+id);if(!scoreEl||!verifiedEl||!featuredEl||!untilEl)return showToast('حقول الثقة والظهور غير مكتملة','error');const raw=String(scoreEl.value||'').trim(),trustScore=Number(raw);if(raw===''||!Number.isInteger(trustScore)||trustScore<0||trustScore>100)return showToast('درجة الثقة لازم تكون رقمًا صحيحًا من 0 إلى 100','error');const isVerified=verifiedEl.checked,isFeatured=featuredEl.checked,featuredUntil=String(untilEl.value||'').trim()||null;if(!confirm('حفظ درجة الثقة وحالة التحقق والظهور لهذا الفني؟'))return;try{const result=await tryApi(['/api/admin/fannis/'+encodeURIComponent(id)+'/profile-controls'],{method:'PATCH',body:JSON.stringify({trustScore,isVerified,isFeatured,featuredUntil})});showToast(result.message||'تم حفظ إعدادات الثقة والظهور');await loadAll();}catch(e){showToast(e.message||'تعذر حفظ إعدادات الثقة والظهور','error');}}
+async function loadAdminUsers(){state.adminUsersLoading=true;if(state.tab==='roles')render();try{const data=await tryApi(['/api/admin/admin-users'],{method:'GET'});state.adminUsers=extractList(data,['users','items']);}catch(e){state.adminUsers=[];showToast(e.message||'تعذر تحميل المناصب','error');}finally{state.adminUsersLoading=false;if(state.tab==='roles')render();}}

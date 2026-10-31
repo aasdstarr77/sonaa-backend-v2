@@ -196,7 +196,7 @@ router.post(
       }
 
       const token = jwt.sign(
-        { id: fanni._id, role: 'fanni' },
+        { id: fanni._id, role: 'fanni', tokenVersion: Number(fanni.tokenVersion || 0) },
         process.env.JWT_SECRET,
         { expiresIn: '30d' }
       );

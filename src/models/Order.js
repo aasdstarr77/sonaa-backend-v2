@@ -82,6 +82,8 @@ ref: 'Client',
 default: null,
 index: true
 },
+// Marks the moment a legacy tracking token was invalidated by linking the order.
+clientAccountLinkedAt: { type: Date, default: null },
 
 service: {
 type: String,

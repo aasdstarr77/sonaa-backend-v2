@@ -29,7 +29,7 @@ function defaultAdminPermissions(role) {
 const PERMISSION_SECTIONS = {
   dashboard: [/^\/me$/, /^\/counts$/, /^\/reports?(\/|$)/, /^\/stats?(\/|$)/],
   wallet: [/^\/wallet(\/|$)/, /^\/fannis\/[^/]+\/(set-balance|add-balance)$/],
-  fannis: [/^\/fannis(\/|$)/],
+  fannis: [/^\/fannis(\/|$)/, /^\/fanni-profile-edits(\/|$)/],
   publishOrders: [/^\/admin\/[^/]+\/publish$/],
   voiceReview: [/^\/[^/]+\/voice$/, /^\/admin\/[^/]+\/voice-reviewed$/],
   passwordRecovery: [/^\/password-recovery\/admin\/requests(\/|$)/],
@@ -88,10 +88,12 @@ function auth(requiredRole = null) {
     try {
       const header = req.headers.authorization;
       if (!header || !header.startsWith('Bearer ')) return res.status(401).json({ message: 'غير مصرح - Token مفقود' });
+      if (!process.env.JWT_SECRET) return res.status(503).json({ message: 'تسجيل الدخول غير متاح بسبب إعدادات الخادم' });
       const token = header.split(' ')[1];
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       const user = await Fanni.findById(decoded.id);
       if (!user) return res.status(401).json({ message: 'المستخدم غير موجود' });
+      if (Number(decoded.tokenVersion || 0) !== Number(user.tokenVersion || 0)) return res.status(401).json({ message: 'انتهت صلاحية الجلسة بعد تغيير كلمة المرور. سجّل الدخول مرة أخرى.' });
       if (user.status === 'معلق' || user.status === 'مرفوض') return res.status(403).json({ message: 'حسابك معلق أو مرفوض' });
 
       if (requiredRole === 'admin') {
