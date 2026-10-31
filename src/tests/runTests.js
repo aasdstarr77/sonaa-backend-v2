@@ -532,7 +532,8 @@ async function run() {
       const acceptRoute = source.slice(acceptStart, acceptEnd);
       assert.doesNotMatch(acceptRoute, /responsePayload\s*=\s*\{[\s\S]{0,250}commission\s*:/);
       assert.match(acceptRoute, /message: 'تم قبول العرض بنجاح'/);
-      assert.match(source, /تمت الموافقة على السعر الجديد\./);
+      const chatSource = fs.readFileSync(path.join(__dirname, '../routes/order/chat.js'), 'utf8');
+      assert.match(chatSource, /تمت الموافقة على السعر الجديد\./);
     });
 
     await test('only the order owner can cancel a pending order', async () => {

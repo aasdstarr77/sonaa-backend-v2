@@ -3,6 +3,8 @@
 const express = require('express');
 
 function createOrderChatRouter({
+  jwt,
+  hasContactDetails,
   Order,
   Fanni,
   WalletTransaction,

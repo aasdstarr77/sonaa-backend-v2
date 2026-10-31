@@ -1461,6 +1461,8 @@ router.post('/:sn/rating', async (req, res, next) => {
 });
 
 router.use(createOrderChatRouter({
+  jwt,
+  hasContactDetails,
   Order,
   Fanni,
   WalletTransaction,
