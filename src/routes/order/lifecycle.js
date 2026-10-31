@@ -321,22 +321,32 @@ router.post('/:sn/cancel', async (req, res, next) => {
       return res.status(409).json({ message: 'الطلب ملغي أو مغلق بالفعل.' });
     }
 
-    order.status = 'ملغي';
-    await order.save();
+    const cancelledOrder = await Order.findOneAndUpdate(
+      {
+        _id: order._id,
+        assignedFanni: null,
+        status: { $nin: ['تم اختيار فني', 'تم الانتهاء', 'ملغي', 'مؤرشف', 'منتهي', 'منتهي - اعتذار'] }
+      },
+      { $set: { status: 'ملغي' } },
+      { new: true, runValidators: true }
+    );
+    if (!cancelledOrder) {
+      return res.status(409).json({ message: 'الطلب لم يعد متاحًا للإلغاء؛ ربما تم اختيار فني أو إغلاق الطلب.' });
+    }
 
-    if (order.clientAccount) {
+    if (cancelledOrder.clientAccount) {
       await createNotification({
         recipientRole: 'client',
-        recipientId: order.clientAccount,
+        recipientId: cancelledOrder.clientAccount,
         type: 'order_cancelled',
         title: 'تم إلغاء الطلب',
         message: 'تم إلغاء طلبك ' + order.sn + ' بناءً على طلبك.',
         link: '/?tab=orders',
-        dedupeKey: 'client-order-cancelled:' + String(order._id)
+        dedupeKey: 'client-order-cancelled:' + String(cancelledOrder._id)
       });
     }
 
-    return res.json({ message: 'تم إلغاء الطلب بنجاح.', order: publicOrder(order) });
+    return res.json({ message: 'تم إلغاء الطلب بنجاح.', order: publicOrder(cancelledOrder) });
   } catch (err) {
     next(err);
   }

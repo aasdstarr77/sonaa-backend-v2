@@ -762,6 +762,16 @@ async function run() {
       const repeated = await request(app).post('/api/orders/' + orderSN + '/cancel')
         .set('Authorization', 'Bearer ' + clientToken);
       assert.equal(repeated.status, 409);
+
+      const lifecycleSource = fs.readFileSync(path.join(__dirname, '../routes/order/lifecycle.js'), 'utf8');
+      const cancelStart = lifecycleSource.indexOf("router.post('/:sn/cancel'");
+      const cancelEnd = lifecycleSource.indexOf("router.post('/:sn/complete'", cancelStart);
+      assert.notEqual(cancelStart, -1);
+      assert.notEqual(cancelEnd, -1);
+      const cancelRoute = lifecycleSource.slice(cancelStart, cancelEnd);
+      assert.match(cancelRoute, /Order\.findOneAndUpdate\(/, 'cancellation must use an atomic conditional update');
+      assert.match(cancelRoute, /assignedFanni:\s*null/, 'cancellation must lose the race if a technician was assigned');
+      assert.doesNotMatch(cancelRoute, /order\.save\(\)/, 'a stale document save must not overwrite an accepted offer');
     });
 
     await test('tracking code alone does not expose order details', async () => {
