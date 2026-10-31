@@ -661,46 +661,7 @@ async function writeAdminAudit(req, action, category, target, details) {
     });
   } catch (err) { console.error('Could not write admin audit log:', err.message); }
 }
-router.get('/audit-logs', auth('admin'), async (req, res, next) => {
-  try {
-    const query = {};
-    if (req.query.date) {
-      const date = new Date(String(req.query.date) + 'T00:00:00.000Z');
-      if (Number.isNaN(date.getTime())) return res.status(400).json({ message: 'التاريخ غير صالح' });
-      const end = new Date(date); end.setUTCDate(end.getUTCDate() + 1);
-      query.createdAt = { $gte: date, $lt: end };
-    }
-    const logs = await AdminAuditLog.find(query).sort({ createdAt: -1 }).limit(200).lean();
-    return res.set('Cache-Control', 'no-store').json({ logs, items: logs });
-  } catch (err) { next(err); }
-});
-router.get('/pricing', auth('admin'), async (req, res, next) => {
-  try {
-    const config = await getAdminConfig();
-    return res.set('Cache-Control', 'no-store').json({ pricing: config.pricing, history: config.history.filter(x => x.key === 'pricing').slice(-100).reverse() });
-  } catch (err) { next(err); }
-});
-router.put('/pricing', auth('admin'), async (req, res, next) => {
-  try {
-    const schema = Joi.object({
-      check: Joi.number().min(0).max(100000).required(),
-      commission: Joi.number().min(0).max(100).required(),
-      minOffer: Joi.number().integer().min(1).max(1000000).required(),
-      maxOffer: Joi.number().integer().min(1).max(1000000).required()
-    }).required();
-    const { error, value } = schema.validate(req.body || {}, { abortEarly: false, stripUnknown: true });
-    if (error) return res.status(400).json({ message: 'تحقق من رسوم الفرصة والعمولة والحدود السعرية' });
-    if (value.minOffer > value.maxOffer) return res.status(400).json({ message: 'الحد الأدنى لا يمكن أن يكون أكبر من الحد الأقصى' });
-    const config = await getAdminConfig();
-    const before = config.pricing.toObject ? config.pricing.toObject() : { ...config.pricing };
-    config.pricing = value;
-    config.history.push({ key: 'pricing', before, after: value, by: adminName(req), byId: String(req.user?._id || ''), reason: 'تعديل الأسعار من لوحة الإدارة', createdAt: new Date() });
-    if (config.history.length > 200) config.history = config.history.slice(-200);
-    await config.save();
-    await writeAdminAudit(req, 'تعديل الأسعار والعمولات', 'pricing', 'pricing', JSON.stringify({ before, after: value }));
-    return res.json({ message: 'تم حفظ الأسعار وسجل التغيير', pricing: config.pricing, history: config.history.filter(x => x.key === 'pricing').slice(-100).reverse() });
-  } catch (err) { next(err); }
-});
+
 router.get('/wallet/transactions/:fanniId', auth('admin'), async (req,res,next)=>{
   try{
     if(!validId(req.params.fanniId)) return sendBadId(res);

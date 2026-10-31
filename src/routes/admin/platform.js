@@ -262,6 +262,47 @@ function createAdminPlatformRouter({
 
   router.get('/page-visits', auth('admin'), async (req,res,next)=>{try{const parsedLimit=Number.parseInt(req.query.limit,10),limit=Number.isInteger(parsedLimit)&&parsedLimit>0?Math.min(parsedLimit,200):100,pageKey=String(req.query.pageKey||'').trim().slice(0,80),match=pageKey?{pageKey}:{};const [summary,recent,total]=await Promise.all([PageVisit.aggregate([{$match:match},{$group:{_id:{pageKey:'$pageKey',pageName:'$pageName'},visits:{$sum:1},lastVisit:{$max:'$visitedAt'}}},{$sort:{visits:-1,lastVisit:-1}},{$limit:100}]),PageVisit.find(match).sort({visitedAt:-1}).limit(limit).select('pageKey pageName path referrer visitedAt').lean(),PageVisit.countDocuments(match)]);return res.set('Cache-Control','no-store').json({summary:summary.map(item=>({pageKey:item._id.pageKey,pageName:item._id.pageName,visits:item.visits,lastVisit:item.lastVisit})),recent,total});}catch(err){next(err);}});
 
+router.get('/audit-logs', auth('admin'), async (req, res, next) => {
+  try {
+    const query = {};
+    if (req.query.date) {
+      const date = new Date(String(req.query.date) + 'T00:00:00.000Z');
+      if (Number.isNaN(date.getTime())) return res.status(400).json({ message: 'التاريخ غير صالح' });
+      const end = new Date(date); end.setUTCDate(end.getUTCDate() + 1);
+      query.createdAt = { $gte: date, $lt: end };
+    }
+    const logs = await AdminAuditLog.find(query).sort({ createdAt: -1 }).limit(200).lean();
+    return res.set('Cache-Control', 'no-store').json({ logs, items: logs });
+  } catch (err) { next(err); }
+});
+router.get('/pricing', auth('admin'), async (req, res, next) => {
+  try {
+    const config = await getAdminConfig();
+    return res.set('Cache-Control', 'no-store').json({ pricing: config.pricing, history: config.history.filter(x => x.key === 'pricing').slice(-100).reverse() });
+  } catch (err) { next(err); }
+});
+router.put('/pricing', auth('admin'), async (req, res, next) => {
+  try {
+    const schema = Joi.object({
+      check: Joi.number().min(0).max(100000).required(),
+      commission: Joi.number().min(0).max(100).required(),
+      minOffer: Joi.number().integer().min(1).max(1000000).required(),
+      maxOffer: Joi.number().integer().min(1).max(1000000).required()
+    }).required();
+    const { error, value } = schema.validate(req.body || {}, { abortEarly: false, stripUnknown: true });
+    if (error) return res.status(400).json({ message: 'تحقق من رسوم الفرصة والعمولة والحدود السعرية' });
+    if (value.minOffer > value.maxOffer) return res.status(400).json({ message: 'الحد الأدنى لا يمكن أن يكون أكبر من الحد الأقصى' });
+    const config = await getAdminConfig();
+    const before = config.pricing.toObject ? config.pricing.toObject() : { ...config.pricing };
+    config.pricing = value;
+    config.history.push({ key: 'pricing', before, after: value, by: adminName(req), byId: String(req.user?._id || ''), reason: 'تعديل الأسعار من لوحة الإدارة', createdAt: new Date() });
+    if (config.history.length > 200) config.history = config.history.slice(-200);
+    await config.save();
+    await writeAdminAudit(req, 'تعديل الأسعار والعمولات', 'pricing', 'pricing', JSON.stringify({ before, after: value }));
+    return res.json({ message: 'تم حفظ الأسعار وسجل التغيير', pricing: config.pricing, history: config.history.filter(x => x.key === 'pricing').slice(-100).reverse() });
+  } catch (err) { next(err); }
+});
+
   return router;
 }
 
