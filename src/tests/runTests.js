@@ -689,7 +689,13 @@ async function run() {
       assert.equal(savedOrder.status, 'وصلتك عروض');
       assert.equal(savedOrder.offers.length, 1);
       const offerId = String(savedOrder.offers[0]._id);
-      assert.equal(savedOrder.offers[0].fanniPhone, undefined, 'public offer responses must not expose technician phone numbers');
+      assert.equal(offer.body.offers[0].fanniPhone, undefined, 'technician offer responses must omit the phone field');
+      const clientOrders = await request(app).get('/api/client/orders')
+        .set('Authorization', 'Bearer ' + clientToken);
+      assert.equal(clientOrders.status, 200);
+      const clientView = clientOrders.body.orders.find(item => item.sn === order.sn);
+      assert.ok(clientView);
+      assert.equal(clientView.offers[0].fanniPhone, undefined, 'client dashboards must not receive technician phone numbers before acceptance');
 
       const accepted = await request(app).post('/api/orders/' + order.sn + '/accept')
         .set('Authorization', 'Bearer ' + clientToken)
