@@ -98,6 +98,13 @@ async function run() {
       assert.match(route, /web-subscription/); assert.match(browser, /PushManager/);
       assert.match(worker, /addEventListener\('push'/); assert.match(delivery, /sendPushNotification/);
       assert.match(delivery, /sendWebPushNotification/);
+      const { isAllowedPushEndpoint } = require('../utils/webPush');
+      assert.equal(isAllowedPushEndpoint('https://fcm.googleapis.com/fcm/send/test'), true);
+      assert.equal(isAllowedPushEndpoint('https://updates.push.services.mozilla.com/wpush/v2/test'), true);
+      assert.equal(isAllowedPushEndpoint('http://fcm.googleapis.com/fcm/send/test'), false);
+      assert.equal(isAllowedPushEndpoint('https://127.0.0.1/admin'), false);
+      assert.equal(isAllowedPushEndpoint('https://attacker.example/push'), false);
+      assert.equal(isAllowedPushEndpoint('https://user:pass@fcm.googleapis.com/push'), false);
     });
     await test('web push public key endpoint fails safely until VAPID keys are configured', async () => {
       delete process.env.VAPID_PUBLIC_KEY; delete process.env.VAPID_PRIVATE_KEY;
