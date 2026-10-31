@@ -284,6 +284,62 @@ async function run() {
       assert.equal(await WebPushSubscription.countDocuments({ endpoint }), 0);
     });
 
+    await test('technician registration and login preserve pending-review rules and Expo push-token lifecycle', async () => {
+      const phone = '01012345681';
+      const registration = await request(app).post('/api/fanni/register').send({
+        name: 'فني اختبار التسجيل',
+        phone,
+        password: 'FanniTestPass123',
+        specialties: ['صيانة تكييف'],
+        areas: ['المعادي']
+      });
+      assert.equal(registration.status, 201);
+      assert.equal(registration.body.status, 'قيد المراجعة');
+      assert.equal(registration.body.token, undefined, 'registration must not bypass admin approval');
+
+      const login = await request(app).post('/api/fanni/login').send({
+        phone,
+        password: 'FanniTestPass123'
+      });
+      assert.equal(login.status, 200);
+      assert.ok(login.body.token);
+      assert.equal(login.body.user.status, 'قيد المراجعة');
+      assert.equal(login.body.user.passwordHash, undefined);
+      const fanniToken = login.body.token;
+
+      const duplicate = await request(app).post('/api/fanni/register').send({
+        name: 'فني مكرر',
+        phone,
+        password: 'FanniTestPass123',
+        specialties: ['صيانة تكييف'],
+        areas: ['المعادي']
+      });
+      assert.equal(duplicate.status, 409);
+
+      const wrongPassword = await request(app).post('/api/fanni/login').send({
+        phone,
+        password: 'WrongFanniPass123'
+      });
+      assert.equal(wrongPassword.status, 401);
+
+      const PushToken = require('../models/PushToken');
+      const expoToken = 'ExponentPushToken[sonaa-phase-two-test-token]';
+      const registeredToken = await request(app).post('/api/notifications/fanni/push-token')
+        .set('Authorization', 'Bearer ' + fanniToken)
+        .send({ token: expoToken, platform: 'android' });
+      assert.equal(registeredToken.status, 200);
+      const storedToken = await PushToken.findOne({ token: expoToken }).lean();
+      assert.ok(storedToken);
+      assert.equal(storedToken.recipientRole, 'fanni');
+
+      const removedToken = await request(app).delete('/api/notifications/fanni/push-token')
+        .set('Authorization', 'Bearer ' + fanniToken)
+        .send({ token: expoToken });
+      assert.equal(removedToken.status, 200);
+      assert.equal(removedToken.body.deleted, 1);
+      assert.equal(await PushToken.countDocuments({ token: expoToken }), 0);
+    });
+
     await test('second client receives a distinct account', async () => {
       const r = await request(app).post('/api/client/register').send({
         name: 'عميل اختبار ثان', phone: '01012345679',
