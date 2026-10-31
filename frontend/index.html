@@ -23,7 +23,7 @@
 </style>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0A2342">
+  <meta name="theme-color" content="#174EA6">
   <meta name="description" content="صُنّاع منصة بتوصّل العملاء بالفنيين ومقدمي الخدمات المنزلية بسهولة. اختار الخدمة المطلوبة أو انضم كفني وابدأ تستقبل طلبات العملاء.">
   <meta name="robots" content="index,follow">
   <link rel="canonical" href="https://sonaa-backend-v2.vercel.app/">
@@ -71,11 +71,12 @@
     h1 span{color:var(--sonaa-color-ffd45e)}
     .hero-copy{font-size:14px;line-height:1.95;color:var(--sonaa-color-d4e1f3);margin:0;max-width:540px;opacity:.98}
     
-    .hero-badge{display:none}
-    @media(min-width:800px){
-      .hero-badge{display:flex;align-items:center;gap:10px;background:var(--sonaa-color-ffffff12);border:1px solid var(--sonaa-color-ffffff20);border-radius:14px;padding:10px 14px;font-size:12px;font-weight:700;color:var(--sonaa-color-dbe7f8);backdrop-filter:blur(6px)}
-      .hero-badge b{color:var(--sonaa-color-ffd45e)}
-    }
+    .hero-badge{position:relative;z-index:1;display:flex;flex-direction:column;align-items:stretch;gap:10px;flex:0 0 min(48%,470px);max-width:470px;background:var(--sonaa-color-ffffff12);border:1px solid var(--sonaa-color-ffffff25);border-radius:16px;padding:13px 14px;color:var(--sonaa-color-dbe7f8);backdrop-filter:blur(7px)}
+    .hero-badge-heading{display:flex;align-items:center;justify-content:center;gap:9px;text-align:center;font-size:13px;font-weight:800;line-height:1.55}
+    .hero-badge-heading>span{display:grid;place-items:center;width:27px;height:27px;flex:0 0 27px;border-radius:50%;background:var(--sonaa-color-16a6a1);color:#fff;font-size:15px}
+    .hero-badge-heading b{color:var(--sonaa-color-ffd45e);font-size:19px}
+    .profession-tags{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+    .profession-tag{min-width:0;padding:6px 4px;border-radius:8px;background:var(--tag-bg);border:1px solid var(--tag-border);color:var(--tag-ink);font-size:10px;font-weight:900;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4}
 
     /* Choose Section - بقى ظاهر فوق بدون سكرول */
     .choose{padding:28px 0 12px}
@@ -110,7 +111,9 @@
     footer{border-top:1px solid var(--line);padding:17px 0;text-align:center;color:var(--sonaa-color-8b99ad);font-size:11.5px;background:var(--sonaa-color-fff)}
 
     @media(max-width:700px){
-      .hero{padding:22px 20px;min-height:auto;border-radius:20px;flex-direction:column;align-items:flex-start}
+      .hero{padding:22px 20px;min-height:auto;border-radius:20px;flex-direction:column;align-items:stretch}
+      .hero-badge{width:100%;max-width:none;flex:1 1 auto}
+      .profession-tags{grid-template-columns:repeat(4,minmax(0,1fr))}
       h1{font-size:23px}
       .hero-copy{font-size:12.8px}
       .cards{grid-template-columns:1fr 1fr;gap:10px;max-width:100%}
@@ -131,6 +134,8 @@
       .home-nav{gap:7px}
       .home-nav a,.home-nav button{padding:8px 10px;font-size:11px}
       .hero{padding:20px 17px}
+      .profession-tags{grid-template-columns:repeat(3,minmax(0,1fr))}
+      .profession-tag{font-size:10px;padding:7px 3px}
       .section-head{margin-bottom:16px}
     }
     @media(max-width:380px){
@@ -157,7 +162,31 @@
         <h1>كل خدمة <span>تبدأ بخطوة</span></h1>
         <p class="hero-copy">منصة بتوصّل الفني الشاطر بالعميل المحتاج، في مكان واحد وبخطوات بسيطة.</p>
       </div>
-      <div class="hero-badge">✓ <div>أكتر من <b>12 خدمة</b><br>في مكان واحد</div></div>
+      <div class="hero-badge" aria-label="أكثر من عشرين مهنة في مكان واحد">
+        <div class="hero-badge-heading"><span aria-hidden="true">✓</span><div>أكثر من <b>20 مهنة</b><br>في مكان واحد</div></div>
+        <div class="profession-tags" aria-label="أمثلة للمهن المتاحة">
+          <span class="profession-tag" style="--tag-bg:#E0F2FE;--tag-border:#7DD3FC;--tag-ink:#075985">سباك</span>
+          <span class="profession-tag" style="--tag-bg:#FEF3C7;--tag-border:#FCD34D;--tag-ink:#92400E">كهربائي</span>
+          <span class="profession-tag" style="--tag-bg:#F3E8D5;--tag-border:#D6B98C;--tag-ink:#704214">نجار</span>
+          <span class="profession-tag" style="--tag-bg:#FCE7F3;--tag-border:#F9A8D4;--tag-ink:#9D174D">نقاش</span>
+          <span class="profession-tag" style="--tag-bg:#E0F2FE;--tag-border:#7DD3FC;--tag-ink:#0369A1">فني تكييف</span>
+          <span class="profession-tag" style="--tag-bg:#EDE9FE;--tag-border:#C4B5FD;--tag-ink:#5B21B6">فني دش</span>
+          <span class="profession-tag" style="--tag-bg:#F3E8FF;--tag-border:#D8B4FE;--tag-ink:#7E22CE">فني كاميرات</span>
+          <span class="profession-tag" style="--tag-bg:#DBEAFE;--tag-border:#93C5FD;--tag-ink:#1D4ED8">فني غسالات</span>
+          <span class="profession-tag" style="--tag-bg:#CFFAFE;--tag-border:#67E8F9;--tag-ink:#155E75">فني ثلاجات</span>
+          <span class="profession-tag" style="--tag-bg:#E0E7FF;--tag-border:#A5B4FC;--tag-ink:#3730A3">فني أجهزة</span>
+          <span class="profession-tag" style="--tag-bg:#E2E8F0;--tag-border:#CBD5E1;--tag-ink:#334155">ألوميتال</span>
+          <span class="profession-tag" style="--tag-bg:#CCFBF1;--tag-border:#5EEAD4;--tag-ink:#115E59">فني زجاج</span>
+          <span class="profession-tag" style="--tag-bg:#FFEDD5;--tag-border:#FDBA74;--tag-ink:#9A3412">مبلط</span>
+          <span class="profession-tag" style="--tag-bg:#F1F5F9;--tag-border:#CBD5E1;--tag-ink:#475569">فني رخام</span>
+          <span class="profession-tag" style="--tag-bg:#FEF3C7;--tag-border:#FDE68A;--tag-ink:#78350F">عامل بناء</span>
+          <span class="profession-tag" style="--tag-bg:#FFE4E6;--tag-border:#FDA4AF;--tag-ink:#9F1239">فني ديكور</span>
+          <span class="profession-tag" style="--tag-bg:#DBEAFE;--tag-border:#60A5FA;--tag-ink:#1E40AF">فني كمبيوتر</span>
+          <span class="profession-tag" style="--tag-bg:#DCFCE7;--tag-border:#86EFAC;--tag-ink:#166534">فني موبايلات</span>
+          <span class="profession-tag" style="--tag-bg:#D1FAE5;--tag-border:#6EE7B7;--tag-ink:#065F46">عامل نظافة</span>
+          <span class="profession-tag" style="--tag-bg:#FDE68A;--tag-border:#FBBF24;--tag-ink:#78350F">نقل وتركيب</span>
+        </div>
+      </div>
     </section>
 
     <section class="choose">
