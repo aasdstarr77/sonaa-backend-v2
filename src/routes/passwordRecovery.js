@@ -3,6 +3,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const Joi = require('joi');
 const rateLimit = require('express-rate-limit');
 const Client = require('../models/Client');
