@@ -259,6 +259,31 @@ async function run() {
       clientToken = r.body.token;
     });
 
+    await test('web push subscription endpoint validates providers and persists/removes only the client subscription', async () => {
+      const WebPushSubscription = require('../models/WebPushSubscription');
+      const invalid = await request(app).post('/api/notifications/client/web-subscription')
+        .set('Authorization', 'Bearer ' + clientToken)
+        .send({ subscription: { endpoint: 'https://example.com/push', keys: { p256dh: 'test-p256dh', auth: 'test-auth' } } });
+      assert.equal(invalid.status, 400, 'untrusted push endpoints must be rejected');
+
+      const endpoint = 'https://fcm.googleapis.com/fcm/send/sonaa-test-subscription';
+      const saved = await request(app).post('/api/notifications/client/web-subscription')
+        .set('Authorization', 'Bearer ' + clientToken)
+        .send({ subscription: { endpoint, keys: { p256dh: 'test-p256dh', auth: 'test-auth' } } });
+      assert.equal(saved.status, 200);
+      const stored = await WebPushSubscription.findOne({ endpoint }).lean();
+      assert.ok(stored);
+      assert.equal(String(stored.recipientId), String(clientId));
+      assert.equal(stored.recipientRole, 'client');
+
+      const removed = await request(app).delete('/api/notifications/client/web-subscription')
+        .set('Authorization', 'Bearer ' + clientToken)
+        .send({ endpoint });
+      assert.equal(removed.status, 200);
+      assert.equal(removed.body.deleted, 1);
+      assert.equal(await WebPushSubscription.countDocuments({ endpoint }), 0);
+    });
+
     await test('second client receives a distinct account', async () => {
       const r = await request(app).post('/api/client/register').send({
         name: 'عميل اختبار ثان', phone: '01012345679',
