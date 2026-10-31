@@ -500,7 +500,7 @@ body:has(.fanni-login-gate) .fanni-app-header,body:has(.fanni-login-gate) nav.fi
 <script src="/js/fanni-auth.js"></script>
 <script src="/js/fanni-workflows.js"></script>
 
-<script>async function handleGlobalRefresh(){const button=document.getElementById('global-refresh');if(globalRefreshInProgress||button?.disabled)return;globalRefreshInProgress=true;if(button){button.disabled=true;button.classList.add('is-refreshing');}try{await refreshTechnicianPage();}catch(e){toast('تعذر تحديث البيانات. حاول مرة أخرى.','error');}finally{hideFanniLoading();globalRefreshInProgress=false;const currentButton=document.getElementById('global-refresh');if(currentButton){currentButton.disabled=false;currentButton.classList.remove('is-refreshing');}}}</script>
+<script src="/js/page-behaviors.js" data-sonaa-feature="fanni-global-refresh"></script>
 
 
 <style>
@@ -538,35 +538,7 @@ body:has(.fanni-login-gate) .fanni-app-header,body:has(.fanni-login-gate) nav.fi
 
 <script src="/web-push.js" defer></script>
 <script src="/page-visit.js" defer></script>
-<script>
-(function(){
-  let observedHeader=null;
-  let headerResizeObserver=null;
-  function syncStickyTabs(){
-    const header=document.querySelector('#app .app-header');
-    if(!header)return;
-    if(header!==observedHeader){
-      observedHeader=header;
-      if(headerResizeObserver)headerResizeObserver.disconnect();
-      if('ResizeObserver' in window){
-        headerResizeObserver=new ResizeObserver(syncStickyTabs);
-        headerResizeObserver.observe(header);
-      }
-    }
-    const height=Math.ceil(header.getBoundingClientRect().height);
-    if(!height)return;
-    document.documentElement.style.setProperty('--sonaa-sticky-header-height',height+'px');
-    document.querySelectorAll('.client-section-tabs,.fanni-dashboard-tabs').forEach(function(tabs){
-      tabs.style.top=height+'px';
-      tabs.style.zIndex='30';
-    });
-  }
-  const app=document.getElementById('app');
-  if(app)new MutationObserver(syncStickyTabs).observe(app,{childList:true,subtree:true});
-  window.addEventListener('resize',syncStickyTabs,{passive:true});
-  syncStickyTabs();
-})();
-</script>
+<script src="/js/page-behaviors.js" data-sonaa-feature="sticky-tabs"></script>
 
 
 
@@ -576,31 +548,7 @@ body:has(.fanni-login-gate) .fanni-app-header,body:has(.fanni-login-gate) nav.fi
 <script src="/js/shared-editor-bridge.js"></script>
 <script src="/js/ui-layout-loader.js"></script>
 <script src="/js/shared-preview-links.js"></script>
-<script>
-/* Enter-key support only for flows that did not already have it. */
-(function(){
- if(window.__sonaaFanniEnterSupport)return;
- window.__sonaaFanniEnterSupport=true;
- document.addEventListener('keydown',function(event){
-  if(event.key!=='Enter'||event.shiftKey||event.defaultPrevented)return;
-  var target=event.target;
-  if(!target||target.isContentEditable)return;
-  var loginPanel=target.closest('.fanni-login-panel');
-  if(loginPanel&&target.matches('input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"])')){
-   event.preventDefault();
-   var fields=Array.from(loginPanel.querySelectorAll('input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not(:disabled)')).filter(function(el){return el.getClientRects().length>0});
-   var index=fields.indexOf(target);
-   if(index>=0&&index<fields.length-1){fields[index+1].focus();return;}
-   if(state.tab==='register')doRegister();else doLogin();
-   return;
-  }
-  if(target.id==='fanniEditPhone'){event.preventDefault();document.getElementById('fanniEditAreas')?.focus();return;}
-  if(target.id==='fanniEditAreas'){event.preventDefault();saveProfileChanges();return;}
-  if(target.id==='fanniOfferPrice'){event.preventDefault();document.getElementById('fanniOfferMessage')?.focus();return;}
-  if(target.id==='fanniOfferMessage'){event.preventDefault();submitOffer();return;}
- });
-})();
-</script>
+<script src="/js/page-behaviors.js" data-sonaa-feature="fanni-enter-support"></script>
 
 </body>
 </html>
