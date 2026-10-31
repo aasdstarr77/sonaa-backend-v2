@@ -9,7 +9,7 @@ router.get('/:sn/chat', async (req, res, next) => {
     if (!validSN(sn)) return res.status(400).json({ message: 'كود الطلب غير صحيح' });
     const order = await Order.findOne({ sn });
     if (!order) return res.status(404).json({ message: 'الطلب غير موجود' });
-    const isClient = verifyClientToken(req, order);
+    const isClient = await verifyClientToken(req, order);
     const token = String(req.headers.authorization || '').startsWith('Bearer ') ? req.headers.authorization.slice(7).trim() : '';
     let fanniId = null;
     if (token && process.env.JWT_SECRET) { try { const payload = jwt.verify(token, process.env.JWT_SECRET); if (payload.id) fanniId = payload.id; } catch (_) {} }
@@ -37,7 +37,7 @@ router.post('/:sn/chat', async (req, res, next) => {
     if (hasContactDetails(text)) return res.status(400).json({ message: 'ممنوع تبادل أرقام الهاتف أو الروابط داخل المحادثة.' });
     const order = await Order.findOne({ sn });
     if (!order) return res.status(404).json({ message: 'الطلب غير موجود' });
-    const isClient = verifyClientToken(req, order);
+    const isClient = await verifyClientToken(req, order);
     const token = String(req.headers.authorization || '').startsWith('Bearer ') ? req.headers.authorization.slice(7).trim() : '';
     let payload = null;
     if (token && process.env.JWT_SECRET) { try { payload = jwt.verify(token, process.env.JWT_SECRET); } catch (_) {} }
@@ -119,7 +119,7 @@ router.post('/:sn/price-change/:requestId/decision', async (req, res, next) => {
     await session.startTransaction();
     const order = await Order.findOne({ sn }).session(session);
     if (!order) { await session.abortTransaction(); return res.status(404).json({ message: 'الطلب غير موجود.' }); }
-    if (!verifyClientToken(req, order)) { await session.abortTransaction(); return res.status(403).json({ message: 'غير مسموح بتعديل سعر هذا الطلب.' }); }
+    if (!(await verifyClientToken(req, order))) { await session.abortTransaction(); return res.status(403).json({ message: 'غير مسموح بتعديل سعر هذا الطلب.' }); }
     if (order.status === 'تم الانتهاء') { await session.abortTransaction(); return res.status(409).json({ message: 'المهمة مكتملة؛ لا يمكن اتخاذ قرار جديد بشأن تعديل السعر.' }); }
     const request = order.priceChangeRequests.id(req.params.requestId);
     if (!request || request.status !== 'قيد الموافقة') { await session.abortTransaction(); return res.status(409).json({ message: 'طلب تعديل السعر غير متاح أو تم اتخاذ قرار بشأنه.' }); }
