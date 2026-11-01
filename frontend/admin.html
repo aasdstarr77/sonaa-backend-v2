@@ -269,37 +269,34 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
   translate:none!important;
 }
 .glass-header .sonaa-brand-shimmer{
-  position:relative!important;
-  isolation:isolate!important;
-  display:inline-block!important;
-  color:#fff!important;
-  -webkit-text-fill-color:#fff!important;
-  background:none!important;
-  background-clip:border-box!important;
-  -webkit-background-clip:border-box!important;
-  animation:none!important;
-  visibility:visible!important;
-  opacity:1!important;
-  text-shadow:0 1px 0 rgba(2,11,32,.88),0 2px 0 rgba(2,11,32,.76),0 4px 8px rgba(2,6,23,.48)!important;
+  position: relative !important;
+  display: inline-block !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
 }
+
 .glass-header .sonaa-brand-shimmer::after{
-  content:attr(data-text);
-  position:absolute;
-  inset:0;
-  display:block;
-  color:transparent;
-  -webkit-text-fill-color:transparent;
-  background-image:linear-gradient(105deg,transparent 28%,rgba(255,255,255,.12) 40%,#fff 48%,#a5f3fc 52%,rgba(255,255,255,.18) 61%,transparent 73%);
-  background-size:260% 100%;
-  background-position:150% 0;
-  background-clip:text;
-  -webkit-background-clip:text;
-  pointer-events:none;
-  animation:adminBrandSweep 2s linear infinite;
+  content: attr(data-text);
+  position: absolute !important;
+  top: 0;
+  right: 0;
+  width: 100%;
+  height: 100%;
+  display: inline-block;
+  white-space: nowrap;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+  background-image: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0) 40%, rgba(255,255,255,0.9) 50%, #a5f3fc 52%, rgba(255,255,255,0) 60%, transparent 75%) !important;
+  background-size: 250% 100% !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  pointer-events: none !important;
+  animation: adminBrandSweep 2.2s ease-in-out infinite !important;
 }
+
 @keyframes adminBrandSweep{
-  from{background-position:150% 0}
-  to{background-position:-110% 0}
+  0%{ background-position: 130% 0; }
+  100%{ background-position: -30% 0; }
 }
 @media(max-width:420px){
   .glass-header>div{
