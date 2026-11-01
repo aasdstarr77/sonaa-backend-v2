@@ -155,13 +155,14 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
 }
 
 
-/* Final admin header alignment: keep all content centered inside the navy bar. */
+/* Stable admin header: three balanced columns keep the logo exactly centered. */
 .glass-header>div{
-  display:flex!important;
+  display:grid!important;
   direction:rtl!important;
-  flex-direction:row!important;
+  grid-template-columns:minmax(0,1fr) 60px minmax(0,1fr)!important;
   align-items:center!important;
-  justify-content:space-between!important;
+  justify-items:stretch!important;
+  justify-content:initial!important;
   gap:8px!important;
   width:100%!important;
   min-height:80px!important;
@@ -169,87 +170,159 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
   box-sizing:border-box!important;
 }
 .glass-header .admin-header-title{
-  flex:1 1 0!important;
+  grid-column:1!important;
+  display:block!important;
   min-width:0!important;
+  width:100%!important;
   align-self:center!important;
-  padding:0!important;
-  text-align:right!important;
-}
-.glass-header .admin-header-title h1{
+  justify-self:stretch!important;
   margin:0!important;
   padding:0!important;
-  font-size:clamp(11px,2.8vw,14px)!important;
-  line-height:1.4!important;
+  text-align:right!important;
+  translate:none!important;
+}
+.glass-header .admin-header-title h1{
+  display:block!important;
+  margin:0!important;
+  padding:0!important;
+  color:#fff!important;
+  font-size:clamp(9px,2.7vw,13px)!important;
+  line-height:1.35!important;
+  white-space:nowrap!important;
   text-align:right!important;
 }
 .glass-header .admin-header-title .admin-role{
+  display:block!important;
   margin-top:2px!important;
-  text-align:right!important;
+  color:#dbeafe!important;
+  font-size:9px!important;
+  line-height:1.25!important;
+  white-space:nowrap!important;
+}
+.glass-header .admin-header-title button[onclick="goBack()"]{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  height:29px!important;
+  min-height:29px!important;
+  margin:4px 0 0!important;
+  padding:0 11px!important;
+  vertical-align:middle!important;
+  translate:none!important;
 }
 .glass-header .admin-logo-frame{
+  grid-column:2!important;
+  display:flex!important;
   flex:0 0 60px!important;
-  width:60px!important;
-  height:60px!important;
+  justify-self:center!important;
   align-self:center!important;
+  width:60px!important;
+  min-width:60px!important;
+  height:60px!important;
+  min-height:60px!important;
   margin:0!important;
+  padding:0!important;
+  overflow:hidden!important;
+  border-radius:14px!important;
+  translate:none!important;
 }
 .glass-header .admin-header-logo{
   display:block!important;
   width:100%!important;
   height:100%!important;
   object-fit:contain!important;
+  translate:none!important;
 }
 .glass-header .admin-header-actions{
-  flex:0 1 190px!important;
-  width:190px!important;
+  grid-column:3!important;
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  align-items:center!important;
+  justify-self:end!important;
+  align-self:center!important;
+  width:100%!important;
   max-width:190px!important;
   min-width:0!important;
-  align-self:center!important;
-  transform:none!important;
   margin:0!important;
+  padding:0!important;
+  gap:5px!important;
+  transform:none!important;
+  translate:none!important;
 }
 .glass-header .admin-header-actions>a,
 .glass-header .admin-header-actions>button{
-  min-width:0!important;
-  margin:0!important;
-  white-space:normal!important;
-  text-align:center!important;
-}
-.glass-header .admin-header-title button[onclick="goBack()"]{
-  display:inline-flex!important;
+  display:flex!important;
   align-items:center!important;
   justify-content:center!important;
-  margin:4px 0 0!important;
-  min-height:30px!important;
-  height:30px!important;
-  padding:0 12px!important;
-  vertical-align:middle!important;
+  width:100%!important;
+  min-width:0!important;
+  height:29px!important;
+  min-height:29px!important;
+  margin:0!important;
+  padding:3px 5px!important;
+  border-radius:9px!important;
+  font-size:9px!important;
+  line-height:1.15!important;
+  text-align:center!important;
+  white-space:nowrap!important;
+  box-sizing:border-box!important;
+  translate:none!important;
 }
 .glass-header .sonaa-brand-shimmer{
   display:inline-block!important;
   visibility:visible!important;
   opacity:1!important;
   color:#fff!important;
-  background-image:linear-gradient(108deg,#fff 0%,#fff 38%,rgba(165,243,252,.9) 46%,#fff 50%,#a5f3fc 54%,#fff 63%,#fff 100%)!important;
+  background-image:linear-gradient(108deg,#fff 0%,#fff 36%,#a5f3fc 47%,#fff 52%,#a5f3fc 58%,#fff 68%,#fff 100%)!important;
   background-size:240% 100%!important;
   background-position:100% 50%;
   background-clip:text!important;
   -webkit-background-clip:text!important;
   -webkit-text-fill-color:transparent!important;
-  animation:sonaa-brand-shimmer 2.1s ease-in-out .35s infinite alternate!important;
+  animation:sonaa-brand-shimmer 2.1s ease-in-out .2s infinite alternate!important;
 }
-@media(max-width:380px){
-  .glass-header>div{min-height:72px!important;padding:5px 8px!important;gap:6px!important}
-  .glass-header .admin-logo-frame{flex-basis:48px!important;width:48px!important;height:48px!important}
-  .glass-header .admin-header-actions{flex-basis:144px!important;width:144px!important;max-width:144px!important;gap:4px!important}
+@keyframes sonaa-brand-shimmer{
+  from{background-position:100% 50%}
+  to{background-position:0% 50%}
+}
+@media(max-width:420px){
+  .glass-header>div{
+    grid-template-columns:minmax(0,1fr) 48px minmax(0,1fr)!important;
+    min-height:72px!important;
+    padding:5px 8px!important;
+    gap:6px!important;
+  }
+  .glass-header .admin-logo-frame{
+    flex-basis:48px!important;
+    width:48px!important;
+    min-width:48px!important;
+    height:48px!important;
+    min-height:48px!important;
+  }
+  .glass-header .admin-header-actions{
+    max-width:144px!important;
+    gap:4px!important;
+  }
   .glass-header .admin-header-actions>a,
-  .glass-header .admin-header-actions>button{height:27px!important;min-height:27px!important;padding:3px 4px!important;font-size:8px!important;line-height:1.15!important}
-  .glass-header .admin-header-title h1{font-size:10px!important;line-height:1.3!important}
+  .glass-header .admin-header-actions>button{
+    height:26px!important;
+    min-height:26px!important;
+    padding:3px 4px!important;
+    font-size:8px!important;
+  }
+  .glass-header .admin-header-title h1{font-size:clamp(9px,2.8vw,11px)!important}
   .glass-header .admin-header-title .admin-role{font-size:8px!important}
-  .glass-header .admin-header-title button[onclick="goBack()"]{height:26px!important;min-height:26px!important;font-size:9px!important}
+  .glass-header .admin-header-title button[onclick="goBack()"]{
+    height:25px!important;
+    min-height:25px!important;
+    font-size:9px!important;
+  }
 }
 @media(prefers-reduced-motion:reduce){
-  .glass-header .sonaa-brand-shimmer{animation:none!important;background-position:50% 50%!important}
+  .glass-header .sonaa-brand-shimmer{
+    animation:none!important;
+    background-position:50% 50%!important;
+  }
 }
 
 </style>

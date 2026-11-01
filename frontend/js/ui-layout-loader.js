@@ -173,6 +173,9 @@
       var el = document.querySelector('[data-sonaa-id="' + escaped + '"]') ||
         document.querySelector('[data-editor-id="' + escaped + '"]') || document.getElementById(key);
       if (!el) return;
+      // The admin header has a fixed, balanced three-column layout. Persisted visual-editor
+      // offsets must not move its logo, title, or actions outside the header.
+      if (page === 'admin' && el.closest('.glass-header')) return;
       if (!el.hasAttribute('data-editor-id')) el.setAttribute('data-editor-id', key);
       var mobile = window.matchMedia('(max-width: 767px)').matches;
       var ov = mobile && (item.mobile || item.mobileOverride || item.mobileOverrides) || {};
