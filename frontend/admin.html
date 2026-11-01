@@ -269,21 +269,38 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
   translate:none!important;
 }
 .glass-header .sonaa-brand-shimmer{
+  position:relative!important;
   display:inline-block!important;
+  color:#fff!important;
+  -webkit-text-fill-color:#fff!important;
   visibility:visible!important;
   opacity:1!important;
-  color:#fff!important;
-  background-image:linear-gradient(108deg,#fff 0%,#fff 36%,#a5f3fc 47%,#fff 52%,#a5f3fc 58%,#fff 68%,#fff 100%)!important;
-  background-size:240% 100%!important;
-  background-position:100% 50%;
-  background-clip:text!important;
-  -webkit-background-clip:text!important;
-  -webkit-text-fill-color:transparent!important;
-  animation:sonaa-brand-shimmer 2.1s ease-in-out .2s infinite alternate!important;
+  isolation:isolate!important;
 }
-@keyframes sonaa-brand-shimmer{
-  from{background-position:100% 50%}
-  to{background-position:0% 50%}
+.glass-header .sonaa-brand-shimmer::after{
+  content:attr(data-text);
+  position:absolute;
+  inset:0;
+  display:block;
+  color:transparent;
+  -webkit-text-fill-color:transparent;
+  background-image:linear-gradient(105deg,transparent 28%,rgba(255,255,255,.12) 40%,#fff 48%,#a5f3fc 52%,rgba(255,255,255,.18) 61%,transparent 73%);
+  background-size:260% 100%;
+  background-position:150% 0;
+  background-clip:text;
+  -webkit-background-clip:text;
+  pointer-events:none;
+  animation:adminBrandSweep 2s ease-in-out infinite;
+}
+@keyframes adminBrandSweep{
+  from{background-position:150% 0}
+  to{background-position:-110% 0}
+}
+@media(prefers-reduced-motion:reduce){
+  .glass-header .sonaa-brand-shimmer::after{
+    animation:none;
+    background-position:50% 0;
+  }
 }
 @media(max-width:420px){
   .glass-header>div{
