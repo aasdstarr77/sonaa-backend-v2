@@ -269,20 +269,37 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
   translate:none!important;
 }
 .glass-header .sonaa-brand-shimmer{
+  position:relative!important;
+  isolation:isolate!important;
   display:inline-block!important;
   color:#fff!important;
-  background-image:linear-gradient(105deg,#fff 0%,#fff 34%,#b9f6ff 43%,#fff 49%,#4de8ff 53%,#fff 61%,#fff 100%)!important;
-  background-size:300% 100%!important;
-  background-position:100% 50%!important;
-  background-clip:text!important;
-  -webkit-background-clip:text!important;
-  -webkit-text-fill-color:transparent!important;
-  animation:adminBrandSweep 1.8s linear infinite!important;
-  text-shadow:0 2px 0 rgba(2,11,32,.8),0 4px 8px rgba(2,6,23,.5)!important;
+  -webkit-text-fill-color:#fff!important;
+  background:none!important;
+  background-clip:border-box!important;
+  -webkit-background-clip:border-box!important;
+  animation:none!important;
+  visibility:visible!important;
+  opacity:1!important;
+  text-shadow:0 1px 0 rgba(2,11,32,.88),0 2px 0 rgba(2,11,32,.76),0 4px 8px rgba(2,6,23,.48)!important;
+}
+.glass-header .sonaa-brand-shimmer::after{
+  content:attr(data-text);
+  position:absolute;
+  inset:0;
+  display:block;
+  color:transparent;
+  -webkit-text-fill-color:transparent;
+  background-image:linear-gradient(105deg,transparent 28%,rgba(255,255,255,.12) 40%,#fff 48%,#a5f3fc 52%,rgba(255,255,255,.18) 61%,transparent 73%);
+  background-size:260% 100%;
+  background-position:150% 0;
+  background-clip:text;
+  -webkit-background-clip:text;
+  pointer-events:none;
+  animation:adminBrandSweep 2s linear infinite;
 }
 @keyframes adminBrandSweep{
-  from{background-position:100% 50%}
-  to{background-position:-200% 50%}
+  from{background-position:150% 0}
+  to{background-position:-110% 0}
 }
 @media(max-width:420px){
   .glass-header>div{
@@ -317,13 +334,6 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
     font-size:9px!important;
   }
 }
-@media(prefers-reduced-motion:reduce){
-  .glass-header .sonaa-brand-shimmer{
-    animation:none!important;
-    background-position:50% 50%!important;
-  }
-}
-
 </style>
 
 <link rel="stylesheet" href="/css/theme.css">
