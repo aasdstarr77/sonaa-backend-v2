@@ -24,7 +24,7 @@
     .shell{width:min(1060px,calc(100% - 28px));margin:auto}
     header{height:76px;display:flex;align-items:center;justify-content:space-between;gap:12px}
     .brand{display:flex;align-items:center;gap:10px;font-size:24px;font-weight:900;color:var(--navy)}
-    .mark{width:42px;height:42px;display:grid;place-items:center;border:2px solid var(--sonaa-color-14b8a6);border-radius:14px;background:var(--sonaa-color-fff);font-size:26px}
+    .brand-mark{width:48px;height:48px;display:grid;place-items:center;background:var(--sonaa-color-fff);border-radius:15px;border:1px solid var(--sonaa-color-e1e8f2);box-shadow:0 5px 16px var(--sonaa-color-1525440b)}.brand-mark img{width:38px;height:38px;object-fit:contain}
     .navlink{padding:8px 13px;border:1px solid var(--line);border-radius:12px;background:var(--sonaa-color-fff);font-size:13px;font-weight:800}
     .hero{position:relative;overflow:hidden;border-radius:27px;padding:clamp(27px,6vw,62px);color:var(--sonaa-color-fff);background:radial-gradient(circle at 8% 0,var(--sonaa-color-28528a) 0,transparent 35%),linear-gradient(125deg,var(--sonaa-color-0b1b3a),var(--sonaa-color-123568) 70%,var(--sonaa-color-19477d));box-shadow:0 24px 55px var(--sonaa-color-0b1b3a20)}
     .pill{display:inline-block;padding:6px 13px;border:1px solid var(--sonaa-color-ffffff35);border-radius:99px;color:var(--sonaa-color-ffe08a);font-size:13px;font-weight:800}
@@ -49,7 +49,7 @@
     .bottom h2{margin:0;color:var(--navy);font-size:25px}
     .bottom p{margin:5px 0 17px;color:var(--muted);font-size:14px}
     footer{text-align:center;padding:17px;color:var(--sonaa-color-8995a7);font-size:12px;border-top:1px solid var(--line)}
-    @media(max-width:680px){header{height:68px}.brand{font-size:21px}.mark{width:38px;height:38px}.hero{border-radius:22px;padding:28px 20px}.grid{grid-template-columns:1fr}.card{padding:18px}.btn{flex:1}}
+    @media(max-width:680px){header{height:68px}.brand{font-size:21px}.brand-mark{width:38px;height:38px}.brand-mark img{width:30px;height:30px}.hero{border-radius:22px;padding:28px 20px}.grid{grid-template-columns:1fr}.card{padding:18px}.btn{flex:1}}
     @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
   </style>
   <script type="application/ld+json">
@@ -66,7 +66,7 @@
 </head>
 <body>
   <header class="shell">
-    <a class="brand" href="/" aria-label="صُنّاع - الصفحة الرئيسية"><span class="mark" aria-hidden="true">ص</span><span class="sonaa-brand-shimmer">صُنّاع</span></a>
+    <a class="brand" href="/" aria-label="صُنّاع - الصفحة الرئيسية"><span class="brand-mark"><img src="/images/LOGO_UPLOAD_HERE/logo.png" alt="صُنّاع" width="120" height="120"></span><span class="sonaa-brand-shimmer">صُنّاع</span></a>
     <a class="navlink" href="/">الصفحة الرئيسية</a>
   </header>
   <main class="shell">
