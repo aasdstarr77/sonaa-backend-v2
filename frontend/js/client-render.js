@@ -20,25 +20,27 @@ function render(){
   const visibleCategories=query?matching:CATEGORIES;
   const selectedCategory=visibleCategories.find(c=>c.label===state.openCategory);
   document.getElementById('app').innerHTML=`
+  <style>
+   .account-top-nav{justify-content:center!important;align-items:center!important;flex-wrap:nowrap!important;width:100%!important;margin-inline:auto!important}
+   body .support-float{left:12px!important;right:auto!important;bottom:18px!important}
+   body .global-refresh-float{right:12px!important;left:auto!important;bottom:18px!important}
+  </style>
   <header class="app-header sticky top-0 z-40 backdrop-blur-xl bg-white/95">
-    <div class="mx-auto w-full max-w-[640px] px-3 py-2.5 flex items-center justify-between gap-2">
-      <div class="flex items-center gap-2.5 min-w-0">
-        <div class="brand-mark h-12 w-12 rounded-xl flex items-center justify-center shrink-0 bg-white border border-slate-100 shadow-sm"><img class="sonaa-logo-svg w-10 h-10" src="/images/LOGO_UPLOAD_HERE/logo.png" alt="صُنّاع"></div>
-        <div class="min-w-0">
-          <h1 class="font-black text-[14px] leading-tight truncate">${escHtml(state.publicContent?.siteName||'صُنّاع')}</h1>
-          <p class="text-[11px] font-bold text-slate-500">كل خدمة تبدأ بخطوة</p>
-        </div>
-      </div>
-      <div class="flex items-center gap-1.5 shrink-0">
-        <a href="https://aasdstarr77.github.io/sonaa-download/" class="h-9 px-3 rounded-xl bg-blue-600 text-white text-[11px] font-black inline-flex items-center justify-center gap-1">تحميل</a>
-        <button type="button" onclick="toggleNotifications()" class="relative h-9 w-9 rounded-xl border bg-white flex items-center justify-center text-[16px]">🔔${notificationBadge()}</button>
-        <a href="/" class="h-9 w-9 rounded-xl bg-slate-50 border flex items-center justify-center text-[16px]">⌂</a>
-      </div>
+   <div class="mx-auto w-full max-w-[640px] px-3 sm:px-4 py-2 flex items-center justify-between gap-2">
+    <div class="flex items-center gap-2 min-w-0 flex-1">
+     <div class="brand-mark h-16 w-16 sm:h-[84px] sm:w-[84px] rounded-xl flex items-center justify-center shrink-0"><img class="sonaa-logo-svg" src="/images/LOGO_UPLOAD_HERE/logo.png" alt="شعار صُنّاع" width="120" height="120" decoding="async"></div>
+     <div class="min-w-0"><h1 class="font-extrabold text-[16px] leading-tight truncate"><span class="sonaa-brand-shimmer">${escHtml(state.publicContent?.siteName||'صُنّاع')}</span></h1><p class="client-header-slogan mt-2 text-sm sm:text-base font-black whitespace-nowrap">كل خدمة تبدأ بخطوة</p></div>
     </div>
-    <div class="mx-auto w-full max-w-[640px] px-3 pb-2.5 flex gap-2">
-      <a href="password.html?role=client&mode=account" class="flex-1 h-9 rounded-xl bg-blue-50 border border-blue-100 text-blue-800 flex items-center justify-center text-[11px] font-black">حسابي</a>
-      <button type="button" onclick="logoutClient()" class="flex-1 h-9 rounded-xl bg-red-50 border border-red-100 text-red-700 text-[11px] font-black">خروج</button>
+    <div class="flex flex-col items-end gap-1.5 shrink-0">
+     <div class="flex items-center justify-end gap-1">
+      <a href="https://aasdstarr77.github.io/sonaa-download/" aria-label="تحميل تطبيق صُنّاع" title="تحميل تطبيق صُنّاع" class="dashboard-download-btn h-9 px-2 sm:px-3 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 inline-flex items-center justify-center gap-1.5 text-[10px] sm:text-[11px] font-extrabold whitespace-nowrap"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg><span>تحميل التطبيق</span></a>
+      <button type="button" onclick="toggleNotifications()" aria-label="الإشعارات" title="الإشعارات" class="relative h-9 w-9 rounded-xl border border-amber-200 bg-amber-50 text-[18px] text-amber-600 shrink-0">🔔${notificationBadge()}</button>
+      <a href="password.html?role=client&mode=account" aria-label="حسابي" title="حسابي" class="h-9 px-2 rounded-xl border border-blue-200 bg-blue-50 text-blue-800 inline-flex items-center justify-center text-[11px] font-extrabold whitespace-nowrap">حسابي</a>
+      <button type="button" onclick="logoutClient()" aria-label="خروج" title="خروج" class="h-9 px-2 rounded-xl bg-red-50 border border-red-100 text-red-700 text-[11px] font-extrabold whitespace-nowrap">خروج</button>
+     </div>
+     <a href="/" aria-label="القائمة الرئيسية" title="القائمة الرئيسية" class="client-home-main-btn h-8 px-3 rounded-lg text-white inline-flex items-center justify-center gap-1 text-[10px] font-extrabold whitespace-nowrap"><span aria-hidden="true">⌂</span><span>القائمة الرئيسية</span></a>
     </div>
+   </div>
   ${notificationPanel()}
   </header>
   <a href="support.html?role=client" aria-label="خدمة العملاء" class="support-float"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="12" width="4" height="7" rx="2"/><rect x="17" y="12" width="4" height="7" rx="2"/><path d="M17 19a5 5 0 0 1-5 2h-1"/></svg></a><button id="global-refresh" type="button" onclick="handleGlobalRefresh()" class="global-refresh global-refresh-float ${globalRefreshInProgress?'is-refreshing':''}"><svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7v5h-5"/><path d="M4 17v-5h5"/><path d="M5.6 9A7 7 0 0 1 17 5l3 7M4 12l3 7a7 7 0 0 0 11.4-2"/></svg></button>
