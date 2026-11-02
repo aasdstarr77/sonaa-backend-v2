@@ -22,25 +22,12 @@ function render(){
   document.getElementById('app').innerHTML=`
   <style>
    .account-top-nav{justify-content:center!important;align-items:center!important;flex-wrap:nowrap!important;width:100%!important;margin-inline:auto!important}
-   body .support-float{left:16px!important;right:auto!important;bottom:85px!important}
-   body .global-refresh-float{right:16px!important;left:auto!important;bottom:85px!important}
+   body .support-float{position:fixed!important;left:16px!important;right:auto!important;bottom:85px!important}
+   body .global-refresh-float{position:fixed!important;right:16px!important;left:auto!important;bottom:85px!important}
 
-   /* Client dashboard header mirrors the technician dashboard layout and sizing. */
-   #app .app-header>div:first-child{display:flex!important;flex-wrap:wrap!important;align-items:center!important;gap:12px!important;padding-top:10px!important;padding-bottom:10px!important}
-   #app .app-header>div:first-child>div:first-child{flex:1 1 155px!important;min-width:0!important;gap:8px!important;align-items:center!important}
-   #app .app-header>div:first-child>div:last-child{flex:1 1 100%!important;display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:7px!important;width:100%!important;min-width:0!important}
-   #app .app-header>div:first-child>div:last-child>div:first-child{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:6px!important;width:100%!important;min-width:0!important}
-   #app .app-header>div:first-child>div:last-child>div:first-child>*{box-sizing:border-box!important;min-width:0!important;width:100%!important;padding-left:4px!important;padding-right:4px!important;justify-content:center!important;text-align:center!important}
-   #app .app-header>div:first-child>div:last-child>div:first-child>a:first-child{grid-column:1/-1!important;min-height:40px!important;font-size:12px!important}
-   #app .app-header>div:first-child>div:last-child>a:last-child{width:100%!important;min-height:40px!important;font-size:12px!important}
-   #app .app-header .brand-mark{width:88px!important;height:88px!important;border-radius:22px!important;background:linear-gradient(145deg,var(--sonaa-color-fff),var(--sonaa-color-e8eff9))!important;border:1px solid var(--sonaa-color-fff)!important;box-shadow:0 5px 0 var(--sonaa-color-cbd8ea),0 10px 18px var(--sonaa-color-0b1b3a1c),inset 0 2px 3px var(--sonaa-color-fff)!important;overflow:visible!important}
-   #app .app-header .brand-mark .sonaa-logo-svg{width:100%!important;height:100%!important;padding:4px!important;box-sizing:border-box!important;object-fit:contain!important;filter:drop-shadow(0 4px 2px var(--sonaa-color-0b1b3a28)) drop-shadow(0 9px 7px var(--sonaa-color-0b1b3a18))!important;transform:translateY(-2px)!important}
-   #app .app-header .client-home-main-btn{width:100%!important;min-height:40px!important}
-   @media(min-width:520px){#app .app-header>div:first-child{flex-wrap:nowrap!important}#app .app-header>div:first-child>div:last-child{flex:0 0 290px!important;width:290px!important;max-width:290px!important}}
-   @media(max-width:380px){#app .app-header .brand-mark{width:70px!important;height:70px!important}#app .app-header>div:first-child{gap:8px!important}#app .app-header .client-header-slogan{font-size:12px!important}}
 
   </style>
-  <header class="app-header sticky top-0 z-40 backdrop-blur-xl bg-white/95">
+  <header class="app-header fanni-app-header sticky top-0 z-40 backdrop-blur-xl">
    <div class="mx-auto w-full max-w-[640px] px-3 sm:px-4 py-2 flex items-center justify-between gap-2">
     <div class="flex items-center gap-2 min-w-0 flex-1">
      <div class="brand-mark h-16 w-16 sm:h-[84px] sm:w-[84px] rounded-xl flex items-center justify-center shrink-0"><img class="sonaa-logo-svg" src="/images/LOGO_UPLOAD_HERE/logo.png" alt="شعار صُنّاع" width="120" height="120" decoding="async" style="width:100%;height:100%;padding:4px;box-sizing:border-box;object-fit:contain"></div>
