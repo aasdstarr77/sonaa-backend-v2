@@ -6,3 +6,8 @@ Disallow: /admin
 Disallow: /admin-setup.html
 
 Sitemap: https://sonaa-backend-v2.vercel.app/sitemap.xml
+Disallow: /admin.html
+Disallow: /editor.html
+Disallow: /editor.backup.html
+Disallow: /palette-preview.html
+Disallow: /admin-audio-review.js
