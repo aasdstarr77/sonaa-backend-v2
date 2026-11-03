@@ -79,9 +79,10 @@ router.get('/areas', async (req, res, next) => {
  */
 router.get('/services', async (req, res, next) => {
   try {
-    const [savedServices, approvedTechnicians] = await Promise.all([
+    const [savedServices, approvedTechnicians, activeRegions] = await Promise.all([
       Service.find({}).select('+normalizedName +normalizedCategory').sort({ sortOrder: 1, name: 1 }).lean(),
-      Fanni.find({ status: 'معتمد', role: 'fanni' }).select('specialties').lean()
+      Fanni.find({ status: 'معتمد', role: 'fanni' }).select('specialties areas').lean(),
+      Region.find({ isActive: true }).select('name').lean()
     ]);
     const technicianCounts = new Map();
     const normalizedSpecialties = approvedTechnicians.map(technician =>
@@ -89,6 +90,25 @@ router.get('/services', async (req, res, next) => {
     );
     for (const specialties of normalizedSpecialties) {
       for (const specialty of specialties) technicianCounts.set(specialty, (technicianCounts.get(specialty) || 0) + 1);
+    }
+    const activeAreaNames = [...new Map([
+      ...AREA_OPTIONS,
+      ...activeRegions.map(item => item.name)
+    ].map(name => [normalizeArea(name), name])).values()];
+    const areaCountsByName = new Map();
+    for (const area of activeAreaNames) {
+      const areaKey = normalizeArea(area);
+      const counts = new Map();
+      for (const technician of approvedTechnicians) {
+        const technicianAreas = Array.isArray(technician.areas) ? technician.areas : [];
+        const worksHere = technicianAreas.some(value =>
+          normalizeArea(value) === areaKey || normalizeArea(value) === normalizeArea(ALL_AREAS_LABEL)
+        );
+        if (!worksHere) continue;
+        const specialties = new Set((Array.isArray(technician.specialties) ? technician.specialties : []).map(normalize).filter(Boolean));
+        for (const specialty of specialties) counts.set(specialty, (counts.get(specialty) || 0) + 1);
+      }
+      areaCountsByName.set(area, counts);
     }
 
     const categoriesMap = new Map();
@@ -173,12 +193,32 @@ router.get('/services', async (req, res, next) => {
         const categoryTechnicianCount = normalizedSpecialties.filter(specialties =>
           Array.from(specialties).some(specialty => normalizedNames.has(specialty))
         ).length;
+        const technicianCountByArea = Object.fromEntries(activeAreaNames.map(area => {
+          const areaKey = normalizeArea(area);
+          const count = approvedTechnicians.filter((technician, index) => {
+            const technicianAreas = Array.isArray(technician.areas) ? technician.areas : [];
+            const worksHere = technicianAreas.some(value =>
+              normalizeArea(value) === areaKey || normalizeArea(value) === normalizeArea(ALL_AREAS_LABEL)
+            );
+            return worksHere && Array.from(normalizedSpecialties[index] || []).some(specialty => normalizedNames.has(specialty));
+          }).length;
+          return [area, count];
+        }));
+        const serviceTechnicianCountsByArea = Object.fromEntries(names.map(name => [
+          name,
+          Object.fromEntries(activeAreaNames.map(area => [
+            area,
+            areaCountsByName.get(area)?.get(normalize(name)) || 0
+          ]))
+        ]));
         return {
           label: category.label,
           emoji: category.emoji,
           services: names,
           technicianCount: categoryTechnicianCount,
-          serviceTechnicianCounts: Object.fromEntries(names.map(name => [name, technicianCounts.get(normalize(name)) || 0]))
+          technicianCountByArea,
+          serviceTechnicianCounts: Object.fromEntries(names.map(name => [name, technicianCounts.get(normalize(name)) || 0])),
+          serviceTechnicianCountsByArea
         };
       })
       .filter(category => category.services.length > 0);
