@@ -18,6 +18,7 @@ const WalletTransaction = require('../models/WalletTransaction');
 const { createNotification } = require('../utils/notifications');
 const Service = require('../models/Service');
 const Region = require('../models/Region');
+const { AREA_OPTIONS } = require('../config/areas');
 const AdminConfig = require('../models/AdminConfig');
 const AdminAuditLog = require('../models/AdminAuditLog');
 const PageVisit = require('../models/PageVisit');
@@ -215,6 +216,9 @@ router.get('/counts', auth('admin'), async (req, res, next) => {
 });
 
 router.use(createAdminFanniProfilesRouter({
+  Region,
+  AREA_OPTIONS,
+  ALL_SERVICES,
   auth,
   validate,
   Joi,
