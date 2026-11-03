@@ -90,7 +90,7 @@ async function editFanniServiceAreas(id){
     if(serviceText===null)return;
     const areaText=prompt('مناطق عمل الفني (افصل بين المناطق بعلامة ،).\\nالمناطق المعتمدة: '+areas.join('، ')+'\\nيمكن كتابة «جميع المناطق» بدل اختيار مناطق متعددة.',Array.isArray(fanni.areas)?fanni.areas.join('، '):'');
     if(areaText===null)return;
-    const parse=value=>[...new Set(String(value||'').split(/[,،;؛\\n\\r]+/).map(item=>item.trim()).filter(Boolean))];
+    const parse=value=>[...new Set(String(value||'').split(/[,،;؛\n\r]+/).map(item=>item.trim()).filter(Boolean))];
     const specialties=parse(serviceText),selectedAreas=parse(areaText);
     if(!specialties.length||!selectedAreas.length)return showToast('لازم تحدد خدمة واحدة ومنطقة عمل واحدة على الأقل.','error');
     if(!confirm('تأكيد تحديث الخدمات ومناطق العمل للفني '+String(fanni.name||'')+'؟'))return;
