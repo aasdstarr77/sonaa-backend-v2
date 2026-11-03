@@ -390,6 +390,46 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
   .glass-header .admin-logo-frame{width:42px!important;height:42px!important;min-width:42px!important;min-height:42px!important;flex-basis:42px!important}
   .glass-header .admin-header-logo{width:32px!important;height:32px!important}
 }
+
+/* Admin header buttons only — preserve the approved logo, brand text and white header. */
+.glass-header .admin-header-actions a[href*="mode=account"]{
+  background:linear-gradient(145deg,#3b82f6 0%,#2563eb 55%,#1d4ed8 100%)!important;
+  color:#fff!important;
+  border:1px solid #93c5fd!important;
+  box-shadow:0 3px 0 #1e40af,0 5px 10px rgba(37,99,235,.18),inset 0 1px 0 rgba(255,255,255,.45)!important;
+}
+.glass-header .admin-header-actions a[href="/"]{
+  background:linear-gradient(145deg,#14b8a6 0%,#0d9488 55%,#0f766e 100%)!important;
+  color:#fff!important;
+  border:1px solid #5eead4!important;
+  box-shadow:0 3px 0 #0f766e,0 5px 10px rgba(13,148,136,.16),inset 0 1px 0 rgba(255,255,255,.4)!important;
+}
+.glass-header .admin-header-actions button[onclick="logout()"]{
+  background:linear-gradient(145deg,#fff1f2 0%,#ffe4e6 100%)!important;
+  color:#be123c!important;
+  border:1px solid #fda4af!important;
+  box-shadow:0 3px 0 #e11d48,0 5px 10px rgba(225,29,72,.12),inset 0 1px 0 #fff!important;
+  font-weight:900!important;
+}
+.glass-header .admin-header-actions #visualEditorLink{
+  background:linear-gradient(145deg,#8b5cf6 0%,#7c3aed 55%,#6d28d9 100%)!important;
+  color:#fff!important;
+  border:1px solid #c4b5fd!important;
+  box-shadow:0 3px 0 #5b21b6,0 5px 10px rgba(109,40,217,.16),inset 0 1px 0 rgba(255,255,255,.4)!important;
+}
+.glass-header .admin-header-title button[onclick="goBack()"]{
+  background:linear-gradient(145deg,#3b82f6 0%,#2563eb 55%,#1d4ed8 100%)!important;
+  color:#fff!important;
+  border:1px solid #93c5fd!important;
+  box-shadow:0 3px 0 #1e40af,0 5px 9px rgba(37,99,235,.16),inset 0 1px 0 rgba(255,255,255,.4)!important;
+}
+.glass-header .admin-header-actions a:focus-visible,
+.glass-header .admin-header-actions button:focus-visible,
+.glass-header .admin-header-title button:focus-visible{
+  outline:3px solid #0f766e!important;
+  outline-offset:2px!important;
+}
+
 </style>
 
 <link rel="stylesheet" href="/css/theme.css">
