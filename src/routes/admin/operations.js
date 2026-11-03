@@ -2,6 +2,7 @@
 
 const express = require('express');
 const crypto = require('crypto');
+const { AREA_OPTIONS, ALL_AREAS_LABEL, normalizeArea } = require('../../config/areas');
 
 function createAdminOperationsRouter({
   Region,
@@ -62,8 +63,17 @@ function createAdminOperationsRouter({
       }
       if (value.isActive !== undefined) region.isActive = value.isActive;
       await region.save();
-      await writeAdminAudit(req, 'تعديل منطقة خدمة', 'regions', String(region._id), JSON.stringify({ before, after: { name: region.name, isActive: region.isActive } }));
-      return res.json({ message: region.isActive ? 'تم حفظ المنطقة وهي متاحة في نموذج طلب العميل' : 'تم تعطيل المنطقة وإخفاؤها من نموذج طلب العميل', region });
+      let updatedTechnicians = 0;
+      if (before.name !== region.name) {
+        const result = await Fanni.updateMany(
+          { role: 'fanni', areas: before.name },
+          { $set: { 'areas.$[matchedArea]': region.name } },
+          { arrayFilters: [{ matchedArea: before.name }] }
+        );
+        updatedTechnicians = Number(result.modifiedCount || result.nModified || 0);
+      }
+      await writeAdminAudit(req, 'تعديل منطقة خدمة', 'regions', String(region._id), JSON.stringify({ before, after: { name: region.name, isActive: region.isActive }, updatedTechnicians }));
+      return res.json({ message: region.isActive ? 'تم حفظ المنطقة وهي متاحة في نموذج طلب العميل' : 'تم تعطيل المنطقة وإخفاؤها من نموذج طلب العميل', region, updatedTechnicians });
     } catch (error) { return next(error); }
   });
   
@@ -72,12 +82,36 @@ function createAdminOperationsRouter({
       if (!validId(req.params.id)) return sendBadId(res);
       const region = await Region.findById(req.params.id);
       if (!region) return res.status(404).json({ message: 'المنطقة غير موجودة أو حُذفت بالفعل' });
-      await Region.deleteOne({ _id: region._id });
-      await writeAdminAudit(req, 'حذف منطقة خدمة', 'regions', String(region._id), region.name);
-      return res.json({ message: 'تم حذف المنطقة من قائمة الإدارة؛ الطلبات التاريخية محفوظة كما هي' });
+      region.isActive = false;
+      await region.save();
+      await writeAdminAudit(req, 'تعطيل منطقة خدمة', 'regions', String(region._id), JSON.stringify({ name: region.name, isActive: false }));
+      return res.json({ message: 'تم تعطيل المنطقة وإخفاؤها من الاختيارات الجديدة مع الاحتفاظ بسجلها وربطها التاريخي.' });
     } catch (error) { return next(error); }
   });
   
+  router.get('/regions/legacy-areas', auth('admin'), async (req, res, next) => {
+    try {
+      const [technicians, activeRegions] = await Promise.all([
+        Fanni.find({ role: 'fanni' }).select('_id name status areas').limit(5000).lean(),
+        Region.find({ isActive: true }).select('name').lean()
+      ]);
+      const known = new Set([...(AREA_OPTIONS || []), ...activeRegions.map(item => item.name), ALL_AREAS_LABEL].map(normalizeArea));
+      const grouped = new Map();
+      for (const technician of technicians) {
+        for (const raw of Array.isArray(technician.areas) ? technician.areas : []) {
+          const name = String(raw || '').normalize('NFC').trim().replace(/\\s+/g, ' ');
+          const key = normalizeArea(name);
+          if (!key || known.has(key)) continue;
+          const item = grouped.get(key) || { name, technicianCount: 0, examples: [] };
+          item.technicianCount += 1;
+          if (item.examples.length < 5) item.examples.push({ id: String(technician._id), name: technician.name || 'فني', status: technician.status || '' });
+          grouped.set(key, item);
+        }
+      }
+      return res.set('Cache-Control', 'no-store').json({ legacyAreas: Array.from(grouped.values()).sort((a, b) => b.technicianCount - a.technicianCount), scannedTechnicians: technicians.length });
+    } catch (error) { return next(error); }
+  });
+
   router.post('/notifications/direct', auth('admin'), async (req, res, next) => {
     try {
       const schema = Joi.object({
