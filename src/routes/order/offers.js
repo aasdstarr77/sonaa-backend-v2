@@ -225,7 +225,7 @@ function createOrderOfferRouter({
         });
       }
 
-      if (!fanniWorksInArea(fanni.areas, order.area)) {
+      if (order.areaMatchingEnabled === true && !fanniWorksInArea(fanni.areas, order.area)) {
         return res.status(403).json({
           message: 'هذا الطلب خارج مناطق العمل المسجلة في حسابك'
         });
