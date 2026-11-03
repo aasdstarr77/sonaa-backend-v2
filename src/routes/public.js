@@ -7,7 +7,7 @@ const AdminConfig = require('../models/AdminConfig');
 const Service = require('../models/Service');
 const Fanni = require('../models/Fanni');
 const Region = require('../models/Region');
-const { AREA_OPTIONS, ALL_AREAS_LABEL, normalizeArea } = require('../config/areas');
+const { AREA_OPTIONS, ALL_AREAS_LABEL, normalizeArea, getEffectiveAreaOptions } = require('../config/areas');
 
 const {
   CATEGORIES,
@@ -58,18 +58,8 @@ function isBrokenWallScreenService(value) {
 /* قائمة مناطق الخدمة المعتمدة: القائمة الأساسية + المناطق النشطة التي تعتمدها الإدارة. */
 router.get('/areas', async (req, res, next) => {
   try {
-    const adminRegions = await Region.find({ isActive: true }).select('name').lean();
-    const byNormalizedName = new Map();
-    for (const area of AREA_OPTIONS) byNormalizedName.set(normalizeArea(area), area);
-    for (const item of adminRegions) {
-      const area = String(item.name || '').trim().normalize('NFC').replace(/\s+/g, ' ');
-      const key = normalizeArea(area);
-      if (area.length >= 2 && area.length <= 100 && key !== normalizeArea(ALL_AREAS_LABEL) && !byNormalizedName.has(key)) byNormalizedName.set(key, area);
-    }
-    return res.set('Cache-Control', 'no-store').json({
-      ok: true,
-      areas: Array.from(byNormalizedName.values()).sort((a, b) => a.localeCompare(b, 'ar'))
-    });
+    const adminRegions=await Region.find({}).select('name isActive isDeleted isBase').lean();
+    return res.set('Cache-Control','no-store').json({ok:true,areas:getEffectiveAreaOptions(adminRegions)});
   } catch (err) { next(err); }
 });
 
@@ -79,10 +69,10 @@ router.get('/areas', async (req, res, next) => {
  */
 router.get('/services', async (req, res, next) => {
   try {
-    const [savedServices, approvedTechnicians, activeRegions] = await Promise.all([
+    const [savedServices, approvedTechnicians, allRegions] = await Promise.all([
       Service.find({}).select('+normalizedName +normalizedCategory').sort({ sortOrder: 1, name: 1 }).lean(),
       Fanni.find({ status: 'معتمد', role: 'fanni' }).select('specialties areas').lean(),
-      Region.find({ isActive: true }).select('name').lean()
+      Region.find({}).select('name isActive isDeleted isBase').lean()
     ]);
     const technicianCounts = new Map();
     const normalizedSpecialties = approvedTechnicians.map(technician =>
@@ -91,10 +81,7 @@ router.get('/services', async (req, res, next) => {
     for (const specialties of normalizedSpecialties) {
       for (const specialty of specialties) technicianCounts.set(specialty, (technicianCounts.get(specialty) || 0) + 1);
     }
-    const activeAreaNames = [...new Map([
-      ...AREA_OPTIONS,
-      ...activeRegions.map(item => item.name)
-    ].map(name => [normalizeArea(name), name])).values()];
+    const activeAreaNames = getEffectiveAreaOptions(allRegions);
     const areaCountsByName = new Map();
     for (const area of activeAreaNames) {
       const areaKey = normalizeArea(area);

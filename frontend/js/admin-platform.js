@@ -32,20 +32,23 @@ function renderServices(){
 }
 
 function renderRegions(){
-  return `
-  <section class="mt-4 space-y-4">
-    <div class="rounded-[18px] bg-gradient-to-r from-teal-600 to-cyan-600 p-4 text-white"><p class="text-[12px] font-black">إدارة مناطق الخدمة</p><p class="text-[10px] text-teal-100 mt-1">إضافة وتعديل وتفعيل وتعطيل وحذف المناطق التي تظهر للعميل عند إنشاء الطلب</p></div>
-    <div class="premium-panel p-4">
-      <div class="flex gap-2"><input id="new-region" maxlength="100" placeholder="اسم المنطقة الجديدة" class="field flex-1"><button id="add-region-btn" onclick="addRegion()" class="pill-btn primary-pill">إضافة</button></div>
-      <p class="mt-2 text-[10px] leading-5 text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl p-3">المناطق النشطة هنا تُضاف إلى قائمة المناطق في نموذج طلب العميل. المناطق الأساسية ومناطق الفنيين المعتمدين تظل متاحة من مصادرها الحالية.</p>
-      <div id="regions-list" class="mt-4 space-y-2">${state.regionsLoading?'<p class="text-center p-4 text-[11px] text-slate-500">جاري تحميل المناطق...</p>':renderRegionItems()}</div>
-    </div>
-  </section>`;
+  const active=state.regions.filter(r=>r.isDeleted!==true&&r.isActive!==false).length,hidden=state.regions.filter(r=>r.isDeleted!==true&&r.isActive===false).length,deleted=state.regions.filter(r=>r.isDeleted===true).length;
+  return '<section class="mt-4 space-y-4"><div class="rounded-[18px] bg-gradient-to-r from-teal-600 to-cyan-600 p-4 text-white"><p class="text-[12px] font-black">إدارة مناطق الخدمة</p><p class="text-[10px] text-teal-100 mt-1">تحكم في كل المناطق الأساسية والمضافة: تعديل، إخفاء، إظهار، حذف واستعادة.</p></div>'+
+  '<div class="grid grid-cols-3 gap-2"><div class="premium-panel p-3 text-center"><b class="block text-xl text-emerald-700">'+active+'</b><span class="text-[10px]">ظاهرة</span></div><div class="premium-panel p-3 text-center"><b class="block text-xl text-amber-700">'+hidden+'</b><span class="text-[10px]">مخفية</span></div><div class="premium-panel p-3 text-center"><b class="block text-xl text-red-700">'+deleted+'</b><span class="text-[10px]">محذوفة</span></div></div>'+
+  '<div class="premium-panel p-4 space-y-3"><div class="flex gap-2"><input id="new-region" maxlength="100" placeholder="اسم المنطقة الجديدة" class="field flex-1"><button id="add-region-btn" onclick="addRegion()" class="pill-btn primary-pill">إضافة</button></div>'+
+  '<input id="region-search" value="'+escHtml(state.regionSearch||'')+'" oninput="filterRegions(this.value)" placeholder="ابحث باسم المنطقة..." class="field w-full">'+
+  '<p class="text-[10px] leading-5 text-slate-500">المناطق الأساسية والمضافة تُدار من نفس القائمة. إخفاء المنطقة يمنع ظهورها في الاختيارات الجديدة. الحذف لا يمس الطلبات القديمة ويمكن استعادة المنطقة.</p>'+
+  '<div id="regions-list" class="space-y-2">'+(state.regionsLoading?'<p class="text-center p-4 text-[11px] text-slate-500">جاري تحميل المناطق...</p>':renderRegionItems())+'</div></div></section>';
 }
 function renderRegionItems(){
   if(state.regionsError)return '<p class="p-3 text-[11px] font-bold text-red-600">'+escHtml(state.regionsError)+'</p>';
-  if(!state.regions.length)return '<p class="p-4 text-center text-[11px] text-slate-500">لا توجد مناطق مضافة من الإدارة حتى الآن.</p>';
-  return state.regions.map(r=>'<div class="flex flex-wrap justify-between items-center gap-3 p-3 rounded-xl bg-slate-50 border"><div class="min-w-0 flex-1"><span class="block text-[11px] font-black">'+escHtml(r.name||'')+'</span><span class="text-[10px] font-bold '+(r.isActive?'text-emerald-700':'text-slate-500')+'">'+(r.isActive?'نشطة — تظهر للعميل':'معطلة — لا تظهر للعميل')+'</span></div><div class="flex flex-wrap gap-1"><button onclick="editRegion(\''+escHtml(r._id)+'\')" class="pill-btn soft-btn">تعديل</button><button onclick="toggleRegion(\''+escHtml(r._id)+'\','+(r.isActive?'true':'false')+')" class="pill-btn soft-btn">'+(r.isActive?'تعطيل':'تفعيل')+'</button><button onclick="deleteRegion(\''+escHtml(r._id)+'\')" class="pill-btn danger-pill">حذف</button></div></div>').join('');
+  const q=String(state.regionSearch||'').trim().toLocaleLowerCase('ar'),rows=state.regions.filter(r=>!q||String(r.name||'').toLocaleLowerCase('ar').includes(q));
+  if(!rows.length)return '<p class="p-4 text-center text-[11px] text-slate-500">لا توجد مناطق مطابقة للبحث.</p>';
+  return rows.map(r=>{
+    const deleted=r.isDeleted===true,active=r.isActive!==false&&!deleted,status=deleted?'محذوفة — غير متاحة':active?'ظاهرة في الاختيارات':'مخفية — لا تظهر في الاختيارات',color=deleted?'text-red-700':active?'text-emerald-700':'text-amber-700';
+    const controls='<button onclick="editRegion(\\''+escHtml(r._id)+'\\')" class="pill-btn soft-btn">تعديل</button>'+(deleted?'<button onclick="restoreRegion(\\''+escHtml(r._id)+'\\')" class="pill-btn soft-btn">استعادة</button>':'<button onclick="toggleRegion(\\''+escHtml(r._id)+'\\','+(active?'true':'false')+')" class="pill-btn soft-btn">'+(active?'إخفاء':'إظهار')+'</button><button onclick="deleteRegion(\\''+escHtml(r._id)+'\\')" class="pill-btn danger-pill">حذف</button>');
+    return '<div class="flex flex-wrap justify-between items-center gap-3 p-3 rounded-xl bg-slate-50 border"><div class="min-w-0 flex-1"><div class="flex flex-wrap items-center gap-2"><span class="text-[11px] font-black">'+escHtml(r.name||'')+'</span><span class="rounded-full bg-slate-200 px-2 py-1 text-[9px] font-bold">'+(r.isBase?'أساسية':'مضافة')+'</span></div><span class="text-[10px] font-bold '+color+'">'+status+'</span></div><div class="flex flex-wrap gap-1">'+controls+'</div></div>';
+  }).join('');
 }
 function renderNotifications(){
   return `

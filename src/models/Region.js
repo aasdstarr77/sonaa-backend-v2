@@ -7,6 +7,8 @@ function normalizeRegionName(value) {
     .normalize('NFC')
     .trim()
     .replace(/\s+/g, ' ')
+    .replace(/^القاهرة\s*[-–—]\s*/u, '')
+    .trim()
     .toLocaleLowerCase('ar-EG');
 }
 
@@ -21,12 +23,14 @@ const regionSchema = new mongoose.Schema({
   },
   normalizedName: { type: String, required: true, unique: true, select: false },
   isActive: { type: Boolean, default: true, index: true },
+  isBase: { type: Boolean, default: false, index: true },
+  isDeleted: { type: Boolean, default: false, index: true },
   createdBy: { type: String, trim: true, maxlength: 120, default: '' }
 }, { timestamps: true, versionKey: false });
 
 regionSchema.pre('validate', function () {
   if (typeof this.name === 'string') {
-    this.name = this.name.normalize('NFC').trim().replace(/\s+/g, ' ');
+    this.name = this.name.normalize('NFC').trim().replace(/\s+/g, ' ').replace(/^القاهرة\s*[-–—]\s*/u, '').trim();
     this.normalizedName = normalizeRegionName(this.name);
   }
 });

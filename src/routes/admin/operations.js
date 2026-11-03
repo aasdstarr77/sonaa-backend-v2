@@ -2,7 +2,7 @@
 
 const express = require('express');
 const crypto = require('crypto');
-const { AREA_OPTIONS, ALL_AREAS_LABEL, normalizeArea } = require('../../config/areas');
+const { AREA_OPTIONS, ALL_AREAS_LABEL, normalizeArea, canonicalAreaName } = require('../../config/areas');
 
 function createAdminOperationsRouter({
   Region,
@@ -20,75 +20,38 @@ function createAdminOperationsRouter({
   function validId(value) { return mongoose.isValidObjectId(value); }
   function sendBadId(res) { return res.status(400).json({ message: 'معرّف غير صالح' }); }
 
-  router.get('/regions', auth('admin'), async (req, res, next) => {
-    try {
-      const regions = await Region.find({}).sort({ isActive: -1, name: 1 }).limit(500).lean();
-      return res.set('Cache-Control', 'no-store').json({ regions, items: regions });
-    } catch (error) { return next(error); }
-  });
-  
-  router.post('/regions', auth('admin'), async (req, res, next) => {
-    try {
-      const schema = Joi.object({ name: Joi.string().trim().min(2).max(100).required() }).required();
-      const { error, value } = schema.validate(req.body || {}, { abortEarly: false, stripUnknown: true });
-      if (error) return res.status(400).json({ message: 'اسم المنطقة مطلوب من حرفين إلى 100 حرف' });
-      const name = value.name.normalize('NFC').trim().replace(/\s+/g, ' ');
-      const normalizedName = name.toLocaleLowerCase('ar-EG');
-      const exists = await Region.findOne({ normalizedName }).select('_id name').lean();
-      if (exists) return res.status(409).json({ message: 'المنطقة موجودة بالفعل', region: exists });
-      const region = await Region.create({ name, createdBy: adminName(req) });
-      await writeAdminAudit(req, 'إضافة منطقة خدمة', 'regions', String(region._id), name);
-      return res.status(201).json({ message: 'تمت إضافة المنطقة وربطها بقائمة مناطق طلب العميل', region });
-    } catch (error) {
-      if (error && error.code === 11000) return res.status(409).json({ message: 'المنطقة موجودة بالفعل' });
-      return next(error);
+  async function syncManagedAreas(req) {
+    const existing=await Region.find({}).select('+normalizedName').sort({createdAt:1,_id:1}),groups=new Map();
+    for(const r of existing){const key=normalizeArea(r.name);if(!key)continue;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(r);}
+    let merged=0,renamed=0;
+    for(const [key,group] of groups){
+      const canonical=canonicalAreaName(group.find(x=>canonicalAreaName(x.name)===x.name)?.name||group[0].name),keeper=group.find(x=>x.name===canonical)||group[0],oldNames=[...new Set(group.map(x=>x.name))],deleted=group.some(x=>x.isDeleted===true),active=group.every(x=>x.isActive!==false)&&!deleted,isBase=group.some(x=>x.isBase===true)||AREA_OPTIONS.some(x=>normalizeArea(x)===key);
+      for(const duplicate of group)if(String(duplicate._id)!==String(keeper._id)){await Region.deleteOne({_id:duplicate._id});merged++;}
+      const oldName=keeper.name;keeper.name=canonical;keeper.normalizedName=key;keeper.isActive=active;keeper.isDeleted=deleted;keeper.isBase=isBase;await keeper.save();if(oldName!==canonical)renamed++;
+      for(const old of oldNames)if(old!==canonical)await Fanni.updateMany({role:'fanni',areas:old},{$set:{'areas.$[matchedArea]':canonical}},{arrayFilters:[{matchedArea:old}]});
     }
-  });
-  
-  router.patch('/regions/:id', auth('admin'), async (req, res, next) => {
-    try {
-      if (!validId(req.params.id)) return sendBadId(res);
-      const schema = Joi.object({ name: Joi.string().trim().min(2).max(100).optional(), isActive: Joi.boolean().optional() }).min(1).required();
-      const { error, value } = schema.validate(req.body || {}, { abortEarly: false, stripUnknown: true });
-      if (error) return res.status(400).json({ message: 'بيانات تعديل المنطقة غير صحيحة' });
-      const region = await Region.findById(req.params.id);
-      if (!region) return res.status(404).json({ message: 'المنطقة غير موجودة' });
-      const before = { name: region.name, isActive: region.isActive };
-      if (value.name !== undefined) {
-        const name = value.name.normalize('NFC').trim().replace(/\s+/g, ' ');
-        const normalizedName = name.toLocaleLowerCase('ar-EG');
-        const duplicate = await Region.findOne({ normalizedName, _id: { $ne: region._id } }).select('_id name').lean();
-        if (duplicate) return res.status(409).json({ message: 'اسم المنطقة مستخدم بالفعل', region: duplicate });
-        region.name = name;
-      }
-      if (value.isActive !== undefined) region.isActive = value.isActive;
-      await region.save();
-      let updatedTechnicians = 0;
-      if (before.name !== region.name) {
-        const result = await Fanni.updateMany(
-          { role: 'fanni', areas: before.name },
-          { $set: { 'areas.$[matchedArea]': region.name } },
-          { arrayFilters: [{ matchedArea: before.name }] }
-        );
-        updatedTechnicians = Number(result.modifiedCount || result.nModified || 0);
-      }
-      await writeAdminAudit(req, 'تعديل منطقة خدمة', 'regions', String(region._id), JSON.stringify({ before, after: { name: region.name, isActive: region.isActive }, updatedTechnicians }));
-      return res.json({ message: region.isActive ? 'تم حفظ المنطقة وهي متاحة في نموذج طلب العميل' : 'تم تعطيل المنطقة وإخفاؤها من نموذج طلب العميل', region, updatedTechnicians });
-    } catch (error) { return next(error); }
-  });
-  
-  router.delete('/regions/:id', auth('admin'), async (req, res, next) => {
-    try {
-      if (!validId(req.params.id)) return sendBadId(res);
-      const region = await Region.findById(req.params.id);
-      if (!region) return res.status(404).json({ message: 'المنطقة غير موجودة أو حُذفت بالفعل' });
-      region.isActive = false;
-      await region.save();
-      await writeAdminAudit(req, 'تعطيل منطقة خدمة', 'regions', String(region._id), JSON.stringify({ name: region.name, isActive: false }));
-      return res.json({ message: 'تم تعطيل المنطقة وإخفاؤها من الاختيارات الجديدة مع الاحتفاظ بسجلها وربطها التاريخي.' });
-    } catch (error) { return next(error); }
-  });
-  
+    const seeds=AREA_OPTIONS.map(name=>({updateOne:{filter:{normalizedName:normalizeArea(name)},update:{$setOnInsert:{name,normalizedName:normalizeArea(name),isActive:true,isBase:true,isDeleted:false,createdBy:'القائمة الأساسية'}},upsert:true}}));
+    if(seeds.length)await Region.bulkWrite(seeds,{ordered:false});
+    if(merged||renamed)await writeAdminAudit(req,'توحيد أسماء المناطق وإزالة التكرار','regions','base-area-normalization',JSON.stringify({merged,renamed}));
+  }
+  router.get('/regions',auth('admin'),async(req,res,next)=>{try{await syncManagedAreas(req);const regions=await Region.find({}).sort({isDeleted:1,isActive:-1,name:1}).limit(1000).lean();return res.set('Cache-Control','no-store').json({regions,items:regions});}catch(error){return next(error);}});
+  router.post('/regions',auth('admin'),async(req,res,next)=>{try{
+    const checked=Joi.object({name:Joi.string().trim().min(2).max(100).required()}).required().validate(req.body||{},{abortEarly:false,stripUnknown:true});if(checked.error)return res.status(400).json({message:'اسم المنطقة مطلوب من حرفين إلى 100 حرف'});
+    const name=canonicalAreaName(checked.value.name),normalizedName=normalizeArea(name);if(name.length<2)return res.status(400).json({message:'اسم المنطقة غير صالح'});
+    const exists=await Region.findOne({normalizedName}).select('_id name isActive isDeleted').lean();if(exists)return res.status(409).json({message:exists.isDeleted?'المنطقة محذوفة بالفعل؛ يمكنك استعادتها من القائمة':'المنطقة موجودة بالفعل',region:exists});
+    const region=await Region.create({name,normalizedName,createdBy:adminName(req),isActive:true,isBase:false,isDeleted:false});await writeAdminAudit(req,'إضافة منطقة خدمة','regions',String(region._id),name);return res.status(201).json({message:'تمت إضافة المنطقة إلى القائمة الموحدة',region});
+  }catch(error){if(error&&error.code===11000)return res.status(409).json({message:'المنطقة موجودة بالفعل'});return next(error);}});
+  router.patch('/regions/:id',auth('admin'),async(req,res,next)=>{try{
+    if(!validId(req.params.id))return sendBadId(res);
+    const checked=Joi.object({name:Joi.string().trim().min(2).max(100).optional(),isActive:Joi.boolean().optional(),isDeleted:Joi.boolean().optional()}).min(1).required().validate(req.body||{},{abortEarly:false,stripUnknown:true});if(checked.error)return res.status(400).json({message:'بيانات تعديل المنطقة غير صحيحة'});
+    const region=await Region.findById(req.params.id);if(!region)return res.status(404).json({message:'المنطقة غير موجودة'});const before={name:region.name,isActive:region.isActive,isDeleted:region.isDeleted};
+    if(checked.value.name!==undefined){const name=canonicalAreaName(checked.value.name),normalizedName=normalizeArea(name),duplicate=await Region.findOne({normalizedName,_id:{$ne:region._id}}).select('_id name').lean();if(duplicate)return res.status(409).json({message:'اسم المنطقة مستخدم بالفعل',region:duplicate});region.name=name;region.normalizedName=normalizedName;
+      if(region.isBase){await Region.updateOne({normalizedName:normalizeArea(before.name),_id:{$ne:region._id}},{$set:{name:canonicalAreaName(before.name),normalizedName:normalizeArea(before.name),isBase:true,isActive:false,isDeleted:true,createdBy:'القائمة الأساسية'}},{upsert:true});region.isBase=false;}}
+    if(checked.value.isDeleted!==undefined){region.isDeleted=checked.value.isDeleted;region.isActive=!checked.value.isDeleted;}if(checked.value.isActive!==undefined&&region.isDeleted!==true)region.isActive=checked.value.isActive;await region.save();
+    let updatedTechnicians=0;if(before.name!==region.name){const result=await Fanni.updateMany({role:'fanni',areas:before.name},{$set:{'areas.$[matchedArea]':region.name}},{arrayFilters:[{matchedArea:before.name}]});updatedTechnicians=Number(result.modifiedCount||result.nModified||0);}
+    await writeAdminAudit(req,'تعديل منطقة خدمة','regions',String(region._id),JSON.stringify({before,after:{name:region.name,isActive:region.isActive,isDeleted:region.isDeleted},updatedTechnicians}));return res.json({message:region.isDeleted?'تم حذف المنطقة من الاختيارات':region.isActive?'تم حفظ المنطقة وهي متاحة في الاختيارات':'تم إخفاء المنطقة من الاختيارات الجديدة',region,updatedTechnicians});
+  }catch(error){return next(error);}});
+  router.delete('/regions/:id',auth('admin'),async(req,res,next)=>{try{if(!validId(req.params.id))return sendBadId(res);const region=await Region.findById(req.params.id);if(!region)return res.status(404).json({message:'المنطقة غير موجودة أو حُذفت بالفعل'});region.isActive=false;region.isDeleted=true;await region.save();await writeAdminAudit(req,'حذف منطقة خدمة','regions',String(region._id),JSON.stringify({name:region.name,isBase:region.isBase}));return res.json({message:'تم حذف المنطقة من الاختيارات الجديدة مع الاحتفاظ بالبيانات التاريخية. ويمكن استعادتها من القائمة.'});}catch(error){return next(error);}});
   router.get('/regions/legacy-areas', auth('admin'), async (req, res, next) => {
     try {
       const [technicians, activeRegions] = await Promise.all([

@@ -77,10 +77,8 @@ function createOrderCreationRouter({
         });
       }
 
-      const [activeRegions] = await Promise.all([
-        Region.find({ isActive: true }).select('name').lean()
-      ]);
-      const allowedAreas = new Set([...(AREA_OPTIONS || []), ...activeRegions.map(item => item.name)].map(normalizeArea));
+      const allRegions=await Region.find({}).select('name isActive isDeleted isBase').lean();
+      const allowedAreas=new Set(getEffectiveAreaOptions(allRegions).map(normalizeArea));
       if (!allowedAreas.has(normalizeArea(area))) {
         return res.status(400).json({
           message: 'اختار المنطقة من قائمة المناطق المعتمدة، ولا تكتب اسمًا غير موجود بالقائمة.'

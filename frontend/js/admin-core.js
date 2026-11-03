@@ -60,7 +60,7 @@ let state={
   clients:[],filteredClients:[],clientsLoading:false,accountCounts:{technicians:0,verifiedTechnicians:0,clients:0},
   adminUsers:[],adminUsersLoading:false,
   
-  auditLogs:[],auditDate:'',regions:[],regionsLoading:false,regionsError:'',notifications:[],walletTransactions:[],walletSelectedFanniId:'',walletLoading:false,settings:{siteName:'صُنّاع',maintenance:false},
+  auditLogs:[],auditDate:'',regions:[],regionsLoading:false,regionsError:'',regionSearch:'',notifications:[],walletTransactions:[],walletSelectedFanniId:'',walletLoading:false,settings:{siteName:'صُنّاع',maintenance:false},
   reports:{},pricing:null,pricingHistory:[],offerFilter:'all',clientSearch:'',content:{announcement:'',faqs:[]},supportQuery:'',supportResults:{orders:[],complaints:[]},supportViolations:[],notificationHistory:[],notificationHistoryLoading:false,
   search:'',filter:'الكل',filterTopup:'الكل',filterOrder:'الكل',filterComplaint:'الكل',filterClient:'الكل',selectedOrderSNs:[],
   errors:{fannis:'',topups:'',orders:'',complaints:'',services:'',clients:''}, error:''
