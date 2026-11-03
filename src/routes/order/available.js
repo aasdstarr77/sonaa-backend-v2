@@ -10,6 +10,7 @@ function createOrderAvailableRouter({
   Rating,
   normalizePhone,
   fanniCanHandleService,
+  fanniWorksInArea,
   publicOrder
 }) {
   const router = express.Router();
@@ -32,7 +33,7 @@ router.get('/available', auth(), async (req, res, next) => {
         _id: req.userId,
         role: 'fanni',
         status: 'معتمد'
-      }).select('specialties technicianGuidelinesAcceptedAt technicianGuidelinesVersion').lean();
+      }).select('specialties areas technicianGuidelinesAcceptedAt technicianGuidelinesVersion').lean();
       if (!fanni) {
         return res.status(403).json({
           message: 'حساب الفني غير موجود أو غير معتمد'
@@ -67,7 +68,8 @@ router.get('/available', auth(), async (req, res, next) => {
 
     if (req.user.role !== 'admin') {
       matchingOrders = orders.filter(order =>
-        fanniCanHandleService(specialties, order.service)
+        fanniCanHandleService(specialties, order.service) &&
+        fanniWorksInArea(fanni?.areas, order.area)
       );
     }
 
