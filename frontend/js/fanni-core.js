@@ -174,11 +174,11 @@ function renderFanniAreaPicker(selected,search,inputId,searchHandler,toggleHandl
  const query=String(search||'').trim().toLocaleLowerCase('ar');
  const options=[ALL_AREAS_LABEL,...AREA_OPTIONS].filter((area,index,list)=>list.indexOf(area)===index);
  const visible=options.filter(area=>!query||String(area).toLocaleLowerCase('ar').includes(query)).slice(0,80);
- return `<div class="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
-  <input id="${esc(inputId)}" class="field h-11" value="${esc(search||'')}" oninput="${esc(searchHandler)}(this.value)" placeholder="ابحث عن المنطقة أو الحي...">
-  <div class="flex flex-wrap gap-2">${chosen.map(area=>`<button type="button" onclick="${esc(toggleHandler)}('${esc(area)}')" class="rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-[11px] font-extrabold text-blue-800">${esc(area)} ×</button>`).join('')||'<span class="text-[10px] text-slate-500">لم يتم اختيار مناطق بعد.</span>'}</div>
-  <div class="max-h-52 overflow-y-auto rounded-lg border border-slate-100 divide-y divide-slate-100">${visible.map(area=>{const checked=chosen.includes(area);return `<button type="button" onclick="${esc(toggleHandler)}('${esc(area)}')" class="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-right text-[12px] font-bold ${checked?'bg-blue-50 text-blue-800':'bg-white text-slate-700'}"><span>${esc(area)}</span><span class="h-5 w-5 rounded-md border flex items-center justify-center ${checked?'border-blue-600 bg-blue-600 text-white':'border-slate-300'}">${checked?'✓':''}</span></button>`}).join('')||'<p class="p-3 text-center text-[11px] text-slate-500">لا توجد مناطق مطابقة.</p>'}</div>
-  <p class="text-[10px] text-slate-500">تقدر تختار أكتر من منطقة. المناطق المعروضة هي القائمة المعتمدة فقط.</p>
+ return `<div class="fanni-area-picker">
+  <div class="fanni-picker-search"><span aria-hidden="true">⌕</span><input id="${esc(inputId)}" value="${esc(search||'')}" oninput="${esc(searchHandler)}(this.value)" placeholder="اكتب اسم المنطقة للبحث..." autocomplete="off"></div>
+  <div class="fanni-selected-areas">${chosen.map(area=>`<button type="button" onclick="${esc(toggleHandler)}('${esc(area)}')" class="fanni-area-tag">${esc(area)} <span aria-hidden="true">×</span></button>`).join('')||'<span class="fanni-picker-empty">لم تختار مناطق حتى الآن</span>'}</div>
+  <div class="fanni-area-options">${visible.map(area=>{const checked=chosen.includes(area);return `<button type="button" onclick="${esc(toggleHandler)}('${esc(area)}')" aria-pressed="${checked?'true':'false'}" class="fanni-area-option ${checked?'is-selected':''}"><span>${esc(area)}</span><span class="fanni-check">${checked?'✓':''}</span></button>`}).join('')||'<p class="fanni-picker-no-results">لا توجد مناطق مطابقة للبحث.</p>'}</div>
+  <p class="fanni-picker-hint">تقدر تختار أكتر من منطقة. الاختيارات المحددة ظاهرة فوق.</p>
  </div>`;
 }
 function addCustomRegArea(){

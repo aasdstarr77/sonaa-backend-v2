@@ -86,6 +86,13 @@ function onClientNameInput(value){
   if(rejectPhoneInField(clean,'اسم العميل')){state.clientName='';const input=document.getElementById('clientNameInput');if(input)input.value='';return;}
   state.clientName=clean;
 }
+function onAreaSearch(value){
+  state.areaSearch=sanitizeInput(value,60);
+  const cursor=state.areaSearch.length;
+  render();
+  const input=document.getElementById('areaSearchInput');
+  if(input){input.focus();try{input.setSelectionRange(cursor,cursor);}catch(_){}}
+}
 function onAreaInput(value){
   const area=sanitizeInput(value,100);
   if(rejectPhoneInField(area,'المنطقة')){state.area='';const input=document.getElementById('areaInput');if(input)input.value='';return;}
