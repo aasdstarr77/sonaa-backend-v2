@@ -65,7 +65,14 @@ function render(){
             <div><label class="text-[11px] font-black mb-1 block">العنوان</label><input value="${escAttr(state.address)}" oninput="onAddressInput(this.value)" placeholder="العنوان بالتفصيل" class="field h-[48px] px-3 w-full"></div>
             <div><label class="text-[11px] font-black mb-1 block">رقم التليفون</label><input value="${escAttr(state.phone)}" oninput="onPhoneInput(this.value)" placeholder="010..." class="field h-[48px] px-3 w-full"></div>
             <div><label class="text-[11px] font-black mb-1 block">الميزانية</label><input value="${escAttr(state.budget)}" oninput="onBudgetInput(this.value)" placeholder="اختياري" class="field h-[48px] px-3 w-full"></div>
-            <div><label class="text-[11px] font-black mb-1 block">وصف المشكلة</label><textarea oninput="onDescInput(this.value)" placeholder="اكتب التفاصيل..." class="field min-h-[100px] p-3 w-full">${escHtml(state.desc)}</textarea></div>
+            <div>
+                            <div class="mb-3 rounded-2xl border-2 border-blue-200 bg-gradient-to-l from-blue-50 to-white p-3 space-y-2">
+                              <div class="text-[13px] font-black text-slate-900">📝 وضّح المشكلة بالطريقة اللي تريحك</div>
+                              <p class="text-[11px] leading-5 text-slate-600">اكتب وصف المشكلة أو سجّلها بصوتك، وممكن تستخدم الطريقتين مع بعض.</p>
+                              <div class="rounded-xl border border-blue-100 bg-white p-2 space-y-1.5">
+                                <div class="text-[12px] font-extrabold text-slate-800">🎙️ سجّل المشكلة بصوتك</div>
+                                <div role="alert" style="display:block!important;visibility:visible!important;opacity:1!important;background:#fef3c7;border:1px solid #f59e0b;border-radius:10px;padding:6px 8px;margin:4px 0;color:#78350f;font-size:11px;font-weight:800;line-height:1.8;text-align:right"><span aria-hidden="true" style="font-size:17px;margin-left:6px">⚠️</span><span>تنبيه مهم: ممنوع ذكر رقم التليفون أو العنوان التفصيلي في التسجيل الصوتي.</span></div>
+            </div>
             <button type="button" onclick="createOrder()" ${state.loading?'disabled':''} class="client-submit-order-btn w-full h-[50px] rounded-xl bg-blue-600 text-white font-black">إرسال الطلب</button>
           </div>
         </div>
