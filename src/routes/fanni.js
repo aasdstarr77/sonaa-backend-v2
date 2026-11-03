@@ -21,7 +21,7 @@ const router = express.Router();
 async function validateApprovedAreas(areas) {
   const activeRegions = await Region.find({ isActive: true }).select('name').lean();
   const allowed = new Set([...(AREA_OPTIONS || []), ...activeRegions.map(item => item.name)].map(normalizeArea));
-  const normalized = [...new Set((Array.isArray(areas) ? areas : []).map(value => String(value || '').normalize('NFC').trim().replace(/\\s+/g, ' ')).filter(value => value.length >= 2))];
+  const normalized = [...new Set((Array.isArray(areas) ? areas : []).map(value => String(value || '').normalize('NFC').trim().replace(/\s+/g, ' ')).filter(value => value.length >= 2))];
   const allAreas = normalized.some(value => normalizeArea(value) === normalizeArea(ALL_AREAS_LABEL));
   if (allAreas) return normalized.length === 1 ? [ALL_AREAS_LABEL] : null;
   return normalized.length && normalized.every(value => allowed.has(normalizeArea(value))) ? normalized : null;
