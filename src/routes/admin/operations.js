@@ -99,7 +99,7 @@ function createAdminOperationsRouter({
       const grouped = new Map();
       for (const technician of technicians) {
         for (const raw of Array.isArray(technician.areas) ? technician.areas : []) {
-          const name = String(raw || '').normalize('NFC').trim().replace(/\\s+/g, ' ');
+          const name = String(raw || '').normalize('NFC').trim().replace(/\s+/g, ' ');
           const key = normalizeArea(name);
           if (!key || known.has(key)) continue;
           const item = grouped.get(key) || { name, technicianCount: 0, examples: [] };
