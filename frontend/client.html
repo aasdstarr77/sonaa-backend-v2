@@ -354,6 +354,21 @@ body .global-refresh-float{right:12px!important;bottom:18px!important;width:48px
 body .support-float{position:fixed!important;left:16px!important;right:auto!important;bottom:calc(86px + env(safe-area-inset-bottom))!important;top:auto!important;z-index:80!important}
 body .global-refresh-float{position:fixed!important;right:16px!important;left:auto!important;bottom:calc(86px + env(safe-area-inset-bottom))!important;top:auto!important;z-index:80!important}
 
+
+/* Match the admin refresh feedback: fade the floating button while data refreshes. */
+.global-refresh-float{
+  opacity:1;
+  transition:opacity .22s ease,transform .18s ease!important;
+}
+.global-refresh-float.is-refreshing,
+.global-refresh-float:disabled{
+  opacity:.32!important;
+  cursor:wait!important;
+}
+@media(prefers-reduced-motion:reduce){
+  .global-refresh-float{transition:none!important}
+}
+
 </style>
 <script src="/web-push.js" defer></script>
 <script src="/page-visit.js" defer></script>
