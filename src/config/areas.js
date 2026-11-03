@@ -201,7 +201,7 @@ function canonicalAreaName(value) { return String(value || '').normalize('NFC').
 function normalizeArea(value) { return canonicalAreaName(value).toLocaleLowerCase('ar-EG'); }
 const AREA_OPTIONS = Array.from(new Map(RAW_AREA_OPTIONS.map(value => { const name = canonicalAreaName(value); return [normalizeArea(name), name]; }).filter(([key, name]) => key && name.length >= 2)).values());
 function getEffectiveAreaOptions(regionDocs = []) {
- const isReservedArea = value => normalizeArea(value) === normalizeArea('جميع المناطق');
+ const isReservedArea = value => String(value || '').normalize('NFKC').replace(/[\u064B-\u065F\u0670\u0640\u200E\u200F\u202A-\u202E\u2066-\u2069]/g, '').replace(/[أإآٱ]/g, 'ا').replace(/\s+/g, '').toLocaleLowerCase('ar-EG') === 'جميعالمناطق';
  const areas = new Map(AREA_OPTIONS
   .filter(name => !isReservedArea(name))
   .map(name => [normalizeArea(name), name]));

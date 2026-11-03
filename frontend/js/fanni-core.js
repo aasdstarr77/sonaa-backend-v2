@@ -165,13 +165,16 @@ function toggleEditArea(area){
  state.error='';render();
 }
 function normalizeFanniAreaSearchText(value){
- return String(value||'').normalize('NFC').replace(/[أإآٱ]/g,'ا').toLocaleLowerCase('ar');
+ return String(value||'').normalize('NFKC').replace(/[\u064B-\u065F\u0670\u0640\u200E\u200F\u202A-\u202E\u2066-\u2069]/g,'').replace(/[أإآٱ]/g,'ا').toLocaleLowerCase('ar');
+}
+function isReservedFanniArea(value){
+ return normalizeFanniAreaSearchText(value).replace(/\s+/g,'')==='جميعالمناطق';
 }
 
 function renderFanniAreaPicker(selected,search,inputId,searchHandler,toggleHandler){
- const chosen=Array.isArray(selected)?selected.filter(area=>String(area||'').trim()!=='جميع المناطق'):[];
+ const chosen=Array.isArray(selected)?selected.filter(area=>!isReservedFanniArea(area)):[];
  const query=normalizeFanniAreaSearchText(String(search||'').trim());
- const options=[...new Set(AREA_OPTIONS)].filter(area=>String(area||'').trim()!=='جميع المناطق');
+ const options=[...new Set(AREA_OPTIONS)].filter(area=>!isReservedFanniArea(area));
  const visible=options.filter(area=>!query||normalizeFanniAreaSearchText(area).includes(query)).slice(0,80);
  return `<div class="fanni-area-picker">
   <div class="fanni-picker-search"><span aria-hidden="true">⌕</span><input id="${esc(inputId)}" value="${esc(search||'')}" oninput="${esc(searchHandler)}(this.value)" placeholder="اكتب اسم المنطقة للبحث..." autocomplete="off"></div>
