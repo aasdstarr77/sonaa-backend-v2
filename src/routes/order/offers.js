@@ -6,7 +6,7 @@ function createOrderOfferRouter({
   Order, Rating, Fanni, auth, hasAcceptedGuidelines, sanitizeOffer,
   publicRatings, normalizePhone, sanitizeText, hasRatingBlock, validSN,
   ACTIVE_STATUSES, currentPricing, DEFAULT_COMMISSION_RATE, money,
-  findPhoneContainingField, fanniCanHandleService, createNotification, Joi
+  findPhoneContainingField, fanniCanHandleService, fanniWorksInArea, createNotification, Joi
 }) {
   const router = express.Router();
 
@@ -204,7 +204,7 @@ function createOrderOfferRouter({
         _id: req.userId,
         role: 'fanni',
         status: 'معتمد'
-      }).select('specialties walletBalance level isFrozen limits badges isVerified isFeatured featuredUntil');
+      }).select('specialties areas walletBalance level isFrozen limits badges isVerified isFeatured featuredUntil');
   
       if (!fanni) {
         return res.status(403).json({
@@ -222,6 +222,12 @@ function createOrderOfferRouter({
       if (!fanniCanHandleService(fanni.specialties, order.service)) {
         return res.status(403).json({
           message: 'هذا الطلب خارج تخصصات حسابك المعتمدة'
+        });
+      }
+
+      if (!fanniWorksInArea(fanni.areas, order.area)) {
+        return res.status(403).json({
+          message: 'هذا الطلب خارج مناطق العمل المسجلة في حسابك'
         });
       }
   
