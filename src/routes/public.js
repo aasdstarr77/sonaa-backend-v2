@@ -58,8 +58,19 @@ function isBrokenWallScreenService(value) {
 /* قائمة مناطق الخدمة المعتمدة: القائمة الأساسية + المناطق النشطة التي تعتمدها الإدارة. */
 router.get('/areas', async (req, res, next) => {
   try {
-    const adminRegions=await Region.find({}).select('name isActive isDeleted isBase').lean();
-    return res.set('Cache-Control','no-store').json({ok:true,areas:getEffectiveAreaOptions(adminRegions)});
+    const [adminRegions, approvedTechnicians] = await Promise.all([
+      Region.find({}).select('name isActive isDeleted isBase').lean(),
+      Fanni.find({ status: 'معتمد', role: 'fanni' }).select('areas').lean()
+    ]);
+    const areas = getEffectiveAreaOptions(adminRegions);
+    const technicianCountByArea = Object.fromEntries(areas.map(area => {
+      const areaKey = normalizeArea(area);
+      const count = approvedTechnicians.filter(technician =>
+        Array.isArray(technician.areas) && technician.areas.some(value => normalizeArea(value) === areaKey)
+      ).length;
+      return [area, count];
+    }));
+    return res.set('Cache-Control','no-store').json({ok:true,areas,technicianCountByArea});
   } catch (err) { next(err); }
 });
 
