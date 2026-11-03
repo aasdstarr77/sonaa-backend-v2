@@ -18,6 +18,7 @@ function createOrderAvailableRouter({
 router.get('/available', auth(), async (req, res, next) => {
   try {
     let specialties = [];
+    let technicianAreas = [];
 
     if (req.user.role !== 'admin') {
       if (
@@ -50,6 +51,7 @@ router.get('/available', auth(), async (req, res, next) => {
       specialties = Array.isArray(fanni.specialties)
         ? fanni.specialties
         : [];
+      technicianAreas = Array.isArray(fanni.areas) ? fanni.areas : [];
 
       if (specialties.length === 0) {
         return res.json({ orders: [], data: [] });
@@ -69,7 +71,7 @@ router.get('/available', auth(), async (req, res, next) => {
     if (req.user.role !== 'admin') {
       matchingOrders = orders.filter(order =>
         fanniCanHandleService(specialties, order.service) &&
-        fanniWorksInArea(fanni?.areas, order.area)
+        fanniWorksInArea(technicianAreas, order.area)
       );
     }
 
