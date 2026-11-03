@@ -134,9 +134,9 @@ const frontendPath = possibleFrontendPaths.find(
 // Keep the admin HTML page out of all public static paths.
 // The private route is enabled only when a valid path is configured.
 const adminPanelPath = String(process.env.ADMIN_PANEL_PATH || '').trim();
-const isValidAdminPanelPath = /^\\/[A-Za-z0-9_-]{24,120}$/.test(adminPanelPath);
+const isValidAdminPanelPath = /^\/[A-Za-z0-9_-]{24,120}$/.test(adminPanelPath);
 app.use((req, res, next) => {
-  const normalizedPath = req.path.toLowerCase().replace(/\\/+$/, '') || '/';
+  const normalizedPath = req.path.toLowerCase().replace(/\/+$/, '') || '/';
   const isPublicAdminPage = ['/admin', '/admin.html', '/frontend/admin.html'].includes(normalizedPath);
   if (isPublicAdminPage) return res.sendStatus(404);
   if (isValidAdminPanelPath && req.path === adminPanelPath) return sendHtml(res, 'admin.html');
