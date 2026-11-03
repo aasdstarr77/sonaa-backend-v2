@@ -1,6 +1,8 @@
 'use strict';
 
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const Joi = require('joi');
@@ -34,7 +36,35 @@ const {
 const { auth, defaultAdminPermissions, ADMIN_PERMISSION_KEYS } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const { normalizePhone } = require('../utils/phone');
+
 const router = express.Router();
+
+// Authenticated mobile container for the exact web admin console.
+// The bearer token is copied into same-origin storage before any admin scripts run,
+// so every existing web-console action and permission guard remains authoritative.
+router.get('/mobile-panel', auth('admin'), (req, res, next) => {
+  try {
+    const authorization = String(req.headers.authorization || '');
+    const token = authorization.replace(/^Bearer\\s+/i, '').trim();
+    if (!token) return res.status(401).json({ message: 'جلسة الإدارة غير صالحة.' });
+    const filePath = path.join(__dirname, '../../frontend/admin.html');
+    let html = fs.readFileSync(filePath, 'utf8');
+    const tokenLiteral = JSON.stringify(token).replace(/</g, '\\u003c');
+    const bootstrap = `<base href="/"><script>
+      (function () {
+        var token = ${tokenLiteral};
+        localStorage.setItem('admin_token_v3', token);
+        localStorage.setItem('admin_token', token);
+        localStorage.setItem('token', token);
+        localStorage.setItem('auth_token', token);
+      })();
+    </script>`;
+    html = html.replace(/<head([^>]*)>/i, (head) => head + bootstrap);
+    return res.status(200).set('Cache-Control', 'no-store, no-cache, must-revalidate').type('html').send(html);
+  } catch (error) {
+    return next(error);
+  }
+});
 
 const createAdminServicesRouter = require('./admin/services');
 const createAdminPlatformRouter = require('./admin/platform');
