@@ -118,6 +118,7 @@ function createOrderCreationRouter({
             clientAccountLinkedAt: new Date(),
             service: value.service,
             area,
+            areaMatchingEnabled: true,
             address,
             clientName: safeClientName || 'عميل',
             clientPhone,
