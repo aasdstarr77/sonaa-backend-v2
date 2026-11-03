@@ -95,8 +95,9 @@ function onAreaSearch(value){
 }
 function onAreaInput(value){
   const area=sanitizeInput(value,100);
-  if(rejectPhoneInField(area,'المنطقة')){state.area='';const input=document.getElementById('areaInput');if(input)input.value='';return;}
+  if(rejectPhoneInField(area,'المنطقة')){state.area='';return;}
   state.area=area;
+  state.areaSearch='';
   render();
 }
 function onAddressInput(value){
