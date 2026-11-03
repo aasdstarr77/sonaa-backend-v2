@@ -167,7 +167,7 @@ function toggleEditArea(area){
 function renderFanniAreaPicker(selected,search,inputId,searchHandler,toggleHandler){
  const chosen=Array.isArray(selected)?selected.filter(area=>String(area||'').trim()!=='جميع المناطق'):[];
  const query=String(search||'').trim().toLocaleLowerCase('ar');
- const options=[...new Set(AREA_OPTIONS)];
+ const options=[...new Set(AREA_OPTIONS)].filter(area=>String(area||'').trim()!=='جميع المناطق');
  const visible=options.filter(area=>!query||String(area).toLocaleLowerCase('ar').includes(query)).slice(0,80);
  return `<div class="fanni-area-picker">
   <div class="fanni-picker-search"><span aria-hidden="true">⌕</span><input id="${esc(inputId)}" value="${esc(search||'')}" oninput="${esc(searchHandler)}(this.value)" placeholder="اكتب اسم المنطقة للبحث..." autocomplete="off"></div>
