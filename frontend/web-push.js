@@ -20,6 +20,24 @@
     return null;
   }
   function accountKey(a){return a.role+':'+a.token;}
+  function removeButton(key){
+    const b=document.getElementById('sonaa-web-push-enable');
+    if(b&&(!key||b._sonaaKey===key))b.remove();
+  }
+  function showButton(a,label){
+    const key=accountKey(a);
+    let b=document.getElementById('sonaa-web-push-enable');
+    if(b&&b._sonaaKey!==key){b.remove();b=null;}
+    if(!b){
+      b=document.createElement('button');
+      b.id='sonaa-web-push-enable';b._sonaaKey=key;b.type='button';
+      b.style.cssText='position:fixed;z-index:9999;top:12px;left:12px;max-width:calc(100vw - 24px);padding:9px 13px;border:1px solid #bfdbfe;border-radius:12px;background:#fff;color:#12305b;font:700 12px system-ui;box-shadow:0 4px 16px #0b1b3a22';
+      b.onclick=()=>enable(b,a);
+      document.body.appendChild(b);
+    }
+    b.textContent=label||'🔔 تفعيل إشعارات المتصفح';
+    b.disabled=false;
+  }
   async function saveSubscription(a,s){
     const r=await fetch('/api/notifications/'+a.role+'/web-subscription',{
       method:'POST',
@@ -33,17 +51,23 @@
     const key=accountKey(a);
     if(checkedFor===key||checkingFor===key||!('serviceWorker'in navigator)||!('PushManager'in window)||!('Notification'in window)||Notification.permission!=='granted')return;
     checkingFor=key;
+    let saved=false;
     try{
       const reg=await navigator.serviceWorker.register('/service-worker.js',{scope:'/'});
       const s=await reg.pushManager.getSubscription();
       if(s&&accountKey(account()||{role:'',token:''})===key){
         await saveSubscription(a,s);
-        hiddenFor=key;
-        const b=document.getElementById('sonaa-web-push-enable');
-        if(b&&b._sonaaKey===key)b.remove();
+        saved=true;hiddenFor=key;removeButton(key);
+      }else if(!s&&accountKey(account()||{role:'',token:''})===key){
+        showButton(a,'🔔 استكمال تفعيل إشعارات المتصفح');
+        checkedFor=key;
       }
-    }catch(_){}
-    finally{checkedFor=key;checkingFor='';}
+    }catch(_){
+      if(accountKey(account()||{role:'',token:''})===key){showButton(a,'🔔 إعادة تفعيل إشعارات المتصفح');checkedFor=key;}
+    }finally{
+      if(saved)checkedFor=key;
+      checkingFor='';
+    }
   }
   async function enable(b,a){
     if(!('serviceWorker'in navigator)||!('PushManager'in window)||!('Notification'in window)){alert('المتصفح لا يدعم إشعارات الويب. جرّب Chrome على أندرويد.');return;}
@@ -51,39 +75,31 @@
     const old=b.textContent;
     b.disabled=true;b.textContent='جاري التفعيل…';
     try{
-      if(await Notification.requestPermission()!=='granted')throw Error('لم يتم السماح بإشعارات المتصفح.');
-      const kr=await fetch('/api/notifications/web-push-public-key',{cache:'no-store'}),kd=await kr.json();
-      if(!kr.ok||!kd.publicKey)throw Error('خدمة إشعارات المتصفح غير متاحة حاليًا. حاول مرة أخرى لاحقًا.');
+      let permission=Notification.permission;
+      if(permission!=='granted')permission=await Notification.requestPermission();
+      if(permission!=='granted')throw Error('لم يتم السماح بإشعارات المتصفح.');
+      const kr=await fetch('/api/notifications/web-push-public-key',{cache:'no-store'}),kd=await kr.json().catch(()=>({}));
+      if(!kr.ok||!kd.publicKey)throw Error(kd.message||'خدمة إشعارات المتصفح غير متاحة حاليًا. حاول مرة أخرى لاحقًا.');
       const reg=await navigator.serviceWorker.register('/service-worker.js',{scope:'/'});
       await navigator.serviceWorker.ready;
       let s=await reg.pushManager.getSubscription();
       if(!s)s=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:bytes(kd.publicKey)});
       await saveSubscription(a,s);
-      hiddenFor=accountKey(a);checkedFor=hiddenFor;
-      b.remove();
-    }catch(e){alert(e.message||'تعذر التفعيل.');b.textContent=old;b.disabled=false;}
+      hiddenFor=accountKey(a);checkedFor=hiddenFor;removeButton(hiddenFor);
+    }catch(e){checkedFor=accountKey(a);alert(e.message||'تعذر التفعيل.');b.textContent=old;b.disabled=false;}
   }
   function mount(a){
-    let b=document.getElementById('sonaa-web-push-enable');
+    const b=document.getElementById('sonaa-web-push-enable');
     if(!a){if(b)b.remove();return;}
     const key=accountKey(a);
-    if(b&&b._sonaaKey!==key){b.remove();b=null;}
-    if(hiddenFor===key){if(b)b.remove();return;}
-    // Do not flash the activation button after the browser has already granted notification permission.
-    // Silently sync any existing subscription with the signed-in account.
+    if(b&&b._sonaaKey!==key){b.remove();}
+    if(hiddenFor===key){removeButton(key);return;}
     if('Notification'in window&&Notification.permission==='granted'){
-      if(b)b.remove();
       void existingSubscription(a);
+      if(checkedFor!==key&&!checkingFor)showButton(a,'🔔 جارٍ فحص إشعارات المتصفح…');
       return;
     }
-    if(b)return;
-    b=document.createElement('button');
-    b.id='sonaa-web-push-enable';b._sonaaKey=key;
-    b.textContent='🔔 تفعيل إشعارات المتصفح';b.type='button';
-    b.style.cssText='position:fixed;z-index:9999;top:12px;left:12px;max-width:calc(100vw - 24px);padding:9px 13px;border:1px solid #bfdbfe;border-radius:12px;background:#fff;color:#12305b;font:700 12px system-ui;box-shadow:0 4px 16px #0b1b3a22';
-    b.onclick=()=>enable(b,a);
-    document.body.appendChild(b);
-    void existingSubscription(a);
+    showButton(a,'🔔 تفعيل إشعارات المتصفح');
   }
   function refresh(){mount(account());}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',refresh);else refresh();
