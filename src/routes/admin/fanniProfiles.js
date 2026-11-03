@@ -93,6 +93,8 @@ function createAdminFanniProfilesRouter({
       const allAreas = areas.some(item => normalizeArea(item) === normalizeArea(ALL_AREAS_LABEL));
       const normalizedAreas = allAreas ? [ALL_AREAS_LABEL] : areas;
       const specialties = [...new Set(value.specialties.map(item => item.normalize('NFC').trim()).filter(Boolean))];
+      const invalidSpecialties = specialties.filter(item => !(ALL_SERVICES || []).some(service => service.normalize('NFC').trim() === item));
+      if (invalidSpecialties.length) return res.status(400).json({ message: 'توجد خدمة غير موجودة في قائمة الخدمات المعتمدة.', invalidSpecialties });
       const before = { specialties: [...(fanni.specialties || [])], areas: [...(fanni.areas || [])] };
       fanni.specialties = specialties;
       fanni.areas = normalizedAreas;
