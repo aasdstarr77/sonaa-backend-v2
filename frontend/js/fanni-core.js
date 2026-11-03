@@ -11,7 +11,6 @@ const log=(...a)=>{if(IS_DEV)console.log(...a)};
 let CATEGORIES=[];
 let ALL_SERVICES=[];
 let AREA_OPTIONS=[];
-const ALL_AREAS_LABEL='جميع المناطق';
 let SERVICES_LOADING=true;
 let SERVICES_ERROR='';
 
@@ -147,8 +146,6 @@ function onRegAreaSearch(value){
 }
 function toggleRegArea(area){
  const value=clean(area,60);if(!value)return;
- if(value===ALL_AREAS_LABEL){state.regAreas=state.regAreas.includes(ALL_AREAS_LABEL)?[]:[ALL_AREAS_LABEL];state.error='';render();return;}
- if(state.regAreas.includes(ALL_AREAS_LABEL))state.regAreas=[];
  if(state.regAreas.includes(value))state.regAreas=state.regAreas.filter(item=>item!==value);
  else if(state.regAreas.length>=30){state.error='تقدر تختار لحد 30 منطقة فقط.';render();return;}
  else state.regAreas=[...state.regAreas,value];
@@ -162,8 +159,6 @@ function onEditAreaSearch(value){
 }
 function toggleEditArea(area){
  const value=clean(area,60);if(!value)return;
- if(value===ALL_AREAS_LABEL){state.editAreas=state.editAreas.includes(value)?[]:[value];state.error='';render();return;}
- state.editAreas=state.editAreas.filter(item=>item!==ALL_AREAS_LABEL);
  if(state.editAreas.includes(value))state.editAreas=state.editAreas.filter(item=>item!==value);
  else if(state.editAreas.length>=30){state.error='تقدر تختار لحد 30 منطقة فقط.';render();return;}
  else state.editAreas=[...state.editAreas,value];
@@ -172,7 +167,7 @@ function toggleEditArea(area){
 function renderFanniAreaPicker(selected,search,inputId,searchHandler,toggleHandler){
  const chosen=Array.isArray(selected)?selected:[];
  const query=String(search||'').trim().toLocaleLowerCase('ar');
- const options=[ALL_AREAS_LABEL,...AREA_OPTIONS].filter((area,index,list)=>list.indexOf(area)===index);
+ const options=[...new Set(AREA_OPTIONS)];
  const visible=options.filter(area=>!query||String(area).toLocaleLowerCase('ar').includes(query)).slice(0,80);
  return `<div class="fanni-area-picker">
   <div class="fanni-picker-search"><span aria-hidden="true">⌕</span><input id="${esc(inputId)}" value="${esc(search||'')}" oninput="${esc(searchHandler)}(this.value)" placeholder="اكتب اسم المنطقة للبحث..." autocomplete="off"></div>
