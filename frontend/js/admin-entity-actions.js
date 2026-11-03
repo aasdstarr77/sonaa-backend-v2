@@ -76,6 +76,30 @@ function logout(){clearToken(); state.pageMode='home'; state.fannis=[]; state.fi
 async function loadComplaints(){if(!getToken())return; state.loadingComplaints=true; state.errors.complaints=''; render(); try{const data=await tryApi(['/api/admin/complaints'],{method:'GET'}); state.complaints=extractList(data,['complaints','items']); applyComplaintFilter();}catch(e){state.complaints=[]; state.filteredComplaints=[]; state.errors.complaints=e.message||'تعذر تحميل الشكاوى'; render();}finally{state.loadingComplaints=false; if(state.tab==='complaints')render();}}
 async function saveComplaint(id){id=String(id||'').trim(); if(!/^[a-f0-9]{24}$/i.test(id)){showToast('معرّف الشكوى غير صالح','error');return;} const statusEl=document.getElementById('complaint-status-'+id); const noteEl=document.getElementById('complaint-note-'+id); const responseEl=document.getElementById('complaint-response-'+id); if(!statusEl||!noteEl||!responseEl){showToast('تعذر قراءة بيانات الشكوى','error');return;} const status=statusEl.value; if(state.deletingItems.includes('complaint:'+id))return; state.deletingItems.push('complaint:'+id); render(); try{const result=await tryApi(['/api/admin/complaints/'+encodeURIComponent(id)],{method:'PATCH',body:JSON.stringify({status:status,adminNote:noteEl.value.trim(),adminResponse:responseEl.value.trim()})}); const updated=result.complaint||result.data||result; const index=state.complaints.findIndex(c=>String(c._id||c.id||'')===id); if(index>=0)state.complaints[index]={...state.complaints[index],...updated}; showToast(result.message||'تم تحديث الشكوى'); applyComplaintFilter();}catch(e){showToast(e.message||'تعذر تحديث الشكوى','error');}finally{state.deletingItems=state.deletingItems.filter(x=>x!=='complaint:'+id); if(state.tab==='complaints')render();}}
 
+async function editFanniServiceAreas(id){
+  const fanni=(state.fannis||[]).find(item=>String(item._id||'')===String(id||''));
+  if(!fanni)return showToast('لم يتم العثور على الفني','error');
+  try{
+    const [serviceData,areasData]=await Promise.all([
+      tryApi(['/api/services'],{method:'GET'}),
+      tryApi(['/api/areas'],{method:'GET'})
+    ]);
+    const services=Array.isArray(serviceData.services)?serviceData.services:[];
+    const areas=Array.isArray(areasData.areas)?areasData.areas:[];
+    const serviceText=prompt('خدمات الفني (افصل بين الخدمات بعلامة ،).\\nالخدمات المعتمدة: '+services.join('، '),Array.isArray(fanni.specialties)?fanni.specialties.join('، '):'');
+    if(serviceText===null)return;
+    const areaText=prompt('مناطق عمل الفني (افصل بين المناطق بعلامة ،).\\nالمناطق المعتمدة: '+areas.join('، ')+'\\nيمكن كتابة «جميع المناطق» بدل اختيار مناطق متعددة.',Array.isArray(fanni.areas)?fanni.areas.join('، '):'');
+    if(areaText===null)return;
+    const parse=value=>[...new Set(String(value||'').split(/[,،;؛\\n\\r]+/).map(item=>item.trim()).filter(Boolean))];
+    const specialties=parse(serviceText),selectedAreas=parse(areaText);
+    if(!specialties.length||!selectedAreas.length)return showToast('لازم تحدد خدمة واحدة ومنطقة عمل واحدة على الأقل.','error');
+    if(!confirm('تأكيد تحديث الخدمات ومناطق العمل للفني '+String(fanni.name||'')+'؟'))return;
+    const result=await tryApi(['/api/admin/fannis/'+encodeURIComponent(id)+'/service-areas'],{method:'PATCH',body:JSON.stringify({specialties,areas:selectedAreas})});
+    showToast(result.message||'تم تحديث خدمات ومناطق الفني');
+    await loadAll();
+  }catch(e){showToast(e.message||'تعذر تعديل خدمات ومناطق الفني','error');}
+}
+
 // --- إدارة الفنيين: المستويات والشارات والملاحظات وحدود الاستقبال ---
 async function updateFanniLevel(id,level){try{const res=await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/level`],{method:'PATCH',body:JSON.stringify({level})}); showToast(res.message||'تم تحديث المستوى'); await loadAll();}catch(e){showToast(e.message||'تعذر تحديث المستوى','error');}}
 async function toggleTrustBadge(id){try{const res=await tryApi([`/api/admin/fannis/${encodeURIComponent(id)}/badge`],{method:'PATCH',body:JSON.stringify({badge:'trusted'})}); showToast(res.message||'تم تحديث الشارة'); await loadAll();}catch(e){showToast(e.message||'تعذر تحديث الشارة','error');}}
