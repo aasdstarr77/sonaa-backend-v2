@@ -430,6 +430,46 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
   outline-offset:2px!important;
 }
 
+
+/* Requested admin header refinements: blue navigation/editor actions and larger centered logo. */
+.glass-header .admin-header-actions a[href="/"],
+.glass-header .admin-header-actions #visualEditorLink{
+  background:linear-gradient(145deg,#60a5fa 0%,#3b82f6 52%,#1d4ed8 100%)!important;
+  color:#fff!important;
+  border:1px solid #93c5fd!important;
+  box-shadow:0 3px 0 #1e40af,0 5px 10px rgba(37,99,235,.18),inset 0 1px 0 rgba(255,255,255,.45)!important;
+}
+.glass-header>div{
+  grid-template-columns:minmax(0,1fr) 68px minmax(0,1fr)!important;
+}
+.glass-header .admin-logo-frame{
+  width:64px!important;
+  min-width:64px!important;
+  height:64px!important;
+  min-height:64px!important;
+  flex-basis:64px!important;
+}
+.glass-header .admin-header-logo{
+  width:54px!important;
+  height:54px!important;
+}
+@media(max-width:420px){
+  .glass-header>div{
+    grid-template-columns:minmax(0,1fr) 56px minmax(0,1fr)!important;
+  }
+  .glass-header .admin-logo-frame{
+    width:54px!important;
+    min-width:54px!important;
+    height:54px!important;
+    min-height:54px!important;
+    flex-basis:54px!important;
+  }
+  .glass-header .admin-header-logo{
+    width:46px!important;
+    height:46px!important;
+  }
+}
+
 </style>
 
 <link rel="stylesheet" href="/css/theme.css">
