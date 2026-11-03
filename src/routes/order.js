@@ -35,6 +35,16 @@ const {
   createFanniCanHandleService
 } = require('../utils/orderPresentation');
 const fanniCanHandleService = createFanniCanHandleService({ CATEGORIES, normalizeServiceName });
+const { normalizeArea, ALL_AREAS_LABEL } = require('../config/areas');
+function fanniWorksInArea(areas, requestedArea) {
+  const requested = normalizeArea(requestedArea);
+  if (!requested) return false;
+  const values = Array.isArray(areas) ? areas : [];
+  return values.some(value => {
+    const normalized = normalizeArea(value);
+    return normalized === requested || normalized === normalizeArea(ALL_AREAS_LABEL);
+  });
+}
 const createOrderChatRouter = require('./order/chat');
 const createOrderTrackingRouter = require('./order/tracking');
 const createOrderCreationRouter = require('./order/create');
@@ -214,7 +224,7 @@ router.use(createOrderRatingRouter({
 }));
 router.use(createOrderAvailableRouter({
   auth, Order, ACTIVE_STATUSES, Fanni, Rating, normalizePhone,
-  fanniCanHandleService, publicOrder
+  fanniCanHandleService, fanniWorksInArea, publicOrder
 }));
 
 router.use(createOrderCreationRouter({
@@ -238,6 +248,7 @@ router.use(createOrderAdminPublicationRouter({
   ORDER_EXPIRY_HOURS,
   Fanni,
   fanniCanHandleService,
+  fanniWorksInArea,
   createNotification,
   publicOrder
 }));
@@ -274,6 +285,7 @@ router.use(createOrderOfferRouter({
   money,
   findPhoneContainingField,
   fanniCanHandleService,
+  fanniWorksInArea,
   createNotification,
   Joi
 }));
