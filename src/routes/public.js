@@ -55,28 +55,21 @@ function isBrokenWallScreenService(value) {
 }
 
 
-/* القائمة الموحدة لمناطق الخدمة: القائمة الأساسية + المناطق التي يضيفها الفنيون المعتمدون. */
+/* قائمة مناطق الخدمة المعتمدة: القائمة الأساسية + المناطق النشطة التي تعتمدها الإدارة. */
 router.get('/areas', async (req, res, next) => {
   try {
-    const [technicians, adminRegions] = await Promise.all([
-      Fanni.find({ status: 'معتمد', role: 'fanni' }).select('areas').lean(),
-      Region.find({ isActive: true }).select('name').lean()
-    ]);
+    const adminRegions = await Region.find({ isActive: true }).select('name').lean();
     const byNormalizedName = new Map();
     for (const area of AREA_OPTIONS) byNormalizedName.set(normalizeArea(area), area);
     for (const item of adminRegions) {
-      const area = String(item.name || '').trim().normalize('NFC').replace(/\s+/g, ' ');
+      const area = String(item.name || '').trim().normalize('NFC').replace(/\\s+/g, ' ');
       const key = normalizeArea(area);
       if (area.length >= 2 && area.length <= 100 && key !== normalizeArea(ALL_AREAS_LABEL) && !byNormalizedName.has(key)) byNormalizedName.set(key, area);
     }
-    for (const technician of technicians) {
-      for (const rawArea of Array.isArray(technician.areas) ? technician.areas : []) {
-        const area = String(rawArea || '').trim().normalize('NFC').replace(/\s+/g, ' ');
-        const key = normalizeArea(area);
-        if (area.length >= 2 && area.length <= 60 && key !== normalizeArea(ALL_AREAS_LABEL) && !byNormalizedName.has(key)) byNormalizedName.set(key, area);
-      }
-    }
-    return res.json({ ok: true, areas: Array.from(byNormalizedName.values()).sort((a, b) => a.localeCompare(b, 'ar')) });
+    return res.set('Cache-Control', 'no-store').json({
+      ok: true,
+      areas: Array.from(byNormalizedName.values()).sort((a, b) => a.localeCompare(b, 'ar'))
+    });
   } catch (err) { next(err); }
 });
 
