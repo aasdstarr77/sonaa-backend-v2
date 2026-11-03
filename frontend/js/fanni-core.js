@@ -155,16 +155,8 @@ function toggleRegArea(area){
  state.error='';render();
 }
 function addCustomRegArea(){
- const area=clean(state.regAreaCustom,60).replace(/\s+/g,' ');
- if(area.length<2){state.error='اكتب اسم منطقة صحيح من حرفين على الأقل.';render();return;}
- if(/01[0-9]{9}/.test(area.replace(/\D/g,''))){state.error='ممنوع كتابة رقم تليفون في اسم المنطقة.';render();return;}
- const key=area.normalize('NFC').trim().toLowerCase();
- const existing=AREA_OPTIONS.find(item=>item.normalize('NFC').trim().toLowerCase()===key)||area;
- if(state.regAreas.includes(existing)){state.error='المنطقة دي مختارة بالفعل.';render();return;}
- if(state.regAreas.includes(ALL_AREAS_LABEL))state.regAreas=[];
- if(state.regAreas.length>=30){state.error='تقدر تختار لحد 30 منطقة فقط.';render();return;}
- if(!AREA_OPTIONS.includes(existing))AREA_OPTIONS=[...AREA_OPTIONS,existing].sort((a,b)=>a.localeCompare(b,'ar'));
- state.regAreas=[...state.regAreas,existing];state.regAreaCustom='';state.regAreaSearch='';state.error='';render();
+ state.error='المنطقة غير موجودة في القائمة المعتمدة. اطلب من الإدارة إضافتها أولًا ثم اختارها من القائمة.';
+ render();
 }
 async function loadAreas(){
  try{const data=await API.areas();AREA_OPTIONS=Array.isArray(data?.areas)?data.areas:[];}
