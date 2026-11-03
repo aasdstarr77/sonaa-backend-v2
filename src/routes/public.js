@@ -62,7 +62,7 @@ router.get('/areas', async (req, res, next) => {
     const byNormalizedName = new Map();
     for (const area of AREA_OPTIONS) byNormalizedName.set(normalizeArea(area), area);
     for (const item of adminRegions) {
-      const area = String(item.name || '').trim().normalize('NFC').replace(/\\s+/g, ' ');
+      const area = String(item.name || '').trim().normalize('NFC').replace(/\s+/g, ' ');
       const key = normalizeArea(area);
       if (area.length >= 2 && area.length <= 100 && key !== normalizeArea(ALL_AREAS_LABEL) && !byNormalizedName.has(key)) byNormalizedName.set(key, area);
     }
