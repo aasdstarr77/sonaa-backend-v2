@@ -37,7 +37,7 @@ const {
   createFanniCanHandleService
 } = require('../utils/orderPresentation');
 const fanniCanHandleService = createFanniCanHandleService({ CATEGORIES, normalizeServiceName });
-const { normalizeArea, ALL_AREAS_LABEL } = require('../config/areas');
+const { ALL_AREAS_LABEL } = require('../config/areas');
 function fanniWorksInArea(areas, requestedArea) {
   const requested = normalizeArea(requestedArea);
   if (!requested) return false;
