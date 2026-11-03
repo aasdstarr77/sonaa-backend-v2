@@ -34,7 +34,7 @@ function createAdminOperationsRouter({
     if(seeds.length)await Region.bulkWrite(seeds,{ordered:false});
     if(merged||renamed)await writeAdminAudit(req,'توحيد أسماء المناطق وإزالة التكرار','regions','base-area-normalization',JSON.stringify({merged,renamed}));
   }
-  router.get('/regions',auth('admin'),async(req,res,next)=>{try{await syncManagedAreas(req);const regions=await Region.find({}).sort({isDeleted:1,isActive:-1,name:1}).limit(1000).lean();return res.set('Cache-Control','no-store').json({regions,items:regions});}catch(error){return next(error);}});
+  router.get('/regions',auth('admin'),async(req,res,next)=>{try{const regions=await Region.find({}).sort({isDeleted:1,isActive:-1,name:1}).limit(1000).lean();return res.set('Cache-Control','no-store').json({regions,items:regions});}catch(error){return next(error);}});
   router.post('/regions',auth('admin'),async(req,res,next)=>{try{
     const checked=Joi.object({name:Joi.string().trim().min(2).max(100).required()}).required().validate(req.body||{},{abortEarly:false,stripUnknown:true});if(checked.error)return res.status(400).json({message:'اسم المنطقة مطلوب من حرفين إلى 100 حرف'});
     const name=canonicalAreaName(checked.value.name),normalizedName=normalizeArea(name);if(name.length<2)return res.status(400).json({message:'اسم المنطقة غير صالح'});
