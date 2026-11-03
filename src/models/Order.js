@@ -101,6 +101,10 @@ trim: true,
 maxlength: 250
 },
 
+// Only orders created after the area-matching rollout use technician work-area eligibility.
+// Legacy orders keep their previous specialty-only eligibility.
+areaMatchingEnabled: { type: Boolean, default: false, index: true },
+
 // العنوان التفصيلي للعميل.
 // لا يجوز عرضه للفني قبل قبول عرضه وتعيينه على الطلب.
 address: {
