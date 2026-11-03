@@ -90,6 +90,7 @@ function onAreaInput(value){
   const area=sanitizeInput(value,100);
   if(rejectPhoneInField(area,'المنطقة')){state.area='';const input=document.getElementById('areaInput');if(input)input.value='';return;}
   state.area=area;
+  render();
 }
 function onAddressInput(value){
   const clean=sanitizeInput(value,250);
