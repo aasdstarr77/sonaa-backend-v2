@@ -8,7 +8,7 @@ const crypto = require('crypto');
 
 const Fanni = require('../models/Fanni');
 const Region = require('../models/Region');
-const { AREA_OPTIONS, ALL_AREAS_LABEL, normalizeArea, getEffectiveAreaOptions } = require('../config/areas');
+const { AREA_OPTIONS, normalizeArea, getEffectiveAreaOptions } = require('../config/areas');
 const TopupRequest = require('../models/TopupRequest');
 
 const { auth } = require('../middleware/auth');
@@ -22,8 +22,6 @@ async function validateApprovedAreas(areas) {
   const allRegions=await Region.find({}).select('name isActive isDeleted isBase').lean();
   const allowed=new Set(getEffectiveAreaOptions(allRegions).map(normalizeArea));
   const normalized = [...new Set((Array.isArray(areas) ? areas : []).map(value => String(value || '').normalize('NFC').trim().replace(/\s+/g, ' ')).filter(value => value.length >= 2))];
-  const allAreas = normalized.some(value => normalizeArea(value) === normalizeArea(ALL_AREAS_LABEL));
-  if (allAreas) return null;
   return normalized.length && normalized.every(value => allowed.has(normalizeArea(value))) ? normalized : null;
 }
 

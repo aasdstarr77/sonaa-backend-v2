@@ -37,14 +37,14 @@ const {
   createFanniCanHandleService
 } = require('../utils/orderPresentation');
 const fanniCanHandleService = createFanniCanHandleService({ CATEGORIES, normalizeServiceName });
-const { ALL_AREAS_LABEL } = require('../config/areas');
+
 function fanniWorksInArea(areas, requestedArea) {
   const requested = normalizeArea(requestedArea);
   if (!requested) return false;
   const values = Array.isArray(areas) ? areas : [];
   return values.some(value => {
     const normalized = normalizeArea(value);
-    return normalized === requested || normalized === normalizeArea(ALL_AREAS_LABEL);
+    return normalized === requested;
   });
 }
 const createOrderChatRouter = require('./order/chat');

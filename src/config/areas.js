@@ -197,13 +197,12 @@ const RAW_AREA_OPTIONS = [
   "قليوب",
   "الخانكة"
 ];
-const ALL_AREAS_LABEL = 'جميع المناطق';
 function canonicalAreaName(value) { return String(value || '').normalize('NFC').trim().replace(/\s+/g, ' ').replace(/^القاهرة\s*[-–—]\s*/u, '').trim(); }
 function normalizeArea(value) { return canonicalAreaName(value).toLocaleLowerCase('ar-EG'); }
 const AREA_OPTIONS = Array.from(new Map(RAW_AREA_OPTIONS.map(value => { const name = canonicalAreaName(value); return [normalizeArea(name), name]; }).filter(([key, name]) => key && name.length >= 2)).values());
 function getEffectiveAreaOptions(regionDocs = []) {
  const areas = new Map(AREA_OPTIONS.map(name => [normalizeArea(name), name]));
- for (const region of Array.isArray(regionDocs) ? regionDocs : []) { const name=canonicalAreaName(region&&region.name),key=normalizeArea(name); if(!key||key===normalizeArea(ALL_AREAS_LABEL))continue; if(region.isDeleted===true||region.isActive===false)areas.delete(key);else areas.set(key,name); }
+ for (const region of Array.isArray(regionDocs) ? regionDocs : []) { const name=canonicalAreaName(region&&region.name),key=normalizeArea(name); if(!key)continue; if(region.isDeleted===true||region.isActive===false)areas.delete(key);else areas.set(key,name); }
  return Array.from(areas.values()).sort((a,b)=>a.localeCompare(b,'ar'));
 }
-module.exports = { AREA_OPTIONS, ALL_AREAS_LABEL, normalizeArea, canonicalAreaName, getEffectiveAreaOptions };
+module.exports = { AREA_OPTIONS, normalizeArea, canonicalAreaName, getEffectiveAreaOptions };

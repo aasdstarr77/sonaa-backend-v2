@@ -7,7 +7,7 @@ const AdminConfig = require('../models/AdminConfig');
 const Service = require('../models/Service');
 const Fanni = require('../models/Fanni');
 const Region = require('../models/Region');
-const { AREA_OPTIONS, ALL_AREAS_LABEL, normalizeArea, getEffectiveAreaOptions } = require('../config/areas');
+const { AREA_OPTIONS, normalizeArea, getEffectiveAreaOptions } = require('../config/areas');
 
 const {
   CATEGORIES,
@@ -89,7 +89,7 @@ router.get('/services', async (req, res, next) => {
       for (const technician of approvedTechnicians) {
         const technicianAreas = Array.isArray(technician.areas) ? technician.areas : [];
         const worksHere = technicianAreas.some(value =>
-          normalizeArea(value) === areaKey || normalizeArea(value) === normalizeArea(ALL_AREAS_LABEL)
+          normalizeArea(value) === areaKey
         );
         if (!worksHere) continue;
         const specialties = new Set((Array.isArray(technician.specialties) ? technician.specialties : []).map(normalize).filter(Boolean));
@@ -185,7 +185,7 @@ router.get('/services', async (req, res, next) => {
           const count = approvedTechnicians.filter((technician, index) => {
             const technicianAreas = Array.isArray(technician.areas) ? technician.areas : [];
             const worksHere = technicianAreas.some(value =>
-              normalizeArea(value) === areaKey || normalizeArea(value) === normalizeArea(ALL_AREAS_LABEL)
+              normalizeArea(value) === areaKey
             );
             return worksHere && Array.from(normalizedSpecialties[index] || []).some(specialty => normalizedNames.has(specialty));
           }).length;

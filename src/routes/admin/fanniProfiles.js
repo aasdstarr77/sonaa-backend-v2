@@ -1,7 +1,7 @@
 'use strict';
 
 const express = require('express');
-const { normalizeArea, ALL_AREAS_LABEL, getEffectiveAreaOptions } = require('../../config/areas');
+const { normalizeArea, getEffectiveAreaOptions } = require('../../config/areas');
 const { normalizePhone } = require('../../utils/phone');
 
 function createAdminFanniProfilesRouter({
@@ -54,11 +54,10 @@ function createAdminFanniProfilesRouter({
       const duplicate = await Fanni.findOne({ phone, _id: { $ne: fanni._id } }).select('_id');
       if (duplicate) return res.status(409).json({ message: 'رقم الهاتف مسجل بالفعل في حساب آخر.' });
       const allRegions=await Region.find({}).select('name isActive isDeleted isBase').lean();
-      const allowedAreas=new Set([...getEffectiveAreaOptions(allRegions),ALL_AREAS_LABEL].map(normalizeArea));
+      const allowedAreas=new Set(getEffectiveAreaOptions(allRegions).map(normalizeArea));
       const areas = [...new Map(value.areas.map(item => [normalizeArea(item), String(item).normalize('NFC').trim().replace(/\s+/g, ' ')])).values()];
       if (areas.some(item => !allowedAreas.has(normalizeArea(item)))) return res.status(400).json({ message: 'اختار مناطق العمل من القائمة المعتمدة فقط.' });
-      const allAreas = areas.some(item => normalizeArea(item) === normalizeArea(ALL_AREAS_LABEL));
-      const normalizedAreas = allAreas ? [ALL_AREAS_LABEL] : areas;
+      const normalizedAreas = areas;
       const specialties = [...new Set(value.specialties.map(item => item.normalize('NFC').trim()))];
       if (specialties.some(item => !(ALL_SERVICES || []).some(service => service.normalize('NFC').trim() === item))) return res.status(400).json({ message: 'توجد خدمة غير موجودة في قائمة الخدمات المعتمدة.' });
       const before = { phone: fanni.phone, specialties: [...(fanni.specialties || [])], areas: [...(fanni.areas || [])] };
@@ -133,13 +132,12 @@ function createAdminFanniProfilesRouter({
       if (fanni.pendingProfileChange?.requestedAt) return res.status(409).json({ message: 'لدى الفني طلب تعديل بيانات قيد المراجعة. راجع الطلب أولًا قبل التعديل المباشر.' });
 
       const activeRegions = await Region.find({ isActive: true }).select('name').lean();
-      const allowedAreas = new Set([...(AREA_OPTIONS || []), ...activeRegions.map(item => item.name), ALL_AREAS_LABEL].map(normalizeArea));
+      const allowedAreas = new Set([...getEffectiveAreaOptions(activeRegions), ...(AREA_OPTIONS || [])].map(normalizeArea));
       const areas = [...new Map(value.areas.map(item => [normalizeArea(item), String(item).normalize('NFC').trim().replace(/\s+/g, ' ')])).values()];
       const invalidAreas = areas.filter(item => !allowedAreas.has(normalizeArea(item)));
       if (invalidAreas.length) return res.status(400).json({ message: 'توجد منطقة غير معتمدة في القائمة. حدّث قائمة المناطق ثم حاول مرة أخرى.', invalidAreas });
 
-      const allAreas = areas.some(item => normalizeArea(item) === normalizeArea(ALL_AREAS_LABEL));
-      const normalizedAreas = allAreas ? [ALL_AREAS_LABEL] : areas;
+      const normalizedAreas = areas;
       const specialties = [...new Set(value.specialties.map(item => item.normalize('NFC').trim()).filter(Boolean))];
       const invalidSpecialties = specialties.filter(item => !(ALL_SERVICES || []).some(service => service.normalize('NFC').trim() === item));
       if (invalidSpecialties.length) return res.status(400).json({ message: 'توجد خدمة غير موجودة في قائمة الخدمات المعتمدة.', invalidSpecialties });
