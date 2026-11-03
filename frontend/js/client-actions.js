@@ -184,8 +184,8 @@ async function loadServices(){
   if(state.servicesLoading&&state.servicesLoaded)return;
   state.servicesLoading=true;state.servicesError='';render();
   try{
-    const [data, areas]=await Promise.all([API.getServices(),API.getAreas()]);
-    AREA_OPTIONS=Array.isArray(areas)?areas:[];
+    const data=await API.getServices();
+    try{const areas=await API.getAreas();AREA_OPTIONS=Array.isArray(areas)?areas:[];}catch(error){AREA_OPTIONS=[];log('تعذر تحميل المناطق:',error);}
     CATEGORIES=data.categories;ALL_SERVICES=data.services;
     TECHNICIAN_COUNTS=Object.fromEntries(CATEGORIES.flatMap(category=>Object.entries(category.serviceTechnicianCounts||{})));
     const flat=[...new Set(CATEGORIES.flatMap(c=>c.services))];
