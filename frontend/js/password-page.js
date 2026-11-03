@@ -74,27 +74,67 @@ $('issueCode').addEventListener('click',async()=>{if(!selectedId)return; if(!con
 $('sendAdminReply').addEventListener('click',async()=>{const text=$('adminReply').value.trim();if(!selectedId||!text)return notice('اكتب رد الدعم أولًا.');if(recoveryReplyBusy)return;recoveryReplyBusy=true;$('sendAdminReply').disabled=true;try{const d=await api('/password-recovery/admin/requests/'+encodeURIComponent(selectedId)+'/reply',{method:'POST',auth:true,body:{text}});$('adminReply').value='';selectedRecovery=d.recovery;drawMessages($('adminMessages'),d.recovery.messages);notice('تم إرسال الرد داخل المحادثة.',true);await loadQueue()}catch(e){notice(e.message)}finally{recoveryReplyBusy=false;$('sendAdminReply').disabled=false}});
 $('rejectRecovery').addEventListener('click',async()=>{if(!selectedId||!confirm('رفض طلب الاستعادة؟'))return;try{const d=await api('/password-recovery/admin/requests/'+encodeURIComponent(selectedId)+'/reject',{method:'POST',auth:true,body:{reason:'تعذر التحقق من ملكية الحساب.'}});notice(d.message,true);$('selectedRecovery').classList.add('hidden');await loadQueue()}catch(e){notice(e.message)}});
 let editFanniCategories=[],editFanniSelectedSpecialties=[],editFanniOpenCategory='',editFanniAreaOptions=[],editFanniSelectedAreas=[],editFanniAreaSearch='';
+$('editFanniAreaSearch')?.addEventListener('input',e=>{editFanniAreaSearch=String(e.target.value||'').slice(0,60);renderEditFanniAreas();});
 function editFanniServiceIcon(name){const s=String(name||'');const rules=[[/كاميرات|مراقبة/,'📹'],[/دش|رسيفر|استقبال|شاشة تلفزيون|شاشات/,'📡'],[/تنظيف سجاد|موكيت|كنب|انتريهات|مراتب/,'🧽'],[/مكافحة حشرات/,'🪲'],[/تنظيف|تطهير/,'🧹'],[/كهرباء|كهربائي|قواطع|مفاتيح|برايز|إضاءة|نجف/,'⚡'],[/تسريب|مياه|سباك|صرف صحي|سيفون|خلاطات|حوض/,'🚿'],[/تكييف|فريون|تبريد/,'❄️'],[/ثلاجات|فريزر|مبرد مياه/,'🧊'],[/غسالات|أطباق/,'🧺'],[/بوتاجاز|أفران|ميكروويف|غاز/,'🔥'],[/نجار|أثاث|موبيليا|دواليب|أبواب|شبابيك/,'🪚'],[/نقاش|دهانات/,'🖌️'],[/ديكور|ورق حائط|جبس بورد/,'🎨'],[/كمبيوتر|لابتوب|طابعات/,'💻'],[/راوتر|إنترنت|شبكات/,'📶'],[/نقل/,'🚚']];for(const [re,icon] of rules)if(re.test(s))return icon;return /تركيب|صيانة|إصلاح|تصليح/.test(s)?'🔧':'🧰'}
+function renderEditFanniAreas(){
+ const root=$('editFanniAreasPicker');if(!root)return;
+ if(!editFanniAreaOptions.length){root.innerHTML='<div class="picker-state">قائمة المناطق غير متاحة حاليًا. <button type="button" class="btn secondary" onclick="loadEditFanniAreas()">إعادة المحاولة</button></div>';return;}
+ const allLabel='جميع المناطق';
+ const options=[allLabel,...editFanniAreaOptions].filter((area,index,list)=>list.indexOf(area)===index);
+ const query=String(editFanniAreaSearch||'').trim().toLocaleLowerCase('ar');
+ const visible=options.filter(area=>!query||String(area).toLocaleLowerCase('ar').includes(query)).slice(0,80);
+ const chosen=editFanniSelectedAreas;
+ root.innerHTML='<div class="edit-picker-shell">'+
+  '<div class="edit-picker-summary"><b>المناطق المختارة</b><span>'+chosen.length+' منطقة</span></div>'+
+  '<div class="edit-picker-selected">'+(chosen.length?chosen.map(area=>'<button type="button" class="edit-selected-chip" data-edit-area="'+esc(area)+'" onclick="toggleEditFanniArea(this.dataset.editArea)">'+esc(area)+' <span aria-hidden="true">×</span></button>').join(''):'<span class="picker-empty">لم يتم اختيار مناطق بعد.</span>')+'</div>'+
+  '<div class="edit-picker-list">'+visible.map(area=>{const checked=chosen.includes(area);return '<button type="button" class="edit-picker-option '+(checked?'is-selected':'')+'" data-edit-area="'+esc(area)+'" onclick="toggleEditFanniArea(this.dataset.editArea)"><span>'+esc(area)+'</span><span class="edit-picker-check">'+(checked?'✓':'')+'</span></button>'}).join('')+'</div>'+
+  '<p class="picker-hint">اختار كل المناطق المناسبة. تقدر تختار حتى 30 منطقة.</p></div>';
+}
+async function loadEditFanniAreas(){
+ const root=$('editFanniAreasPicker');if(root)root.innerHTML='<div class="picker-state"><span class="picker-spinner"></span> جاري تحميل المناطق...</div>';
+ try{
+  const d=await api('/areas');
+  editFanniAreaOptions=Array.isArray(d.areas)?d.areas.filter(x=>typeof x==='string'&&x.trim()):[];
+  if(!editFanniAreaOptions.length)throw Error('قائمة المناطق فارغة حاليًا.');
+  editFanniSelectedAreas=[...new Set(editFanniSelectedAreas.filter(Boolean))];
+  renderEditFanniAreas();
+ }catch(e){
+  if(root)root.innerHTML='<div class="picker-error">'+esc(e.message||'تعذر تحميل المناطق')+' <button type="button" class="btn secondary" onclick="loadEditFanniAreas()">إعادة المحاولة</button></div>';
+ }
+}
+function toggleEditFanniArea(value){
+ const area=String(value||'').trim();if(!area)return;
+ if(area==='جميع المناطق'){editFanniSelectedAreas=editFanniSelectedAreas.includes(area)?[]:[area];}
+ else{
+  editFanniSelectedAreas=editFanniSelectedAreas.filter(x=>x!=='جميع المناطق');
+  if(editFanniSelectedAreas.includes(area))editFanniSelectedAreas=editFanniSelectedAreas.filter(x=>x!==area);
+  else if(editFanniSelectedAreas.length>=30){notice('تقدر تختار حتى 30 منطقة فقط.');return;}
+  else editFanniSelectedAreas.push(area);
+ }
+ renderEditFanniAreas();
+}
 async function loadEditFanniCatalog(){try{const d=await api('/services');editFanniCategories=Array.isArray(d.categories)?d.categories:[];if(!editFanniCategories.length)throw Error('قائمة التخصصات غير متاحة حاليًا.');renderEditFanniSpecialties()}catch(e){$('editFanniSpecialtiesPicker').innerHTML='<p class="error">'+esc(e.message||'تعذر تحميل التخصصات')+' <button type="button" class="btn secondary" onclick="loadEditFanniCatalog()">إعادة المحاولة</button></p>'}}
 function renderEditFanniSpecialties(){
  const root=$('editFanniSpecialtiesPicker');if(!root)return;
  if(!editFanniCategories.length){root.innerHTML='<p class="muted">جاري تحميل التخصصات...</p>';return;}
  const known=new Set(editFanniCategories.flatMap(c=>Array.isArray(c.services)?c.services:[]));
  const legacy=editFanniSelectedSpecialties.filter(x=>!known.has(x));
- root.innerHTML='<p class="muted">تم اختيار '+editFanniSelectedSpecialties.length+' تخصصًا (الحد الأقصى 20).</p>'+
+ root.innerHTML='<div class="edit-picker-shell">'+
+ '<div class="edit-picker-summary"><b>التخصصات المختارة</b><span>'+editFanniSelectedSpecialties.length+' / 20</span></div>'+
  editFanniCategories.map((cat,i)=>{
   const services=Array.isArray(cat.services)?cat.services:[];
   const count=services.filter(x=>editFanniSelectedSpecialties.includes(x)).length;
   const open=editFanniOpenCategory===cat.label;
-  return '<section class="mb-3 overflow-hidden rounded-xl border border-slate-200 bg-white">'+
-   '<button type="button" data-edit-category="'+esc(cat.label)+'" onclick="toggleEditFanniCategory(this.dataset.editCategory)" aria-expanded="'+open+'" class="flex w-full items-center justify-between gap-3 p-3 text-right">'+
-    '<span class="flex min-w-0 items-center gap-2"><span class="text-lg">'+esc(cat.emoji||'🛠️')+'</span><span class="min-w-0"><b class="block text-[12px]">'+esc(cat.label)+'</b><small class="block text-[10px] text-slate-500">'+(count?'تم اختيار '+count+' تخصصات':'اضغط لاختيار التخصصات')+'</small></span></span>'+
-    '<span class="flex shrink-0 items-center gap-2"><span class="rounded-full bg-blue-50 px-2 py-1 text-[10px] font-black text-blue-700">'+count+'/'+services.length+'</span><span class="text-lg">'+(open?'−':'+')+'</span></span>'+
+  return '<section class="edit-specialty-category">'+
+   '<button type="button" data-edit-category="'+esc(cat.label)+'" onclick="toggleEditFanniCategory(this.dataset.editCategory)" aria-expanded="'+open+'" class="edit-specialty-heading">'+
+    '<span class="edit-specialty-heading-main"><span class="edit-category-emoji">'+esc(cat.emoji||'🛠️')+'</span><span><b>'+esc(cat.label)+'</b><small>'+(count?'تم اختيار '+count+' خدمة':'اضغط لعرض الخدمات')+'</small></span></span>'+
+    '<span class="edit-specialty-heading-meta"><span class="edit-count-badge">'+count+'</span><span class="edit-chevron">'+(open?'−':'+')+'</span></span>'+
    '</button>'+
-   (open?'<div class="grid grid-cols-3 gap-2 p-2 max-[380px]:grid-cols-2">'+services.map(x=>'<label class="service-chip '+(editFanniSelectedSpecialties.includes(x)?'selected':'')+'"><input type="checkbox" '+(editFanniSelectedSpecialties.includes(x)?'checked':'')+' data-edit-specialty="'+esc(x)+'" onchange="toggleEditFanniSpecialty(this.dataset.editSpecialty)"><span class="service-icon">'+editFanniServiceIcon(x)+'</span><span>'+esc(x)+'</span></label>').join('')+'</div>':'')+
+   (open?'<div class="edit-service-grid">'+services.map(x=>'<label class="service-chip '+(editFanniSelectedSpecialties.includes(x)?'selected':'')+'"><input type="checkbox" '+(editFanniSelectedSpecialties.includes(x)?'checked':'')+' data-edit-specialty="'+esc(x)+'" onchange="toggleEditFanniSpecialty(this.dataset.editSpecialty)"><span class="service-icon">'+editFanniServiceIcon(x)+'</span><span class="service-name">'+esc(x)+'</span></label>').join('')+'</div>':'')+
   '</section>';
  }).join('')+
- (legacy.length?'<p class="muted">تخصصات محفوظة قديمة (اختياري إلغاء تحديدها):</p><div class="grid grid-cols-3 gap-2 max-[380px]:grid-cols-2">'+legacy.map(x=>'<label class="service-chip selected"><input type="checkbox" checked data-edit-specialty="'+esc(x)+'" onchange="toggleEditFanniSpecialty(this.dataset.editSpecialty)"><span class="service-icon">🧰</span><span>'+esc(x)+'</span></label>').join('')+'</div>':'');
+ (legacy.length?'<div class="edit-legacy-note"><b>خدمات محفوظة قديمة</b><div class="edit-service-grid">'+legacy.map(x=>'<label class="service-chip selected"><input type="checkbox" checked data-edit-specialty="'+esc(x)+'" onchange="toggleEditFanniSpecialty(this.dataset.editSpecialty)"><span class="service-icon">🧰</span><span class="service-name">'+esc(x)+'</span></label>').join('')+'</div></div>':'')+
+ '</div>';
 }
 function toggleEditFanniCategory(label){editFanniOpenCategory=editFanniOpenCategory===label?'':label;renderEditFanniSpecialties()}
 function toggleEditFanniSpecialty(value){if(editFanniSelectedSpecialties.includes(value))editFanniSelectedSpecialties=editFanniSelectedSpecialties.filter(x=>x!==value);else if(editFanniSelectedSpecialties.length<20)editFanniSelectedSpecialties=[...editFanniSelectedSpecialties,value];else{notice('تقدر تختار 20 تخصصًا كحد أقصى.');return}renderEditFanniSpecialties()}
