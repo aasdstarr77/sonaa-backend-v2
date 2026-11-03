@@ -183,7 +183,8 @@ async function loadServices(){
   if(state.servicesLoading&&state.servicesLoaded)return;
   state.servicesLoading=true;state.servicesError='';render();
   try{
-    const data=await API.getServices();
+    const [data, areas]=await Promise.all([API.getServices(),API.getAreas()]);
+    AREA_OPTIONS=Array.isArray(areas)?areas:[];
     CATEGORIES=data.categories;ALL_SERVICES=data.services;
     TECHNICIAN_COUNTS=Object.fromEntries(CATEGORIES.flatMap(category=>Object.entries(category.serviceTechnicianCounts||{})));
     const flat=[...new Set(CATEGORIES.flatMap(c=>c.services))];
