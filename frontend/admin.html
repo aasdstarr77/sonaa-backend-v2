@@ -331,6 +331,65 @@ input:focus,textarea:focus,select:focus{border-color:var(--blue)!important;box-s
     font-size:9px!important;
   }
 }
+
+/* Admin header aligned with the shared white Sonaa site header */
+.glass-header{
+  background:#fff!important;
+  color:var(--sonaa-color-17366c)!important;
+  border-bottom:1px solid var(--sonaa-color-e1e8f2)!important;
+  box-shadow:0 5px 16px var(--sonaa-color-1525440b)!important;
+  backdrop-filter:none!important;
+}
+.glass-header>div{
+  min-height:76px!important;
+  padding:8px 12px!important;
+  align-items:center!important;
+}
+.glass-header .admin-header-title{
+  align-self:center!important;
+  padding:0!important;
+  text-shadow:none!important;
+}
+.glass-header .admin-header-title h1{
+  margin:0!important;
+  color:var(--sonaa-color-17366c)!important;
+  font-size:24px!important;
+  line-height:1.4!important;
+  font-weight:900!important;
+  white-space:nowrap!important;
+  text-shadow:none!important;
+}
+.glass-header .admin-header-title .sonaa-brand-shimmer{
+  color:var(--sonaa-color-17366c)!important;
+  -webkit-text-fill-color:transparent!important;
+  font-size:25px!important;
+  text-shadow:none!important;
+}
+.glass-header .admin-header-title .admin-role{
+  color:var(--sonaa-color-64748b)!important;
+  text-shadow:none!important;
+}
+.glass-header .admin-logo-frame{
+  width:48px!important;height:48px!important;min-width:48px!important;min-height:48px!important;
+  flex-basis:48px!important;margin:0!important;padding:4px!important;
+  align-self:center!important;border:1px solid var(--sonaa-color-e1e8f2)!important;
+  border-radius:15px!important;background:#fff!important;
+  box-shadow:0 5px 16px var(--sonaa-color-1525440b)!important;
+}
+.glass-header .admin-header-logo{
+  width:38px!important;height:38px!important;object-fit:contain!important;filter:none!important;
+}
+.glass-header button,
+.glass-header .admin-header-actions>a{
+  text-shadow:none!important;
+}
+@media(max-width:640px){
+  .glass-header>div{min-height:68px!important;padding:6px 8px!important;gap:6px!important}
+  .glass-header .admin-header-title h1{font-size:clamp(14px,3.8vw,21px)!important}
+  .glass-header .admin-header-title .sonaa-brand-shimmer{font-size:inherit!important}
+  .glass-header .admin-logo-frame{width:42px!important;height:42px!important;min-width:42px!important;min-height:42px!important;flex-basis:42px!important}
+  .glass-header .admin-header-logo{width:32px!important;height:32px!important}
+}
 </style>
 
 <link rel="stylesheet" href="/css/theme.css">
