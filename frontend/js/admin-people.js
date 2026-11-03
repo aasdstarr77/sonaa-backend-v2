@@ -71,6 +71,7 @@ function renderFannis(){
           <div class="mt-2 rounded-[14px] border border-blue-100 bg-blue-50/60 p-3">
             <p class="text-[11px] font-black text-blue-900 mb-2">📍 مناطق العمل المسجلة</p>
             <p class="text-[11px] font-bold leading-6 whitespace-pre-wrap break-words">${escHtml(Array.isArray(f.areas)&&f.areas.length?f.areas.join('، '):'لم يحدد مناطق عمل')}</p>
+            <button type="button" onclick="editFanniServiceAreas('${id}')" class="mt-3 h-10 w-full rounded-xl blue-btn text-[11px] font-extrabold">تعديل الخدمات ومناطق العمل</button>
           </div>
           ${Array.isArray(f.works)&&f.works.length?'<div class="mt-2 rounded-[14px] border bg-white p-3"><p class="text-[11px] font-black mb-2">الأعمال والخدمات المسجلة</p><p class="text-[11px] font-bold leading-6 whitespace-pre-wrap break-words">'+escHtml(f.works.join('، '))+'</p></div>':''}
           ${f.prices&&Object.keys(f.prices).length?'<div class="mt-2 rounded-[14px] border bg-white p-3"><p class="text-[11px] font-black mb-2">الأسعار/تفاصيل الأعمال المسجلة</p><div class="space-y-2">'+Object.entries(f.prices instanceof Map?Object.fromEntries(f.prices):f.prices).map(([key,value])=>'<div class="border-b last:border-0 pb-2 last:pb-0"><p class="text-[10px] font-black">'+escHtml(key)+'</p><p class="text-[10px] leading-5">'+escHtml([value?.from,value?.desc].filter(Boolean).join(' — ')||String(value??''))+'</p></div>').join('')+'</div></div>':''}
