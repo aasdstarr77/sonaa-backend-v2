@@ -138,12 +138,10 @@ function render(){
 
             <div>
               <label for="areaInput" class="text-[12px] font-extrabold mb-1.5 block">المنطقة أو الحي *</label>
-              <input id="areaSearchInput" type="search" value="${escAttr(state.areaSearch||'')}" oninput="onAreaSearch(this.value)" placeholder="🔎 ابحث باسم المنطقة أو الحي..." class="field h-[48px] px-4 text-[13px] font-bold mb-2" autocomplete="off">
-              <select id="areaInput" onchange="onAreaInput(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('addrInput')?.focus()}" class="field h-[50px] px-4 text-[13px] font-bold" autocomplete="address-level2">
-                <option value="">اختار المنطقة أو الحي</option>
-                ${AREA_OPTIONS.filter(area=>!String(state.areaSearch||'').trim()||String(area).toLocaleLowerCase('ar').includes(String(state.areaSearch).trim().toLocaleLowerCase('ar'))).map(area=>`<option value="${escAttr(area)}" ${state.area===area?'selected':''}>${escHtml(area)}</option>`).join('')}
-              </select>
-              <p class="mt-1 text-[10px] text-slate-500">${state.areaSearch&&!AREA_OPTIONS.some(area=>String(area).toLocaleLowerCase('ar').includes(String(state.areaSearch).trim().toLocaleLowerCase('ar')))?'مفيش منطقة مطابقة للبحث. جرّب اسمًا تانيًا.':AREA_OPTIONS.length?'اكتب جزءًا من اسم المنطقة لتصفية القائمة، ثم اختار المنطقة المناسبة.':'قائمة المناطق غير متاحة حاليًا؛ حدّث الصفحة وحاول مرة أخرى.'}</p>
+              <input id="areaSearchInput" type="search" value="${escAttr(state.areaSearch||'')}" oninput="onAreaSearch(this.value)" placeholder="🔎 ابحث باسم المنطقة أو الحي..." class="field h-[48px] px-4 text-[13px] font-bold mb-2" autocomplete="off" aria-controls="areaSearchResults" aria-expanded="${!!String(state.areaSearch||'').trim()}">
+              ${state.area?'<div class="mb-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[12px] font-extrabold text-emerald-800">المنطقة المختارة: '+escHtml(state.area)+'</div>':''}
+              ${String(state.areaSearch||'').trim()?'<div id="areaSearchResults" class="max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg" role="listbox">'+(AREA_OPTIONS.filter(area=>String(area).toLocaleLowerCase('ar').includes(String(state.areaSearch).trim().toLocaleLowerCase('ar'))).slice(0,60).map(area=>'<button type="button" role="option" aria-selected="'+(state.area===area?'true':'false')+'" onclick="onAreaInput(\''+escAttr(area).replace(/\\/g,'\\\\').replace(/'/g,"\\'")+'\')" class="block w-full border-b border-slate-100 px-4 py-3 text-right text-[13px] font-bold text-slate-800 last:border-0 hover:bg-blue-50">'+escHtml(area)+'</button>').join('')||'<p class="px-4 py-3 text-[12px] text-slate-500">مفيش منطقة مطابقة للبحث. جرّب اسمًا تانيًا.</p>')+'</div>':''}
+              <p class="mt-1 text-[10px] text-slate-500">${AREA_OPTIONS.length?'اكتب جزءًا من اسم المنطقة، وهتظهر المناطق المطابقة تحت خانة البحث مباشرة.':'قائمة المناطق غير متاحة حاليًا؛ حدّث الصفحة وحاول مرة أخرى.'}</p>
               
             </div>
             <div>
