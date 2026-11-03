@@ -138,8 +138,11 @@ function render(){
 
             <div>
               <label for="areaInput" class="text-[12px] font-extrabold mb-1.5 block">المنطقة أو الحي *</label>
-              <input id="areaInput" type="text" value="${escAttr(state.area)}" oninput="onAreaInput(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('addrInput')?.focus()}" maxlength="100" class="field h-[50px] px-4 text-[13px] font-bold" autocomplete="address-level2" placeholder="اكتب اسم المنطقة أو الحي">
-              <p class="mt-1 text-[10px] text-slate-500">اكتب اسم المنطقة أو الحي، واكتب الشارع ورقم العمارة في العنوان التفصيلي.</p>
+              <select id="areaInput" onchange="onAreaInput(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('addrInput')?.focus()}" class="field h-[50px] px-4 text-[13px] font-bold" autocomplete="address-level2">
+                <option value="">اختار المنطقة أو الحي</option>
+                ${AREA_OPTIONS.map(area=>`<option value="${escAttr(area)}" ${state.area===area?'selected':''}>${escHtml(area)}</option>`).join('')}
+              </select>
+              <p class="mt-1 text-[10px] text-slate-500">${AREA_OPTIONS.length?'اختار المنطقة من القائمة، واكتب الشارع ورقم العمارة في العنوان التفصيلي.':'قائمة المناطق غير متاحة حاليًا؛ حدّث الصفحة وحاول مرة أخرى.'}</p>
             </div>
             <div>
               <label for="addrInput" class="text-[12px] font-extrabold mb-1.5 flex justify-between gap-2">
