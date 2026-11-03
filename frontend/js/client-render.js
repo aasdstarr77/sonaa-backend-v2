@@ -66,12 +66,25 @@ function render(){
             <div><label class="text-[11px] font-black mb-1 block">رقم التليفون</label><input value="${escAttr(state.phone)}" oninput="onPhoneInput(this.value)" placeholder="010..." class="field h-[48px] px-3 w-full"></div>
             <div><label class="text-[11px] font-black mb-1 block">الميزانية</label><input value="${escAttr(state.budget)}" oninput="onBudgetInput(this.value)" placeholder="اختياري" class="field h-[48px] px-3 w-full"></div>
             <div>
-                            <div class="mb-3 rounded-2xl border-2 border-blue-200 bg-gradient-to-l from-blue-50 to-white p-3 space-y-2">
-                              <div class="text-[13px] font-black text-slate-900">📝 وضّح المشكلة بالطريقة اللي تريحك</div>
-                              <p class="text-[11px] leading-5 text-slate-600">اكتب وصف المشكلة أو سجّلها بصوتك، وممكن تستخدم الطريقتين مع بعض.</p>
-                              <div class="rounded-xl border border-blue-100 bg-white p-2 space-y-1.5">
-                                <div class="text-[12px] font-extrabold text-slate-800">🎙️ سجّل المشكلة بصوتك</div>
-                                <div role="alert" style="display:block!important;visibility:visible!important;opacity:1!important;background:#fef3c7;border:1px solid #f59e0b;border-radius:10px;padding:6px 8px;margin:4px 0;color:#78350f;font-size:11px;font-weight:800;line-height:1.8;text-align:right"><span aria-hidden="true" style="font-size:17px;margin-left:6px">⚠️</span><span>تنبيه مهم: ممنوع ذكر رقم التليفون أو العنوان التفصيلي في التسجيل الصوتي.</span></div>
+              <div class="mb-3 rounded-2xl border-2 border-blue-200 bg-gradient-to-l from-blue-50 to-white p-3 space-y-2">
+                <div class="text-[13px] font-black text-slate-900">📝 وضّح المشكلة بالطريقة اللي تريحك</div>
+                <p class="text-[11px] leading-5 text-slate-600">اكتب وصف المشكلة أو سجّلها بصوتك، وممكن تستخدم الطريقتين مع بعض.</p>
+                <div class="rounded-xl border border-blue-100 bg-white p-2 space-y-1.5">
+                  <div class="text-[12px] font-extrabold text-slate-800">🎙️ سجّل المشكلة بصوتك</div>
+                  <div role="alert" style="display:block!important;visibility:visible!important;opacity:1!important;background:#fef3c7;border:1px solid #f59e0b;border-radius:10px;padding:6px 8px;margin:4px 0;color:#78350f;font-size:11px;font-weight:800;line-height:1.8;text-align:right"><span aria-hidden="true" style="font-size:17px;margin-left:6px">⚠️</span><span>تنبيه مهم: ممنوع ذكر رقم التليفون أو العنوان التفصيلي في التسجيل الصوتي.</span></div>
+                  <p class="text-[11px] leading-5 text-slate-600">${state.voiceRecording?'🔴 التسجيل شغّال دلوقتي...':state.voiceBlob?'✅ التسجيل جاهز، تقدر تسمعه قبل الإرسال.':'اضغط على الزر واشرح المشكلة للفني بصوتك (حتى 30 ثانية).'}</p>
+                  ${state.voiceRecording?'<div class="rounded-lg bg-red-50 border border-red-200 px-2 py-1.5 text-center"><span class="text-red-700 font-black">🔴 جاري التسجيل</span><div id="voiceRecordingTimer" dir="ltr" class="text-lg font-black text-red-700">00:00 / 00:30</div></div><button type="button" onclick="stopVoiceRecording()" class="w-full rounded-xl bg-red-600 px-3 py-2.5 text-[12px] font-extrabold text-white">⏹ إيقاف التسجيل</button>':'<button type="button" onclick="startVoiceRecording()" class="w-full rounded-xl bg-teal-700 px-3 py-2.5 text-[12px] font-extrabold text-white">🎙️ ابدأ التسجيل الصوتي</button>'}
+                  ${state.voiceBlob?'<button type="button" onclick="clearVoiceRecording()" class="w-full rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] font-extrabold text-red-700">حذف التسجيل وإعادة المحاولة</button>':''}
+                  ${state.voiceUrl?`<div class="mt-2 rounded-xl border border-teal-200 bg-teal-50 p-3"><div class="mb-2 text-[12px] font-extrabold text-teal-900">▶️ استمع للتسجيل قبل الإرسال</div><audio controls playsinline preload="metadata" src="${escAttr(state.voiceUrl)}" class="mt-1 w-full" style="min-height:44px" onerror="showToast('تعذر تشغيل التسجيل على هذا المتصفح؛ أعد التسجيل من فضلك.')"></audio></div>`:''}
+                </div>
+                <div class="flex items-center gap-3 text-[11px] font-extrabold text-slate-400"><span class="h-px flex-1 bg-slate-200"></span><span>أو اكتب وصف المشكلة</span><span class="h-px flex-1 bg-slate-200"></span></div>
+                <label for="descInput" class="text-[12px] font-extrabold flex justify-between gap-2">
+                  <span>✍️ وصف المشكلة وتفاصيل الشغل</span>
+                  <span id="descCounter" class="text-[10px] text-slate-400">${state.desc.length}/1000</span>
+                </label>
+                <textarea id="descInput" oninput="onDescInput(this.value)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();createOrder()}" maxlength="1000" placeholder="اكتب هنا تفاصيل المشكلة أو الشغل المطلوب..." class="field min-h-[112px] p-3.5 text-[13px] font-semibold resize-none leading-6">${escHtml(state.desc)}</textarea>
+                <p class="text-[10px] leading-5 text-slate-500">ممكن تكتب وتسجّل مع بعض. ما تكتبش رقم تليفونك هنا؛ رقمك موجود في الخانة المخصصة.</p>
+              </div>
             </div>
             <button type="button" onclick="createOrder()" ${state.loading?'disabled':''} class="client-submit-order-btn w-full h-[50px] rounded-xl bg-blue-600 text-white font-black">إرسال الطلب</button>
           </div>
