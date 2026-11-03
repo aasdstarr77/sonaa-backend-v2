@@ -1,8 +1,12 @@
 'use strict';
 
 const express = require('express');
+const { normalizeArea, ALL_AREAS_LABEL } = require('../../config/areas');
 
 function createAdminFanniProfilesRouter({
+  Region,
+  AREA_OPTIONS,
+  ALL_SERVICES,
   auth,
   validate,
   Joi,
@@ -66,6 +70,45 @@ function createAdminFanniProfilesRouter({
     } catch (err) { next(err); }
   });
   
+  router.patch('/fannis/:id/service-areas', auth('admin'), async (req, res, next) => {
+    try {
+      if (!validId(req.params.id)) return sendBadId(res);
+      const schema = Joi.object({
+        specialties: Joi.array().items(Joi.string().trim().min(1).max(100)).min(1).max(20).required(),
+        areas: Joi.array().items(Joi.string().trim().min(2).max(100)).min(1).max(30).required()
+      }).required();
+      const { error, value } = schema.validate(req.body || {}, { abortEarly: false, stripUnknown: true });
+      if (error) return res.status(400).json({ message: 'اختار خدمة واحدة على الأقل ومنطقة عمل واحدة على الأقل.' });
+
+      const fanni = await Fanni.findOne({ _id: req.params.id, role: 'fanni' });
+      if (!fanni) return res.status(404).json({ message: 'حساب الفني غير موجود.' });
+      if (fanni.pendingProfileChange?.requestedAt) return res.status(409).json({ message: 'لدى الفني طلب تعديل بيانات قيد المراجعة. راجع الطلب أولًا قبل التعديل المباشر.' });
+
+      const activeRegions = await Region.find({ isActive: true }).select('name').lean();
+      const allowedAreas = new Set([...(AREA_OPTIONS || []), ...activeRegions.map(item => item.name), ALL_AREAS_LABEL].map(normalizeArea));
+      const areas = [...new Map(value.areas.map(item => [normalizeArea(item), String(item).normalize('NFC').trim().replace(/\\s+/g, ' ')])).values()];
+      const invalidAreas = areas.filter(item => !allowedAreas.has(normalizeArea(item)));
+      if (invalidAreas.length) return res.status(400).json({ message: 'توجد منطقة غير معتمدة في القائمة. حدّث قائمة المناطق ثم حاول مرة أخرى.', invalidAreas });
+
+      const allAreas = areas.some(item => normalizeArea(item) === normalizeArea(ALL_AREAS_LABEL));
+      const normalizedAreas = allAreas ? [ALL_AREAS_LABEL] : areas;
+      const specialties = [...new Set(value.specialties.map(item => item.normalize('NFC').trim()).filter(Boolean))];
+      const before = { specialties: [...(fanni.specialties || [])], areas: [...(fanni.areas || [])] };
+      fanni.specialties = specialties;
+      fanni.areas = normalizedAreas;
+      fanni.decisions.push(decision(req, 'تعديل تخصصات ومناطق فني', 'تعديل مباشر من لوحة الإدارة'));
+      fanni.decisions[fanni.decisions.length - 1].meta = {
+        before,
+        after: { specialties, areas: normalizedAreas },
+        source: 'admin-direct-edit'
+      };
+      await fanni.save();
+      const after = { specialties, areas: normalizedAreas };
+      await writeAdminAudit(req, 'تعديل تخصصات ومناطق فني', 'fannis', String(fanni._id), JSON.stringify({ before, after }));
+      return res.json({ message: 'تم تحديث خدمات ومناطق عمل الفني بنجاح.', fanni: publicFanni(fanni), changes: { before, after } });
+    } catch (err) { next(err); }
+  });
+
   router.get('/fanni-profile-edits', auth('admin'), async (req, res, next) => {
     try {
       const fannis = await Fanni.find({ role: 'fanni', 'pendingProfileChange.requestedAt': { $exists: true, $ne: null } }).select('-passwordHash').sort({ 'pendingProfileChange.requestedAt': 1 }).limit(MAX_LIST_LIMIT).lean();
