@@ -3,6 +3,9 @@
 const express = require('express');
 
 function createOrderCreationRouter({
+  Region,
+  AREA_OPTIONS,
+  normalizeArea,
   clientAuth,
   createSchema,
   findPhoneContainingField,
@@ -71,6 +74,16 @@ function createOrderCreationRouter({
       if (area.length < 2 || area.length > 100) {
         return res.status(400).json({
           message: 'اكتب المنطقة أو الحي بشكل صحيح'
+        });
+      }
+
+      const [activeRegions] = await Promise.all([
+        Region.find({ isActive: true }).select('name').lean()
+      ]);
+      const allowedAreas = new Set([...(AREA_OPTIONS || []), ...activeRegions.map(item => item.name)].map(normalizeArea));
+      if (!allowedAreas.has(normalizeArea(area))) {
+        return res.status(400).json({
+          message: 'اختار المنطقة من قائمة المناطق المعتمدة، ولا تكتب اسمًا غير موجود بالقائمة.'
         });
       }
   
