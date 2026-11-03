@@ -94,9 +94,15 @@ const fanniSchema = new mongoose.Schema({
   },
   rejectionReason: { type: String, maxlength: 500 },
   pendingProfileChange: {
+    before: {
+      phone: { type: String, trim: true },
+      specialties: [{ type: String, trim: true }],
+      areas: [{ type: String, trim: true }]
+    },
     phone: { type: String, trim: true },
     specialties: [{ type: String, trim: true }],
     areas: [{ type: String, trim: true }],
+    changedFields: [{ type: String, enum: ['phone', 'specialties', 'areas'] }],
     requestedAt: { type: Date }
   },
   suspensionReason: { type: String, maxlength: 500 },

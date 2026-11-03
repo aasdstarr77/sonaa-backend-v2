@@ -247,13 +247,24 @@ router.patch('/me', auth(), requireFanni, validate(profileUpdateSchema), async (
     const duplicate = await Fanni.findOne({ phone, _id: { $ne: req.user._id } }).select('_id');
     if (duplicate) return res.status(409).json({ message: 'رقم الهاتف مسجل بالفعل في حساب آخر' });
     const requestedSpecialties = Array.isArray(req.body.specialties) ? req.body.specialties : [];
-    const normalizedSpecialties = [...new Set(requestedSpecialties.map(value => String(value).trim()).filter(Boolean))];
-    // التخصصات اختيارية عند تعديل الملف؛ إذا لم يحدد الفني تخصصات جديدة، احتفظ بالتخصصات الحالية.
-    const specialties = normalizedSpecialties.length ? normalizedSpecialties : [...(req.user.specialties || [])];
+    const normalizedSpecialties = [...new Set(requestedSpecialties.map(value => String(value).normalize('NFC').trim()).filter(Boolean))];
+    const current = {
+      phone: String(req.user.phone || ''),
+      specialties: [...(req.user.specialties || [])],
+      areas: [...(req.user.areas || [])]
+    };
+    // التخصصات اختيارية؛ عدم إرسالها يعني الاحتفاظ بالقائمة الحالية.
+    const specialties = normalizedSpecialties.length ? normalizedSpecialties : [...current.specialties];
     const areas = await validateApprovedAreas(req.body.areas);
     if (!areas) return res.status(400).json({ message: 'اختار مناطق العمل من قائمة المناطق المعتمدة فقط.' });
-    req.user.pendingProfileChange = { phone, specialties, areas, requestedAt: new Date() };
-    req.user.decisions.push({ action: 'طلب تعديل بيانات', reason: 'طلب الفني تغيير بيانات حسابه', date: new Date(), by: String(req.user.name || 'الفني'), byId: req.user._id, meta: { phone, specialties, areas } });
+    const sameArray = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+    const changedFields = [];
+    if (phone !== current.phone) changedFields.push('phone');
+    if (!sameArray(specialties, current.specialties)) changedFields.push('specialties');
+    if (!sameArray(areas, current.areas)) changedFields.push('areas');
+    if (!changedFields.length) return res.status(400).json({ message: 'لم يتم اكتشاف أي تغيير في البيانات. عدّل الحقل المطلوب أولًا.' });
+    req.user.pendingProfileChange = { before: current, phone, specialties, areas, changedFields, requestedAt: new Date() };
+    req.user.decisions.push({ action: 'طلب تعديل بيانات', reason: 'طلب الفني تغيير بيانات حسابه', date: new Date(), by: String(req.user.name || 'الفني'), byId: req.user._id, meta: { before: current, requested: { phone, specialties, areas }, changedFields } });
     await req.user.save();
     return res.set('Cache-Control', 'no-store').json({ message: 'تم إرسال طلب تعديل بياناتك للإدارة. بيانات حسابك الحالية ستظل كما هي لحين الموافقة.', user: req.user.toSafeJSON(), pendingProfileChange: req.user.pendingProfileChange });
   } catch (err) {

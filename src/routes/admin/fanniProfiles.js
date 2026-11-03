@@ -160,7 +160,22 @@ function createAdminFanniProfilesRouter({
   router.get('/fanni-profile-edits', auth('admin'), async (req, res, next) => {
     try {
       const fannis = await Fanni.find({ role: 'fanni', 'pendingProfileChange.requestedAt': { $exists: true, $ne: null } }).select('-passwordHash').sort({ 'pendingProfileChange.requestedAt': 1 }).limit(MAX_LIST_LIMIT).lean();
-      return res.set('Cache-Control', 'no-store').json({ requests: fannis.map(item => ({ _id: item._id, name: item.name, phone: item.phone, specialties: item.specialties || [], areas: item.areas || [], pendingProfileChange: item.pendingProfileChange, status: item.status, createdAt: item.createdAt })) });
+      return res.set('Cache-Control', 'no-store').json({ requests: fannis.map(item => {
+        const pending = item.pendingProfileChange || {};
+        const current = { phone: item.phone, specialties: item.specialties || [], areas: item.areas || [] };
+        const sameArray = (a, b) => JSON.stringify(a || []) === JSON.stringify(b || []);
+        const changedFields = Array.isArray(pending.changedFields) && pending.changedFields.length ? pending.changedFields : [
+          ...(String(pending.phone || current.phone) !== String(current.phone) ? ['phone'] : []),
+          ...(!sameArray(pending.specialties, current.specialties) ? ['specialties'] : []),
+          ...(!sameArray(pending.areas, current.areas) ? ['areas'] : [])
+        ];
+        return {
+          _id: item._id, name: item.name, phone: item.phone,
+          specialties: current.specialties, areas: current.areas,
+          pendingProfileChange: { ...pending, before: pending.before || current, changedFields },
+          status: item.status, createdAt: item.createdAt
+        };
+      }) });
     } catch (err) { next(err); }
   });
   
@@ -170,15 +185,26 @@ function createAdminFanniProfilesRouter({
       const fanni = await Fanni.findOne({ _id: req.params.id, role: 'fanni' });
       if (!fanni || !fanni.pendingProfileChange?.requestedAt) return res.status(404).json({ message: 'طلب تعديل البيانات غير موجود أو تمت مراجعته بالفعل' });
       const pending = fanni.pendingProfileChange;
-      const duplicate = await Fanni.findOne({ phone: pending.phone, _id: { $ne: fanni._id } }).select('_id');
-      if (duplicate) return res.status(409).json({ message: 'رقم الهاتف المطلوب أصبح مسجلًا في حساب آخر. ارفض الطلب واطلب من الفني رقمًا آخر.' });
-      const before = { phone: fanni.phone, specialties: fanni.specialties, areas: fanni.areas };
-      fanni.phone = pending.phone; fanni.specialties = pending.specialties; fanni.areas = pending.areas;
+      const before = { phone: String(fanni.phone || ''), specialties: [...(fanni.specialties || [])], areas: [...(fanni.areas || [])] };
+      const sameArray = (a, b) => JSON.stringify(a || []) === JSON.stringify(b || []);
+      const changedFields = Array.isArray(pending.changedFields) && pending.changedFields.length ? pending.changedFields : [
+        ...(String(pending.phone || before.phone) !== before.phone ? ['phone'] : []),
+        ...(!sameArray(pending.specialties, before.specialties) ? ['specialties'] : []),
+        ...(!sameArray(pending.areas, before.areas) ? ['areas'] : [])
+      ];
+      if (!changedFields.length) return res.status(409).json({ message: 'الطلب لا يحتوي على تغييرات فعلية. ارفضه واطلب من الفني إرسال التعديلات من جديد.' });
+      if (changedFields.includes('phone')) {
+        const duplicate = await Fanni.findOne({ phone: pending.phone, _id: { $ne: fanni._id } }).select('_id');
+        if (duplicate) return res.status(409).json({ message: 'رقم الهاتف المطلوب أصبح مسجلًا في حساب آخر. ارفض الطلب واطلب من الفني رقمًا آخر.' });
+        fanni.phone = pending.phone;
+      }
+      if (changedFields.includes('specialties')) fanni.specialties = pending.specialties;
+      if (changedFields.includes('areas')) fanni.areas = pending.areas;
       fanni.pendingProfileChange = undefined;
       fanni.decisions.push(decision(req, 'اعتماد تعديل بيانات', 'اعتماد طلب تعديل بيانات الفني'));
-      fanni.decisions[fanni.decisions.length - 1].meta = { before, after: { phone: fanni.phone, specialties: fanni.specialties, areas: fanni.areas } };
+      fanni.decisions[fanni.decisions.length - 1].meta = { before, after: { phone: fanni.phone, specialties: fanni.specialties, areas: fanni.areas }, changedFields };
       await fanni.save();
-      await writeAdminAudit(req, 'اعتماد تعديل بيانات فني', 'fannis', String(fanni._id), JSON.stringify({ before, after: { phone: fanni.phone, specialties: fanni.specialties, areas: fanni.areas } }));
+      await writeAdminAudit(req, 'اعتماد تعديل بيانات فني', 'fannis', String(fanni._id), JSON.stringify({ before, after: { phone: fanni.phone, specialties: fanni.specialties, areas: fanni.areas }, changedFields }));
       await createNotification({ recipientRole: 'fanni', recipientId: fanni._id, type: 'profile_change_approved', title: 'تمت الموافقة على تعديل بياناتك', message: 'وافقت الإدارة على طلب تعديل بيانات حسابك وتم تحديث البيانات.', link: '/fanni', dedupeKey: 'profile-change-approved:' + String(fanni._id) + ':' + Date.now() });
       return res.json({ message: 'تم اعتماد تعديل بيانات الفني بنجاح', fanni: publicFanni(fanni) });
     } catch (err) { next(err); }
