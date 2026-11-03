@@ -10,6 +10,7 @@ function createOrderAdminPublicationRouter({
   ORDER_EXPIRY_HOURS,
   Fanni,
   fanniCanHandleService,
+  fanniWorksInArea,
   createNotification,
   publicOrder
 }) {
@@ -75,10 +76,10 @@ function createOrderAdminPublicationRouter({
         return res.status(409).json({ message: 'الطلب ليس قيد المراجعة، لذلك لم يتم نشره', status: existing.status });
       }
   
-      // Notify every approved technician whose specialties match; work area is informational only.
-      const eligibleFannis = await Fanni.find({ role: 'fanni', status: 'معتمد' }).select('_id specialties').lean();
+      // Notify only approved technicians matching both the service and work area.
+      const eligibleFannis = await Fanni.find({ role: 'fanni', status: 'معتمد' }).select('_id specialties areas').lean();
       for (const fanni of eligibleFannis) {
-        if (fanniCanHandleService(fanni.specialties, order.service)) {
+        if (fanniCanHandleService(fanni.specialties, order.service) && fanniWorksInArea(fanni.areas, order.area)) {
           await createNotification({
             recipientRole: 'fanni', recipientId: fanni._id, type: 'new_opportunity',
             title: 'فرصة عمل جديدة', message: 'طلب جديد يناسب تخصصك في ' + order.area + ' (' + order.service + ').',
