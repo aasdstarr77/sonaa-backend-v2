@@ -543,6 +543,21 @@ body:has(.fanni-login-gate) .fanni-app-header,body:has(.fanni-login-gate) nav.fi
  box-shadow:0 1px 0 var(--sonaa-color-dbeafe),0 3px 6px var(--sonaa-color-1e3a8a18),inset 0 1px 0 var(--sonaa-color-fff)!important;
 }
 
+
+/* Match the admin refresh feedback: fade the floating button while data refreshes. */
+.global-refresh-float{
+  opacity:1;
+  transition:opacity .22s ease,transform .18s ease!important;
+}
+.global-refresh-float.is-refreshing,
+.global-refresh-float:disabled{
+  opacity:.32!important;
+  cursor:wait!important;
+}
+@media(prefers-reduced-motion:reduce){
+  .global-refresh-float{transition:none!important}
+}
+
 </style>
 
 
