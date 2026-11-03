@@ -7,6 +7,8 @@ const Joi = require('joi');
 const crypto = require('crypto');
 
 const Fanni = require('../models/Fanni');
+const Region = require('../models/Region');
+const { AREA_OPTIONS, ALL_AREAS_LABEL, normalizeArea } = require('../config/areas');
 const TopupRequest = require('../models/TopupRequest');
 
 const { auth } = require('../middleware/auth');
@@ -15,6 +17,15 @@ const { normalizePhone } = require('../utils/phone');
 const { notifyAdmins } = require('../utils/notifications');
 
 const router = express.Router();
+
+async function validateApprovedAreas(areas) {
+  const activeRegions = await Region.find({ isActive: true }).select('name').lean();
+  const allowed = new Set([...(AREA_OPTIONS || []), ...activeRegions.map(item => item.name)].map(normalizeArea));
+  const normalized = [...new Set((Array.isArray(areas) ? areas : []).map(value => String(value || '').normalize('NFC').trim().replace(/\\s+/g, ' ')).filter(value => value.length >= 2))];
+  const allAreas = normalized.some(value => normalizeArea(value) === normalizeArea(ALL_AREAS_LABEL));
+  if (allAreas) return normalized.length === 1 ? [ALL_AREAS_LABEL] : null;
+  return normalized.length && normalized.every(value => allowed.has(normalizeArea(value))) ? normalized : null;
+}
 
 const registerSchema = Joi.object({
   name: Joi.string().trim().min(2).max(50).required(),
@@ -111,6 +122,8 @@ router.post(
           message: 'رقم الهاتف مسجل بالفعل. جرّب تسجيل الدخول.'
         });
       }
+      const approvedAreas = await validateApprovedAreas(req.body.areas);
+      if (!approvedAreas) return res.status(400).json({ message: 'اختار مناطق العمل من قائمة المناطق المعتمدة فقط. لا يمكن تسجيل منطقة غير موجودة بالقائمة.' });
 
       const passwordHash = await bcrypt.hash(req.body.password, 10);
 
@@ -119,7 +132,7 @@ router.post(
         phone,
         passwordHash,
         specialties: req.body.specialties,
-        areas: req.body.areas || [],
+        areas: approvedAreas,
         ...(req.body.guidelinesAccepted === true ? {
           technicianGuidelinesAcceptedAt: new Date(),
           technicianGuidelinesVersion: TECHNICIAN_GUIDELINES_VERSION
@@ -239,8 +252,8 @@ router.patch('/me', auth(), requireFanni, validate(profileUpdateSchema), async (
     const normalizedSpecialties = [...new Set(requestedSpecialties.map(value => String(value).trim()).filter(Boolean))];
     // التخصصات اختيارية عند تعديل الملف؛ إذا لم يحدد الفني تخصصات جديدة، احتفظ بالتخصصات الحالية.
     const specialties = normalizedSpecialties.length ? normalizedSpecialties : [...(req.user.specialties || [])];
-    const areas = [...new Set(req.body.areas.map(value => String(value).trim()).filter(value => value.length >= 2))];
-    if (!areas.length) return res.status(400).json({ message: 'اكتب منطقة عمل واحدة على الأقل' });
+    const areas = await validateApprovedAreas(req.body.areas);
+    if (!areas) return res.status(400).json({ message: 'اختار مناطق العمل من قائمة المناطق المعتمدة فقط.' });
     req.user.pendingProfileChange = { phone, specialties, areas, requestedAt: new Date() };
     req.user.decisions.push({ action: 'طلب تعديل بيانات', reason: 'طلب الفني تغيير بيانات حسابه', date: new Date(), by: String(req.user.name || 'الفني'), byId: req.user._id, meta: { phone, specialties, areas } });
     await req.user.save();
