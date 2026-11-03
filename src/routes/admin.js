@@ -45,7 +45,7 @@ const router = express.Router();
 router.get('/mobile-panel', auth('admin'), (req, res, next) => {
   try {
     const authorization = String(req.headers.authorization || '');
-    const token = authorization.replace(/^Bearer\\s+/i, '').trim();
+    const token = authorization.replace(/^Bearer\s+/i, '').trim();
     if (!token) return res.status(401).json({ message: 'جلسة الإدارة غير صالحة.' });
     const filePath = path.join(__dirname, '../../frontend/admin.html');
     let html = fs.readFileSync(filePath, 'utf8');
