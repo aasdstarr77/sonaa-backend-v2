@@ -23,7 +23,7 @@ async function validateApprovedAreas(areas) {
   const allowed=new Set(getEffectiveAreaOptions(allRegions).map(normalizeArea));
   const normalized = [...new Set((Array.isArray(areas) ? areas : []).map(value => String(value || '').normalize('NFC').trim().replace(/\s+/g, ' ')).filter(value => value.length >= 2))];
   const allAreas = normalized.some(value => normalizeArea(value) === normalizeArea(ALL_AREAS_LABEL));
-  if (allAreas) return normalized.length === 1 ? [ALL_AREAS_LABEL] : null;
+  if (allAreas) return null;
   return normalized.length && normalized.every(value => allowed.has(normalizeArea(value))) ? normalized : null;
 }
 

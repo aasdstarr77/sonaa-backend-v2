@@ -145,7 +145,7 @@ function onRegAreaSearch(value){
  if(input){input.focus();try{input.setSelectionRange(cursor,cursor);}catch(_){}}
 }
 function toggleRegArea(area){
- const value=clean(area,60);if(!value)return;
+ const value=clean(area,60);if(!value||value==='جميع المناطق')return;
  if(state.regAreas.includes(value))state.regAreas=state.regAreas.filter(item=>item!==value);
  else if(state.regAreas.length>=30){state.error='تقدر تختار لحد 30 منطقة فقط.';render();return;}
  else state.regAreas=[...state.regAreas,value];
@@ -158,14 +158,14 @@ function onEditAreaSearch(value){
  if(input){input.focus();try{input.setSelectionRange(cursor,cursor);}catch(_){}}
 }
 function toggleEditArea(area){
- const value=clean(area,60);if(!value)return;
+ const value=clean(area,60);if(!value||value==='جميع المناطق')return;
  if(state.editAreas.includes(value))state.editAreas=state.editAreas.filter(item=>item!==value);
  else if(state.editAreas.length>=30){state.error='تقدر تختار لحد 30 منطقة فقط.';render();return;}
  else state.editAreas=[...state.editAreas,value];
  state.error='';render();
 }
 function renderFanniAreaPicker(selected,search,inputId,searchHandler,toggleHandler){
- const chosen=Array.isArray(selected)?selected:[];
+ const chosen=Array.isArray(selected)?selected.filter(area=>String(area||'').trim()!=='جميع المناطق'):[];
  const query=String(search||'').trim().toLocaleLowerCase('ar');
  const options=[...new Set(AREA_OPTIONS)];
  const visible=options.filter(area=>!query||String(area).toLocaleLowerCase('ar').includes(query)).slice(0,80);

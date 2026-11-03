@@ -112,7 +112,7 @@ async function doRegister(){
 function beginEditProfile(){
  const user=currentUser||getUser()||{};
  state.editPhone=String(user.phone||'');
- state.editAreas=Array.isArray(user.areas)?[...user.areas]:[];
+ state.editAreas=Array.isArray(user.areas)?user.areas.filter(area=>String(area||'').trim()!=='جميع المناطق'):[];
  state.editAreaSearch='';
  state.editSpecialties=Array.isArray(user.specialties)?[...user.specialties]:[];
  state.editProfileMode=true;state.openSpecialtyCategory='';state.error='';state.success='';render();
