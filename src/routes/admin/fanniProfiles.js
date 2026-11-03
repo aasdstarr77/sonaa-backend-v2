@@ -2,6 +2,7 @@
 
 const express = require('express');
 const { normalizeArea, ALL_AREAS_LABEL } = require('../../config/areas');
+const { normalizePhone } = require('../../utils/phone');
 
 function createAdminFanniProfilesRouter({
   Region,
@@ -25,6 +26,53 @@ function createAdminFanniProfilesRouter({
   reasonSchema
 }) {
   const router = express.Router();
+
+  router.get('/fannis/:id/profile', auth('admin'), async (req, res, next) => {
+    try {
+      if (!validId(req.params.id)) return sendBadId(res);
+      const fanni = await Fanni.findOne({ _id: req.params.id, role: 'fanni' }).select('-passwordHash').lean();
+      if (!fanni) return res.status(404).json({ message: 'حساب الفني غير موجود.' });
+      return res.set('Cache-Control', 'no-store').json({ fanni: { _id: String(fanni._id), name: fanni.name, phone: fanni.phone, specialties: fanni.specialties || [], areas: fanni.areas || [], status: fanni.status } });
+    } catch (err) { next(err); }
+  });
+
+  router.patch('/fannis/:id/profile', auth('admin'), async (req, res, next) => {
+    try {
+      if (!validId(req.params.id)) return sendBadId(res);
+      const schema = Joi.object({
+        phone: Joi.string().trim().required(),
+        specialties: Joi.array().items(Joi.string().trim().min(1).max(100)).min(1).max(20).required(),
+        areas: Joi.array().items(Joi.string().trim().min(2).max(60)).min(1).max(30).required()
+      }).required();
+      const { error, value } = schema.validate(req.body || {}, { abortEarly: false, stripUnknown: true });
+      if (error) return res.status(400).json({ message: 'راجع رقم الهاتف والتخصصات ومناطق العمل.' });
+      const phone = normalizePhone(value.phone);
+      if (!phone || !/^01[0-9]{9}$/.test(phone)) return res.status(400).json({ message: 'رقم الهاتف غير صحيح.' });
+      const fanni = await Fanni.findOne({ _id: req.params.id, role: 'fanni' });
+      if (!fanni) return res.status(404).json({ message: 'حساب الفني غير موجود.' });
+      if (fanni.pendingProfileChange?.requestedAt) return res.status(409).json({ message: 'لدى الفني طلب تعديل بيانات قيد المراجعة. راجع الطلب أولًا.' });
+      const duplicate = await Fanni.findOne({ phone, _id: { $ne: fanni._id } }).select('_id');
+      if (duplicate) return res.status(409).json({ message: 'رقم الهاتف مسجل بالفعل في حساب آخر.' });
+      const activeRegions = await Region.find({ isActive: true }).select('name').lean();
+      const allowedAreas = new Set([...(AREA_OPTIONS || []), ...activeRegions.map(item => item.name), ALL_AREAS_LABEL].map(normalizeArea));
+      const areas = [...new Map(value.areas.map(item => [normalizeArea(item), String(item).normalize('NFC').trim().replace(/\s+/g, ' ')])).values()];
+      if (areas.some(item => !allowedAreas.has(normalizeArea(item)))) return res.status(400).json({ message: 'اختار مناطق العمل من القائمة المعتمدة فقط.' });
+      const allAreas = areas.some(item => normalizeArea(item) === normalizeArea(ALL_AREAS_LABEL));
+      const normalizedAreas = allAreas ? [ALL_AREAS_LABEL] : areas;
+      const specialties = [...new Set(value.specialties.map(item => item.normalize('NFC').trim()))];
+      if (specialties.some(item => !(ALL_SERVICES || []).some(service => service.normalize('NFC').trim() === item))) return res.status(400).json({ message: 'توجد خدمة غير موجودة في قائمة الخدمات المعتمدة.' });
+      const before = { phone: fanni.phone, specialties: [...(fanni.specialties || [])], areas: [...(fanni.areas || [])] };
+      fanni.phone = phone; fanni.specialties = specialties; fanni.areas = normalizedAreas;
+      fanni.decisions.push(decision(req, 'تعديل بيانات فني', 'تعديل مباشر من لوحة الإدارة'));
+      fanni.decisions[fanni.decisions.length - 1].meta = { before, after: { phone, specialties, areas: normalizedAreas }, source: 'admin-profile-editor' };
+      await fanni.save();
+      await writeAdminAudit(req, 'تعديل بيانات فني', 'fannis', String(fanni._id), JSON.stringify({ before, after: { phone, specialties, areas: normalizedAreas } }));
+      return res.json({ message: 'تم حفظ بيانات الفني بنجاح.', fanni: publicFanni(fanni) });
+    } catch (err) {
+      if (err && err.code === 11000) return res.status(409).json({ message: 'رقم الهاتف مسجل بالفعل في حساب آخر.' });
+      next(err);
+    }
+  });
 
   router.patch('/fannis/:id/password', auth('admin'), async (req, res, next) => {
     try {

@@ -158,6 +158,39 @@ function createAdminPlatformRouter({
     try { const logs = await AdminAuditLog.find({ category: 'support' }).sort({ createdAt: -1 }).limit(200).lean(); return res.json({ violations: logs, items: logs }); }
     catch (err) { next(err); }
   });
+  router.get('/client-accounts/:id/profile', auth('admin'), async (req, res, next) => {
+    try {
+      if (!/^[a-f0-9]{24}$/i.test(String(req.params.id || ''))) return res.status(400).json({ message: 'معرّف العميل غير صالح.' });
+      const client = await Client.findById(req.params.id).select('name phone status').lean();
+      if (!client) return res.status(404).json({ message: 'حساب العميل غير موجود.' });
+      return res.set('Cache-Control', 'no-store').json({ client: { _id: String(client._id), name: client.name, phone: client.phone, status: client.status } });
+    } catch (err) { next(err); }
+  });
+  router.patch('/client-accounts/:id/profile', auth('admin'), async (req, res, next) => {
+    try {
+      if (!/^[a-f0-9]{24}$/i.test(String(req.params.id || ''))) return res.status(400).json({ message: 'معرّف العميل غير صالح.' });
+      const schema = Joi.object({ name: Joi.string().trim().min(2).max(50).required(), phone: Joi.string().trim().required() }).required();
+      const { error, value } = schema.validate(req.body || {}, { abortEarly: false, stripUnknown: true });
+      if (error) return res.status(400).json({ message: 'اكتب اسم العميل ورقم الهاتف بشكل صحيح.' });
+      const name = String(value.name || '').trim();
+      const phone = normalizePhone(value.phone);
+      if (!/^[\p{L}\p{M} .'-]{2,50}$/u.test(name)) return res.status(400).json({ message: 'اسم العميل غير صحيح.' });
+      if (!phone || !/^01[0-9]{9}$/.test(phone)) return res.status(400).json({ message: 'رقم الهاتف غير صحيح.' });
+      const client = await Client.findById(req.params.id);
+      if (!client) return res.status(404).json({ message: 'حساب العميل غير موجود.' });
+      const duplicate = await Client.findOne({ phone, _id: { $ne: client._id } }).select('_id');
+      if (duplicate) return res.status(409).json({ message: 'رقم الهاتف مسجل بالفعل في حساب آخر.' });
+      const before = { name: client.name, phone: client.phone };
+      client.name = name; client.phone = phone;
+      await client.save();
+      await writeAdminAudit(req, 'تعديل بيانات عميل', 'clients', String(client._id), JSON.stringify({ before, after: { name, phone } }));
+      return res.json({ message: 'تم حفظ بيانات العميل بنجاح.', client: { _id: String(client._id), name: client.name, phone: client.phone, status: client.status } });
+    } catch (err) {
+      if (err && err.code === 11000) return res.status(409).json({ message: 'رقم الهاتف مسجل بالفعل في حساب آخر.' });
+      next(err);
+    }
+  });
+
   router.patch('/clients/:phone/password', auth('admin'), async (req, res, next) => {
     try {
       const phone = normalizePhone(String(req.params.phone || '').trim());
@@ -184,7 +217,7 @@ function createAdminPlatformRouter({
       const orders = await Order.find(rx ? { $or: [{ clientName: rx }, { clientPhone: rx }, { sn: rx }] } : {}).select('clientName clientPhone sn createdAt').sort({ createdAt: -1 }).limit(500).lean();
       const byPhone = new Map();
       for (const order of orders) { const phone = String(order.clientPhone || ''); if (!phone) continue; const item = byPhone.get(phone) || { name: order.clientName || 'عميل', phone, status: 'غير مسجل', orderCount: 0, lastOrder: '' }; item.orderCount++; if (!item.lastOrder) item.lastOrder = order.sn || ''; byPhone.set(phone, item); }
-      for (const client of registered) { const item = byPhone.get(client.phone) || { name: client.name, phone: client.phone, orderCount: 0, lastOrder: '' }; Object.assign(item, { name: client.name, status: client.status, adminNote: client.adminNote || '', registered: true }); byPhone.set(client.phone, item); }
+      for (const client of registered) { const item = byPhone.get(client.phone) || { name: client.name, phone: client.phone, orderCount: 0, lastOrder: '' }; Object.assign(item, { id: String(client._id), name: client.name, status: client.status, adminNote: client.adminNote || '', registered: true }); byPhone.set(client.phone, item); }
       const clients = Array.from(byPhone.values()).sort((a,b) => (b.orderCount || 0) - (a.orderCount || 0)).slice(0, 200);
       const phones = clients.map(client => normalizePhone(client.phone || '')).filter(Boolean);
       const [ratingStats, completedStats] = phones.length ? await Promise.all([
