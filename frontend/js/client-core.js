@@ -123,6 +123,7 @@ const VALIDATORS={
 };
 let CATEGORIES=[];
 let ALL_SERVICES=[];
+let TECHNICIAN_COUNTS={};
 const API={
   tokenKey(sn){return 'sonaa_client_token_'+String(sn||'').toUpperCase()},
   saveClientToken(sn,token){

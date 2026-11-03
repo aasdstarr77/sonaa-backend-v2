@@ -185,6 +185,7 @@ async function loadServices(){
   try{
     const data=await API.getServices();
     CATEGORIES=data.categories;ALL_SERVICES=data.services;
+    TECHNICIAN_COUNTS=Object.fromEntries(CATEGORIES.flatMap(category=>Object.entries(category.serviceTechnicianCounts||{})));
     const flat=[...new Set(CATEGORIES.flatMap(c=>c.services))];
     if(flat.length!==ALL_SERVICES.length){ALL_SERVICES=[...new Set(ALL_SERVICES)];}
     state.servicesLoading=false;state.servicesError='';state.servicesLoaded=true;

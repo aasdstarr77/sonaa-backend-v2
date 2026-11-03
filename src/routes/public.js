@@ -86,10 +86,17 @@ router.get('/areas', async (req, res, next) => {
  */
 router.get('/services', async (req, res, next) => {
   try {
-    const savedServices = await Service.find({})
-      .select('+normalizedName +normalizedCategory')
-      .sort({ sortOrder: 1, name: 1 })
-      .lean();
+    const [savedServices, approvedTechnicians] = await Promise.all([
+      Service.find({}).select('+normalizedName +normalizedCategory').sort({ sortOrder: 1, name: 1 }).lean(),
+      Fanni.find({ status: 'معتمد', role: 'fanni' }).select('specialties').lean()
+    ]);
+    const technicianCounts = new Map();
+    const normalizedSpecialties = approvedTechnicians.map(technician =>
+      new Set((Array.isArray(technician.specialties) ? technician.specialties : []).map(normalize).filter(Boolean))
+    );
+    for (const specialties of normalizedSpecialties) {
+      for (const specialty of specialties) technicianCounts.set(specialty, (technicianCounts.get(specialty) || 0) + 1);
+    }
 
     const categoriesMap = new Map();
 
@@ -168,7 +175,18 @@ router.get('/services', async (req, res, next) => {
       .sort((a, b) => a.categorySortOrder - b.categorySortOrder || a.label.localeCompare(b.label, 'ar'))
       .map(category => {
         category.services.sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, 'ar'));
-        return { label: category.label, emoji: category.emoji, services: category.services.map(item => item.name) };
+        const names = category.services.map(item => item.name);
+        const normalizedNames = new Set(names.map(normalize));
+        const categoryTechnicianCount = normalizedSpecialties.filter(specialties =>
+          Array.from(specialties).some(specialty => normalizedNames.has(specialty))
+        ).length;
+        return {
+          label: category.label,
+          emoji: category.emoji,
+          services: names,
+          technicianCount: categoryTechnicianCount,
+          serviceTechnicianCounts: Object.fromEntries(names.map(name => [name, technicianCounts.get(normalize(name)) || 0]))
+        };
       })
       .filter(category => category.services.length > 0);
 

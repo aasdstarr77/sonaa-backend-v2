@@ -104,6 +104,7 @@ function render(){
                   <div class="category-tile-grid">
                     ${visibleCategories.map(c=>`
                       <button type="button" onclick='toggleCategory(${escAttr(JSON.stringify(c.label))})' aria-expanded="${state.openCategory===c.label?'true':'false'}" aria-pressed="${state.openCategory===c.label?'true':'false'}" class="category-tile ${state.openCategory===c.label?'active':''}">
+                        <span class="category-tile-availability">${Number(c.technicianCount)||0} صنايعي متاح</span>
                         <span class="category-tile-icon" aria-hidden="true">${escHtml(c.emoji)}</span>
                         <span class="category-tile-label">${escHtml(c.label)}</span>
                         <span class="category-tile-count">${c.services.length} خدمة</span>
@@ -124,7 +125,8 @@ function render(){
                         ${selectedCategory.services.map(s=>`
                           <button type="button" onclick="selectServiceByIndex(${ALL_SERVICES.indexOf(s)})" class="service-choice ${state.service===s?'selected':'hover:bg-blue-50'}">
                             <span class="service-icon" aria-hidden="true">${serviceIconFor(s)}</span>
-                            <span>${escHtml(s)}</span>
+                            <span class="service-choice-name">${escHtml(s)}</span>
+                            <span class="service-choice-availability">${Number(TECHNICIAN_COUNTS[s])||0} صنايعي متاح</span>
                           </button>
                         `).join('')}
                       </div>
