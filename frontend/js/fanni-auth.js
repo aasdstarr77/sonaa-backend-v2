@@ -66,10 +66,8 @@ async function doRegister(){
  if(!CATEGORIES.length){state.error='قائمة التخصصات غير متاحة حاليًا.';render();return}
  if(!state.regSpecialties.length){state.error='اختار تخصصًا واحدًا على الأقل';render();return}
 
- const area=clean(state.regAreaCustom,60).replace(/\s+/g,' ');
- if(area.length<2){state.error='اكتب اسم المنطقة أو الحي من حرفين على الأقل';render();return}
- if(/01[0-9]{9}/.test(area.replace(/\D/g,''))){state.error='ممنوع كتابة رقم تليفون في المنطقة';render();return}
- const areas=[area];
+ const areas=[...new Set((state.regAreas||[]).filter(Boolean))];
+ if(!areas.length){state.error='اختار منطقة عمل واحدة على الأقل من القائمة';render();return}
  if(!V.text(state.regPass,6,100)){state.error='كلمة السر لازم تكون 6 أحرف على الأقل';render();return}
  if(state.regPass!==state.regPassConfirm){state.error='تأكيد كلمة السر غير مطابق. اكتب نفس كلمة السر في الخانتين.';render();return}
  if(!state.regGuidelinesAccepted){state.error='لازم تقرأ ميثاق التعامل المهني وتحدد الموافقة قبل إنشاء الحساب.';render();return}
@@ -114,7 +112,8 @@ async function doRegister(){
 function beginEditProfile(){
  const user=currentUser||getUser()||{};
  state.editPhone=String(user.phone||'');
- state.editAreasText=Array.isArray(user.areas)?user.areas.join('، '):'';
+ state.editAreas=Array.isArray(user.areas)?[...user.areas]:[];
+ state.editAreaSearch='';
  state.editSpecialties=Array.isArray(user.specialties)?[...user.specialties]:[];
  state.editProfileMode=true;state.openSpecialtyCategory='';state.error='';state.success='';render();
 }
@@ -131,8 +130,8 @@ async function saveProfileChanges(){
  const phone=String(state.editPhone||'').replace(/\D/g,'');
  if(!/^01[0-9]{9}$/.test(phone)){state.error='رقم التليفون لازم يكون 11 رقم ويبدأ بـ 01';render();return;}
  if(!Array.isArray(state.editSpecialties)||!state.editSpecialties.length){state.error='اختار تخصصًا واحدًا على الأقل';render();return;}
- const areas=parseAreas(state.editAreasText);
- if(!areas.length){state.error='اكتب منطقة عمل واحدة على الأقل';render();return;}
+ const areas=[...new Set((state.editAreas||[]).filter(Boolean))];
+ if(!areas.length){state.error='اختار منطقة عمل واحدة على الأقل من القائمة';render();return;}
  state.editSaving=true;state.error='';state.success='';render();
  try{
   const result=await API.updateProfile({phone,specialties:state.editSpecialties,areas});

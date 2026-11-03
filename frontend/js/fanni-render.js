@@ -73,9 +73,9 @@ function render(){
     </div>
 
     <div>
-      <label class="field-label">منطقة العمل أو الحي اللي حابب تشتغل فيه *</label>
-      <input id="fanniRegArea" class="field" required minlength="2" autocomplete="address-level2" enterkeyhint="next" maxlength="60" value="${esc(state.regAreaCustom)}" oninput="state.regAreaCustom=this.value.slice(0,60)" placeholder="مثال: شبرا، المعادي، فيصل...">
-      <p class="mt-1 text-[10px] text-slate-500">اكتب اسم المنطقة أو الحي. مش لازم تختار من قائمة.</p>
+      <label class="field-label">مناطق العمل *</label>
+      <p class="mb-2 text-[10px] text-slate-500">ابحث عن المناطق اللي تقدر تشتغل فيها واختار كل المناطق المناسبة.</p>
+      ${renderFanniAreaPicker(state.regAreas,state.regAreaSearch,'regAreaSearchInput','onRegAreaSearch','toggleRegArea')}
      </div>
     <div><label class="field-label">كلمة السر *</label><input id="fanniRegPassword" type="password" class="field" autocomplete="new-password" enterkeyhint="next" value="${esc(state.regPass)}" oninput="state.regPass=this.value.slice(0,100)" placeholder="6 أحرف على الأقل"></div>
     <div><label class="field-label">تأكيد كلمة السر *</label><input id="fanniRegPasswordConfirm" type="password" class="field" autocomplete="new-password" enterkeyhint="go" value="${esc(state.regPassConfirm)}" oninput="state.regPassConfirm=this.value.slice(0,100)" placeholder="اكتب كلمة السر مرة تانية"><p class="text-[10px] text-slate-500 mt-1">لازم تكون مطابقة لكلمة السر الأولى.</p></div>
@@ -280,8 +280,8 @@ function render(){
     ${state.editProfileMode?`
      <div class="mt-4 space-y-4">
       <div><label class="field-label">رقم التليفون *</label><input id="fanniEditPhone" class="field" inputmode="numeric" autocomplete="tel" maxlength="11" enterkeyhint="next" value="${esc(state.editPhone)}" oninput="state.editPhone=this.value.replace(/\\D/g,'').slice(0,11)" placeholder="01xxxxxxxxx"><p class="text-[10px] text-slate-500 mt-1">رقم مصري من 11 رقمًا وغير مسجل لحساب آخر.</p></div>
-      <div><label class="field-label">مناطق العمل *</label><textarea id="fanniEditAreas" class="field min-h-[90px]" maxlength="1800" enterkeyhint="go" oninput="state.editAreasText=this.value.slice(0,1800)" placeholder="اكتب المناطق أو الأحياء وافصل بينها بفاصلة، مثال: شبرا، المعادي، فيصل">${esc(state.editAreasText)}</textarea><p class="text-[10px] text-slate-500 mt-1">اكتب كل المناطق اللي تقدر تشتغل فيها، وافصل بينها بفاصلة.</p></div>
-      <div class="rounded-2xl border p-3">
+      <div><label class="field-label">مناطق العمل *</label><p class="text-[10px] text-slate-500 mb-2">ابحث واختار كل المناطق اللي تقدر تشتغل فيها.</p>${renderFanniAreaPicker(state.editAreas,state.editAreaSearch,'editAreaSearchInput','onEditAreaSearch','toggleEditArea')}</div>
+       <div class="rounded-2xl border p-3">
        <div class="font-extrabold text-[12px] mb-3">التخصصات * <span class="text-slate-500">(${state.editSpecialties.length} مختار)</span></div>
        ${SERVICES_LOADING?`<p class="py-4 text-center text-[11px]">جاري تحميل التخصصات...</p>`:SERVICES_ERROR?`<div class="rounded-xl bg-red-50 border border-red-200 p-3 text-[11px] text-red-700">${esc(SERVICES_ERROR)} <button type="button" onclick="loadServices()" class="secondary-btn px-3 py-1">إعادة المحاولة</button></div>`:CATEGORIES.map((cat,index)=>{
         const selectedCount=cat.services.filter(s=>state.editSpecialties.includes(s)).length;
