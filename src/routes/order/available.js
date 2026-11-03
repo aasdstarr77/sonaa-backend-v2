@@ -71,7 +71,7 @@ router.get('/available', auth(), async (req, res, next) => {
     if (req.user.role !== 'admin') {
       matchingOrders = orders.filter(order =>
         fanniCanHandleService(specialties, order.service) &&
-        fanniWorksInArea(technicianAreas, order.area)
+        (order.areaMatchingEnabled !== true || fanniWorksInArea(technicianAreas, order.area))
       );
     }
 
