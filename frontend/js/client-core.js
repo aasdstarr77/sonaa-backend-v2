@@ -188,7 +188,7 @@ const API={
     if(!ALL_SERVICES.length){throw new Error('قائمة الخدمات غير متاحة حاليًا. حدّث الصفحة وحاول مرة أخرى.');}
     if(!VALIDATORS.name(payload.clientName))throw new Error('اكتب اسمك بشكل صحيح، من حرفين إلى 50 حرفًا.');
     if(!payload.service||!ALL_SERVICES.includes(payload.service))throw new Error('اختار الخدمة المطلوبة من القائمة الرسمية.');
-    if(!VALIDATORS.text(payload.area,2,100))throw new Error('اكتب المنطقة أو الحي من حرفين على الأقل.');
+    if(!AREA_OPTIONS.includes(String(payload.area||'').trim()))throw new Error('اختار المنطقة أو الحي من قائمة المناطق المعتمدة.');
     if(!VALIDATORS.text(payload.address,5,250))throw new Error('اكتب العنوان التفصيلي بشكل صحيح.');
     if(!VALIDATORS.phone(payload.phone))throw new Error('رقم التليفون غير صحيح؛ لازم يكون 11 رقم ويبدأ بـ 01.');
     const description=String(payload.description||'').trim(),voiceRecordingData=String(payload.voiceRecordingData||'');if(description.length<10&&!voiceRecordingData)throw new Error('اكتب وصف المشكلة أو سجّل فويس يوضح المشكلة قبل إرسال الطلب.');
