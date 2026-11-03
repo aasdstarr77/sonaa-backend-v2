@@ -79,7 +79,7 @@ function createOrderAdminPublicationRouter({
       // Notify only approved technicians matching both the service and work area.
       const eligibleFannis = await Fanni.find({ role: 'fanni', status: 'معتمد' }).select('_id specialties areas').lean();
       for (const fanni of eligibleFannis) {
-        if (fanniCanHandleService(fanni.specialties, order.service) && fanniWorksInArea(fanni.areas, order.area)) {
+        if (fanniCanHandleService(fanni.specialties, order.service) && (order.areaMatchingEnabled !== true || fanniWorksInArea(fanni.areas, order.area))) {
           await createNotification({
             recipientRole: 'fanni', recipientId: fanni._id, type: 'new_opportunity',
             title: 'فرصة عمل جديدة', message: 'طلب جديد يناسب تخصصك في ' + order.area + ' (' + order.service + ').',
