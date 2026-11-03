@@ -86,7 +86,7 @@ function createAdminFanniProfilesRouter({
 
       const activeRegions = await Region.find({ isActive: true }).select('name').lean();
       const allowedAreas = new Set([...(AREA_OPTIONS || []), ...activeRegions.map(item => item.name), ALL_AREAS_LABEL].map(normalizeArea));
-      const areas = [...new Map(value.areas.map(item => [normalizeArea(item), String(item).normalize('NFC').trim().replace(/\\s+/g, ' ')])).values()];
+      const areas = [...new Map(value.areas.map(item => [normalizeArea(item), String(item).normalize('NFC').trim().replace(/\s+/g, ' ')])).values()];
       const invalidAreas = areas.filter(item => !allowedAreas.has(normalizeArea(item)));
       if (invalidAreas.length) return res.status(400).json({ message: 'توجد منطقة غير معتمدة في القائمة. حدّث قائمة المناطق ثم حاول مرة أخرى.', invalidAreas });
 
