@@ -12,7 +12,6 @@ function setTab(t,scrollTarget='content',fromBack=false){
 }
 function goBack(){
  if(ADMIN_TAB_HISTORY.length){const previous=ADMIN_TAB_HISTORY.pop();setTab(previous,'back',true);return;}
- if(window.history&&window.history.length>1){window.history.back();return;}
  if(window.ReactNativeWebView){window.ReactNativeWebView.postMessage('sonaa-admin-back-at-root');}
 }
 function onSearch(v){state.search=v; if(state.tab==='orders')applyOrderFilter(); else if(state.tab==='complaints')applyComplaintFilter(); else if(state.tab==='services')applyServicesFilter(); else if(state.tab==='topups')applyTopupFilter(); else if(state.tab==='clients')applyClientFilter(); else applyFilter();}
