@@ -39,9 +39,9 @@ function mountRoleRoutes(role) {
       }
       if (role === 'admin' && req.user?.role !== 'admin' && !req.user?.adminRole) return res.status(403).json({ message: 'تسجيل إشعارات الإدارة يتطلب حسابًا إداريًا.' });
       const token = typeof req.body?.token === 'string' ? req.body.token.trim() : '';
-      const isExpoToken = /^(Exponent|Expo)PushToken\\[[^\\]]+\\]$/.test(token);
+      const isExpoToken = /^(Exponent|Expo)PushToken\[[^\]]+\]$/.test(token);
       const requestedPlatform = String(req.body?.platform || '').trim();
-      const isFcmToken = requestedPlatform === 'fcm-android' && token.length >= 40 && token.length <= 200 && !/\\s/.test(token);
+      const isFcmToken = requestedPlatform === 'fcm-android' && token.length >= 40 && token.length <= 200 && !/\s/.test(token);
       if (!isExpoToken && !isFcmToken) {
         return res.status(400).json({ message: 'رمز إشعارات الجهاز غير صالح.' });
       }

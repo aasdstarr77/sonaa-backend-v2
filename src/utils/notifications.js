@@ -67,7 +67,7 @@ async function sendFirebasePushNotifications(devices, payload) {
 async function sendPushNotification({ recipientRole, recipientId, title, message, type, link = '' }) {
   try {
     const devices = await PushToken.find({ recipientRole, recipientId }).select('token platform').lean();
-    const expo = devices.filter(d => d.platform !== 'fcm-android' && /^(Exponent|Expo)PushToken\\[[^\\]]+\\]$/.test(d.token));
+    const expo = devices.filter(d => d.platform !== 'fcm-android' && /^(Exponent|Expo)PushToken\[[^\]]+\]$/.test(d.token));
     const fcm = devices.filter(d => d.platform === 'fcm-android');
     if (expo.length && typeof fetch === 'function') {
       const messages = expo.map(d => ({
