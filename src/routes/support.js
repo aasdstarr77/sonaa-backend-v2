@@ -97,6 +97,14 @@ async function sendOwnerMessage(req, res, role) {
   // Any new owner message after an admin reply needs another human review.
   item.needsHuman = role === 'client' || role === 'fanni' || req.body?.needsHuman === true;
   await item.save();
+  const lastMessage = item.messages[item.messages.length - 1];
+  await notifyAdmins({
+    type: 'admin_support_followup',
+    title: 'رسالة جديدة في الدعم',
+    message: `وصلت رسالة متابعة من ${item.ownerName || (role === 'fanni' ? 'فني' : 'عميل')} في محادثة الدعم: ${item.subject}.`,
+    link: '/admin?tab=support',
+    dedupeKey: 'admin-support-message:' + String(item._id) + ':' + String(lastMessage?._id || item.lastMessageAt?.getTime?.() || Date.now())
+  });
   return res.json({ message: 'تم إرسال الرسالة.', supportCase: publicCase(item) });
 }
 

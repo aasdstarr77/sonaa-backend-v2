@@ -239,6 +239,14 @@ router.post('/request/:id/messages', async (req, res, next) => {
     item.messages.push({ senderRole: 'user', text });
     if (item.status === 'بانتظار رد المستخدم') item.status = 'قيد التحقق';
     await item.save();
+    const lastMessage = item.messages[item.messages.length - 1];
+    await notifyAdmins({
+      type: 'admin_password_recovery_message',
+      title: 'رسالة جديدة في طلب استعادة كلمة المرور',
+      message: `وصلت رسالة جديدة إلى طلب استعادة كلمة المرور لحساب ${item.ownerRole} برقم ${item.phone}.`,
+      link: '/admin?tab=support',
+      dedupeKey: 'admin-password-recovery-message:' + String(item._id) + ':' + String(lastMessage?._id || Date.now())
+    });
     return res.json({ message: 'تم إرسال رسالتك للدعم.', recovery: safeUserRecovery(item) });
   } catch (e) { return next(e); }
 });
