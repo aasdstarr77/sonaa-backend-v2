@@ -275,7 +275,7 @@ router.use(createAdminComplaintsRouter({
   validId, sendBadId, Complaint, Order, adminName, writeAdminAudit, createNotification
 }));
 
-router.get('/counts', auth('admin'), async (req, res, next) => {
+router.get(['/counts', '/stats'], auth('admin'), async (req, res, next) => {
   try {
     const acceptedFanniFilter = {
       $and: [
@@ -412,6 +412,15 @@ async function writeAdminAudit(req, action, category, target, details) {
 }
 
 router.use(createAdminClientsRouter({ auth, Joi, Client, normalizePhone, adminName, writeAdminAudit }));
+
+router.get('/clients', auth('admin'), async (req, res, next) => {
+  try {
+    const parsedLimit = Number.parseInt(req.query.limit, 10);
+    const limit = Number.isInteger(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, MAX_LIST_LIMIT) : MAX_LIST_LIMIT;
+    const clients = await Client.find({}).select('name phone status createdAt').sort({ createdAt: -1 }).limit(limit).lean();
+    return res.set('Cache-Control', 'no-store').json({ clients, data: clients, items: clients });
+  } catch (err) { next(err); }
+});
 
 
 const ADMIN_LAYOUT_SECTIONS = {
