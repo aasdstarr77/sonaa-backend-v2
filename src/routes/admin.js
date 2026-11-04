@@ -52,6 +52,7 @@ router.get('/mobile-panel', auth('admin'), (req, res, next) => {
     const tokenLiteral = JSON.stringify(token).replace(/</g, '\\u003c');
     const bootstrap = `<base href="/"><script>
       (function () {
+        window.__SONAA_CON_APP__ = true;
         var token = ${tokenLiteral};
         localStorage.setItem('admin_token_v3', token);
         localStorage.setItem('admin_token', token);
@@ -80,6 +81,7 @@ const createAdminWalletRouter = require('./admin/wallet');
 const createAdminFanniManagementRouter = require('./admin/fanniManagement');
 
 const ADMIN_TOKEN_EXPIRY = '1d';
+const CON_ADMIN_TOKEN_EXPIRY = '30d';
 const MAX_LIST_LIMIT = 500;
 
 const loginSchema = Joi.object({
@@ -223,6 +225,48 @@ router.post('/login', validate(loginSchema), async (req, res, next) => {
     }
     const token = jwt.sign({ id: admin._id, role: admin.role, adminRole: admin.adminRole || null, tokenVersion: Number(admin.tokenVersion || 0) }, process.env.JWT_SECRET, { expiresIn: ADMIN_TOKEN_EXPIRY });
     return res.json({ token, user: { id: String(admin._id), name: admin.name, phone: admin.phone, role: admin.role, adminRole: admin.adminRole || null } });
+  } catch (err) { next(err); }
+});
+// Dedicated 30-day session for the Sonaa CON native app.
+// Browser admin sessions intentionally remain limited to ADMIN_TOKEN_EXPIRY (1d).
+router.post('/con-login', validate(loginSchema), async (req, res, next) => {
+  try {
+    if (!process.env.JWT_SECRET) {
+      return res.status(503).json({ message: 'تسجيل الدخول غير متاح بسبب إعدادات الخادم' });
+    }
+    const phone = getLoginPhone(req.body);
+    if (!phone) return res.status(401).json({ message: 'بيانات الدخول غير صحيحة' });
+    const admin = await Fanni.findOne({
+      phone,
+      $or: [
+        { role: 'admin' },
+        { adminRole: { $in: ['مشرف', 'مشرف أول', 'مدير', 'قراءة فقط'] } }
+      ]
+    }).select('+passwordHash');
+    if (!admin || !admin.passwordHash || !(await bcrypt.compare(req.body.password, admin.passwordHash))) {
+      return res.status(401).json({ message: 'بيانات الدخول غير صحيحة' });
+    }
+    if (admin.status === 'معلق' || admin.status === 'مرفوض') {
+      return res.status(403).json({ message: 'حساب الإدارة غير مسموح له بالدخول' });
+    }
+    const token = jwt.sign({
+      id: admin._id,
+      role: admin.role,
+      adminRole: admin.adminRole || null,
+      tokenVersion: Number(admin.tokenVersion || 0),
+      client: 'sonaa-con',
+      scope: 'admin'
+    }, process.env.JWT_SECRET, { expiresIn: CON_ADMIN_TOKEN_EXPIRY, audience: 'sonaa-con' });
+    return res.json({
+      token,
+      user: {
+        id: String(admin._id),
+        name: admin.name,
+        phone: admin.phone,
+        role: admin.role,
+        adminRole: admin.adminRole || null
+      }
+    });
   } catch (err) { next(err); }
 });
 

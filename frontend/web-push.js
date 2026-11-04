@@ -102,6 +102,8 @@
     showButton(a,'🔔 تفعيل إشعارات المتصفح');
   }
   function refresh(){mount(account());}
+  // CON uses native Expo notifications; keep the browser permission banner out of its WebView.
+  if(window.__SONAA_CON_APP__){removeButton();return;}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',refresh);else refresh();
   setInterval(refresh,2500);
 })();

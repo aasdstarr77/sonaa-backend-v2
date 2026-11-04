@@ -469,6 +469,46 @@ async function run() {
       assert.equal(oldAdminSession.status, 401);
       adminToken = adminPasswordChange.body.token;
 
+      const browserLogin = await request(app).post('/api/admin/login')
+        .send({ phone: '01012345678', password: 'AdminChangedPass123' });
+      assert.equal(browserLogin.status, 200);
+      const browserClaims = jwt.decode(browserLogin.body.token);
+      assert.equal(browserClaims.client, undefined, 'browser token must not carry the CON client marker');
+      assert.equal(browserClaims.exp - browserClaims.iat, 24 * 60 * 60, 'browser session remains at 24 hours');
+
+      const conLogin = await request(app).post('/api/admin/con-login')
+        .send({ phone: '01012345678', password: 'AdminChangedPass123' });
+      assert.equal(conLogin.status, 200, 'CON login must accept the same active admin account');
+      const conClaims = jwt.decode(conLogin.body.token);
+      assert.equal(conClaims.client, 'sonaa-con');
+      assert.equal(conClaims.aud, 'sonaa-con');
+      assert.equal(conClaims.scope, 'admin');
+      assert.equal(conClaims.exp - conClaims.iat, 30 * 24 * 60 * 60, 'CON session must last 30 days');
+
+      const conMe = await request(app).get('/api/admin/me')
+        .set('Authorization', 'Bearer ' + conLogin.body.token);
+      assert.equal(conMe.status, 200, 'CON session must access admin APIs');
+      const conPanel = await request(app).get('/api/admin/mobile-panel')
+        .set('Authorization', 'Bearer ' + conLogin.body.token);
+      assert.equal(conPanel.status, 200);
+      assert.match(conPanel.text, /window\\.__SONAA_CON_APP__ = true/);
+
+      const conPushToken = await request(app).post('/api/notifications/admin/push-token')
+        .set('Authorization', 'Bearer ' + conLogin.body.token)
+        .send({ token: 'ExponentPushToken[sonaa-con-session-test]', platform: 'android' });
+      assert.equal(conPushToken.status, 200, 'CON session must register native admin push tokens');
+
+      const conCrossRole = await request(app).get('/api/fanni/me')
+        .set('Authorization', 'Bearer ' + conLogin.body.token);
+      assert.equal(conCrossRole.status, 401, 'CON token must not authenticate non-admin routes');
+
+      const malformedConToken = jwt.sign({
+        id: String(admin._id), role: 'admin', client: 'sonaa-con', scope: 'admin'
+      }, process.env.JWT_SECRET, { expiresIn: '30d', audience: 'wrong-audience' });
+      const rejectedConToken = await request(app).get('/api/admin/me')
+        .set('Authorization', 'Bearer ' + malformedConToken);
+      assert.equal(rejectedConToken.status, 401, 'CON marker with wrong audience must be rejected');
+
       const fanni = await Fanni.create({
         name: 'فني اختبار', phone: '01012345680', passwordHash: await bcrypt.hash('FanniOldPass123', 12),
         specialties: ['صيانة تكييف'], areas: ['القاهرة'], status: 'معتمد', role: 'fanni'

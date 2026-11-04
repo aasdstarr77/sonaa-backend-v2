@@ -91,6 +91,16 @@ function auth(requiredRole = null) {
       if (!process.env.JWT_SECRET) return res.status(503).json({ message: 'تسجيل الدخول غير متاح بسبب إعدادات الخادم' });
       const token = header.split(' ')[1];
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const hasConMarker = decoded.client === 'sonaa-con' || decoded.aud === 'sonaa-con';
+      const isConToken = hasConMarker && decoded.client === 'sonaa-con' &&
+        decoded.aud === 'sonaa-con' && decoded.scope === 'admin';
+      if (hasConMarker && !isConToken) return res.status(401).json({ message: 'Token غير صالح' });
+      const requestPath = String(req.originalUrl || (String(req.baseUrl || '') + String(req.path || '')));
+      const isConNotificationRoute = /^\/api\/notifications\/admin(?:\/|$)/.test(requestPath);
+      // CON tokens are limited to admin APIs and the admin notification endpoints only.
+      if (isConToken && requiredRole !== 'admin' && !isConNotificationRoute) {
+        return res.status(401).json({ message: 'هذا الرمز مخصص لتطبيق الإدارة فقط' });
+      }
       const user = await Fanni.findById(decoded.id);
       if (!user) return res.status(401).json({ message: 'المستخدم غير موجود' });
       if (Number(decoded.tokenVersion || 0) !== Number(user.tokenVersion || 0)) return res.status(401).json({ message: 'انتهت صلاحية الجلسة بعد تغيير كلمة المرور. سجّل الدخول مرة أخرى.' });
