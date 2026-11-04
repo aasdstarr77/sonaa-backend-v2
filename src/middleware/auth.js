@@ -27,7 +27,7 @@ function defaultAdminPermissions(role) {
 }
 
 const PERMISSION_SECTIONS = {
-  dashboard: [/^\/me$/, /^\/counts$/, /^\/reports?(\/|$)/, /^\/stats?(\/|$)/],
+  dashboard: [/^\/me$/, /^\/counts$/, /^\/mobile-panel$/, /^\/reports?(\/|$)/, /^\/stats?(\/|$)/],
   wallet: [/^\/wallet(\/|$)/, /^\/fannis\/[^/]+\/(set-balance|add-balance)$/],
   fannis: [/^\/fannis(\/|$)/, /^\/fanni-profile-edits(\/|$)/],
   publishOrders: [/^\/admin\/[^/]+\/publish$/],
