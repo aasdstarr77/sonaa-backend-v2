@@ -148,6 +148,7 @@ async function saveProfileChanges(){
   render();
   toast(state.error,'error');
  }
+}
 
 async function loadProfile(){
  if(!getToken())return;
