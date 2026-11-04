@@ -133,15 +133,21 @@ async function saveProfileChanges(){
  const areas=[...new Set((state.editAreas||[]).filter(Boolean))];
  if(!areas.length){state.error='اختار منطقة عمل واحدة على الأقل من القائمة';render();return;}
  state.editSaving=true;state.error='';state.success='';render();
+ toast('جاري إرسال طلب تعديل البيانات للإدارة...','pending');
  try{
   const result=await API.updateProfile({phone,specialties:state.editSpecialties,areas});
   const updated=extractUser(result)||result?.data||result?.fanni||null;
-  if(!updated||typeof updated!=='object')throw new Error('تم إرسال طلب التعديل، لكن تعذر تحديث البيانات المعروضة. حدّث الصفحة للتأكد.');
+  if(!updated||typeof updated!=='object')throw new Error(result?.message||'وصل رد غير مكتمل من الخادم. حاول تحديث الصفحة.');
   currentUser={...(currentUser||{}),...updated};setAuth(getToken(),currentUser);
-  state.editProfileMode=false;state.editSaving=false;state.error='';state.success='';render();
+  state.editProfileMode=false;state.editSaving=false;state.error='';state.success='';
+  render();
   toast(result.message||'تم إرسال طلب تعديل البيانات للإدارة للمراجعة');
- }catch(e){state.editSaving=false;state.error=e.message||'تعذر تحديث البيانات';render();}
-}
+ }catch(e){
+  state.editSaving=false;
+  state.error=e.message||'تعذر إرسال طلب تعديل البيانات';
+  render();
+  toast(state.error,'error');
+ }
 
 async function loadProfile(){
  if(!getToken())return;
