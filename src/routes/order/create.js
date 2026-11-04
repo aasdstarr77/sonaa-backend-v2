@@ -6,6 +6,7 @@ function createOrderCreationRouter({
   Region,
   AREA_OPTIONS,
   normalizeArea,
+  getEffectiveAreaOptions,
   clientAuth,
   createSchema,
   findPhoneContainingField,

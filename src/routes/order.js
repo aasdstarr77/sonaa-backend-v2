@@ -10,7 +10,7 @@ const Client = require('../models/Client');
 const { createNotification, notifyAdmins } = require('../utils/notifications');
 const Fanni = require('../models/Fanni');
 const Region = require('../models/Region');
-const { AREA_OPTIONS, normalizeArea } = require('../config/areas');
+const { AREA_OPTIONS, normalizeArea, getEffectiveAreaOptions } = require('../config/areas');
 const Rating = require('../models/Rating');
 const WalletTransaction = require('../models/WalletTransaction');
 const AdminConfig = require('../models/AdminConfig');
@@ -233,6 +233,7 @@ router.use(createOrderCreationRouter({
   Region,
   AREA_OPTIONS,
   normalizeArea,
+  getEffectiveAreaOptions,
   clientAuth,
   createSchema,
   findPhoneContainingField,
