@@ -57,7 +57,7 @@ async function sendFirebasePushNotifications(devices, payload) {
         token: device.token,
         notification: { title: String(payload.title || 'إشعار من صُنّاع').slice(0, 100), body: String(payload.message || '').slice(0, 300) },
         data,
-        android: { priority: 'HIGH', notification: { channel_id: channelFor(type) } }
+        android: { priority: 'HIGH', notification: { channel_id: channelFor(type), click_action: 'com.sonaa.nativeadmin.OPEN_NOTIFICATION' } }
       } })
     });
     if (response.status === 404 || response.status === 410) await PushToken.deleteOne({ token: device.token }).catch(() => {});
@@ -73,7 +73,7 @@ async function sendPushNotification({ recipientRole, recipientId, title, message
       const messages = expo.map(d => ({
         to: d.token, title: String(title || 'إشعار من صُنّاع').slice(0, 100),
         body: String(message || '').slice(0, 300), sound: 'default', priority: 'high',
-        channelId: channelFor(String(type || '')),
+        channelId: 'default',
         data: { type: String(type || 'general').slice(0, 50), link: String(link || '').slice(0, 200) }
       }));
       for (let start = 0; start < messages.length; start += 100) {
