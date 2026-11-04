@@ -266,6 +266,13 @@ router.patch('/me', auth(), requireFanni, validate(profileUpdateSchema), async (
     req.user.pendingProfileChange = { before: current, phone, specialties, areas, changedFields, requestedAt: new Date() };
     req.user.decisions.push({ action: 'طلب تعديل بيانات', reason: 'طلب الفني تغيير بيانات حسابه', date: new Date(), by: String(req.user.name || 'الفني'), byId: req.user._id, meta: { before: current, requested: { phone, specialties, areas }, changedFields } });
     await req.user.save();
+    await notifyAdmins({
+      type: 'admin_fanni_profile_edit',
+      title: 'طلب تعديل بيانات فني',
+      message: `طلب الفني ${req.user.name} تعديل بيانات حسابه ويحتاج مراجعة الإدارة.`,
+      link: '/admin?tab=profileEdits',
+      dedupeKey: 'admin-fanni-profile-edit:' + String(req.user._id) + ':' + String(req.user.pendingProfileChange.requestedAt.getTime())
+    });
     return res.set('Cache-Control', 'no-store').json({ message: 'تم إرسال طلب تعديل بياناتك للإدارة. بيانات حسابك الحالية ستظل كما هي لحين الموافقة.', user: req.user.toSafeJSON(), pendingProfileChange: req.user.pendingProfileChange });
   } catch (err) {
     if (err && err.code === 11000) return res.status(409).json({ message: 'رقم الهاتف مسجل بالفعل في حساب آخر' });
@@ -318,6 +325,14 @@ router.post(
         status: 'قيد المراجعة',
         isCredited: false,
         idempotencyKey
+      });
+
+      await notifyAdmins({
+        type: 'admin_new_topup',
+        title: 'طلب شحن محفظة جديد',
+        message: `أرسل الفني ${req.user.name} طلب شحن محفظة بقيمة ${request.amount} جنيه ويحتاج مراجعة الإدارة.`,
+        link: '/admin?tab=topups',
+        dedupeKey: 'admin-new-topup:' + String(request._id)
       });
 
       return res.status(201).json({
