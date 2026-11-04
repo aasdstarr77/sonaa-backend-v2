@@ -277,10 +277,15 @@ router.use(createAdminComplaintsRouter({
 
 router.get('/counts', auth('admin'), async (req, res, next) => {
   try {
-    const legacyFanniFilter = { $or: [ { role: 'fanni' }, { role: { $ne: 'admin' }, specialties: { $exists: true, $ne: [] }, adminRole: null } ] };
+    const acceptedFanniFilter = {
+      $and: [
+        { $or: [ { role: 'fanni' }, { role: { $ne: 'admin' }, specialties: { $exists: true, $ne: [] }, adminRole: null } ] },
+        { status: { $in: ['معتمد', 'معلق'] } }
+      ]
+    };
     const [technicians, verifiedTechnicians, clients] = await Promise.all([
-      Fanni.countDocuments(legacyFanniFilter),
-      Fanni.countDocuments({ ...legacyFanniFilter, status: 'معتمد' }),
+      Fanni.countDocuments(acceptedFanniFilter),
+      Fanni.countDocuments({ ...acceptedFanniFilter, status: 'معتمد' }),
       Client.countDocuments({})
     ]);
     return res.set('Cache-Control', 'no-store').json({
