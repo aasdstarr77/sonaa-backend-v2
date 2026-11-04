@@ -798,6 +798,7 @@ async function run() {
       assert.ok(fanni, 'approved technician fixture must exist');
       fanni.status = 'معتمد';
       fanni.specialties = [service];
+      fanni.areas = ['المعادي'];
       fanni.walletBalance = 1000;
       fanni.technicianGuidelinesAcceptedAt = new Date();
       fanni.technicianGuidelinesVersion = '2026-10-20-v1';
