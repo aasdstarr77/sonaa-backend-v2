@@ -12,6 +12,8 @@ const Rating = require('../models/Rating');
 const { clientAuth } = require('../middleware/clientAuth');
 const { normalizePhone } = require('../utils/phone');
 
+const { notifyAdmins } = require('../utils/notifications');
+
 const router = express.Router();
 
 const registerSchema = Joi.object({
@@ -123,6 +125,13 @@ router.post('/register', async (req, res, next) => {
 
     const passwordHash = await bcrypt.hash(value.password, 12);
     const client = await Client.create({ name: value.name, phone, passwordHash });
+    await notifyAdmins({
+      type: 'admin_new_client',
+      title: 'عميل جديد',
+      message: 'تم تسجيل عميل جديد باسم ' + client.name + ' ورقم ' + client.phone + '.',
+      link: '/admin?tab=clients',
+      dedupeKey: 'admin-new-client:' + String(client._id)
+    });
     const token = issueToken(client);
 
     return res.status(201).json({

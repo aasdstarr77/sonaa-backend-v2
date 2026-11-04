@@ -7,12 +7,12 @@ const Fanni = require('../models/Fanni');
 const { sendWebPushNotification } = require('./webPush');
 
 function channelFor(type) {
-  if (['order_new', 'new_order'].includes(type)) return 'order_new';
-  if (['fanni_register', 'new_fanni'].includes(type)) return 'fanni_register';
-  if (['client_register', 'new_client'].includes(type)) return 'client_register';
-  if (type === 'password_reset') return 'password_reset';
-  if (['support', 'new_complaint'].includes(type)) return 'support';
-  if (['wallet_charge', 'topup_request'].includes(type)) return 'wallet_charge';
+  if (['order_new', 'new_order', 'admin_new_order'].includes(type)) return 'order_new';
+  if (['fanni_register', 'new_fanni', 'admin_new_technician'].includes(type)) return 'fanni_register';
+  if (['client_register', 'new_client', 'admin_new_client'].includes(type)) return 'client_register';
+  if (['password_reset', 'admin_password_recovery'].includes(type)) return 'password_reset';
+  if (['support', 'new_complaint', 'admin_support_request', 'admin_new_complaint'].includes(type)) return 'support';
+  if (['wallet_charge', 'topup_request', 'admin_new_topup'].includes(type)) return 'wallet_charge';
   return 'support';
 }
 function destinationFor(type) {
