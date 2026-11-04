@@ -491,7 +491,7 @@ async function run() {
       const conPanel = await request(app).get('/api/admin/mobile-panel')
         .set('Authorization', 'Bearer ' + conLogin.body.token);
       assert.equal(conPanel.status, 200);
-      assert.match(conPanel.text, /window\\.__SONAA_CON_APP__ = true/);
+      assert.ok(conPanel.text.includes('window.__SONAA_CON_APP__ = true'));
 
       const conPushToken = await request(app).post('/api/notifications/admin/push-token')
         .set('Authorization', 'Bearer ' + conLogin.body.token)
