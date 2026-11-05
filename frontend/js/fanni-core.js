@@ -227,13 +227,14 @@ async function api(path,options={}){
  try{data=raw?JSON.parse(raw):{}}catch{data={message:'تعذر قراءة البيانات. حاول مرة أخرى.'};}
 
  if(!response.ok){
-  const message=response.status===404||response.status>=500?'تعذر تنفيذ طلبك حاليًا. حاول مرة أخرى.':(data.message||data.error||(
+  const isMaintenance=response.status===503&&data.code==='MAINTENANCE_MODE';
+  const message=isMaintenance?(data.message||'الموقع تحت الصيانة مؤقتًا. سنعود للعمل قريبًا.'):(response.status===404||response.status>=500?'تعذر تنفيذ طلبك حاليًا. حاول مرة أخرى.':(data.message||data.error||(
    response.status===404?'الخدمة المطلوبة غير متاحة حاليًا.':
    response.status===401?'انتهت الجلسة أو بيانات الدخول غير صحيحة':
    response.status===403?'الحساب غير مصرح له بتنفيذ العملية':
    response.status===429?'محاولات كثيرة. انتظر قليلًا ثم حاول مجددًا':
    `حدثت مشكلة أثناء تنفيذ الطلب. حاول مرة أخرى.`
-  ));
+  )));
 
   const error=new Error(message);
   error.status=response.status;
