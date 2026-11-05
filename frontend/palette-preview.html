@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>معاينة ألوان صُنّاع | 4 اتجاهات</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#eef2f7;color:#172033;font-family:Tahoma,Arial,sans-serif}
+header{position:sticky;top:0;z-index:5;background:#fff;border-bottom:1px solid #dbe3ef;padding:14px 18px;box-shadow:0 4px 18px #15254412}
+h1{font-size:20px;margin:0 0 5px}p{margin:0;color:#64748b;font-size:13px}
+.controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+button{border:1px solid #cbd5e1;background:#fff;border-radius:10px;padding:10px 14px;font-weight:700;font-size:13px;cursor:pointer;color:#172033}
+button[aria-pressed=true]{background:#172554;color:#fff;border-color:#172554}
+main{padding:14px;max-width:1440px;margin:auto}
+.frame-wrap{height:calc(100vh - 145px);min-height:580px;background:#fff;border:1px solid #dbe3ef;border-radius:14px;overflow:hidden}
+iframe{width:100%;height:100%;border:0;background:#fff}
+.note{margin-top:9px;font-size:12px;color:#64748b}
+@media(max-width:600px){header{padding:12px}h1{font-size:17px}main{padding:8px}.frame-wrap{height:calc(100vh - 175px);min-height:500px}button{flex:1;min-width:42%;padding:10px 7px}}
+</style>
+</head>
+<body>
+<header>
+<h1>معاينة ألوان الصفحة الرئيسية — صُنّاع</h1>
+<p>اختار اتجاه اللون لمشاهدة الصفحة الرئيسية الفعلية بنفس المحتوى والتصميم، بدون أي تعديل على الموقع الأصلي.</p>
+<div class="controls" role="group" aria-label="اختيار لوحة الألوان">
+<button type="button" data-palette="1" aria-pressed="true">1 — أزرق ملكي + تركواز</button>
+<button type="button" data-palette="2" aria-pressed="false">2 — أخضر زمردي + ذهبي</button>
+<button type="button" data-palette="3" aria-pressed="false">3 — أزرق سماوي + برتقالي</button>
+<button type="button" data-palette="4" aria-pressed="false">4 — بترولي + نحاسي</button>
+</div>
+</header>
+<main>
+<div class="frame-wrap"><iframe id="homePreview" title="معاينة الصفحة الرئيسية لصُنّاع" src="/" loading="eager"></iframe></div>
+<div class="note">المعاينة للعرض فقط. الروابط والأزرار داخل الصفحة الأصلية تظل كما هي؛ لا تُدخل بيانات دخول أو بيانات شخصية أثناء التجربة.</div>
+</main>
+<script>
+(function(){
+const palettes={
+1:{name:'أزرق ملكي + تركواز',navy:'#174EA6',deep:'#123A72',deeper:'#0D2F5E',blue:'#2878D0',blueDark:'#1E63B4',bright:'#3C91E8',teal:'#16A6A1',gold:'#F5B928',paper:'#F4F8FC',ink:'#18324F',line:'#D8E5F2',soft:'#E5F1FB',shadow:'#174EA620'},
+2:{name:'أخضر زمردي + ذهبي',navy:'#146B52',deep:'#105641',deeper:'#0B4333',blue:'#269B72',blueDark:'#197D5A',bright:'#36B889',teal:'#269B72',gold:'#E6B84A',paper:'#F6FAF7',ink:'#193B31',line:'#DCEBE2',soft:'#E5F4EB',shadow:'#146B5220'},
+3:{name:'أزرق سماوي + برتقالي',navy:'#176B9B',deep:'#12577F',deeper:'#0D4568',blue:'#35A9D6',blueDark:'#218AB8',bright:'#55BDE3',teal:'#35A9D6',gold:'#F28C38',paper:'#F5FAFD',ink:'#18394D',line:'#DCEAF2',soft:'#E5F4FB',shadow:'#176B9B20'},
+4:{name:'بترولي + نحاسي',navy:'#155E63',deep:'#104C51',deeper:'#0B3B40',blue:'#27858A',blueDark:'#1C6D72',bright:'#3A9DA0',teal:'#27858A',gold:'#C58B52',paper:'#F5F8F7',ink:'#1B383A',line:'#DCE8E6',soft:'#E5F1EF',shadow:'#155E6320'}
+};
+const frame=document.getElementById('homePreview');
+let selected='1';
+function apply(){
+ const p=palettes[selected]; if(!frame.contentDocument)return;
+ const d=frame.contentDocument;
+ let s=d.getElementById('sonaa-palette-preview-style');
+ if(!s){s=d.createElement('style');s.id='sonaa-palette-preview-style';d.head.appendChild(s);}
+ s.textContent=`
+ :root{
+ --sonaa-color-0b1b3a:${p.navy}!important;--sonaa-color-173d70:${p.deep}!important;--sonaa-color-07142c:${p.deeper}!important;
+ --sonaa-color-2563eb:${p.blue}!important;--sonaa-color-1d4ed8:${p.blueDark}!important;--sonaa-color-4380ff:${p.bright}!important;
+ --sonaa-color-315fc5:${p.blue}!important;--sonaa-color-214ca8:${p.blueDark}!important;--sonaa-color-173779:${p.deep}!important;
+ --sonaa-color-173fae:${p.deep}!important;--sonaa-color-2455bf:${p.blueDark}!important;--sonaa-color-152544:${p.ink}!important;
+ --sonaa-color-f4f7fb:${p.paper}!important;--sonaa-color-f7f9fc:${p.paper}!important;--sonaa-color-f7f9fd:${p.paper}!important;
+ --sonaa-color-e7edf5:${p.line}!important;--sonaa-color-e1e8f2:${p.line}!important;--sonaa-color-dce5f2:${p.line}!important;
+ --sonaa-color-e6efff:${p.soft}!important;--sonaa-color-b8d0ff:${p.soft}!important;--sonaa-color-dbeafe:${p.soft}!important;
+ --sonaa-color-ffd45e:${p.gold}!important;--sonaa-color-ffe27a:${p.gold}!important;--sonaa-color-f5b928:${p.gold}!important;
+ }
+ body{background:${p.paper}!important;color:${p.ink}!important}
+ .brand,.section-head h2,.entry h3{color:${p.navy}!important}
+ .hero{background:linear-gradient(155deg,${p.deep} 0%,${p.navy} 58%,${p.deeper} 100%)!important;border-color:${p.blue}!important}
+ .home-nav .download-link,.action-label,.technician .action-label{background:linear-gradient(180deg,${p.bright} 0%,${p.blueDark} 100%)!important;border-color:${p.blueDark}!important}
+ .customer .entry-icon,.technician .entry-icon{background:linear-gradient(145deg,${p.soft} 0%,${p.teal}55 100%)!important;color:${p.navy}!important}
+ .entry{border-color:${p.line}!important}
+ .top-note,.trust-row span{border-color:${p.line}!important}
+ footer{background:#fff!important;border-color:${p.line}!important}
+ `;
+}
+frame.addEventListener('load',()=>{apply();setTimeout(apply,250);});
+document.querySelectorAll('[data-palette]').forEach(b=>b.addEventListener('click',()=>{
+ selected=b.dataset.palette;document.querySelectorAll('[data-palette]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));apply();
+}));
+})();
+</script>
+</body>
+</html>

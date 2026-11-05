@@ -1,0 +1,208 @@
+
+'use strict';
+const API='/api', params=new URLSearchParams(location.search);
+const rawRole=String(params.get('role')||'client').trim().toLowerCase(), mode=params.get('mode')||'account', supportMode=params.get('support')==='1';
+const tokenKeys={client:'sonaa_client_account_token',fanni:'fanni_token_v4',admin:'admin_token_v3'};
+const roleAliases={client:'client',customer:'client',fanni:'fanni',technician:'fanni',tech:'fanni',admin:'admin',manager:'admin',supervisor:'admin'};
+function inferAccountRole(){try{if(localStorage.getItem(tokenKeys.client))return 'client';if(localStorage.getItem(tokenKeys.fanni))return 'fanni';if(localStorage.getItem(tokenKeys.admin))return 'admin'}catch(_){}return '';}
+const role=roleAliases[rawRole]||(mode==='account'||mode==='change'?inferAccountRole():rawRole);
+const targetRole=String(params.get('targetRole')||'').trim().toLowerCase(),targetId=String(params.get('targetId')||'').trim();
+const recoveryStorageKeys={token:'sonaa_recovery_token_'+role,id:'sonaa_recovery_id_'+role};
+const token=()=>{try{return localStorage.getItem(tokenKeys[role])||''}catch(_){return ''}};
+const $=id=>document.getElementById(id);
+$('password-back-button')?.addEventListener('click',()=>history.back());
+$('password-home-button')?.addEventListener('click',()=>{location.href=role==='admin'?'/admin.html':'/'});
+$('change-password-button')?.addEventListener('click',()=>{location.search='?role='+encodeURIComponent(role)+'&mode=change'});
+let recoveryToken='',recoveryId='',selectedId='',selectedRecovery=null,busy=false,pollTimer=null,recoveryPollBusy=false,recoveryReplyBusy=false,recoveryRequestBusy=false;
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+function notice(text,ok=false){$('notice').innerHTML=text?'<div class="'+(ok?'ok':'error')+'">'+esc(text)+'</div>':''}
+async function api(path,opts={}){
+ let r,timeoutId,controller;
+ const timeoutMs=Number(opts.timeoutMs)||20000;
+ try{
+  const request={
+   method:opts.method||'GET',
+   headers:{
+    Accept:'application/json',
+    'Content-Type':'application/json',
+    ...(opts.auth?{Authorization:'Bearer '+token()}:{}),
+    ...(opts.ticket?{'X-Recovery-Token':opts.ticket}:{})
+   },
+   body:opts.body?JSON.stringify(opts.body):undefined,
+   cache:'no-store'
+  };
+  if(typeof AbortController!=='undefined'){
+   controller=new AbortController();
+   request.signal=controller.signal;
+   timeoutId=setTimeout(()=>controller.abort(),timeoutMs);
+  }
+  r=await fetch(API+path,request);
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok){
+   const err=Error(r.status===404||r.status>=500?'تعذر تنفيذ طلبك حاليًا. حاول مرة أخرى.':(d.message||'تعذر تنفيذ الطلب.'));
+   err.status=r.status;
+   err.code=d.code;
+   throw err;
+  }
+  return d;
+ }catch(error){
+  if(error&&error.name==='AbortError')throw Error('انتهت مهلة الاتصال بالخادم. تأكد من حالة العملية قبل إعادة المحاولة.');
+  if(error&&typeof error.status==='number')throw error;
+  throw Error('تعذر الاتصال. تحقق من الإنترنت وحاول مرة أخرى.');
+ }finally{
+  if(timeoutId)clearTimeout(timeoutId);
+ }
+}
+function drawMessages(target,messages,adminMode=false){target.innerHTML=(messages||[]).map(m=>{const removeButton=adminMode&&m.id?'<div style="margin-top:10px"><button type="button" class="btn danger" style="display:inline-flex!important;visibility:visible!important;opacity:1!important;background:#b91c1c!important;color:#fff!important;border:1px solid #991b1b;padding:8px 12px;font-size:13px" onclick="deleteRecoveryMessage(&quot;'+esc(selectedId)+'&quot;,&quot;'+esc(m.id)+'&quot;)">🗑 حذف الرسالة</button></div>':'';return '<div class="msg '+(m.senderRole==='admin'?'admin':'user')+'"><b>'+(m.senderRole==='admin'?'الدعم':'أنت')+'</b><div>'+esc(m.text)+'</div><small class="muted">'+esc(m.createdAt?new Date(m.createdAt).toLocaleString('ar-EG'):'')+'</small>'+removeButton+'</div>'}).join('')||'<p class="muted">لا توجد رسائل بعد.</p>'}
+window.deleteRecoveryMessage=async(id,messageId)=>{if(role!=='admin'||busy||!id||!messageId)return;if(!confirm('متأكد إنك عايز تحذف الرسالة نهائيًا من طلب استعادة كلمة المرور؟ هتختفي من محادثة صاحب الحساب كمان.'))return;busy=true;try{const d=await api('/password-recovery/admin/requests/'+encodeURIComponent(id)+'/messages/'+encodeURIComponent(messageId),{method:'DELETE',auth:true});selectedRecovery=d.recovery;drawMessages($('adminMessages'),selectedRecovery.messages,true);notice(d.message||'تم حذف الرسالة من محادثة استعادة كلمة المرور.',true);await loadQueue()}catch(e){notice(e.message||'تعذر حذف الرسالة.')}finally{busy=false}}
+function showRecovery(data){$('recoveryChat').classList.remove('hidden');$('recoveryStatus').textContent='حالة الطلب: '+(data.status||'بانتظار الدعم');drawMessages($('messages'),data.messages)}
+function saveRecoveryState(){try{localStorage.setItem(recoveryStorageKeys.token,recoveryToken);localStorage.setItem(recoveryStorageKeys.id,recoveryId)}catch(_){try{sessionStorage.setItem(recoveryStorageKeys.token,recoveryToken);sessionStorage.setItem(recoveryStorageKeys.id,recoveryId)}catch(__){}}}
+function loadRecoveryState(){try{recoveryToken=localStorage.getItem(recoveryStorageKeys.token)||'';recoveryId=localStorage.getItem(recoveryStorageKeys.id)||''}catch(_){}if(!recoveryToken||!recoveryId){try{recoveryToken=recoveryToken||sessionStorage.getItem(recoveryStorageKeys.token)||sessionStorage.getItem('sonaa_recovery_token')||'';recoveryId=recoveryId||sessionStorage.getItem(recoveryStorageKeys.id)||sessionStorage.getItem('sonaa_recovery_id')||''}catch(_){}if(recoveryToken&&recoveryId)saveRecoveryState()}return Boolean(recoveryToken&&recoveryId)}
+function clearRecoveryState(message,ok=false,showRequestForm=true){if(pollTimer){clearInterval(pollTimer);pollTimer=null}recoveryToken='';recoveryId='';try{localStorage.removeItem(recoveryStorageKeys.token);localStorage.removeItem(recoveryStorageKeys.id);localStorage.removeItem('sonaa_recovery_token');localStorage.removeItem('sonaa_recovery_id')}catch(_){}try{sessionStorage.removeItem(recoveryStorageKeys.token);sessionStorage.removeItem(recoveryStorageKeys.id);sessionStorage.removeItem('sonaa_recovery_token');sessionStorage.removeItem('sonaa_recovery_id')}catch(_){}if(showRequestForm){$('requestForm').classList.remove('hidden');$('requestForm').reset()}else{$('requestForm').classList.add('hidden')}$('recoveryChat').classList.add('hidden');notice(message||'انتهت صلاحية طلب الاستعادة. اكتب رقم هاتفك لفتح طلب جديد.',ok)}
+async function refreshRecovery(){if(!recoveryId||!recoveryToken)return;try{const d=await api('/password-recovery/request/'+encodeURIComponent(recoveryId),{ticket:recoveryToken});showRecovery(d.recovery||{})}catch(e){if([400,401,404,410].includes(e.status)){clearRecoveryState('طلب الاستعادة السابق غير صالح أو انتهت صلاحيته. اكتب رقم هاتفك لفتح طلب جديد.');return}notice(e.message)}}
+$('changeForm').addEventListener('submit',async e=>{e.preventDefault();const f=new FormData(e.currentTarget),currentPassword=String(f.get('currentPassword')||''),newPassword=String(f.get('newPassword')||''),confirmPassword=String(f.get('confirmPassword')||'');if(!supportMode&&!currentPassword)return notice('اكتب كلمة المرور الحالية.');if(newPassword.length<8||newPassword!==confirmPassword)return notice('كلمة المرور الجديدة 8 أحرف على الأقل والتأكيد مطابق.');try{const d=await api('/password-recovery/change/'+role,{method:'POST',auth:true,body:{currentPassword,newPassword,confirmPassword}});if(d.token){try{localStorage.setItem(tokenKeys[role],d.token)}catch(_){}}e.currentTarget.reset();notice(d.message||'تم تغيير كلمة المرور.',true);if(supportMode){alert('تم تأمين حسابك. سجّل دخولك بكلمة المرور الجديدة.');location.href=role==='client'?'/client.html':'/fanni.html';}}catch(e){notice(e.message)}});
+$('requestForm').addEventListener('submit',async e=>{
+ e.preventDefault();
+ if(recoveryRequestBusy)return;
+ const phone=String(new FormData(e.currentTarget).get('phone')||'').replace(/\D/g,'');
+ if(!/^01\d{9}$/.test(phone))return notice('رقم الهاتف غير صحيح. اكتب 11 رقمًا يبدأ بـ 01.');
+ recoveryRequestBusy=true;
+ const submitButton=e.currentTarget.querySelector('button[type="submit"]');
+ const originalLabel=submitButton?.textContent||'فتح طلب دعم';
+ if(submitButton){submitButton.disabled=true;submitButton.textContent='جاري التحقق...';}
+ try{
+  if(loadRecoveryState()){
+   $('requestForm').classList.add('hidden');
+   showRecovery({status:'جاري تحميل طلبك السابق',messages:[]});
+   notice('أنت قدمت طلب استعادة بالفعل. بنفتح لك نفس المحادثة لمتابعة رد الدعم.',true);
+   await refreshRecovery();
+   if(pollTimer)clearInterval(pollTimer);
+   pollTimer=setInterval(refreshRecovery,3000);
+   return;
+  }
+  notice('جاري التحقق من رقم الهاتف ونوع الحساب...');
+  const d=await api('/password-recovery/request',{method:'POST',body:{role,phone}});
+  recoveryToken=d.recoveryToken;
+  recoveryId=d.requestId;
+  saveRecoveryState();
+  $('requestForm').classList.add('hidden');
+  notice(d.message||'تم فتح طلب الاستعادة بنجاح.',true);
+  showRecovery({status:'بانتظار الدعم',messages:[]});
+  await refreshRecovery();
+  if(pollTimer)clearInterval(pollTimer);
+  pollTimer=null;
+  if(recoveryId&&recoveryToken)pollTimer=setInterval(refreshRecovery,3000);
+ }catch(error){
+  notice(error.message||'تعذر التحقق من رقم الهاتف. حاول مرة أخرى.');
+ }finally{
+  recoveryRequestBusy=false;
+  if(submitButton){submitButton.disabled=false;submitButton.textContent=originalLabel;}
+ }
+});
+$('sendMessage').addEventListener('click',async()=>{const text=$('messageText').value.trim();if(!text)return notice('اكتب رسالتك أولًا.');try{const d=await api('/password-recovery/request/'+encodeURIComponent(recoveryId)+'/messages',{method:'POST',ticket:recoveryToken,body:{text}});$('messageText').value='';showRecovery(d.recovery||{});notice('تم إرسال الرسالة.',true)}catch(e){notice(e.message)}});
+$('verifyCode').addEventListener('click',async()=>{try{const d=await api('/password-recovery/request/'+encodeURIComponent(recoveryId)+'/verify-code',{method:'POST',ticket:recoveryToken,body:{code:$('recoveryCode').value.trim()}});notice(d.message,true)}catch(e){notice(e.message)}});
+$('resetPassword').addEventListener('click',async()=>{const newPassword=$('newPassword').value,confirmPassword=$('confirmPassword').value;if(newPassword.length<8||newPassword!==confirmPassword)return notice('كلمة المرور الجديدة 8 أحرف على الأقل والتأكيد مطابق.');try{const d=await api('/password-recovery/request/'+encodeURIComponent(recoveryId)+'/reset-password',{method:'POST',ticket:recoveryToken,body:{newPassword,confirmPassword}});notice(d.message,true);clearRecoveryState('تم تغيير كلمة المرور. يمكنك تسجيل الدخول بكلمة المرور الجديدة.',true,false);}catch(e){notice(e.message)}});
+$('refreshRecovery').addEventListener('click',refreshRecovery);
+async function loadQueue(){try{const d=await api('/password-recovery/admin/requests',{auth:true});const items=d.recoveries||[];$('queue').innerHTML=items.map(x=>'<button class="btn secondary" style="width:100%;text-align:right" onclick="selectRecovery(\''+esc(x.id)+'\')">'+esc(x.accountName||x.ownerRole)+' — '+esc(x.phone)+' — '+esc(x.status)+'</button>').join('')||'<p class="muted">لا توجد طلبات استعادة نشطة.</p>'}catch(e){notice(e.message)}}
+window.selectRecovery=async id=>{selectedId=id;try{const d=await api('/password-recovery/admin/requests/'+encodeURIComponent(id),{auth:true});selectedRecovery=d.recovery;$('selectedRecovery').classList.remove('hidden');$('selectedTitle').textContent=(selectedRecovery.accountName||selectedRecovery.ownerRole)+' — '+selectedRecovery.phone+' — '+selectedRecovery.status;drawMessages($('adminMessages'),selectedRecovery.messages,true)}catch(e){notice(e.message)}};
+$('refreshQueue').addEventListener('click',loadQueue);
+$('issueCode').addEventListener('click',async()=>{if(!selectedId)return; if(!confirm('هل تحققت من ملكية الحساب من خلال أسئلة الدعم؟'))return;try{const d=await api('/password-recovery/admin/requests/'+encodeURIComponent(selectedId)+'/issue-code',{method:'POST',auth:true,body:{}});$('issuedCode').classList.remove('hidden');$('issuedCode').innerHTML='<div class="ok">رمز مؤقت (10 دقائق): <b dir="ltr">'+esc(d.code)+'</b><button class="btn secondary" id="copyCode">نسخ الرمز</button><p>أرسل الرمز يدويًا للمستخدم من خلال المحادثة بالأسفل. لن يظهر الرمز مرة أخرى.</p></div>';$('copyCode').onclick=()=>navigator.clipboard?.writeText(d.code);await selectRecovery(selectedId);notice('تم إصدار الرمز بعد تأكيدك. أرسله في رد الدعم.',true)}catch(e){notice(e.message)}});
+$('sendAdminReply').addEventListener('click',async()=>{const text=$('adminReply').value.trim();if(!selectedId||!text)return notice('اكتب رد الدعم أولًا.');if(recoveryReplyBusy)return;recoveryReplyBusy=true;$('sendAdminReply').disabled=true;try{const d=await api('/password-recovery/admin/requests/'+encodeURIComponent(selectedId)+'/reply',{method:'POST',auth:true,body:{text}});$('adminReply').value='';selectedRecovery=d.recovery;drawMessages($('adminMessages'),d.recovery.messages);notice('تم إرسال الرد داخل المحادثة.',true);await loadQueue()}catch(e){notice(e.message)}finally{recoveryReplyBusy=false;$('sendAdminReply').disabled=false}});
+$('rejectRecovery').addEventListener('click',async()=>{if(!selectedId||!confirm('رفض طلب الاستعادة؟'))return;try{const d=await api('/password-recovery/admin/requests/'+encodeURIComponent(selectedId)+'/reject',{method:'POST',auth:true,body:{reason:'تعذر التحقق من ملكية الحساب.'}});notice(d.message,true);$('selectedRecovery').classList.add('hidden');await loadQueue()}catch(e){notice(e.message)}});
+let editFanniCategories=[],editFanniSelectedSpecialties=[],editFanniOpenCategory='',editFanniAreaOptions=[],editFanniSelectedAreas=[],editFanniAreaSearch='';
+$('editFanniAreaSearch')?.addEventListener('input',e=>{editFanniAreaSearch=String(e.target.value||'').slice(0,60);renderEditFanniAreas();});
+function editFanniServiceIcon(name){const s=String(name||'');const rules=[[/كاميرات|مراقبة/,'📹'],[/دش|رسيفر|استقبال|شاشة تلفزيون|شاشات/,'📡'],[/تنظيف سجاد|موكيت|كنب|انتريهات|مراتب/,'🧽'],[/مكافحة حشرات/,'🪲'],[/تنظيف|تطهير/,'🧹'],[/كهرباء|كهربائي|قواطع|مفاتيح|برايز|إضاءة|نجف/,'⚡'],[/تسريب|مياه|سباك|صرف صحي|سيفون|خلاطات|حوض/,'🚿'],[/تكييف|فريون|تبريد/,'❄️'],[/ثلاجات|فريزر|مبرد مياه/,'🧊'],[/غسالات|أطباق/,'🧺'],[/بوتاجاز|أفران|ميكروويف|غاز/,'🔥'],[/نجار|أثاث|موبيليا|دواليب|أبواب|شبابيك/,'🪚'],[/نقاش|دهانات/,'🖌️'],[/ديكور|ورق حائط|جبس بورد/,'🎨'],[/كمبيوتر|لابتوب|طابعات/,'💻'],[/راوتر|إنترنت|شبكات/,'📶'],[/نقل/,'🚚']];for(const [re,icon] of rules)if(re.test(s))return icon;return /تركيب|صيانة|إصلاح|تصليح/.test(s)?'🔧':'🧰'}
+function renderEditFanniAreas(){
+ const root=$('editFanniAreasPicker');if(!root)return;
+ if(!editFanniAreaOptions.length){root.innerHTML='<div class="picker-state">قائمة المناطق غير متاحة حاليًا. <button type="button" class="btn secondary" onclick="loadEditFanniAreas()">إعادة المحاولة</button></div>';return;}
+ const allLabel='جميع المناطق';
+ const options=[allLabel,...editFanniAreaOptions].filter((area,index,list)=>list.indexOf(area)===index);
+ const query=String(editFanniAreaSearch||'').trim().toLocaleLowerCase('ar');
+ const visible=options.filter(area=>!query||String(area).toLocaleLowerCase('ar').includes(query)).slice(0,80);
+ const chosen=editFanniSelectedAreas;
+ root.innerHTML='<div class="edit-picker-shell">'+
+  '<div class="edit-picker-summary"><b>المناطق المختارة</b><span>'+chosen.length+' منطقة</span></div>'+
+  '<div class="edit-picker-selected">'+(chosen.length?chosen.map(area=>'<button type="button" class="edit-selected-chip" data-edit-area="'+esc(area)+'" onclick="toggleEditFanniArea(this.dataset.editArea)">'+esc(area)+' <span aria-hidden="true">×</span></button>').join(''):'<span class="picker-empty">لم يتم اختيار مناطق بعد.</span>')+'</div>'+
+  '<div class="edit-picker-list">'+visible.map(area=>{const checked=chosen.includes(area);return '<button type="button" class="edit-picker-option '+(checked?'is-selected':'')+'" data-edit-area="'+esc(area)+'" onclick="toggleEditFanniArea(this.dataset.editArea)"><span>'+esc(area)+'</span><span class="edit-picker-check">'+(checked?'✓':'')+'</span></button>'}).join('')+'</div>'+
+  '<p class="picker-hint">اختار كل المناطق المناسبة. تقدر تختار حتى 30 منطقة.</p></div>';
+}
+async function loadEditFanniAreas(){
+ const root=$('editFanniAreasPicker');if(root)root.innerHTML='<div class="picker-state"><span class="picker-spinner"></span> جاري تحميل المناطق...</div>';
+ try{
+  const d=await api('/areas');
+  editFanniAreaOptions=Array.isArray(d.areas)?d.areas.filter(x=>typeof x==='string'&&x.trim()):[];
+  if(!editFanniAreaOptions.length)throw Error('قائمة المناطق فارغة حاليًا.');
+  editFanniSelectedAreas=[...new Set(editFanniSelectedAreas.filter(Boolean))];
+  renderEditFanniAreas();
+ }catch(e){
+  if(root)root.innerHTML='<div class="picker-error">'+esc(e.message||'تعذر تحميل المناطق')+' <button type="button" class="btn secondary" onclick="loadEditFanniAreas()">إعادة المحاولة</button></div>';
+ }
+}
+function toggleEditFanniArea(value){
+ const area=String(value||'').trim();if(!area)return;
+ if(area==='جميع المناطق'){editFanniSelectedAreas=editFanniSelectedAreas.includes(area)?[]:[area];}
+ else{
+  editFanniSelectedAreas=editFanniSelectedAreas.filter(x=>x!=='جميع المناطق');
+  if(editFanniSelectedAreas.includes(area))editFanniSelectedAreas=editFanniSelectedAreas.filter(x=>x!==area);
+  else if(editFanniSelectedAreas.length>=30){notice('تقدر تختار حتى 30 منطقة فقط.');return;}
+  else editFanniSelectedAreas.push(area);
+ }
+ renderEditFanniAreas();
+}
+async function loadEditFanniCatalog(){try{const d=await api('/services');editFanniCategories=Array.isArray(d.categories)?d.categories:[];if(!editFanniCategories.length)throw Error('قائمة التخصصات غير متاحة حاليًا.');renderEditFanniSpecialties()}catch(e){$('editFanniSpecialtiesPicker').innerHTML='<p class="error">'+esc(e.message||'تعذر تحميل التخصصات')+' <button type="button" class="btn secondary" onclick="loadEditFanniCatalog()">إعادة المحاولة</button></p>'}}
+function renderEditFanniSpecialties(){
+ const root=$('editFanniSpecialtiesPicker');if(!root)return;
+ if(!editFanniCategories.length){root.innerHTML='<p class="muted">جاري تحميل التخصصات...</p>';return;}
+ const known=new Set(editFanniCategories.flatMap(c=>Array.isArray(c.services)?c.services:[]));
+ const legacy=editFanniSelectedSpecialties.filter(x=>!known.has(x));
+ root.innerHTML='<div class="edit-picker-shell">'+
+ '<div class="edit-picker-summary"><b>التخصصات المختارة</b><span>'+editFanniSelectedSpecialties.length+' / 20</span></div>'+
+ editFanniCategories.map((cat,i)=>{
+  const services=Array.isArray(cat.services)?cat.services:[];
+  const count=services.filter(x=>editFanniSelectedSpecialties.includes(x)).length;
+  const open=editFanniOpenCategory===cat.label;
+  return '<section class="edit-specialty-category">'+
+   '<button type="button" data-edit-category="'+esc(cat.label)+'" onclick="toggleEditFanniCategory(this.dataset.editCategory)" aria-expanded="'+open+'" class="edit-specialty-heading">'+
+    '<span class="edit-specialty-heading-main"><span class="edit-category-emoji">'+esc(cat.emoji||'🛠️')+'</span><span><b>'+esc(cat.label)+'</b><small>'+(count?'تم اختيار '+count+' خدمة':'اضغط لعرض الخدمات')+'</small></span></span>'+
+    '<span class="edit-specialty-heading-meta"><span class="edit-count-badge">'+count+'</span><span class="edit-chevron">'+(open?'−':'+')+'</span></span>'+
+   '</button>'+
+   (open?'<div class="edit-service-grid">'+services.map(x=>'<label class="service-chip '+(editFanniSelectedSpecialties.includes(x)?'selected':'')+'"><input type="checkbox" '+(editFanniSelectedSpecialties.includes(x)?'checked':'')+' data-edit-specialty="'+esc(x)+'" onchange="toggleEditFanniSpecialty(this.dataset.editSpecialty)"><span class="service-icon">'+editFanniServiceIcon(x)+'</span><span class="service-name">'+esc(x)+'</span></label>').join('')+'</div>':'')+
+  '</section>';
+ }).join('')+
+ (legacy.length?'<div class="edit-legacy-note"><b>خدمات محفوظة قديمة</b><div class="edit-service-grid">'+legacy.map(x=>'<label class="service-chip selected"><input type="checkbox" checked data-edit-specialty="'+esc(x)+'" onchange="toggleEditFanniSpecialty(this.dataset.editSpecialty)"><span class="service-icon">🧰</span><span class="service-name">'+esc(x)+'</span></label>').join('')+'</div></div>':'')+
+ '</div>';
+}
+function toggleEditFanniCategory(label){editFanniOpenCategory=editFanniOpenCategory===label?'':label;renderEditFanniSpecialties()}
+function toggleEditFanniSpecialty(value){if(editFanniSelectedSpecialties.includes(value))editFanniSelectedSpecialties=editFanniSelectedSpecialties.filter(x=>x!==value);else if(editFanniSelectedSpecialties.length<20)editFanniSelectedSpecialties=[...editFanniSelectedSpecialties,value];else{notice('تقدر تختار 20 تخصصًا كحد أقصى.');return}renderEditFanniSpecialties()}
+let historyOrders=[];
+function isOrderCompleted(o){const s=String(o?.status||o?.orderStatus||'').trim();return ['تم الانتهاء','مكتمل','مكتملة','completed','complete','finished'].includes(s.toLowerCase())||s==='تم الانتهاء';}
+function hasMyRating(o){const key=role==='client'?'client':'fanni';return Boolean(o?.myRating||o?.[key+'Rating']||o?.ratingByClient&&role==='client'||o?.ratingByFanni&&role==='fanni'||(Array.isArray(o?.ratings)&&o.ratings.some(r=>r.reviewerRole===key||r.role===key)));}
+function renderRatingHistory(items){historyOrders=Array.isArray(items)?items:[];const rows=historyOrders.filter(isOrderCompleted);$('ratingHistory').innerHTML=rows.length?'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th style="text-align:right;padding:8px;border-bottom:1px solid #e2e8f0">رقم العملية</th><th style="text-align:right;padding:8px;border-bottom:1px solid #e2e8f0">الخدمة</th><th style="text-align:right;padding:8px;border-bottom:1px solid #e2e8f0">التقييم</th><th style="text-align:right;padding:8px;border-bottom:1px solid #e2e8f0">الإجراء</th></tr></thead><tbody>'+rows.map(o=>{const sn=String(o.orderSn||o.sn||o.trackingCode||o.requestSn||'').toUpperCase();const rated=hasMyRating(o);const rating=o.myRating||o.clientRating||o.fanniRating||{};const service=o.service||o.serviceName||o.title||'خدمة';return '<tr><td style="padding:8px;border-bottom:1px solid #e2e8f0;white-space:nowrap">'+esc(sn||'—')+'</td><td style="padding:8px;border-bottom:1px solid #e2e8f0">'+esc(service)+'</td><td style="padding:8px;border-bottom:1px solid #e2e8f0">'+(rated?('★'.repeat(Math.max(0,Math.min(5,Number(rating.stars||rating.rating)||0)))+' '+esc(rating.stars||rating.rating||'تم التقييم')):'لم يتم التقييم')+'</td><td style="padding:8px;border-bottom:1px solid #e2e8f0">'+(rated?'<span class="muted">تم</span>':'<div style="min-width:180px"><select class="field" id="stars-'+esc(sn)+'" style="margin:4px 0;padding:6px"><option value="5">5 نجوم</option><option value="4">4 نجوم</option><option value="3">3 نجوم</option><option value="2">نجمتان</option><option value="1">نجمة واحدة</option></select><textarea class="field" id="comment-'+esc(sn)+'" rows="2" maxlength="1000" placeholder="تعليق اختياري" style="margin:4px 0;padding:6px"></textarea><button class="btn" onclick="submitPastRating(\''+esc(sn)+'\')">حفظ التقييم</button></div>')+'</td></tr>'}).join('')+'</tbody></table></div>':'<p class="muted">لا توجد عمليات مكتملة لعرضها حاليًا.</p>';}
+window.submitPastRating=async sn=>{const item=historyOrders.find(o=>String(o.orderSn||o.sn||o.trackingCode||o.requestSn||'').toUpperCase()===sn);if(!item)return notice('تعذر تحديد العملية.');const stars=Number($('stars-'+sn)?.value||5),comment=String($('comment-'+sn)?.value||'').trim();try{const d=await api('/orders/'+encodeURIComponent(sn)+'/rating',{method:'POST',auth:true,body:{stars,comment,clientToken:token()}});notice(d.message||'تم حفظ التقييم بنجاح.',true);await loadProfileAndRatings()}catch(e){notice(e.message)}};
+async function loadAdminTargetProfile(){
+ if(role!=='admin'||!['client','fanni'].includes(targetRole)||!targetId)throw Error('بيانات الحساب المطلوب تعديلها غير صحيحة.');
+ const path=targetRole==='fanni'?'/admin/fannis/'+encodeURIComponent(targetId)+'/profile':'/admin/client-accounts/'+encodeURIComponent(targetId)+'/profile';
+ const d=await api(path,{auth:true});const user=d.fanni||d.client;
+ if(!user)throw Error('تعذر تحميل بيانات الحساب.');
+ $('profile').classList.remove('hidden');$('profileData').innerHTML='<p class="muted">تعديل بيانات '+(targetRole==='fanni'?'الفني':'العميل')+' — '+esc(user.name||'')+'</p>';
+ $('change-password-button').classList.add('hidden');$('editClientProfileButton').classList.add('hidden');
+ $('profileIntro').textContent='تعديل بيانات الحساب من لوحة الإدارة.';$('ratingHistory').classList.add('hidden');
+ if(targetRole==='client'){
+  $('editClientProfileForm').classList.remove('hidden');$('editClientName').value=String(user.name||'');$('editClientPhone').value=String(user.phone||'');
+ }else{
+  $('editFanniProfileForm').classList.remove('hidden');$('editFanniPhone').value=String(user.phone||'');
+  editFanniSelectedSpecialties=Array.isArray(user.specialties)?[...user.specialties]:[];
+  editFanniSelectedAreas=Array.isArray(user.areas)?[...user.areas]:[];
+  $('editFanniAreaSearch').value='';editFanniAreaSearch='';
+  $('saveFanniProfileButton').textContent='حفظ التعديلات';
+  loadEditFanniCatalog();loadEditFanniAreas();
+ }
+}
+async function loadProfileAndRatings(){try{const paths={client:'/client/me',fanni:'/fanni/me',admin:'/admin/me'};const data=await api(paths[role],{auth:true});const user=data.client||data.user||data.admin||data;const fields=[['الاسم',user.name],['رقم الهاتف',user.phone],['البريد الإلكتروني',user.email],['نوع الحساب',role==='client'?'عميل':role==='fanni'?'فني':(user.role||user.adminRole||'إدارة')],['حالة الحساب',user.status||user.accountStatus],['الخدمات والمهن',Array.isArray(user.specialties)?user.specialties.join('، '):Array.isArray(user.services)?user.services.join('، '):(user.specialties||user.services)],['مناطق العمل',Array.isArray(user.areas)?user.areas.join('، '):Array.isArray(user.workAreas)?user.workAreas.join('، '):(user.areas||user.workAreas)],['المستوى المهني',user.level],['الرصيد',user.walletBalance??user.balance],['المنصب الإداري',user.adminRole],['تاريخ إنشاء الحساب',user.createdAt?new Date(user.createdAt).toLocaleDateString('ar-EG'):null]];$('profileData').innerHTML='<div class="msg">'+fields.filter(x=>x[1]!=null&&String(x[1]).trim()).map(x=>'<p><b>'+esc(x[0])+':</b> '+esc(x[1])+'</p>').join('')+'</div>';if(role==='client'){$('editClientProfileButton').textContent='✏️ تعديل بياناتي';$('editClientProfileButton').classList.remove('hidden');$('editClientName').value=String(user.name||'');$('editClientPhone').value=String(user.phone||'')}else if(role==='fanni'){$('editClientProfileButton').textContent='✏️ تعديل بياناتي';$('editClientProfileButton').classList.remove('hidden');$('editFanniPhone').value=String(user.phone||'');editFanniSelectedSpecialties=Array.isArray(user.specialties)?[...user.specialties]:[];editFanniSelectedAreas=(Array.isArray(user.areas)?user.areas:Array.isArray(user.workAreas)?user.workAreas:[]).filter(Boolean);$('editFanniAreaSearch').value='';editFanniAreaSearch='';loadEditFanniCatalog();loadEditFanniAreas()}if(role==='client'||role==='fanni'){const list=await api(role==='client'?'/client/orders':'/orders/my-offers',{auth:true});renderRatingHistory(list.orders||list.offers||list.items||list.data||[])}else{$('ratingHistory').innerHTML='<p class="muted">سجل تقييم العمليات متاح لحسابات العملاء والفنيين.</p>'}}catch(e){notice(e.message);}}
+$('editClientProfileButton').addEventListener('click',()=>{if(role==='client'){$('editClientProfileForm').classList.remove('hidden');$('editClientProfileButton').classList.add('hidden');$('editClientName').focus()}else if(role==='fanni'){$('editFanniProfileForm').classList.remove('hidden');$('editClientProfileButton').classList.add('hidden');$('editFanniPhone').focus()}});
+$('cancelClientProfileButton').addEventListener('click',()=>{$('editClientProfileForm').classList.add('hidden');$('editClientProfileButton').classList.remove('hidden');notice('');});
+$('cancelFanniProfileButton').addEventListener('click',()=>{$('editFanniProfileForm').classList.add('hidden');$('editClientProfileButton').classList.remove('hidden');notice('');});
+function showProfileEditFeedback(form,text,ok=false){let box=form.querySelector('[data-profile-edit-feedback]');if(!box){box=document.createElement('div');box.dataset.profileEditFeedback='';box.style.cssText='padding:12px;border-radius:12px;margin:10px 0;font-size:12px;font-weight:800;line-height:1.7';form.insertBefore(box,form.querySelector('.row'));}box.textContent=text;box.style.background=ok?'#ecfdf5':'#fff1f2';box.style.color=ok?'#065f46':'#9f1239';box.style.border='1px solid '+(ok?'#a7f3d0':'#fecdd3');box.scrollIntoView({behavior:'smooth',block:'nearest'});}
+$('editFanniProfileForm').addEventListener('submit',async e=>{e.preventDefault();if(!(role==='fanni'||(mode==='admin-edit'&&role==='admin'&&targetRole==='fanni')))return;const phone=String($('editFanniPhone').value||'').replace(/[^0-9٠-٩۰-۹]/g,'').replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));const specialties=[...editFanniSelectedSpecialties];const allAreasSelected=editFanniSelectedAreas.includes('جميع المناطق');const areas=[...new Set(allAreasSelected?editFanniAreaOptions:editFanniSelectedAreas)];if(allAreasSelected&&areas.length>30)return showProfileEditFeedback(e.currentTarget,'اختيار «جميع المناطق» يتجاوز الحد المسموح (30 منطقة). اختار المناطق المطلوبة يدويًا.',false);if(!/^01[0-9]{9}$/.test(phone))return showProfileEditFeedback(e.currentTarget,'رقم الهاتف لازم يكون 11 رقمًا ويبدأ بـ 01.');if(!specialties.length)return showProfileEditFeedback(e.currentTarget,'اختار تخصصًا واحدًا على الأقل.');if(!areas.length)return showProfileEditFeedback(e.currentTarget,'اختار منطقة عمل واحدة على الأقل من القائمة.');const button=$('saveFanniProfileButton');button.disabled=true;button.textContent='جاري الحفظ...';showProfileEditFeedback(e.currentTarget,'جاري إرسال طلب تعديل البيانات للإدارة للمراجعة...',true);try{const adminEditing=mode==='admin-edit'&&role==='admin'&&targetRole==='fanni';const d=await api(adminEditing?'/admin/fannis/'+encodeURIComponent(targetId)+'/profile':'/fanni/me',{method:'PATCH',auth:true,body:{phone,specialties,areas},timeoutMs:25000});if(adminEditing){const verify=await api('/admin/fannis/'+encodeURIComponent(targetId)+'/profile',{auth:true,timeoutMs:15000});const saved=verify.fanni;if(!saved||saved.phone!==phone||JSON.stringify([...(saved.specialties||[])].sort())!==JSON.stringify([...specialties].sort())||JSON.stringify([...(saved.areas||[])].sort())!==JSON.stringify([...areas].sort()))throw Error('تم إرسال الحفظ لكن البيانات المسترجعة لا تطابق التعديلات. أعد المحاولة أو راجع سجل التدقيق.');$('editFanniPhone').value=saved.phone;editFanniSelectedSpecialties=[...saved.specialties];editFanniSelectedAreas=[...saved.areas];renderEditFanniSpecialties();renderEditFanniAreas();showProfileEditFeedback(e.currentTarget,d.message||'تم حفظ بيانات الفني والتحقق من ظهورها بعد الحفظ.',true);notice(d.message||'تم حفظ بيانات الفني والتحقق منها.',true);}else{$('editFanniProfileForm').classList.add('hidden');$('editClientProfileButton').classList.remove('hidden');await loadProfileAndRatings();notice(d.message||'تم إرسال طلب تعديل بياناتك للإدارة للمراجعة، وبياناتك الحالية ستظل كما هي لحين الموافقة.',true);}}catch(error){showProfileEditFeedback(e.currentTarget,error.message||'تعذر حفظ التعديلات.');notice(error.message||'تعذر حفظ التعديلات.')}finally{button.disabled=false;button.textContent=mode==='admin-edit'?'حفظ التعديلات':'إرسال طلب التعديل';}});
+$('editClientProfileForm').addEventListener('submit',async e=>{e.preventDefault();if(!(role==='client'||(mode==='admin-edit'&&role==='admin'&&targetRole==='client')))return;const name=String($('editClientName').value||'').trim();const phone=String($('editClientPhone').value||'').replace(/[^0-9٠-٩۰-۹]/g,'').replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));if(name.length<2||name.length>50)return notice('اكتب الاسم بشكل صحيح.');if(!/^01[0-9]{9}$/.test(phone))return notice('رقم الهاتف لازم يكون 11 رقمًا ويبدأ بـ 01.');const button=$('saveClientProfileButton');button.disabled=true;button.textContent='جاري الحفظ...';try{const adminEditing=mode==='admin-edit'&&role==='admin'&&targetRole==='client';const d=await api(adminEditing?'/admin/client-accounts/'+encodeURIComponent(targetId)+'/profile':'/client/me',{method:'PATCH',auth:true,body:{name,phone}});$('editClientName').value=d.client.name;$('editClientPhone').value=d.client.phone;if(adminEditing){$('editClientName').value=d.client.name;$('editClientPhone').value=d.client.phone;notice(d.message||'تم حفظ بيانات العميل بنجاح.',true);}else{$('editClientProfileForm').classList.add('hidden');$('editClientProfileButton').classList.remove('hidden');notice(d.message||'تم تحديث بيانات حسابك بنجاح.',true);await loadProfileAndRatings();}}catch(error){notice(error.message||'تعذر حفظ البيانات.')}finally{button.disabled=false;button.textContent='حفظ التعديلات';}});
+(function init(){if(!['client','fanni','admin'].includes(role)){notice('نوع الحساب غير صحيح.');return}const pageTitle=document.querySelector('.wrap>h1');if(pageTitle)pageTitle.textContent=mode==='recovery'?'استعادة كلمة المرور':mode==='change'?'تغيير كلمة المرور':'حسابي';if(mode==='admin-edit'){if(role!=='admin'||!token()){notice('لازم تسجّل دخولك للأدمن أولًا.');return;}if(!['client','fanni'].includes(targetRole)||!targetId){notice('رابط تعديل الحساب غير صحيح.');return;}const pageTitle=document.querySelector('.wrap>h1');if(pageTitle)pageTitle.textContent='تعديل بيانات الحساب';loadAdminTargetProfile().catch(e=>notice(e.message||'تعذر تحميل بيانات الحساب.'));return}if(mode==='support'){if(!token()&&!window.IS_EDITOR_PREVIEW)return notice('سجّل دخولك للإدارة أولًا.');$('adminQueue').classList.remove('hidden');loadQueue();setInterval(async()=>{if(recoveryPollBusy||recoveryReplyBusy||document.hidden)return;recoveryPollBusy=true;try{await loadQueue();if(selectedId)await selectRecovery(selectedId)}finally{recoveryPollBusy=false}},3000);return}if(mode==='recovery'){ $('recovery').classList.remove('hidden');if(loadRecoveryState()){ $('requestForm').classList.add('hidden');showRecovery({status:'جاري تحميل المحادثة',messages:[]});refreshRecovery();pollTimer=setInterval(refreshRecovery,3000)}return}if(!token()&&!window.IS_EDITOR_PREVIEW){notice('لازم تسجّل الدخول الأول لعرض بيانات حسابك أو تغيير كلمة المرور.');const login={client:'client.html',fanni:'fanni.html',admin:'admin.html'}[role];const link=document.createElement('a');link.href=login;link.textContent='الانتقال لتسجيل الدخول';link.className='btn';$('notice').appendChild(link);return}if(mode==='change'){$('changePassword').classList.remove('hidden');if(supportMode){$('currentPasswordField')?.classList.add('hidden');const note=document.querySelector('#changePassword>p.muted');if(note)note.textContent='تم الدخول بكلمة دعم لمرة واحدة. عيّن كلمة مرور شخصية جديدة لإكمال استخدام حسابك.';const current=$('changeForm')?.elements?.currentPassword;if(current){current.required=false;current.disabled=true;}}return}$('profile').classList.remove('hidden');if(role==='client'||role==='fanni'){const support=document.createElement('a');support.href='support.html?role='+role;support.className='account-support-float';support.setAttribute('aria-label','خدمة العملاء');support.title='خدمة العملاء';support.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 13v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="12" width="4" height="7" rx="2"/><rect x="17" y="12" width="4" height="7" rx="2"/><path d="M17 19a5 5 0 0 1-5 2h-1"/></svg>';document.body.appendChild(support)}loadProfileAndRatings()})();

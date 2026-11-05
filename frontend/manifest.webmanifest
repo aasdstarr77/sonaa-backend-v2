@@ -1,0 +1,20 @@
+{
+  "name": "صُنّاع",
+  "short_name": "صُنّاع",
+  "description": "صُنّاع، كُلُّ خِدْمَةٍ تَبْدَأُ بِخُطْوَةٍ",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0A2342",
+  "icons": [
+    {
+      "src": "/icons/sonaa-logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

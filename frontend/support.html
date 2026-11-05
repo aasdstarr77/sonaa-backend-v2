@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="ar" dir="rtl" data-sonaa-theme="support"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#174EA6">
+<title>صُنّاع | خدمة العملاء</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+
+
+<script src="/js/preview-bootstrap.js" data-sonaa-page="support"></script>
+<style>
+:root{--navy:var(--sonaa-color-0b1b3a);--blue:var(--sonaa-color-2563eb);--teal:var(--sonaa-color-0d9488);--page:var(--sonaa-color-f4f7fb);--border:var(--sonaa-color-e2e8f0);--muted:var(--sonaa-color-64748b)}
+*{box-sizing:border-box;font-family:Cairo,system-ui,sans-serif}
+body{margin:0;background:var(--page);color:var(--navy);padding:0 0 max(24px,env(safe-area-inset-bottom))}
+button,input,textarea,select{font:inherit}
+button{cursor:pointer}
+button:disabled{opacity:.55;cursor:not-allowed}
+.wrap{max-width:850px;margin:auto;padding:14px}
+.header{background:linear-gradient(135deg,var(--sonaa-color-0b1b3a),var(--sonaa-color-1e3a8a));color:var(--sonaa-color-fff);border-radius:20px;padding:18px;box-shadow:0 12px 28px var(--sonaa-color-0b1b3a20)}
+.headerline{display:flex;align-items:center;justify-content:space-between;gap:12px}
+h1{font-size:21px;margin:0;font-weight:900}
+.sub{font-size:12px;color:var(--sonaa-color-dbeafe);margin-top:6px;line-height:1.8}
+.card{background:var(--sonaa-color-fff);border:1px solid var(--border);border-radius:18px;padding:15px;margin-top:13px;box-shadow:0 3px 12px var(--sonaa-color-0f172a08)}
+.row{display:flex;gap:8px;align-items:center}.between{justify-content:space-between}
+.field{width:100%;border:1px solid var(--sonaa-color-dbe3ef);border-radius:12px;padding:11px 12px;background:var(--sonaa-color-fff);color:var(--sonaa-color-0b1b3a);font-size:13px;min-width:0}
+textarea.field{resize:vertical;min-height:92px}
+label{display:block;font-size:11px;font-weight:800;margin:10px 0 6px}
+.btn{border:0;border-radius:12px;background:var(--blue);color:var(--sonaa-color-fff);padding:11px 14px;font-size:12px;font-weight:900;min-height:42px}
+.btn.secondary{background:var(--sonaa-color-eff6ff);color:var(--sonaa-color-1d4ed8);border:1px solid var(--sonaa-color-dbeafe)}
+.btn.dark{background:var(--navy)}.btn.light{background:var(--sonaa-color-f1f5f9);color:var(--sonaa-color-334155);border:1px solid var(--sonaa-color-e2e8f0)}
+.btn.danger{background:var(--sonaa-color-b91c1c)}
+.pill{font-size:10px;font-weight:900;border-radius:99px;padding:5px 9px;background:var(--sonaa-color-fef3c7);color:var(--sonaa-color-92400e);white-space:nowrap}
+.pill.green{background:var(--sonaa-color-d1fae5);color:var(--sonaa-color-065f46)}.pill.gray{background:var(--sonaa-color-e2e8f0);color:var(--sonaa-color-334155)}
+.muted{color:var(--muted);font-size:11px;line-height:1.8}.title{font-size:14px;font-weight:900;margin:0 0 8px}
+.list{display:grid;gap:8px}.case{width:100%;text-align:right;background:var(--sonaa-color-fff);border:1px solid var(--border);border-radius:13px;padding:12px;color:var(--navy)}
+.case.active{border-color:var(--sonaa-color-14b8a6);box-shadow:0 0 0 2px var(--sonaa-color-14b8a61a)}.case strong{font-size:12px;display:block}.case small{font-size:10px;color:var(--muted);display:block;margin-top:5px}
+.messages{display:grid;gap:10px;margin:12px 0}.message{border-radius:13px;padding:10px 12px;background:var(--sonaa-color-f1f5f9);max-width:95%;overflow-wrap:anywhere}.message.mine{margin-right:auto;background:var(--sonaa-color-dbeafe)}.message.admin{margin-left:auto;background:var(--sonaa-color-d1fae5)}.message .meta{font-size:10px;color:var(--sonaa-color-475569);margin-bottom:5px;font-weight:800}.message .body{white-space:pre-wrap;font-size:12px;line-height:1.9}
+.notice{border-radius:12px;background:var(--sonaa-color-fffbeb);border:1px solid var(--sonaa-color-fde68a);padding:10px 12px;font-size:11px;line-height:1.8;color:var(--sonaa-color-92400e);margin-top:10px}
+.error{background:var(--sonaa-color-fef2f2);border:1px solid var(--sonaa-color-fecaca);color:var(--sonaa-color-991b1b);padding:10px;border-radius:12px;font-size:12px;margin-top:10px}
+.success{background:var(--sonaa-color-ecfdf5);border:1px solid var(--sonaa-color-a7f3d0);color:var(--sonaa-color-065f46);padding:10px;border-radius:12px;font-size:12px;margin-top:10px}
+.hidden{display:none!important}
+@media(min-width:680px){.cols{display:grid;grid-template-columns:300px minmax(0,1fr);gap:13px;align-items:start}.cols>.card{margin-top:13px}.cols .list{max-height:62vh;overflow:auto}.chat{min-height:400px}}
+
+/* Full-page raised 3D treatment */
+body{background:radial-gradient(ellipse at top,var(--sonaa-color-fff) 0%,var(--sonaa-color-edf3fb) 48%,var(--sonaa-color-e5edf8) 100%)}
+.wrap{padding-top:18px}
+.header{border:1px solid var(--sonaa-color-35527f);box-shadow:0 7px 0 var(--sonaa-color-08152e),0 15px 28px var(--sonaa-color-0b1b3a24),inset 0 1px 0 var(--sonaa-color-ffffff35)}
+.card{border:1px solid var(--sonaa-color-d6e1ef);background:linear-gradient(145deg,var(--sonaa-color-fff) 0%,var(--sonaa-color-f9fbff) 100%);box-shadow:0 5px 0 var(--sonaa-color-d9e3f0),0 10px 22px var(--sonaa-color-0b1b3a0d),inset 0 1px 0 var(--sonaa-color-fff);transition:transform .18s,box-shadow .18s}
+.title{text-shadow:0 1px 0 var(--sonaa-color-fff);letter-spacing:.1px}
+.btn{border:1px solid var(--sonaa-color-315ec1);background:linear-gradient(145deg,var(--sonaa-color-3b82f6) 0%,var(--sonaa-color-2563eb) 55%,var(--sonaa-color-1d4ed8) 100%);box-shadow:0 4px 0 var(--sonaa-color-1e40af),0 7px 12px var(--sonaa-color-1d4ed82b),inset 0 1px 0 var(--sonaa-color-ffffff60);text-shadow:0 1px 1px var(--sonaa-color-102b6650);transition:transform .15s,box-shadow .15s,filter .15s}
+.btn.secondary{border-color:var(--sonaa-color-b8d1f7);background:linear-gradient(145deg,var(--sonaa-color-fff) 0%,var(--sonaa-color-eaf3ff) 100%);color:var(--sonaa-color-1d4ed8);box-shadow:0 4px 0 var(--sonaa-color-c3d8f5),0 7px 12px var(--sonaa-color-1d4ed814),inset 0 1px 0 var(--sonaa-color-fff);text-shadow:none}
+.btn.dark{border-color:var(--sonaa-color-08152e);background:linear-gradient(145deg,var(--sonaa-color-1e3a8a),var(--sonaa-color-0b1b3a));box-shadow:0 4px 0 var(--sonaa-color-08152e),0 7px 12px var(--sonaa-color-0b1b3a28),inset 0 1px 0 var(--sonaa-color-ffffff30)}
+.btn.light{border-color:var(--sonaa-color-cbd7e7);background:linear-gradient(145deg,var(--sonaa-color-fff),var(--sonaa-color-e8eef7));color:var(--sonaa-color-334155);box-shadow:0 4px 0 var(--sonaa-color-cbd5e1),0 7px 12px var(--sonaa-color-0b1b3a18),inset 0 1px 0 var(--sonaa-color-fff)}
+.btn.danger{border-color:var(--sonaa-color-991b1b);background:linear-gradient(145deg,var(--sonaa-color-ef4444),var(--sonaa-color-b91c1c));box-shadow:0 4px 0 var(--sonaa-color-7f1d1d),0 7px 12px var(--sonaa-color-b91c1c2e),inset 0 1px 0 var(--sonaa-color-ffffff45)}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--sonaa-color-1e40af),0 2px 4px var(--sonaa-color-0b1b3a16);filter:brightness(.98)}
+.btn:disabled{transform:none;box-shadow:0 2px 0 var(--sonaa-color-94a3b8);filter:grayscale(.12)}
+.field{border:1px solid var(--sonaa-color-c5d3e6);background:linear-gradient(145deg,var(--sonaa-color-f8fbff),var(--sonaa-color-fff));box-shadow:inset 0 3px 6px var(--sonaa-color-0b1b3a0c),0 3px 0 var(--sonaa-color-dbe5f1),0 5px 9px var(--sonaa-color-0b1b3a08);transition:border-color .15s,box-shadow .15s}
+.field:focus{outline:none;border-color:var(--sonaa-color-60a5fa);box-shadow:inset 0 2px 4px var(--sonaa-color-0b1b3a0b),0 0 0 3px var(--sonaa-color-60a5fa2e),0 3px 0 var(--sonaa-color-bfdbfe)}
+label{color:var(--sonaa-color-203d65);text-shadow:0 1px 0 var(--sonaa-color-fff)}
+.case{border:1px solid var(--sonaa-color-d2deed);background:linear-gradient(145deg,var(--sonaa-color-fff),var(--sonaa-color-f2f6fc));box-shadow:0 3px 0 var(--sonaa-color-dbe5f1),0 5px 10px var(--sonaa-color-0b1b3a0a),inset 0 1px 0 var(--sonaa-color-fff);transition:transform .15s,box-shadow .15s,border-color .15s}
+.case:active{transform:translateY(2px);box-shadow:0 1px 0 var(--sonaa-color-dbe5f1)}
+.case.active{border-color:var(--sonaa-color-0d9488);background:linear-gradient(145deg,var(--sonaa-color-f0fdfa),var(--sonaa-color-dffaf5));box-shadow:0 4px 0 var(--sonaa-color-99f6e4),0 7px 12px var(--sonaa-color-0d94881c),inset 0 1px 0 var(--sonaa-color-fff)}
+.message{border:1px solid var(--sonaa-color-d8e2ef);box-shadow:0 3px 0 var(--sonaa-color-dbe5f1),0 6px 10px var(--sonaa-color-0b1b3a0a),inset 0 1px 0 var(--sonaa-color-ffffffb5)}
+.message.mine{border-color:var(--sonaa-color-bfd7fb);background:linear-gradient(145deg,var(--sonaa-color-eff6ff),var(--sonaa-color-dbeafe));box-shadow:0 3px 0 var(--sonaa-color-bfdbfe),0 6px 10px var(--sonaa-color-1d4ed810)}
+.message.admin{border-color:var(--sonaa-color-a7f3d0);background:linear-gradient(145deg,var(--sonaa-color-ecfdf5),var(--sonaa-color-d1fae5));box-shadow:0 3px 0 var(--sonaa-color-a7f3d0),0 6px 10px var(--sonaa-color-05966910)}
+.notice,.error,.success{box-shadow:0 3px 0 var(--sonaa-color-0000000a),0 6px 12px var(--sonaa-color-0b1b3a08),inset 0 1px 0 var(--sonaa-color-ffffffa0)}
+.pill{border:1px solid var(--sonaa-color-fcd34d);box-shadow:0 2px 0 var(--sonaa-color-fef3c7),inset 0 1px 0 var(--sonaa-color-fff9)}
+.pill.green{border-color:var(--sonaa-color-6ee7b7);box-shadow:0 2px 0 var(--sonaa-color-a7f3d0)}
+.pill.gray{border-color:var(--sonaa-color-cbd5e1);box-shadow:0 2px 0 var(--sonaa-color-e2e8f0)}
+input[type=checkbox]{width:18px;height:18px;accent-color:var(--sonaa-color-0d9488);filter:drop-shadow(0 2px 1px var(--sonaa-color-0b1b3a20))}
+#notice-area,#error-area{font-weight:800}
+@media(prefers-reduced-motion:reduce){.btn,.field,.case,.card{transition:none}}
+
+
+/* Full-page raised 3D treatment */
+body{background:radial-gradient(ellipse at top,var(--sonaa-color-fff) 0%,var(--sonaa-color-edf3fb) 48%,var(--sonaa-color-e5edf8) 100%)}
+.wrap{padding-top:18px}
+.header{border:1px solid var(--sonaa-color-35527f);box-shadow:0 7px 0 var(--sonaa-color-08152e),0 15px 28px var(--sonaa-color-0b1b3a24),inset 0 1px 0 var(--sonaa-color-ffffff35)}
+.card{border:1px solid var(--sonaa-color-d6e1ef);background:linear-gradient(145deg,var(--sonaa-color-fff) 0%,var(--sonaa-color-f9fbff) 100%);box-shadow:0 5px 0 var(--sonaa-color-d9e3f0),0 10px 22px var(--sonaa-color-0b1b3a0d),inset 0 1px 0 var(--sonaa-color-fff);transition:transform .18s,box-shadow .18s}
+.title{text-shadow:0 1px 0 var(--sonaa-color-fff);letter-spacing:.1px}
+.btn{border:1px solid var(--sonaa-color-315ec1);background:linear-gradient(145deg,var(--sonaa-color-3b82f6) 0%,var(--sonaa-color-2563eb) 55%,var(--sonaa-color-1d4ed8) 100%);box-shadow:0 4px 0 var(--sonaa-color-1e40af),0 7px 12px var(--sonaa-color-1d4ed82b),inset 0 1px 0 var(--sonaa-color-ffffff60);text-shadow:0 1px 1px var(--sonaa-color-102b6650);transition:transform .15s,box-shadow .15s,filter .15s}
+.btn.secondary{border-color:var(--sonaa-color-b8d1f7);background:linear-gradient(145deg,var(--sonaa-color-fff) 0%,var(--sonaa-color-eaf3ff) 100%);color:var(--sonaa-color-1d4ed8);box-shadow:0 4px 0 var(--sonaa-color-c3d8f5),0 7px 12px var(--sonaa-color-1d4ed814),inset 0 1px 0 var(--sonaa-color-fff);text-shadow:none}
+.btn.dark{border-color:var(--sonaa-color-08152e);background:linear-gradient(145deg,var(--sonaa-color-1e3a8a),var(--sonaa-color-0b1b3a));box-shadow:0 4px 0 var(--sonaa-color-08152e),0 7px 12px var(--sonaa-color-0b1b3a28),inset 0 1px 0 var(--sonaa-color-ffffff30)}
+.btn.light{border-color:var(--sonaa-color-cbd7e7);background:linear-gradient(145deg,var(--sonaa-color-fff),var(--sonaa-color-e8eef7));color:var(--sonaa-color-334155);box-shadow:0 4px 0 var(--sonaa-color-cbd5e1),0 7px 12px var(--sonaa-color-0b1b3a18),inset 0 1px 0 var(--sonaa-color-fff)}
+.btn.danger{border-color:var(--sonaa-color-991b1b);background:linear-gradient(145deg,var(--sonaa-color-ef4444),var(--sonaa-color-b91c1c));box-shadow:0 4px 0 var(--sonaa-color-7f1d1d),0 7px 12px var(--sonaa-color-b91c1c2e),inset 0 1px 0 var(--sonaa-color-ffffff45)}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--sonaa-color-1e40af),0 2px 4px var(--sonaa-color-0b1b3a16);filter:brightness(.98)}
+.btn:disabled{transform:none;box-shadow:0 2px 0 var(--sonaa-color-94a3b8);filter:grayscale(.12)}
+.field{border:1px solid var(--sonaa-color-c5d3e6);background:linear-gradient(145deg,var(--sonaa-color-f8fbff),var(--sonaa-color-fff));box-shadow:inset 0 3px 6px var(--sonaa-color-0b1b3a0c),0 3px 0 var(--sonaa-color-dbe5f1),0 5px 9px var(--sonaa-color-0b1b3a08);transition:border-color .15s,box-shadow .15s}
+.field:focus{outline:none;border-color:var(--sonaa-color-60a5fa);box-shadow:inset 0 2px 4px var(--sonaa-color-0b1b3a0b),0 0 0 3px var(--sonaa-color-60a5fa2e),0 3px 0 var(--sonaa-color-bfdbfe)}
+label{color:var(--sonaa-color-203d65);text-shadow:0 1px 0 var(--sonaa-color-fff)}
+.case{border:1px solid var(--sonaa-color-d2deed);background:linear-gradient(145deg,var(--sonaa-color-fff),var(--sonaa-color-f2f6fc));box-shadow:0 3px 0 var(--sonaa-color-dbe5f1),0 5px 10px var(--sonaa-color-0b1b3a0a),inset 0 1px 0 var(--sonaa-color-fff);transition:transform .15s,box-shadow .15s,border-color .15s}
+.case:active{transform:translateY(2px);box-shadow:0 1px 0 var(--sonaa-color-dbe5f1)}
+.case.active{border-color:var(--sonaa-color-0d9488);background:linear-gradient(145deg,var(--sonaa-color-f0fdfa),var(--sonaa-color-dffaf5));box-shadow:0 4px 0 var(--sonaa-color-99f6e4),0 7px 12px var(--sonaa-color-0d94881c),inset 0 1px 0 var(--sonaa-color-fff)}
+.message{border:1px solid var(--sonaa-color-d8e2ef);box-shadow:0 3px 0 var(--sonaa-color-dbe5f1),0 6px 10px var(--sonaa-color-0b1b3a0a),inset 0 1px 0 var(--sonaa-color-ffffffb5)}
+.message.mine{border-color:var(--sonaa-color-bfd7fb);background:linear-gradient(145deg,var(--sonaa-color-eff6ff),var(--sonaa-color-dbeafe));box-shadow:0 3px 0 var(--sonaa-color-bfdbfe),0 6px 10px var(--sonaa-color-1d4ed810)}
+.message.admin{border-color:var(--sonaa-color-a7f3d0);background:linear-gradient(145deg,var(--sonaa-color-ecfdf5),var(--sonaa-color-d1fae5));box-shadow:0 3px 0 var(--sonaa-color-a7f3d0),0 6px 10px var(--sonaa-color-05966910)}
+.notice,.error,.success{box-shadow:0 3px 0 var(--sonaa-color-0000000a),0 6px 12px var(--sonaa-color-0b1b3a08),inset 0 1px 0 var(--sonaa-color-ffffffa0)}
+.pill{border:1px solid var(--sonaa-color-fcd34d);box-shadow:0 2px 0 var(--sonaa-color-fef3c7),inset 0 1px 0 var(--sonaa-color-fff9)}
+.pill.green{border-color:var(--sonaa-color-6ee7b7);box-shadow:0 2px 0 var(--sonaa-color-a7f3d0)}
+.pill.gray{border-color:var(--sonaa-color-cbd5e1);box-shadow:0 2px 0 var(--sonaa-color-e2e8f0)}
+input[type=checkbox]{width:18px;height:18px;accent-color:var(--sonaa-color-0d9488);filter:drop-shadow(0 2px 1px var(--sonaa-color-0b1b3a20))}
+#notice-area,#error-area{font-weight:800}
+@media(prefers-reduced-motion:reduce){.btn,.field,.case,.card{transition:none}}
+
+</style>
+<link rel="stylesheet" href="/css/theme.css">
+</head>
+<body>
+<div class="wrap">
+<header class="header">
+ <div class="headerline"><div><h1>خدمة عملاء صُنّاع</h1><div class="sub" id="role-caption">محادثة خاصة محفوظة داخل المنصة</div></div><button class="btn light" id="back-btn" type="button">رجوع</button></div>
+</header>
+<div id="notice-area"></div>
+<section id="login-needed" class="card hidden">
+ <h2 class="title">سجّل الدخول أولًا</h2>
+ <p class="muted">خدمة العملاء مرتبطة بحسابك لحماية بياناتك ومحادثاتك. افتح صفحة حسابك وسجّل الدخول، ثم ارجع لخدمة العملاء.</p>
+ <div class="row" style="flex-wrap:wrap;margin-top:12px"><a id="login-link" class="btn" href="client.html" style="text-decoration:none">فتح صفحة الحساب</a><button class="btn secondary" id="retry-login-button" type="button">إعادة المحاولة</button></div>
+</section>
+<section id="main" class="hidden">
+ <div class="card">
+  <h2 class="title" id="new-title">افتح محادثة جديدة</h2>
+  <label for="subject">عنوان الاستفسار (اختياري)</label>
+  <input class="field" id="subject" maxlength="120" placeholder="مثال: مشكلة في طلب أو المحفظة">
+  <label for="new-message">رسالتك</label>
+  <textarea class="field" id="new-message" maxlength="2000" placeholder="اشرح المشكلة أو الاستفسار..."></textarea>
+  <button class="btn" id="create-btn" style="width:100%;margin-top:10px">إرسال وفتح محادثة</button>
+  <div class="notice">بعد إرسال رسالتك، يمكنك متابعة رد فريق الدعم من خلال هذه الصفحة.</div>
+ </div>
+ <div class="cols">
+  <section class="card">
+   <div class="row between"><h2 class="title">محادثاتي</h2><button class="btn secondary" id="refresh-btn">تحديث</button></div>
+   <div id="case-list" class="list"><p class="muted">جاري تحميل المحادثات...</p></div>
+  </section>
+  <section class="card chat">
+   <div class="row between"><div><h2 class="title" id="chat-title">اختار محادثة</h2><div class="muted" id="chat-subtitle">هتظهر الرسائل هنا</div></div><span id="case-status" class="pill gray">—</span></div>
+   <div id="messages" class="messages"><p class="muted">افتح محادثة من القائمة أو ابدأ محادثة جديدة.</p></div>
+   <div id="reply-area" class="hidden">
+    <label for="reply-message">اكتب ردك</label><textarea class="field" id="reply-message" maxlength="2000" placeholder="اكتب رسالتك..."></textarea>
+    <div class="row" style="flex-wrap:wrap;margin-top:9px"><button class="btn" id="send-btn">إرسال الرسالة</button><button class="btn secondary" id="human-btn">طلب تدخل موظف الدعم</button></div>
+   </div>
+   <div id="closed-note" class="muted hidden">الحالة مغلقة. افتح محادثة جديدة إذا احتجت مساعدة أخرى.</div>
+  </section>
+ </div>
+</section>
+<section id="admin-main" class="hidden">
+ <div class="card">
+  <div class="row between" style="flex-wrap:wrap"><h2 class="title">صندوق خدمة العملاء</h2><button class="btn secondary" id="admin-refresh">تحديث القائمة</button></div>
+  <div class="row" style="flex-wrap:wrap">
+   <select id="admin-filter" class="field" style="flex:1"><option value="">كل الحالات</option><option value="جديدة">جديدة</option><option value="بانتظار الدعم">بانتظار الدعم</option><option value="قيد المعالجة">قيد المعالجة</option><option value="بانتظار رد المستخدم">بانتظار رد المستخدم</option><option value="تم الحل">تم الحل</option><option value="مغلقة">مغلقة</option></select>
+   <label style="display:flex;align-items:center;gap:7px;margin:0"><input type="checkbox" id="human-only" checked> تحتاج تدخل بشري</label>
+  </div>
+ </div>
+ <div class="cols">
+  <section class="card"><h2 class="title">الحالات</h2><div id="admin-case-list" class="list"><p class="muted">جاري التحميل...</p></div></section>
+  <section class="card chat">
+   <div class="row between"><div><h2 class="title" id="admin-chat-title">اختار حالة</h2><div id="admin-chat-subtitle" class="muted"></div></div><span id="admin-case-status" class="pill gray">—</span></div>
+   <div id="admin-messages" class="messages"><p class="muted">اختار حالة لعرض المحادثة.</p></div>
+   <label for="admin-reply">رد الإدارة</label><textarea class="field" id="admin-reply" maxlength="2000" placeholder="اكتب ردًا واضحًا لصاحب الحالة..."></textarea>
+   <div class="row" style="flex-wrap:wrap;margin-top:9px"><button class="btn" id="admin-send">إرسال الرد</button><select class="field" id="admin-status" style="flex:1"><option>جديدة</option><option>بانتظار الدعم</option><option>قيد المعالجة</option><option>بانتظار رد المستخدم</option><option>تم الحل</option><option>مغلقة</option></select><button class="btn secondary" id="admin-save-status">حفظ الحالة</button></div>
+  </section>
+ </div>
+</section>
+<div id="error-area"></div>
+</div>
+<script src="/js/support-page.js"></script>
+
+
+
+
+
+
+
+<script src="/js/shared-editor-bridge.js"></script>
+<script src="/js/ui-layout-loader.js"></script>
+<script src="/js/shared-preview-links.js"></script>
+</body>
+</html>
