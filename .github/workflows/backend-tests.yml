@@ -1,8 +1,21 @@
-name: Backend integration tests
+name: Backend integration tests # re-run after admin runtime fix
 
 on:
-  push:
+  pull_request:
     branches: [main]
+    paths:
+      - 'src/**'
+      - 'frontend/admin.html'
+      - 'frontend/editor.html'
+      - 'frontend/client.html'
+      - 'frontend/fanni.html'
+      - 'frontend/js/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'scripts/**'
+      - '.github/workflows/backend-tests.yml'
+  push:
+    branches: [main, 'feature/one-time-support-passwords-20261105']
     paths:
       - 'src/**'
       - 'frontend/admin.html'

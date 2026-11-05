@@ -36,6 +36,7 @@ async function doLogin(){
   forceTechnicianRegistration=false;
   setAuth(token,user);
   currentUser=user;
+  if(data.mustChangePassword&&!window.IS_EDITOR_PREVIEW){location.href='password.html?role=fanni&mode=change&support=1';return;}
   state.loading=false;
   state.tab='available';
   state.loginPass='';

@@ -203,6 +203,8 @@ function createAdminPlatformRouter({
       client.passwordHash = await bcrypt.hash(value.newPassword, 12);
       client.tokenVersion = Number(client.tokenVersion || 0) + 1;
       await client.save();
+      const SupportPassword = require('../../models/SupportPassword');
+      await SupportPassword.updateMany({ ownerRole: 'client', accountId: client._id, usedAt: null, revokedAt: null }, { $set: { revokedAt: new Date(), revokedBy: req.user._id } });
       await writeAdminAudit(req, 'تغيير كلمة سر عميل', 'clients', phone, 'تغيير كلمة سر الحساب من لوحة الإدارة دون تسجيل كلمة السر');
       return res.json({ message: 'تم تغيير كلمة سر العميل بنجاح.' });
     } catch (err) { next(err); }

@@ -9,6 +9,7 @@ const rateLimit = require('express-rate-limit');
 const Client = require('../models/Client');
 const Fanni = require('../models/Fanni');
 const PasswordRecovery = require('../models/PasswordRecovery');
+const SupportPassword = require('../models/SupportPassword');
 const { auth, isRootAdmin, canAccessAdmin } = require('../middleware/auth');
 const { clientAuth } = require('../middleware/clientAuth');
 const { notifyAdmins } = require('../utils/notifications');
@@ -110,7 +111,7 @@ function ownerAuth(req, res, next) {
 router.post('/change/client', clientAuth, async (req, res, next) => {
   try {
     const { currentPassword, newPassword, confirmPassword } = req.body || {};
-    if (typeof currentPassword !== 'string' || !(await bcrypt.compare(currentPassword, await Client.findById(req.client._id).select('+passwordHash').then(x => x?.passwordHash || '')))) {
+    if (!req.mustChangePassword && (typeof currentPassword !== 'string' || !(await bcrypt.compare(currentPassword, await Client.findById(req.client._id).select('+passwordHash').then(x => x?.passwordHash || ''))))) {
       return res.status(400).json({ message: 'كلمة المرور الحالية غير صحيحة.' });
     }
     const valid = passwordSchema.validate(newPassword);
@@ -119,6 +120,7 @@ router.post('/change/client', clientAuth, async (req, res, next) => {
     user.passwordHash = await bcrypt.hash(newPassword, 12);
     user.tokenVersion = Number(user.tokenVersion || 0) + 1;
     await user.save();
+    await SupportPassword.updateMany({ ownerRole: 'client', accountId: user._id, usedAt: null, revokedAt: null }, { $set: { revokedAt: new Date() } });
     const token = jwt.sign(
       { id: String(user._id), role: 'client', tokenVersion: user.tokenVersion },
       process.env.JWT_SECRET,
@@ -132,12 +134,13 @@ router.post('/change/fanni', auth('fanni'), async (req, res, next) => {
     if (req.user.role !== 'fanni') return res.status(403).json({ message: 'هذا المسار مخصص لحساب الفني فقط.' });
     const user = await Fanni.findById(req.user._id).select('+passwordHash');
     const { currentPassword, newPassword, confirmPassword } = req.body || {};
-    if (!user || typeof currentPassword !== 'string' || !(await bcrypt.compare(currentPassword, user.passwordHash || ''))) return res.status(400).json({ message: 'كلمة المرور الحالية غير صحيحة.' });
+    if (!user || (!req.mustChangePassword && (typeof currentPassword !== 'string' || !(await bcrypt.compare(currentPassword, user.passwordHash || ''))))) return res.status(400).json({ message: 'كلمة المرور الحالية غير صحيحة.' });
     const valid = passwordSchema.validate(newPassword);
     if (valid.error || newPassword !== confirmPassword || newPassword === currentPassword) return res.status(400).json({ message: 'كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل، والتأكيد مطابقًا، وألا تكون هي القديمة.' });
     user.passwordHash = await bcrypt.hash(newPassword, 12);
     user.tokenVersion = Number(user.tokenVersion || 0) + 1;
     await user.save();
+    await SupportPassword.updateMany({ ownerRole: 'fanni', accountId: user._id, usedAt: null, revokedAt: null }, { $set: { revokedAt: new Date() } });
     const token = jwt.sign({ id: String(user._id), role: 'fanni', tokenVersion: user.tokenVersion }, process.env.JWT_SECRET, { expiresIn: '30d' });
     return res.json({ message: 'تم تغيير كلمة المرور بنجاح.', token });
   } catch (e) { return next(e); }
@@ -283,6 +286,7 @@ router.post('/request/:id/reset-password', async (req, res, next) => {
     account.passwordHash = await bcrypt.hash(newPassword, 12);
     account.tokenVersion = Number(account.tokenVersion || 0) + 1;
     await account.save();
+    await SupportPassword.updateMany({ ownerRole: item.ownerRole, accountId: account._id, usedAt: null, revokedAt: null }, { $set: { revokedAt: new Date() } });
     item.status = 'تمت الاستعادة';
     item.accessTokenHash = digest(randomToken());
     item.codeHash = '';
@@ -374,6 +378,69 @@ router.post('/admin/requests/:id/reject', supportAdminAuth, async (req, res, nex
     item.codeExpiresAt = null;
     await item.save();
     return res.json({ message: 'تم رفض الطلب.', recovery: safeRequest(item) });
+  } catch (e) { return next(e); }
+});
+
+
+function supportPasswordEncrypt(value) {
+  const key = crypto.createHash('sha256').update(String(process.env.JWT_SECRET || '') + '|sonaa-support-password-v1').digest();
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const body = Buffer.concat([cipher.update(String(value), 'utf8'), cipher.final()]);
+  return [iv.toString('hex'), cipher.getAuthTag().toString('hex'), body.toString('hex')].join(':');
+}
+function supportPasswordDecrypt(value) {
+  try {
+    const [iv, tag, body] = String(value || '').split(':');
+    const key = crypto.createHash('sha256').update(String(process.env.JWT_SECRET || '') + '|sonaa-support-password-v1').digest();
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(iv, 'hex'));
+    decipher.setAuthTag(Buffer.from(tag, 'hex'));
+    return Buffer.concat([decipher.update(Buffer.from(body, 'hex')), decipher.final()]).toString('utf8');
+  } catch (_) { return ''; }
+}
+router.post('/admin/support-passwords', supportAdminAuth, async (req, res, next) => {
+  try {
+    const role = clean(req.body?.role, 20);
+    const accountId = String(req.body?.accountId || '');
+    if (!['client', 'fanni'].includes(role) || !/^[a-f0-9]{24}$/i.test(accountId)) return res.status(400).json({ message: 'نوع الحساب أو معرّفه غير صحيح.' });
+    const Account = role === 'client' ? Client : Fanni;
+    const account = await Account.findById(accountId).select('_id role name phone');
+    if (!account || (role === 'fanni' && account.role !== 'fanni')) return res.status(404).json({ message: 'حساب العميل أو الفني غير موجود.' });
+    await SupportPassword.updateMany({ ownerRole: role, accountId, usedAt: null, revokedAt: null }, { $set: { revokedAt: new Date(), revokedBy: String(req.user._id) } });
+    const secret = crypto.randomBytes(9).toString('base64url');
+    const item = await SupportPassword.create({
+      ownerRole: role, accountId, passwordHash: await bcrypt.hash(secret, 12),
+      encryptedPassword: supportPasswordEncrypt(secret), createdBy: String(req.user._id)
+    });
+    return res.status(201).json({ message: 'تم إصدار كلمة دعم لمرة واحدة.', supportPassword: secret, id: String(item._id), account: { role, name: account.name || '', phone: account.phone || '' } });
+  } catch (e) { return next(e); }
+});
+
+router.get('/admin/support-passwords', supportAdminAuth, async (req, res, next) => {
+  try {
+    const role = clean(req.query?.role, 20);
+    const accountId = String(req.query?.accountId || '');
+    if (!['client', 'fanni'].includes(role) || !/^[a-f0-9]{24}$/i.test(accountId)) return res.status(400).json({ message: 'نوع الحساب أو معرّفه غير صحيح.' });
+    const item = await SupportPassword.findOne({ ownerRole: role, accountId, usedAt: null, revokedAt: null }).sort({ createdAt: -1 }).select('_id createdAt');
+    if (!item) return res.status(404).json({ message: 'لا توجد كلمة دعم صالحة لهذا الحساب.' });
+    return res.json({ id: String(item._id), createdAt: item.createdAt });
+  } catch (e) { return next(e); }
+});
+
+router.get('/admin/support-passwords/:id/reveal', supportAdminAuth, async (req, res, next) => {
+  try {
+    const item = await SupportPassword.findOne({ _id: req.params.id, usedAt: null, revokedAt: null }).select('+encryptedPassword');
+    if (!item) return res.status(404).json({ message: 'كلمة الدعم غير موجودة أو استُخدمت/أُلغيت.' });
+    const secret = supportPasswordDecrypt(item.encryptedPassword);
+    if (!secret) return res.status(500).json({ message: 'تعذر استرجاع كلمة الدعم.' });
+    return res.json({ supportPassword: secret });
+  } catch (e) { return next(e); }
+});
+router.delete('/admin/support-passwords/:id', supportAdminAuth, async (req, res, next) => {
+  try {
+    const item = await SupportPassword.findOneAndUpdate({ _id: req.params.id, usedAt: null, revokedAt: null }, { $set: { revokedAt: new Date(), revokedBy: String(req.user._id) } }, { new: true });
+    if (!item) return res.status(404).json({ message: 'كلمة الدعم غير موجودة أو استُخدمت/أُلغيت.' });
+    return res.json({ message: 'تم إلغاء كلمة الدعم.' });
   } catch (e) { return next(e); }
 });
 
