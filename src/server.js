@@ -13,7 +13,15 @@ const path = require('path');
 
 const connectDB = require('./config/db');
 const AdminConfig = require('./models/AdminConfig');
-const { getMaintenanceStatus } = require('./utils/maintenanceCache');
+const { getMaintenanceStatus, resetMaintenanceCache } = require('./utils/maintenanceCache');
+const jwt = require('jsonwebtoken');
+const Fanni = require('./models/Fanni');
+const { normalizePhone } = require('./utils/phone');
+
+const MAINTENANCE_BYPASS_PHONES = ['01152822262', '01152822263'];
+// A changed allowlist is deployed with a fresh process; explicitly invalidate
+// the maintenance cache so the process never carries a stale maintenance state.
+resetMaintenanceCache();
 const orderRouter = require('./routes/order');
 const fanniRouter = require('./routes/fanni');
 const adminRouter = require('./routes/admin');
@@ -228,13 +236,54 @@ if (req.path === '/health') {
     const maintenanceExempt = ['/health', '/content', '/services', '/areas'];
     const isAdminPath = req.path.startsWith('/admin') ||
       req.path.startsWith('/admins') || req.path.startsWith('/auth/admin');
+
     if (!isAdminPath && !maintenanceExempt.includes(req.path)) {
       const maintenance = await getMaintenanceStatus(AdminConfig);
       if (maintenance.isOn) {
-        return res.status(503).json({
-          message: maintenance.message,
-          code: 'MAINTENANCE_MODE'
-        });
+        // Keep the requested phone lookup order, but never trust a caller-supplied
+        // query/header/body phone for an already authenticated API request.
+        const phone = req.user?.phone || req.body?.phone || req.query?.phone || req.headers['x-test-phone'];
+        const claimedPhone = normalizePhone(String(phone || ''));
+        const loginPaths = [
+          '/fanni/login', '/fannis/login', '/technician/login', '/technicians/login',
+          '/client/login', '/clients/login'
+        ];
+        const isLoginRequest = loginPaths.includes(req.path);
+
+        // Auth middleware is mounted inside the routers, after this global gate.
+        // Verify the Bearer token here only while maintenance is active, so an
+        // authenticated allowlisted account can continue without trusting a spoofed phone.
+        let authenticatedPhone = req.user?.phone || null;
+        const authorization = String(req.headers.authorization || '');
+        if (!authenticatedPhone && authorization.startsWith('Bearer ') && process.env.JWT_SECRET) {
+          try {
+            const decoded = jwt.verify(authorization.slice(7), process.env.JWT_SECRET);
+            const account = await Fanni.findById(decoded.id)
+              .select('phone tokenVersion status')
+              .lean();
+            if (account &&
+                Number(decoded.tokenVersion || 0) === Number(account.tokenVersion || 0) &&
+                !['معلق', 'مرفوض'].includes(account.status)) {
+              authenticatedPhone = account.phone;
+            }
+          } catch (_) {
+            // Invalid/expired tokens do not grant a maintenance bypass.
+          }
+        }
+
+        const isAllowlistedLogin = isLoginRequest &&
+          MAINTENANCE_BYPASS_PHONES.includes(claimedPhone);
+        const isAllowlistedSession = MAINTENANCE_BYPASS_PHONES.includes(
+          normalizePhone(String(authenticatedPhone || ''))
+        );
+
+        if (!isAllowlistedLogin && !isAllowlistedSession) {
+          return res.status(503).json({
+            message: maintenance.message,
+            code: 'MAINTENANCE_MODE',
+            maintenance: true
+          });
+        }
       }
     }
 
