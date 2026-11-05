@@ -413,15 +413,8 @@ async function writeAdminAudit(req, action, category, target, details) {
 
 router.use(createAdminClientsRouter({ auth, Joi, Client, normalizePhone, adminName, writeAdminAudit }));
 
-router.get('/clients', auth('admin'), async (req, res, next) => {
-  try {
-    const parsedLimit = Number.parseInt(req.query.limit, 10);
-    const limit = Number.isInteger(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, MAX_LIST_LIMIT) : MAX_LIST_LIMIT;
-    const records = await Client.find({}).select('name phone status createdAt').sort({ createdAt: -1 }).limit(limit).lean();
-    const clients = records.map(client => ({ ...client, id: String(client._id) }));
-    return res.set('Cache-Control', 'no-store').json({ clients, data: clients, items: clients });
-  } catch (err) { next(err); }
-});
+// GET /clients is intentionally provided by the platform router below.
+// Its response merges registered accounts with order-only customers and sets registered=true.
 
 
 const ADMIN_LAYOUT_SECTIONS = {
