@@ -129,7 +129,7 @@ function toggleEditSpecialty(specialty){
 async function saveProfileChanges(){
  if(state.editSaving)return;
 
- const phone=String(state.editPhone||'').replace(/\\D/g,'');
+ const phone=String(state.editPhone||'').replace(/\D/g,'');
  if(!/^01[0-9]{9}$/.test(phone)){
   state.error='رقم التليفون لازم يكون 11 رقم ويبدأ بـ 01';
   render();
@@ -155,24 +155,28 @@ async function saveProfileChanges(){
  toast('جاري إرسال طلب تعديل البيانات...','pending');
 
  try{
-  // API.updateProfile already uses a 25-second timeout in fanni-core.js.
   const result=await API.updateProfile({
    phone,
    specialties:[...state.editSpecialties],
    areas
   });
 
-  const updated=extractUser(result)||result?.data||result?.fanni||null;
-  if(!updated||typeof updated!=='object'){
-   throw new Error(result?.message||'وصل رد غير مكتمل من الخادم. حاول تحديث الصفحة.');
+  // A successful PATCH may return only {message} or {success}; a user
+  // object is optional and must not be required to finish the request.
+  if(!result||typeof result!=='object'||Array.isArray(result)||result.success===false){
+   throw new Error(result?.message||'لم يؤكد الخادم استلام طلب التعديل. حاول مرة أخرى.');
   }
 
-  currentUser={...(currentUser||{}),...updated};
-  setAuth(getToken(),currentUser);
+  const updated=extractUser(result)||result?.data?.user||result?.data?.fanni||result?.data||null;
+  if(updated&&typeof updated==='object'&&!Array.isArray(updated)){
+   currentUser={...(currentUser||{}),...updated};
+   setAuth(getToken(),currentUser);
+  }
+
   state.editProfileMode=false;
   state.error='';
   state.success='';
-  toast(result?.message||'تم إرسال طلب التعديل');
+  toast(result?.message||result?.data?.message||'تم إرسال طلب التعديل للإدارة للمراجعة');
  }catch(e){
   state.error=e?.message||'تعذر إرسال طلب تعديل البيانات';
   toast(state.error,'error');
