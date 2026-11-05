@@ -109,20 +109,30 @@ async function createNotification({ recipientRole, recipientId, type, title, mes
       notification = result?.value || result;
       isNew = !result?.lastErrorObject?.updatedExisting;
     } else notification = await Notification.create(payload);
-    if (isNew) await Promise.allSettled([
-      sendPushNotification({ recipientRole, recipientId, title, message, type, link }),
-      sendWebPushNotification({ recipientRole, recipientId, title, message, type, link })
-    ]);
+    // The database notification is the source of truth. External push providers
+    // are best-effort and must never hold the user's primary action indefinitely.
+    if (isNew) {
+      const delivery = Promise.allSettled([
+        sendPushNotification({ recipientRole, recipientId, title, message, type, link }),
+        sendWebPushNotification({ recipientRole, recipientId, title, message, type, link })
+      ]);
+      let timeout;
+      await Promise.race([
+        delivery,
+        new Promise(resolve => { timeout = setTimeout(resolve, 2500); })
+      ]);
+      if (timeout) clearTimeout(timeout);
+    }
     return notification;
   } catch (error) { console.error('Notification create failed:', error.message); return null; }
 }
 async function notifyAdmins({ type, title, message, link = '', dedupeKey = null }) {
   try {
     const admins = await Fanni.find({ $or: [{ role: 'admin' }, { adminRole: { $in: ['مشرف', 'مشرف أول', 'مدير', 'قراءة فقط'] } }] }).select('_id').lean();
-    for (const admin of admins) await createNotification({
+    await Promise.all(admins.map(admin => createNotification({
       recipientRole: 'admin', recipientId: admin._id, type, title, message, link,
       dedupeKey: dedupeKey ? dedupeKey + ':' + String(admin._id) : null
-    });
+    })));
   } catch (error) { console.error('Admin notification creation failed:', error.message); }
 }
 module.exports = { createNotification, sendPushNotification, notifyAdmins };
