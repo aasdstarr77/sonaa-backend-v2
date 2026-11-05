@@ -148,42 +148,11 @@ async function saveProfileChanges(){
   return;
  }
 
- state.editSaving=true;
- state.error='';
- state.success='';
- render();
- toast('جاري إرسال طلب تعديل البيانات...','pending');
-
- try{
-  const result=await API.updateProfile({
-   phone,
-   specialties:[...state.editSpecialties],
-   areas
-  });
-
-  // A successful PATCH may return only {message} or {success}; a user
-  // object is optional and must not be required to finish the request.
-  if(!result||typeof result!=='object'||Array.isArray(result)||result.success===false){
-   throw new Error(result?.message||'لم يؤكد الخادم استلام طلب التعديل. حاول مرة أخرى.');
-  }
-
-  const updated=extractUser(result)||result?.data?.user||result?.data?.fanni||result?.data||null;
-  if(updated&&typeof updated==='object'&&!Array.isArray(updated)){
-   currentUser={...(currentUser||{}),...updated};
-   setAuth(getToken(),currentUser);
-  }
-
-  state.editProfileMode=false;
-  state.error='';
-  state.success='';
-  toast(result?.message||result?.data?.message||'تم إرسال طلب التعديل للإدارة للمراجعة');
- }catch(e){
-  state.error=e?.message||'تعذر إرسال طلب تعديل البيانات';
-  toast(state.error,'error');
- }finally{
-  state.editSaving=false;
-  render();
- }
+ return submitFanniProfileEdit({
+  phone,
+  specialties:[...state.editSpecialties],
+  areas
+ });
 }
 
 async function loadProfile(){

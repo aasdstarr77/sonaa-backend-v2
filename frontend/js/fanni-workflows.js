@@ -1,5 +1,47 @@
 'use strict';
 
+async function submitFanniProfileEdit(payload){
+ if(state.editSaving)return null;
+
+ state.editSaving=true;
+ state.error='';
+ state.success='';
+ render();
+ toast('جاري إرسال طلب تعديل البيانات للإدارة للمراجعة...','pending');
+
+ let outcome='error';
+ let feedback='';
+ try{
+  const result=await API.updateProfile(payload);
+  if(!result||typeof result!=='object'||Array.isArray(result)||result.success===false){
+   throw new Error(result?.message||'لم يؤكد الخادم استلام طلب التعديل. حاول مرة أخرى.');
+  }
+
+  const updated=extractUser(result);
+  if(updated&&typeof updated==='object'&&!Array.isArray(updated)){
+   currentUser={...(currentUser||{}),...updated};
+   setAuth(getToken(),currentUser);
+  }
+
+  state.editProfileMode=false;
+  state.error='';
+  state.success='';
+  feedback=result?.message||result?.data?.message||'تم إرسال طلب التعديل للإدارة للمراجعة';
+  outcome='success';
+  return result;
+ }catch(error){
+  feedback=error?.message||'تعذر إرسال طلب تعديل البيانات';
+  state.error=feedback;
+  return null;
+ }finally{
+  state.editSaving=false;
+  render();
+  if(outcome==='success')toast(feedback,'success');
+  else if(feedback)toast(feedback,'error');
+ }
+}
+
+
 async function loadOrders(page=1,append=false){
  if(!getToken()||state.loading)return;
 
