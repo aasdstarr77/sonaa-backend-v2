@@ -417,7 +417,8 @@ router.get('/clients', auth('admin'), async (req, res, next) => {
   try {
     const parsedLimit = Number.parseInt(req.query.limit, 10);
     const limit = Number.isInteger(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, MAX_LIST_LIMIT) : MAX_LIST_LIMIT;
-    const clients = await Client.find({}).select('name phone status createdAt').sort({ createdAt: -1 }).limit(limit).lean();
+    const records = await Client.find({}).select('name phone status createdAt').sort({ createdAt: -1 }).limit(limit).lean();
+    const clients = records.map(client => ({ ...client, id: String(client._id) }));
     return res.set('Cache-Control', 'no-store').json({ clients, data: clients, items: clients });
   } catch (err) { next(err); }
 });

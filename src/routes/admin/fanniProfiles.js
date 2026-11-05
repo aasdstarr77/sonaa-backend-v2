@@ -61,12 +61,25 @@ function createAdminFanniProfilesRouter({
       const specialties = [...new Set(value.specialties.map(item => item.normalize('NFC').trim()))];
       if (specialties.some(item => !(ALL_SERVICES || []).some(service => service.normalize('NFC').trim() === item))) return res.status(400).json({ message: 'توجد خدمة غير موجودة في قائمة الخدمات المعتمدة.' });
       const before = { phone: fanni.phone, specialties: [...(fanni.specialties || [])], areas: [...(fanni.areas || [])] };
-      fanni.phone = phone; fanni.specialties = specialties; fanni.areas = normalizedAreas;
-      fanni.decisions.push(decision(req, 'تعديل بيانات فني', 'تعديل مباشر من لوحة الإدارة'));
-      fanni.decisions[fanni.decisions.length - 1].meta = { before, after: { phone, specialties, areas: normalizedAreas }, source: 'admin-profile-editor' };
-      await fanni.save();
-      await writeAdminAudit(req, 'تعديل بيانات فني', 'fannis', String(fanni._id), JSON.stringify({ before, after: { phone, specialties, areas: normalizedAreas } }));
-      return res.json({ message: 'تم حفظ بيانات الفني بنجاح.', fanni: publicFanni(fanni) });
+      const auditDetails = JSON.stringify({ before, after: { phone, specialties, areas: normalizedAreas } });
+      const profileDecision = decision(req, 'تعديل بيانات فني', 'تعديل مباشر من لوحة الإدارة');
+      profileDecision.meta = { before, after: { phone, specialties, areas: normalizedAreas }, source: 'admin-profile-editor' };
+
+      // Atomic update avoids re-validating unrelated legacy fields on the whole document.
+      const updatedFanni = await Fanni.findOneAndUpdate(
+        { _id: fanni._id, role: 'fanni' },
+        { $set: { phone, specialties, areas: normalizedAreas }, $push: { decisions: profileDecision } },
+        { new: true, runValidators: true, context: 'query' }
+      ).select('-passwordHash');
+      if (!updatedFanni) return res.status(404).json({ message: 'حساب الفني غير موجود.' });
+
+      // Audit logging must not keep the profile-save response pending.
+      writeAdminAudit(req, 'تعديل بيانات فني', 'fannis', String(updatedFanni._id), auditDetails)
+        .catch(err => console.error('Could not write technician profile audit:', err.message));
+      return res.set('Cache-Control', 'no-store').json({
+        message: 'تم حفظ بيانات الفني بنجاح.',
+        fanni: publicFanni(updatedFanni)
+      });
     } catch (err) {
       if (err && err.code === 11000) return res.status(409).json({ message: 'رقم الهاتف مسجل بالفعل في حساب آخر.' });
       next(err);
