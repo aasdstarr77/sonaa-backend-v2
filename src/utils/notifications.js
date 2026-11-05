@@ -11,7 +11,7 @@ const { sendWebPushNotification } = require('./webPush');
 function notificationFetch(url, options = {}) {
   const signal = typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
     ? AbortSignal.timeout(4000) : undefined;
-  return globalThis.notificationFetch(url, { ...options, ...(signal ? { signal } : {}) });
+  return globalThis.fetch(url, { ...options, ...(signal ? { signal } : {}) });
 }
 
 function channelFor(type) {
