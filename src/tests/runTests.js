@@ -542,6 +542,7 @@ async function run() {
             featuredUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
           });
         assert.equal(response.status, 200, JSON.stringify(response.body));
+        const Fanni = require('../models/Fanni');
         const persisted = await Fanni.findById(fanni._id).lean();
         assert.equal(persisted.trustScore, 77);
         assert.equal(persisted.isVerified, true);
