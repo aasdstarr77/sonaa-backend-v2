@@ -525,6 +525,22 @@ async function run() {
       const activeFanniSession = await request(app).get('/api/fanni/me').set('Authorization', 'Bearer ' + fanniNewLogin.body.token);
       assert.equal(activeFanniSession.status, 200);
 
+      await test('technician profile edit request persists and appears in the admin review queue', async () => {
+        const edit = await request(app).patch('/api/fanni/me')
+          .set('Authorization', 'Bearer ' + fanniNewLogin.body.token)
+          .send({ phone: '01012345680', specialties: ['صيانة تكييف'], areas: ['مدينة نصر'] });
+        assert.equal(edit.status, 200, JSON.stringify(edit.body));
+        assert.ok(edit.body.pendingProfileChange?.requestedAt);
+        const Fanni = require('../models/Fanni');
+        const persisted = await Fanni.findById(fanni._id).lean();
+        assert.equal(persisted.pendingProfileChange.phone, '01012345680');
+        assert.deepEqual(persisted.pendingProfileChange.areas, ['مدينة نصر']);
+        const queue = await request(app).get('/api/admin/fanni-profile-edits')
+          .set('Authorization', 'Bearer ' + adminToken);
+        assert.equal(queue.status, 200, JSON.stringify(queue.body));
+        assert.ok(queue.body.requests.some(item => String(item._id) === String(fanni._id)));
+      });
+
       const oldClientSessionBeforeAdminReset = clientToken;
       const clientAdminReset = await request(app).patch('/api/admin/clients/01012345678/password')
         .set('Authorization', 'Bearer ' + adminToken)
