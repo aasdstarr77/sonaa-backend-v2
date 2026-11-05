@@ -128,24 +128,53 @@ function toggleEditSpecialty(specialty){
 }
 async function saveProfileChanges(){
  if(state.editSaving)return;
- const phone=String(state.editPhone||'').replace(/\D/g,'');
- if(!/^01[0-9]{9}$/.test(phone)){state.error='رقم التليفون لازم يكون 11 رقم ويبدأ بـ 01';render();return;}
- if(!Array.isArray(state.editSpecialties)||!state.editSpecialties.length){state.error='اختار تخصصًا واحدًا على الأقل';render();return;}
+
+ const phone=String(state.editPhone||'').replace(/\\D/g,'');
+ if(!/^01[0-9]{9}$/.test(phone)){
+  state.error='رقم التليفون لازم يكون 11 رقم ويبدأ بـ 01';
+  render();
+  return;
+ }
+ if(!Array.isArray(state.editSpecialties)||!state.editSpecialties.length){
+  state.error='اختار تخصصًا واحدًا على الأقل';
+  render();
+  return;
+ }
+
  const areas=[...new Set((state.editAreas||[]).filter(Boolean))];
- if(!areas.length){state.error='اختار منطقة عمل واحدة على الأقل من القائمة';render();return;}
- state.editSaving=true;state.error='';state.success='';
+ if(!areas.length){
+  state.error='اختار منطقة عمل واحدة على الأقل من القائمة';
+  render();
+  return;
+ }
+
+ state.editSaving=true;
+ state.error='';
+ state.success='';
+ render();
+ toast('جاري إرسال طلب تعديل البيانات...','pending');
+
  try{
-  render();
-  toast('جاري إرسال طلب تعديل البيانات للإدارة...','pending');
-  const result=await API.updateProfile({phone,specialties:state.editSpecialties,areas});
+  // API.updateProfile already uses a 25-second timeout in fanni-core.js.
+  const result=await API.updateProfile({
+   phone,
+   specialties:[...state.editSpecialties],
+   areas
+  });
+
   const updated=extractUser(result)||result?.data||result?.fanni||null;
-  if(!updated||typeof updated!=='object')throw new Error(result?.message||'وصل رد غير مكتمل من الخادم. حاول تحديث الصفحة.');
-  currentUser={...(currentUser||{}),...updated};setAuth(getToken(),currentUser);
-  state.editProfileMode=false;state.error='';state.success='';
-  render();
-  toast(result.message||'تم إرسال طلب تعديل البيانات للإدارة للمراجعة');
+  if(!updated||typeof updated!=='object'){
+   throw new Error(result?.message||'وصل رد غير مكتمل من الخادم. حاول تحديث الصفحة.');
+  }
+
+  currentUser={...(currentUser||{}),...updated};
+  setAuth(getToken(),currentUser);
+  state.editProfileMode=false;
+  state.error='';
+  state.success='';
+  toast(result?.message||'تم إرسال طلب التعديل');
  }catch(e){
-  state.error=e.message||'تعذر إرسال طلب تعديل البيانات';
+  state.error=e?.message||'تعذر إرسال طلب تعديل البيانات';
   toast(state.error,'error');
  }finally{
   state.editSaving=false;
