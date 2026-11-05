@@ -215,9 +215,29 @@ function createAdminPlatformRouter({
       const rx = literal.length >= 2 ? new RegExp(literal, 'i') : null;
       const registered = await Client.find(rx ? { $or: [{ name: rx }, { phone: rx }] } : {}).select('name phone status adminNote createdAt').sort({ createdAt: -1 }).limit(200).lean();
       const orders = await Order.find(rx ? { $or: [{ clientName: rx }, { clientPhone: rx }, { sn: rx }] } : {}).select('clientName clientPhone sn createdAt').sort({ createdAt: -1 }).limit(500).lean();
+      // Merge orders and registered accounts by normalized Egyptian phone.
+      // Legacy orders may store the same number as +20 / 0020 / with spaces.
       const byPhone = new Map();
-      for (const order of orders) { const phone = String(order.clientPhone || ''); if (!phone) continue; const item = byPhone.get(phone) || { name: order.clientName || 'عميل', phone, status: 'غير مسجل', orderCount: 0, lastOrder: '' }; item.orderCount++; if (!item.lastOrder) item.lastOrder = order.sn || ''; byPhone.set(phone, item); }
-      for (const client of registered) { const item = byPhone.get(client.phone) || { name: client.name, phone: client.phone, orderCount: 0, lastOrder: '' }; Object.assign(item, { id: String(client._id), name: client.name, status: client.status, adminNote: client.adminNote || '', registered: true }); byPhone.set(client.phone, item); }
+      const phoneKey = value => {
+        const raw = String(value || '').trim();
+        return normalizePhone(raw) || raw.replace(/\\D/g, '') || raw;
+      };
+      for (const order of orders) {
+        const phone = String(order.clientPhone || '').trim();
+        const key = phoneKey(phone);
+        if (!key) continue;
+        const item = byPhone.get(key) || { name: order.clientName || 'عميل', phone, status: 'غير مسجل', orderCount: 0, lastOrder: '' };
+        item.orderCount++;
+        if (!item.lastOrder) item.lastOrder = order.sn || '';
+        byPhone.set(key, item);
+      }
+      for (const client of registered) {
+        const key = phoneKey(client.phone);
+        if (!key) continue;
+        const item = byPhone.get(key) || { name: client.name, phone: client.phone, orderCount: 0, lastOrder: '' };
+        Object.assign(item, { id: String(client._id), name: client.name, phone: client.phone, status: client.status, adminNote: client.adminNote || '', registered: true });
+        byPhone.set(key, item);
+      }
       const clients = Array.from(byPhone.values()).sort((a,b) => (b.orderCount || 0) - (a.orderCount || 0)).slice(0, 200);
       const phones = clients.map(client => normalizePhone(client.phone || '')).filter(Boolean);
       const [ratingStats, completedStats] = phones.length ? await Promise.all([
