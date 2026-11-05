@@ -204,7 +204,7 @@ async function api(path,options={}){
 
  let response;
  let raw;
- const timeoutMs=Number(options.timeoutMs)||0;
+ const timeoutMs=Number(options.timeoutMs)||20000;
  const fetchOptions={...options};
  delete fetchOptions.timeoutMs;
  const controller=timeoutMs&&typeof AbortController!=='undefined'?new AbortController():null;
