@@ -66,7 +66,7 @@ function renderFannis(){
               </div>
             </div>
           `:''}
-          <a href="/password.html?role=admin&amp;mode=admin-edit&amp;targetRole=fanni&amp;targetId=${encodeURIComponent(id)}" class="mt-3 flex h-10 w-full items-center justify-center rounded-xl border border-blue-200 bg-blue-50 text-[11px] font-extrabold text-blue-800">✏️ تعديل البيانات</a>
+          <button type="button" onclick="openFanniProfileEditor('${id}')" class="mt-3 flex h-10 w-full items-center justify-center rounded-xl border border-blue-200 bg-blue-50 text-[11px] font-extrabold text-blue-800">✏️ تعديل البيانات</button>
           <div class="mt-4 grid grid-cols-2 gap-2">
             <div class="rounded-[14px] bg-slate-50 border p-3"><p class="text-[10px] font-black text-slate-400">كل التخصصات</p><p class="text-[11.5px] font-black mt-1 leading-6 whitespace-pre-wrap break-words">${escHtml((Array.isArray(f.specialties)&&f.specialties.length?f.specialties:(f.skill||f.service?[f.skill||f.service]:[])).join('، ')||'غير محدد')}</p></div>
             <div class="rounded-[14px] bg-emerald-50 border border-emerald-100 p-3"><p class="text-[10px] font-black text-emerald-700">الرصيد</p><p class="text-[13px] font-black text-emerald-700 mt-1">${escHtml(String(f.balance??f.walletBalance??0))} ج</p></div>
