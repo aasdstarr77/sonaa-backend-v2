@@ -158,8 +158,9 @@ function onEditAreaSearch(value){
  if(input){input.focus();try{input.setSelectionRange(cursor,cursor);}catch(_){}}
 }
 function toggleEditArea(area){
- const value=clean(area,60);if(!value||value==='جميع المناطق')return;
- if(state.editAreas.includes(value))state.editAreas=state.editAreas.filter(item=>item!==value);
+ const value=clean(area,60);if(!value||isReservedFanniArea(value))return;
+ const key=normalizeFanniAreaKey(value);
+ if(state.editAreas.some(item=>normalizeFanniAreaKey(item)===key))state.editAreas=state.editAreas.filter(item=>normalizeFanniAreaKey(item)!==key);
  else if(state.editAreas.length>=30){state.error='تقدر تختار لحد 30 منطقة فقط.';render();return;}
  else state.editAreas=[...state.editAreas,value];
  state.error='';render();
@@ -167,19 +168,27 @@ function toggleEditArea(area){
 function normalizeFanniAreaSearchText(value){
  return String(value||'').normalize('NFKC').replace(/[\u064B-\u065F\u0670\u0640\u200E\u200F\u202A-\u202E\u2066-\u2069]/g,'').replace(/[أإآٱ]/g,'ا').toLocaleLowerCase('ar');
 }
+function normalizeFanniAreaKey(value){
+ return normalizeFanniAreaSearchText(value).replace(/^القاهرة\s*[-–—]\s*/u,'').replace(/\s+/g,' ').trim();
+}
 function isReservedFanniArea(value){
  return normalizeFanniAreaSearchText(value).replace(/\s+/g,'')==='جميعالمناطق';
 }
 
 function renderFanniAreaPicker(selected,search,inputId,searchHandler,toggleHandler){
- const chosen=Array.isArray(selected)?selected.filter(area=>!isReservedFanniArea(area)):[];
- const query=normalizeFanniAreaSearchText(String(search||'').trim());
  const options=[...new Set(AREA_OPTIONS)].filter(area=>!isReservedFanniArea(area));
+ const optionsByKey=new Map(options.map(area=>[normalizeFanniAreaKey(area),area]));
+ const chosen=[...new Set((Array.isArray(selected)?selected:[]).filter(area=>!isReservedFanniArea(area)).map(area=>{
+  const key=normalizeFanniAreaKey(area);
+  return optionsByKey.get(key)||String(area||'').trim();
+ }).filter(Boolean))];
+ const chosenKeys=new Set(chosen.map(normalizeFanniAreaKey));
+ const query=normalizeFanniAreaSearchText(String(search||'').trim());
  const visible=options.filter(area=>!query||normalizeFanniAreaSearchText(area).includes(query)).slice(0,80);
  return `<div class="fanni-area-picker">
   <div class="fanni-picker-search"><span aria-hidden="true">⌕</span><input id="${esc(inputId)}" value="${esc(search||'')}" oninput="${esc(searchHandler)}(this.value)" placeholder="اكتب اسم المنطقة للبحث..." autocomplete="off"></div>
   <div class="fanni-selected-areas">${chosen.map(area=>`<button type="button" onclick="${esc(toggleHandler)}('${esc(area)}')" class="fanni-area-tag">${esc(area)} <span aria-hidden="true">×</span></button>`).join('')||'<span class="fanni-picker-empty">لم تختار مناطق حتى الآن</span>'}</div>
-  <div class="fanni-area-options">${visible.map(area=>{const checked=chosen.includes(area);return `<button type="button" onclick="${esc(toggleHandler)}('${esc(area)}')" aria-pressed="${checked?'true':'false'}" class="fanni-area-option ${checked?'is-selected':''}"><span>${esc(area)}</span><span class="fanni-check">${checked?'✓':''}</span></button>`}).join('')||'<p class="fanni-picker-no-results">لا توجد مناطق مطابقة للبحث.</p>'}</div>
+  <div class="fanni-area-options">${visible.map(area=>{const checked=chosenKeys.has(normalizeFanniAreaKey(area));return `<button type="button" onclick="${esc(toggleHandler)}('${esc(area)}')" aria-pressed="${checked?'true':'false'}" class="fanni-area-option ${checked?'is-selected':''}"><span>${esc(area)}</span><span class="fanni-check">${checked?'✓':''}</span></button>`}).join('')||'<p class="fanni-picker-no-results">لا توجد مناطق مطابقة للبحث.</p>'}</div>
   <p class="fanni-picker-hint">تقدر تختار أكتر من منطقة. الاختيارات المحددة ظاهرة فوق.</p>
  </div>`;
 }
@@ -564,26 +573,4 @@ async function acceptTechnicianGuidelines(){try{const result=await API.acceptGui
 async function sendFanniQuickReply(sn,offerId,reply){try{await API.sendChat(sn,reply,offerId);await refreshFanniChatsSilently();toast('تم إرسال الرد.');}catch(e){toast(e.message||'تعذر إرسال الرد.','error');}}
 async function sendFanniChat(sn,offerId){const el=document.getElementById('fanni-chat-'+sn);const text=String(el?.value||'').trim();if(!text)return toast('اكتب الرسالة أولًا.','error');try{await API.sendChat(sn,text,offerId);if(el)el.value='';await refreshFanniChatsSilently();toast('تم إرسال الرسالة.');}catch(e){toast(e.message||'تعذر إرسال الرسالة.','error');}}
 async function requestFanniPriceChange(sn){const price=Number(document.getElementById('price-change-'+sn)?.value);const reason=String(document.getElementById('price-reason-'+sn)?.value||'').trim();const offer=[...state.myOffers,...state.completedOffers].find(o=>String(o.orderSn||o.sn||o.order?.sn||'').toUpperCase()===String(sn||'').toUpperCase());const currentPrice=Number(offer?.client?.acceptedOfferPrice??offer?.acceptedOfferPrice??offer?.priceNum??offer?.price);if(!Number.isFinite(currentPrice))return toast('تعذر تحديد السعر الحالي؛ حدّث البيانات وحاول مرة أخرى.','error');if(!Number.isFinite(price)||price<=currentPrice||price<=0)return toast('السعر الجديد لازم يكون أعلى من السعر الحالي ('+currentPrice+' جنيه).','error');if(reason.length<5)return toast('اكتب سببًا واضحًا للتعديل.','error');try{const r=await API.requestPriceChange(sn,price,reason);toast(r.message||'تم إرسال طلب تعديل السعر.');await loadMyOffers();}catch(e){toast(e.message||'تعذر طلب تعديل السعر.','error');}}
-async function saveProfileChanges() {
-  state.editSaving = true;
-  state.error = '';
-  render();
 
-  try {
-    const payload = {
-      phone: state.editPhone,
-      areas: state.editAreas,
-      specialties: state.editSpecialties
-    };
-    const updatedUser = await API.updateProfile(payload);
-    setAuth(getToken(), updatedUser);
-    currentUser = updatedUser;
-    state.editProfileMode = false;
-    toast('تم حفظ التعديلات بنجاح');
-  } catch (e) {
-    state.error = e.message || 'تعذر حفظ التعديلات';
-  } finally {
-    state.editSaving = false;
-    render();
-  }
-}
