@@ -94,7 +94,16 @@ window.openFanniProfileEditor=async function(id){
  document.body.appendChild(modal);const close=()=>modal.remove();modal.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',close));modal.addEventListener('click',e=>{if(e.target===modal)close();});
  const body=modal.querySelector('#admin-fanni-editor-body');
  try{
-  const results=await Promise.all([tryApi(['/api/admin/fannis/'+encodeURIComponent(id)+'/profile']),tryApi(['/api/areas']),tryApi(['/api/services'])]);
+  const requests=await Promise.allSettled([tryApi(['/api/admin/fannis/'+encodeURIComponent(id)+'/profile']),tryApi(['/api/areas']),tryApi(['/api/services'])]);
+  const requestLabels=['بيانات الفني','قائمة المناطق','قائمة الخدمات'];
+  const failed=requests.map((item,index)=>item.status==='rejected'?requestLabels[index]+': '+String(item.reason?.message||'تعذر التحميل'):null).filter(Boolean);
+  if(failed.length){
+   body.className='py-4 text-sm font-bold text-red-700';
+   body.innerHTML='<p>تعذر فتح محرر البيانات بسبب مشكلة في تحميل:</p><ul class="my-2 list-disc pr-5">'+failed.map(item=>'<li>'+escHtml(item)+'</li>').join('')+'</ul><button type="button" id="admin-fanni-editor-retry" class="primary-pill pill-btn">إعادة المحاولة</button>';
+   body.querySelector('#admin-fanni-editor-retry').addEventListener('click',()=>window.openFanniProfileEditor(id));
+   return;
+  }
+  const results=requests.map(item=>item.value);
   const f=results[0].fanni||results[0],areas=Array.isArray(results[1].areas)?results[1].areas:[],cats=Array.isArray(results[2].categories)?results[2].categories:[];
   if(!f||!f._id||!areas.length||!cats.length)throw new Error('تعذر تحميل بيانات الفني أو القوائم المعتمدة.');
   const esc=escHtml,normalizeAreaKey=value=>String(value||'').normalize('NFKC').replace(/[\u064B-\u065F\u0670\u0640\u200E\u200F\u202A-\u202E\u2066-\u2069]/g,'').replace(/[أإآٱ]/g,'ا').replace(/^القاهرة\s*[-–—]\s*/u,'').replace(/\s+/g,' ').trim().toLocaleLowerCase('ar'),chosenAreas=new Set((f.areas||[]).map(normalizeAreaKey)),chosenServices=new Set(f.specialties||[]);

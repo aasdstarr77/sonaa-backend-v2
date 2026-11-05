@@ -11,6 +11,8 @@ const log=(...a)=>{if(IS_DEV)console.log(...a)};
 let CATEGORIES=[];
 let ALL_SERVICES=[];
 let AREA_OPTIONS=[];
+let AREAS_LOADING=true;
+let AREAS_ERROR='';
 let SERVICES_LOADING=true;
 let SERVICES_ERROR='';
 
@@ -188,7 +190,7 @@ function renderFanniAreaPicker(selected,search,inputId,searchHandler,toggleHandl
  return `<div class="fanni-area-picker">
   <div class="fanni-picker-search"><span aria-hidden="true">⌕</span><input id="${esc(inputId)}" value="${esc(search||'')}" oninput="${esc(searchHandler)}(this.value)" placeholder="اكتب اسم المنطقة للبحث..." autocomplete="off"></div>
   <div class="fanni-selected-areas">${chosen.map(area=>`<button type="button" onclick="${esc(toggleHandler)}('${esc(area)}')" class="fanni-area-tag">${esc(area)} <span aria-hidden="true">×</span></button>`).join('')||'<span class="fanni-picker-empty">لم تختار مناطق حتى الآن</span>'}</div>
-  <div class="fanni-area-options">${visible.map(area=>{const checked=chosenKeys.has(normalizeFanniAreaKey(area));return `<button type="button" onclick="${esc(toggleHandler)}('${esc(area)}')" aria-pressed="${checked?'true':'false'}" class="fanni-area-option ${checked?'is-selected':''}"><span>${esc(area)}</span><span class="fanni-check">${checked?'✓':''}</span></button>`}).join('')||'<p class="fanni-picker-no-results">لا توجد مناطق مطابقة للبحث.</p>'}</div>
+  <div class="fanni-area-options">${visible.map(area=>{const checked=chosenKeys.has(normalizeFanniAreaKey(area));return `<button type="button" onclick="${esc(toggleHandler)}('${esc(area)}')" aria-pressed="${checked?'true':'false'}" class="fanni-area-option ${checked?'is-selected':''}"><span>${esc(area)}</span><span class="fanni-check">${checked?'✓':''}</span></button>`}).join('')||(AREAS_LOADING?'<p class="fanni-picker-no-results">جاري تحميل المناطق المعتمدة...</p>':AREAS_ERROR&&!options.length?'<div class="fanni-picker-no-results"><p>تعذر تحميل قائمة المناطق: '+esc(AREAS_ERROR)+'</p><button type="button" class="mt-2 underline font-bold" onclick="loadAreas()">إعادة تحميل المناطق</button></div>':'<p class="fanni-picker-no-results">لا توجد مناطق مطابقة للبحث.</p>')}</div>
   <p class="fanni-picker-hint">تقدر تختار أكتر من منطقة. الاختيارات المحددة ظاهرة فوق.</p>
  </div>`;
 }
@@ -197,9 +199,23 @@ function addCustomRegArea(){
  render();
 }
 async function loadAreas(){
- try{const data=await API.areas();AREA_OPTIONS=Array.isArray(data?.areas)?data.areas:[];}
- catch(e){log('تعذر تحميل المناطق',e);AREA_OPTIONS=[];}
+ AREAS_LOADING=true;
+ AREAS_ERROR='';
  render();
+ try{
+  const data=await API.areas();
+  if(!Array.isArray(data?.areas)||!data.areas.length)throw new Error('لم تصل قائمة المناطق المعتمدة من الخادم.');
+  const nextAreas=[...new Set(data.areas.map(area=>String(area||'').trim()).filter(area=>area&&!isReservedFanniArea(area)))];
+  if(!nextAreas.length)throw new Error('قائمة المناطق المعتمدة فارغة.');
+  AREA_OPTIONS=nextAreas;
+ }catch(e){
+  AREAS_ERROR=e.message||'تعذر تحميل قائمة المناطق.';
+  log('تعذر تحميل المناطق',e);
+  if(!AREA_OPTIONS.length)toast(AREAS_ERROR,'error');
+ }finally{
+  AREAS_LOADING=false;
+  render();
+ }
 }
 
 function parseAreas(value){
