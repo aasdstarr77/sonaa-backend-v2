@@ -203,6 +203,7 @@ async function api(path,options={}){
  if(token)headers.Authorization='Bearer '+token;
 
  let response;
+ let raw;
  const timeoutMs=Number(options.timeoutMs)||0;
  const fetchOptions={...options};
  delete fetchOptions.timeoutMs;
@@ -210,16 +211,17 @@ async function api(path,options={}){
  let timeoutId=null;
  if(controller)timeoutId=setTimeout(()=>controller.abort(),timeoutMs);
 
+ // Keep the timeout active until the complete response body is read.
+ // fetch() may resolve when headers arrive while response.text() is still pending.
  try{
   response=await fetch(buildUrl(path),{...fetchOptions,...(controller?{signal:controller.signal}:{}),headers,credentials:'omit',mode:'cors'});
+  raw=await response.text();
  }catch(e){
   if(controller&&controller.signal.aborted)throw new Error('استغرق الاتصال وقتًا أطول من المعتاد. حاول مرة أخرى بعد قليل.');
   throw new Error('تعذر الاتصال. تحقق من الإنترنت وحاول مرة أخرى.');
  }finally{
   if(timeoutId!==null)clearTimeout(timeoutId);
  }
-
- const raw=await response.text();
  let data={};
 
  try{data=raw?JSON.parse(raw):{}}catch{data={message:'تعذر قراءة البيانات. حاول مرة أخرى.'};}
