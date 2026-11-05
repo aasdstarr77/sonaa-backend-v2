@@ -532,6 +532,23 @@ async function run() {
       const activeFanniSession = await request(app).get('/api/fanni/me').set('Authorization', 'Bearer ' + fanniNewLogin.body.token);
       assert.equal(activeFanniSession.status, 200);
 
+      await test('admin technician trust and visibility controls save their decision history', async () => {
+        const response = await request(app).patch('/api/admin/fannis/' + fanni._id + '/profile-controls')
+          .set('Authorization', 'Bearer ' + adminToken)
+          .send({
+            trustScore: 77,
+            isVerified: true,
+            isFeatured: true,
+            featuredUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+          });
+        assert.equal(response.status, 200, JSON.stringify(response.body));
+        const persisted = await Fanni.findById(fanni._id).lean();
+        assert.equal(persisted.trustScore, 77);
+        assert.equal(persisted.isVerified, true);
+        assert.equal(persisted.isFeatured, true);
+        assert.ok(persisted.decisions.some(item => item.action === 'تعديل الثقة والظهور'));
+      });
+
       await test('technician profile edit request persists and appears in the admin review queue', async () => {
         const edit = await request(app).patch('/api/fanni/me')
           .set('Authorization', 'Bearer ' + fanniNewLogin.body.token)
