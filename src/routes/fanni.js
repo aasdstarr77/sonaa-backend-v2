@@ -263,17 +263,40 @@ router.patch('/me', auth(), requireFanni, validate(profileUpdateSchema), async (
     if (!sameArray(specialties, current.specialties)) changedFields.push('specialties');
     if (!sameArray(areas, current.areas)) changedFields.push('areas');
     if (!changedFields.length) return res.status(400).json({ message: 'لم يتم اكتشاف أي تغيير في البيانات. عدّل الحقل المطلوب أولًا.' });
-    req.user.pendingProfileChange = { before: current, phone, specialties, areas, changedFields, requestedAt: new Date() };
-    req.user.decisions.push({ action: 'طلب تعديل بيانات', reason: 'طلب الفني تغيير بيانات حسابه', date: new Date(), by: String(req.user.name || 'الفني'), byId: req.user._id, meta: { before: current, requested: { phone, specialties, areas }, changedFields } });
-    await req.user.save();
-    await notifyAdmins({
+    const requestedAt = new Date();
+    const pendingProfileChange = { before: current, phone, specialties, areas, changedFields, requestedAt };
+    const profileDecision = {
+      action: 'طلب تعديل بيانات',
+      reason: 'طلب الفني تغيير بيانات حسابه',
+      date: requestedAt,
+      by: String(req.user.name || 'الفني'),
+      byId: req.user._id,
+      meta: { before: current, requested: { phone, specialties, areas }, changedFields }
+    };
+
+    // Target only the fields for this request. Saving the entire legacy document
+    // can fail validation because of unrelated historical fields.
+    const updatedFanni = await Fanni.findOneAndUpdate(
+      { _id: req.user._id, role: 'fanni' },
+      { $set: { pendingProfileChange }, $push: { decisions: profileDecision } },
+      { new: true, runValidators: true, context: 'query' }
+    );
+    if (!updatedFanni) return res.status(404).json({ message: 'حساب الفني غير موجود.' });
+
+    // Notification delivery must not keep the profile-edit request pending.
+    Promise.resolve(notifyAdmins({
       type: 'admin_fanni_profile_edit',
       title: 'طلب تعديل بيانات فني',
-      message: `طلب الفني ${req.user.name} تعديل بيانات حسابه ويحتاج مراجعة الإدارة.`,
+      message: `طلب الفني ${updatedFanni.name} تعديل بيانات حسابه ويحتاج مراجعة الإدارة.`,
       link: '/admin?tab=profileEdits',
-      dedupeKey: 'admin-fanni-profile-edit:' + String(req.user._id) + ':' + String(req.user.pendingProfileChange.requestedAt.getTime())
+      dedupeKey: 'admin-fanni-profile-edit:' + String(updatedFanni._id) + ':' + String(requestedAt.getTime())
+    })).catch(err => console.error('Could not notify admins about technician profile edit:', err.message));
+
+    return res.set('Cache-Control', 'no-store').json({
+      message: 'تم إرسال طلب تعديل بياناتك للإدارة. بيانات حسابك الحالية ستظل كما هي لحين الموافقة.',
+      user: updatedFanni.toSafeJSON(),
+      pendingProfileChange: updatedFanni.pendingProfileChange
     });
-    return res.set('Cache-Control', 'no-store').json({ message: 'تم إرسال طلب تعديل بياناتك للإدارة. بيانات حسابك الحالية ستظل كما هي لحين الموافقة.', user: req.user.toSafeJSON(), pendingProfileChange: req.user.pendingProfileChange });
   } catch (err) {
     if (err && err.code === 11000) return res.status(409).json({ message: 'رقم الهاتف مسجل بالفعل في حساب آخر' });
     next(err);
