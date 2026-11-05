@@ -28,6 +28,27 @@ function createOrderOfferRouter({
         .lean();
   
       const offers = [];
+      const orderIds = orders.map(order => order._id);
+      const clientPhones = [...new Set(orders.map(order => normalizePhone(order.clientPhone || '')).filter(Boolean))];
+      const [allRatings, clientRatingStats, completedJobStats] = await Promise.all([
+        orderIds.length ? Rating.find({ orderId: { $in: orderIds } }).sort({ createdAt: 1 }).lean() : Promise.resolve([]),
+        clientPhones.length ? Rating.aggregate([
+          { $match: { clientPhone: { $in: clientPhones }, reviewerRole: 'fanni' } },
+          { $group: { _id: '$clientPhone', average: { $avg: '$stars' }, count: { $sum: 1 } } }
+        ]) : Promise.resolve([]),
+        clientPhones.length ? Order.aggregate([
+          { $match: { clientPhone: { $in: clientPhones }, status: 'تم الانتهاء' } },
+          { $group: { _id: '$clientPhone', count: { $sum: 1 } } }
+        ]) : Promise.resolve([])
+      ]);
+      const ratingsByOrderId = new Map();
+      for (const rating of allRatings) {
+        const key = String(rating.orderId);
+        if (!ratingsByOrderId.has(key)) ratingsByOrderId.set(key, []);
+        ratingsByOrderId.get(key).push(rating);
+      }
+      const ratingStatsByPhone = new Map(clientRatingStats.map(item => [normalizePhone(item._id || ''), item]));
+      const completedJobsByPhone = new Map(completedJobStats.map(item => [normalizePhone(item._id || ''), Number(item.count || 0)]));
   
       for (const order of orders) {
         for (const offer of order.offers || []) {
@@ -57,23 +78,15 @@ function createOrderOfferRouter({
           };
   
           if (isCompletedByThisFanni) {
-            const ratings = await Rating.find({ orderId: order._id }).sort({ createdAt: 1 }).lean();
+            const ratings = ratingsByOrderId.get(String(order._id)) || [];
             safeOffer.ratings = publicRatings(ratings);
-            safeOffer.myRating = publicRatings(
-              ratings.filter(rating => rating.reviewerRole === 'fanni')
-            )[0] || null;
+            safeOffer.myRating = publicRatings(ratings.filter(rating => rating.reviewerRole === 'fanni'))[0] || null;
           }
   
           if (isAcceptedByThisFanni) {
             const clientPhone = normalizePhone(order.clientPhone || '');
-            const [clientRatingStats, clientCompletedJobs] = clientPhone ? await Promise.all([
-              Rating.aggregate([
-                { $match: { clientPhone, reviewerRole: 'fanni' } },
-                { $group: { _id: null, average: { $avg: '$stars' }, count: { $sum: 1 } } }
-              ]),
-              Order.countDocuments({ clientPhone, status: 'تم الانتهاء' })
-            ]) : [[], 0];
-            const clientRating = clientRatingStats[0] || { average: 0, count: 0 };
+            const clientRating = ratingStatsByPhone.get(clientPhone) || { average: 0, count: 0 };
+            const clientCompletedJobs = completedJobsByPhone.get(clientPhone) || 0;
             safeOffer.client = {
               name: sanitizeText(order.clientName || ''),
               area: order.area || '',

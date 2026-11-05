@@ -6,6 +6,7 @@ function createOrderAvailableRouter({
   auth,
   Order,
   ACTIVE_STATUSES,
+  ALL_SERVICES,
   Fanni,
   Rating,
   normalizePhone,
@@ -17,8 +18,13 @@ function createOrderAvailableRouter({
 
 router.get('/available', auth(), async (req, res, next) => {
   try {
+    const parsedPage = Number.parseInt(req.query.page, 10);
+    const page = Number.isInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+    const limit = 20;
+    const skip = (page - 1) * limit;
     let specialties = [];
     let technicianAreas = [];
+    let blockedPhones = [];
 
     if (req.user.role !== 'admin') {
       if (
@@ -54,51 +60,41 @@ router.get('/available', auth(), async (req, res, next) => {
       technicianAreas = Array.isArray(fanni.areas) ? fanni.areas : [];
 
       if (specialties.length === 0) {
-        return res.json({ orders: [], data: [] });
+        return res.set('Cache-Control', 'no-store').json({ orders: [], data: [], pagination: { page, limit, total: 0, pages: 0 } });
       }
+      const matchingServices = ALL_SERVICES.filter(service => fanniCanHandleService(specialties, service));
+      if (!matchingServices.length) {
+        return res.set('Cache-Control', 'no-store').json({ orders: [], data: [], pagination: { page, limit, total: 0, pages: 0 } });
+      }
+      const [blockedRatings, clientBlocks] = await Promise.all([
+        Rating.find({ fanniId: req.userId, blockFuture: true }).select('clientPhone').lean(),
+        Rating.find({ reviewerRole: 'client', fanniId: req.userId, blockFuture: true }).select('clientPhone').lean()
+      ]);
+      blockedPhones = [...new Set([...blockedRatings, ...clientBlocks].map(item => normalizePhone(item.clientPhone)).filter(Boolean))];
     }
 
-    const orders = await Order.find({
-      status: { $in: ACTIVE_STATUSES },
-      expiresAt: { $gt: new Date() }
-    })
-      .select('-phone -address -clientName +voiceRecordingData')
-      .sort({ createdAt: -1 })
-      .lean();
-
-    let matchingOrders = orders;
-
+    const query = { status: { $in: ACTIVE_STATUSES }, expiresAt: { $gt: new Date() } };
     if (req.user.role !== 'admin') {
-      matchingOrders = orders.filter(order =>
-        fanniCanHandleService(specialties, order.service) &&
-        (order.areaMatchingEnabled !== true || fanniWorksInArea(technicianAreas, order.area))
-      );
+      query.service = { $in: ALL_SERVICES.filter(service => fanniCanHandleService(specialties, service)) };
+      query.$or = technicianAreas.length
+        ? [{ areaMatchingEnabled: { $ne: true } }, { area: { $in: technicianAreas } }]
+        : [{ areaMatchingEnabled: { $ne: true } }];
+      if (blockedPhones.length) query.clientPhone = { $nin: blockedPhones };
     }
-
-    if (req.user.role === 'fanni') {
-      const blockedRatings = await Rating.find({
-        fanniId: req.userId,
-        blockFuture: true
-      }).select('clientPhone').lean();
-      const blockedPhones = new Set(
-        blockedRatings.map(item => normalizePhone(item.clientPhone)).filter(Boolean)
-      );
-      matchingOrders = matchingOrders.filter(order =>
-        !blockedPhones.has(normalizePhone(order.clientPhone))
-      );
-      // Also hide this technician from customers who blocked them.
-      const clientBlocks = await Rating.find({
-        reviewerRole: 'client',
-        fanniId: req.userId,
-        blockFuture: true
-      }).select('clientPhone').lean();
-      const clientBlockedPhones = new Set(
-        clientBlocks.map(item => normalizePhone(item.clientPhone)).filter(Boolean)
-      );
-      matchingOrders = matchingOrders.filter(order =>
-        !clientBlockedPhones.has(normalizePhone(order.clientPhone))
-      );
-    }
+    const [total, orders] = await Promise.all([
+      Order.countDocuments(query),
+      Order.find(query)
+        .select('-phone -address -clientName +voiceRecordingData')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean()
+    ]);
+    const matchingOrders = req.user.role === 'admin' ? orders : orders.filter(order =>
+      fanniCanHandleService(specialties, order.service) &&
+      (order.areaMatchingEnabled !== true || fanniWorksInArea(technicianAreas, order.area)) &&
+      !blockedPhones.includes(normalizePhone(order.clientPhone))
+    );
 
     let clientRatingsByPhone = new Map();
     let clientCompletedByPhone = new Map();
@@ -134,9 +130,10 @@ router.get('/available', auth(), async (req, res, next) => {
       return safeOrder;
     });
 
-    return res.json({
+    return res.set('Cache-Control', 'no-store').json({
       orders: safeOrders,
-      data: safeOrders
+      data: safeOrders,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) }
     });
   } catch (err) {
     next(err);

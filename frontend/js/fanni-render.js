@@ -1,6 +1,6 @@
 'use strict';
 
-function render(){
+function renderContent(){
   if(window.IS_EDITOR_PREVIEW&&window.PREVIEW_REQUESTED_TAB){state.tab=window.PREVIEW_REQUESTED_TAB;}
   const user=currentUser||getUser()||(window.IS_EDITOR_PREVIEW&&window.PREVIEW_REQUESTED_TAB&&!['login','register'].includes(window.PREVIEW_REQUESTED_TAB)?{name:'معاينة المحرر',status:'approved',technicianGuidelinesAcceptedAt:'preview',technicianGuidelinesVersion:'2026-10-20-v1',specialties:[],areas:[],walletBalance:0}:null);
   const previewTab=window.IS_EDITOR_PREVIEW?window.PREVIEW_REQUESTED_TAB:'';
@@ -146,7 +146,7 @@ function render(){
     </div>
 
     ${state.loading?'<div class="panel p-6 text-center text-[12px]">جاري تحميل الطلبات...</div>':''}
-    ${!state.loading&&!state.filteredOrders.length?'<div class="panel p-8 text-center"><div class="text-2xl">📋</div><p class="text-[13px] font-extrabold mt-3">لا توجد طلبات متاحة حاليًا</p><p class="text-[11px] text-slate-500 mt-1">قد تكون القائمة فارغة أو لا يملك الحساب صلاحية عرض الطلبات.</p></div>':''}
+    ${!state.loading&&!state.filteredOrders.length?'<div class="empty-state panel p-8 text-center" role="status"><div class="text-3xl">📋</div><p class="text-[13px] font-extrabold mt-3">لا توجد طلبات متاحة حاليًا</p><p class="text-[11px] text-slate-500 mt-1">سيتم إشعارك عند وجود طلبات جديدة.</p><button type="button" onclick="loadOrders()" class="secondary-btn mt-4 px-5 py-2 text-[11px]">تحديث الطلبات</button></div>':''}
 
     ${state.filteredOrders.map(o=>{
       const sn=o.sn||o.orderSn||'';
@@ -175,13 +175,14 @@ function render(){
         : `<button data-sn="${esc(sn)}" onclick="openOffer(this.dataset.sn)" ${!approved?'disabled':''} class="primary-btn w-full h-11 text-[12px]">${approved?'تقديم عرض لهذا الطلب':'العروض بعد اعتماد الحساب'}</button>`}
       </article>`;
     }).join('')}
+    ${state.ordersPagination?.page<state.ordersPagination?.pages?`<button type="button" onclick="loadOrders(${Number(state.ordersPagination.page)+1},true)" ${state.loading?'disabled':''} class="secondary-btn w-full py-3 text-[12px]">${state.loading?'جاري تحميل المزيد...':'تحميل 20 طلبًا إضافيًا'}</button>`:''}
    </section>`:''}
 
   ${state.tab==='myOffers'?`
    <section class="mt-4 space-y-3">
     <div class="flex justify-between items-center"><h3 class="section-title">عروضي</h3></div>
 
-    ${!state.myOffers.length?'<div class="panel p-8 text-center"><div class="text-2xl">💼</div><p class="text-[13px] font-extrabold mt-3">لا توجد عروض لعرضها</p><p class="text-[11px] text-slate-500 mt-1">العروض التي ترسلها ستظهر هنا، وبيانات العميل تظهر فقط بعد قبوله لعرضك.</p></div>':state.myOffers.map(o=>`<article class="panel p-4 space-y-3">
+    ${!state.myOffers.length?'<div class="empty-state panel p-8 text-center" role="status"><div class="text-3xl">💼</div><p class="text-[13px] font-extrabold mt-3">لا توجد طلبات جارية حاليا</p><p class="text-[11px] text-slate-500 mt-1">ستظهر هنا الطلبات التي قدمت عليها عروضًا أو تم قبولها.</p><button type="button" onclick="loadMyOffers()" class="secondary-btn mt-4 px-5 py-2 text-[11px]">تحديث الطلبات الجارية</button></div>':state.myOffers.map(o=>`<article class="panel p-4 space-y-3">
      <div class="flex justify-between gap-3">
       <div><div class="text-[10px] text-slate-500">كود الطلب</div><b class="font-mono text-[12px]">${esc(o.orderSn||o.sn||o.order?.sn||'')}</b></div>
       <div><div class="text-[10px] text-slate-500">سعر عرضك</div><b class="text-blue-700">${esc(o.price??o.priceNum??'غير متاح')} جنيه</b></div>
@@ -339,4 +340,15 @@ function render(){
   ${`<style>.global-refresh.is-refreshing svg{animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}</style><a href="support.html?role=fanni" aria-label="خدمة العملاء" title="خدمة العملاء" class="support-float ${authenticated?'':'prelogin-floating'}" ${authenticated?'':'style="bottom:18px;left:18px;right:auto;top:auto;position:fixed;z-index:40;width:48px;height:48px;border-radius:9999px;background:#2563eb;color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(37,99,235,.35);"' }><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 13v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="12" width="4" height="7" rx="2"/><rect x="17" y="12" width="4" height="7" rx="2"/><path d="M17 19a5 5 0 0 1-5 2h-1"/></svg></a>`:''}
   <button id="global-refresh" type="button" onclick="handleGlobalRefresh()" aria-label="تحديث البيانات" title="تحديث البيانات" class="global-refresh global-refresh-float ${authenticated?'':'prelogin-floating'} ${globalRefreshInProgress?'is-refreshing':''}" ${authenticated?'':'style="bottom:18px;right:18px;left:auto;top:auto;position:fixed;z-index:40;width:48px;height:48px;border-radius:9999px;background:#2563eb;border:2px solid #fff;color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(37,99,235,.35);"' }><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7v5h-5"/><path d="M4 17v-5h5"/><path d="M5.6 9A7 7 0 0 1 17 5l3 7M4 12l3 7a7 7 0 0 0 11.4-2"/></svg></button>`;
  
+}
+
+
+function render(){
+  try {
+    return renderContent();
+  } catch (error) {
+    console.error('Technician dashboard render failed:', error);
+    const appRoot = document.getElementById('app');
+    if (appRoot) appRoot.innerHTML = '<main class="mx-auto max-w-[680px] p-6"><section class="empty-state panel p-6 text-center" role="alert"><p class="font-extrabold">تعذر عرض بيانات الصفحة حاليًا.</p><p class="mt-2 text-sm text-slate-500">حاول إعادة تحميل الصفحة.</p><button type="button" onclick="location.reload()" class="primary-btn mt-4 px-5 py-3">إعادة المحاولة</button></section></main>';
+  }
 }

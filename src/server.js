@@ -13,6 +13,7 @@ const path = require('path');
 
 const connectDB = require('./config/db');
 const AdminConfig = require('./models/AdminConfig');
+const { getMaintenanceStatus } = require('./utils/maintenanceCache');
 const orderRouter = require('./routes/order');
 const fanniRouter = require('./routes/fanni');
 const adminRouter = require('./routes/admin');
@@ -228,13 +229,10 @@ if (req.path === '/health') {
     const isAdminPath = req.path.startsWith('/admin') ||
       req.path.startsWith('/admins') || req.path.startsWith('/auth/admin');
     if (!isAdminPath && !maintenanceExempt.includes(req.path)) {
-      const config = await AdminConfig.findOne({ key: 'main' })
-        .select('settings.maintenance settings.maintenanceMessage')
-        .maxTimeMS(5000)
-        .lean();
-      if (config?.settings?.maintenance) {
+      const maintenance = await getMaintenanceStatus(AdminConfig);
+      if (maintenance.isOn) {
         return res.status(503).json({
-          message: String(config.settings.maintenanceMessage || 'النظام في وضع الصيانة مؤقتًا. حاول مرة أخرى لاحقًا.'),
+          message: maintenance.message,
           code: 'MAINTENANCE_MODE'
         });
       }

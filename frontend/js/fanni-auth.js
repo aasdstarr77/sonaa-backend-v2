@@ -149,7 +149,7 @@ async function saveProfileChanges(){
   toast(state.error,'error');
  }finally{
   state.editSaving=false;
-  if(state.editProfileMode)render();
+  render();
  }
 }
 

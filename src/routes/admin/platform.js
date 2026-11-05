@@ -1,6 +1,7 @@
 'use strict';
 
 const express = require('express');
+const { resetMaintenanceCache } = require('../../utils/maintenanceCache');
 
 function createAdminPlatformRouter({
   auth,
@@ -42,6 +43,7 @@ function createAdminPlatformRouter({
       config.history.push({ key: 'settings', before, after: value, by: adminName(req), byId: String(req.user?._id || ''), reason: 'تعديل إعدادات النظام', createdAt: new Date() });
       if (config.history.length > 200) config.history = config.history.slice(-200);
       await config.save();
+      if (Boolean(before.maintenance) !== Boolean(value.maintenance) || String(before.maintenanceMessage || '') !== String(value.maintenanceMessage || '')) resetMaintenanceCache();
       await writeAdminAudit(req, 'حفظ إعدادات النظام', 'settings', 'settings', JSON.stringify({ before, after: value }));
       return res.json({ message: 'تم حفظ الإعدادات. وضع الصيانة مفعل على طلبات العملاء والفنيين؛ حد محاولات تسجيل الفني لكل IP خلال 15 دقيقة مطبق.', settings: config.settings });
     } catch (err) { next(err); }
@@ -183,8 +185,12 @@ function createAdminPlatformRouter({
       const before = { name: client.name, phone: client.phone };
       client.name = name; client.phone = phone;
       await client.save();
-      await writeAdminAudit(req, 'تعديل بيانات عميل', 'clients', String(client._id), JSON.stringify({ before, after: { name, phone } }));
-      return res.json({ message: 'تم حفظ بيانات العميل بنجاح.', client: { _id: String(client._id), name: client.name, phone: client.phone, status: client.status } });
+      writeAdminAudit(req, 'تعديل بيانات عميل', 'clients', String(client._id), JSON.stringify({ before, after: { name, phone } }))
+        .catch(err => console.error('Could not write client profile audit:', err.message));
+      return res.set('Cache-Control', 'no-store').json({
+        message: 'تم حفظ بيانات العميل بنجاح.',
+        client: { _id: String(client._id), name: client.name, phone: client.phone, status: client.status }
+      });
     } catch (err) {
       if (err && err.code === 11000) return res.status(409).json({ message: 'رقم الهاتف مسجل بالفعل في حساب آخر.' });
       next(err);

@@ -225,7 +225,7 @@ router.use(createOrderRatingRouter({
   sanitizeText, autoPromoteFanni, createNotification
 }));
 router.use(createOrderAvailableRouter({
-  auth, Order, ACTIVE_STATUSES, Fanni, Rating, normalizePhone,
+  auth, Order, ACTIVE_STATUSES, Fanni, Rating, normalizePhone, ALL_SERVICES,
   fanniCanHandleService, fanniWorksInArea, publicOrder
 }));
 

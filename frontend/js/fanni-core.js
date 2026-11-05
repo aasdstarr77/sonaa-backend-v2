@@ -255,7 +255,7 @@ const API={
  login:p=>api('/api/fanni/login',{method:'POST',body:JSON.stringify(p),timeoutMs:15000}),
  profile:()=>apiGet('/api/fanni/me'),
  updateProfile:p=>api('/api/fanni/me',{method:'PATCH',body:JSON.stringify(p),timeoutMs:25000}),
- available:()=>apiGet('/api/orders/available'),
+ available:(page=1)=>apiGet('/api/orders/available?page='+encodeURIComponent(page)),
  myOffers:()=>apiGet('/api/orders/my-offers'),
  complete:sn=>apiPost('/api/orders/'+encodeURIComponent(sn)+'/complete',{}),
  rateOrder:(sn,p)=>apiPost('/api/orders/'+encodeURIComponent(sn)+'/rating',p),
@@ -312,7 +312,7 @@ let state={
  editProfileMode:false,editPhone:'',editAreas:[],editAreaSearch:'',editSpecialties:[],editSaving:false,
  loading:false,checkingSession:false,
  
- orders:[],filteredOrders:[],search:'',filterSkill:'الكل',
+ orders:[],filteredOrders:[],ordersPagination:{page:1,limit:20,total:0,pages:0},search:'',filterSkill:'الكل',
  myOffers:[],completedOffers:[],offerModal:null,offerPrice:'',offerMessage:'',
  offerError:'',offerSubmitting:false,
  walletFromPhone:'',walletAmount:'',walletRef:'',walletMethod:'vodafone_cash',

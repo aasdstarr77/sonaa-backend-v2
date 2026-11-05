@@ -1,36 +1,22 @@
 'use strict';
 
-async function loadOrders(){
- if(!getToken())return;
+async function loadOrders(page=1,append=false){
+ if(!getToken()||state.loading)return;
 
  state.loading=true;
  render();
 
  try{
-  const [availableResult, offersResult]=await Promise.allSettled([
-   API.available(),
-   API.myOffers()
-  ]);
-
-  if(availableResult.status==='rejected')throw availableResult.reason;
-
-  const data=availableResult.value;
-  state.orders=extractList(data,['orders','requests','items']);
-
-  // تحميل عروض الفني أيضًا حتى لا يظهر زر تقديم العرض مرة أخرى بعد تحديث الصفحة.
-  if(offersResult.status==='fulfilled'){
-   const allOffers=extractList(offersResult.value,['offers','items','requests']);
-   state.completedOffers=allOffers.filter(o=>o.completed===true||o.orderStatus==='تم الانتهاء');
-   state.myOffers=allOffers.filter(o=>!(o.completed===true||o.orderStatus==='تم الانتهاء'));
-  }
-
+  const data=await API.available(page);
+  const incoming=extractList(data,['orders','requests','items']);
+  state.orders=append?[...(state.orders||[]),...incoming]:incoming;
+  state.ordersPagination=data.pagination||{page,limit:20,total:state.orders.length,pages:1};
   applyFilter();
   state.loading=false;
   render();
  }catch(e){
   state.loading=false;
-  state.orders=[];
-  state.filteredOrders=[];
+  if(!append){state.orders=[];state.filteredOrders=[];}
   render();
   toast(e.message,'error');
  }
@@ -271,17 +257,24 @@ async function start(){
 
 let globalRefreshInProgress=false;
 let fanniChatPollInFlight=false,fanniLiveRenderPending=false;
+let isFetching=false;
 function renderFanniChatMessages(messages,accepted){return (Array.isArray(messages)?messages:[]).map(function(m){return '<div class="rounded-lg p-2 '+(m.senderRole==='fanni'?'bg-blue-50':'bg-emerald-50')+'"><p class="text-[10px] font-bold">'+(m.senderRole==='fanni'?'أنت':'العميل')+'</p><p class="text-[12px] '+(accepted?'whitespace-pre-wrap break-words':'')+'">'+esc(m.text||'')+'</p></div>';}).join('');}
 function liveFanniCanRender(){return !['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName);}
 async function refreshFanniChatsSilently(){
- if(!getToken()||document.hidden||fanniChatPollInFlight)return;
+ if(!getToken()||document.hidden||fanniChatPollInFlight||isFetching)return;
  fanniChatPollInFlight=true;
+ isFetching=true;
  try{
   const beforeOffers=JSON.stringify((state.myOffers||[]).map(o=>({id:String(o._id||''),accepted:!!o.accepted,status:o.orderStatus||'',completed:!!o.completed,price:o.priceNum??o.price??null})));
   const beforeCompleted=JSON.stringify((state.completedOffers||[]).map(o=>String(o._id||'')));
   const beforeOrders=JSON.stringify((state.orders||[]).map(o=>({sn:String(o.sn||o.orderSn||''),status:o.status||o.orderStatus||'',offersCount:(o.offers||[]).length})));
   const [availableResult,offersResult,notificationsResult]=await Promise.allSettled([API.available(),API.myOffers(),API.notifications()]);
-  if(availableResult.status==='fulfilled')state.orders=extractList(availableResult.value,['orders','requests','items']);
+  if(availableResult.status==='fulfilled'){
+   const latestOrders=extractList(availableResult.value,['orders','requests','items']);
+   const currentPage=Number(state.ordersPagination?.page||1);
+   state.orders=currentPage>1?[...latestOrders,...(state.orders||[]).slice(20)]:latestOrders;
+   if(availableResult.value.pagination)state.ordersPagination={...availableResult.value.pagination,page:currentPage};
+  }
   let newlyAccepted=false;
   if(offersResult.status==='fulfilled'){
    const allOffers=extractList(offersResult.value,['offers','items','requests']);
@@ -306,7 +299,7 @@ async function refreshFanniChatsSilently(){
    fanniLiveRenderPending=false;const scrollY=window.scrollY||window.pageYOffset||0;render();window.scrollTo({top:scrollY,left:0,behavior:'instant'});
   }
   if(newlyAccepted){const accepted=state.myOffers.find(o=>o.accepted===true&&o.orderStatus==='تم اختيار فني');if(accepted)setTimeout(()=>document.getElementById('fanni-accepted-chat-'+String(accepted.orderSn||accepted.sn||'').toUpperCase())?.scrollIntoView({behavior:'smooth',block:'center'}),80);}}catch(_){/* Preserve the last successful state during temporary network failures. */}
- finally{fanniChatPollInFlight=false;}
+ finally{fanniChatPollInFlight=false;isFetching=false;}
 }
 let fanniMessagesPollInFlight=false;
 async function refreshFanniChatMessagesSilently(){
@@ -328,8 +321,22 @@ async function refreshFanniChatMessagesSilently(){
  }catch(_){/* Keep the last successful chat visible during temporary network failures. */}
  finally{fanniMessagesPollInFlight=false;}
 }
-setInterval(refreshFanniChatsSilently,3000);
-setInterval(refreshFanniChatMessagesSilently,2000);
+let fanniChatsPollTimer=null;
+let fanniMessagesPollTimer=null;
+function stopFanniPolling(){
+ if(fanniChatsPollTimer){clearInterval(fanniChatsPollTimer);fanniChatsPollTimer=null;}
+ if(fanniMessagesPollTimer){clearInterval(fanniMessagesPollTimer);fanniMessagesPollTimer=null;}
+}
+function startFanniPolling(){
+ stopFanniPolling();
+ if(document.hidden||!getToken())return;
+ fanniChatsPollTimer=setInterval(refreshFanniChatsSilently,25000);
+ fanniMessagesPollTimer=setInterval(refreshFanniChatMessagesSilently,10000);
+}
+document.addEventListener('visibilitychange',function(){
+ if(document.hidden)stopFanniPolling();
+ else startFanniPolling();
+});
 
 document.addEventListener('focusout',function(){
  setTimeout(function(){
@@ -342,3 +349,4 @@ document.addEventListener('focusout',function(){
 });
 
 start();
+startFanniPolling();
