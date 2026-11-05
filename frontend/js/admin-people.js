@@ -50,6 +50,8 @@ function renderFannis(){
                   <button onclick="event.stopPropagation();setPendingAction('${menuKey}','badge_trust','منح شارة موثوق')" class="dropdown-item">🛡️ منح موثوق</button>
                   <div class="h-px bg-slate-100 my-1"></div>
                   <button onclick="event.stopPropagation();changeAccountPassword('fanni','${id}')" class="dropdown-item">🔐 تغيير كلمة السر</button>
+                  <button onclick="event.stopPropagation();issueSupportPassword('fanni','${id}')" class="dropdown-item">🛟 إصدار كلمة دعم لمرة واحدة</button>
+                  <button onclick="event.stopPropagation();revealSupportPassword('fanni','${id}')" class="dropdown-item">👁 عرض كلمة الدعم الحالية</button>
                   <button onclick="event.stopPropagation();setPendingAction('${menuKey}','delete','حذف نهائي')" class="dropdown-item text-red-600">🗑️ حذف نهائي</button>
                 </div>
               `:''}
@@ -216,3 +218,36 @@ window.adminMarkVoiceReviewed=async function(sn){
     showToast(result.message||'تم تأكيد مراجعة التسجيل');await loadOrders();
   }catch(e){showToast(e.message||'تعذر حفظ مراجعة التسجيل','error')}
 };
+
+
+async function issueSupportPassword(role, accountId) {
+  if (!confirm('إصدار كلمة دعم مستقلة لهذا الحساب؟ أي كلمة دعم سابقة غير مستخدمة سيتم إلغاؤها.')) return;
+  try {
+    const result = await tryApi(['/api/password-recovery/admin/support-passwords'], {
+      method: 'POST', body: JSON.stringify({ role, accountId })
+    });
+    const secret = result?.supportPassword || result?.data?.supportPassword;
+    if (!secret) throw new Error(result?.message || 'لم يتم استلام كلمة الدعم.');
+    let copied = false;
+    try { await navigator.clipboard.writeText(secret); copied = true; } catch (_) {}
+    alert('كلمة الدعم لمرة واحدة:\n\n' + secret + (copied ? '\n\nتم نسخها. أرسلها لصاحب الحساب بشكل آمن.' : '\n\nانسخها يدويًا وأرسلها لصاحب الحساب بشكل آمن.'));
+  } catch (error) {
+    alert(error?.message || 'تعذر إصدار كلمة الدعم.');
+  }
+}
+
+
+async function revealSupportPassword(role, accountId) {
+  try {
+    const active = await tryApi(['/api/password-recovery/admin/support-passwords?role=' + encodeURIComponent(role) + '&accountId=' + encodeURIComponent(accountId)]);
+    if (!active?.id) throw new Error('لا توجد كلمة دعم صالحة لهذا الحساب.');
+    const result = await tryApi(['/api/password-recovery/admin/support-passwords/' + encodeURIComponent(active.id) + '/reveal']);
+    const secret = result?.supportPassword || result?.data?.supportPassword;
+    if (!secret) throw new Error('تعذر استرجاع كلمة الدعم.');
+    let copied = false;
+    try { await navigator.clipboard.writeText(secret); copied = true; } catch (_) {}
+    alert('كلمة الدعم الحالية:\n\n' + secret + (copied ? '\n\nتم نسخها.' : '\n\nانسخها يدويًا.'));
+  } catch (error) {
+    alert(error?.message || 'تعذر عرض كلمة الدعم.');
+  }
+}

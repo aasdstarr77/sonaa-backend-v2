@@ -97,6 +97,8 @@ function createAdminFanniProfilesRouter({
       fanni.passwordHash = await bcrypt.hash(value.newPassword, 12);
       fanni.tokenVersion = Number(fanni.tokenVersion || 0) + 1;
       await fanni.save();
+      const SupportPassword = require('../../models/SupportPassword');
+      await SupportPassword.updateMany({ ownerRole: 'fanni', accountId: fanni._id, usedAt: null, revokedAt: null }, { $set: { revokedAt: new Date(), revokedBy: req.user._id } });
       await writeAdminAudit(req, 'تغيير كلمة سر فني', 'fannis', String(fanni._id), 'تغيير كلمة سر الحساب من لوحة الإدارة دون تسجيل كلمة السر');
       return res.json({ message: 'تم تغيير كلمة سر الفني بنجاح.' });
     } catch (err) { next(err); }

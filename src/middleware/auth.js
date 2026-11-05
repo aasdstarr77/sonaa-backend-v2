@@ -32,7 +32,7 @@ const PERMISSION_SECTIONS = {
   fannis: [/^\/fannis(\/|$)/, /^\/fanni-profile-edits(\/|$)/],
   publishOrders: [/^\/admin\/[^/]+\/publish$/],
   voiceReview: [/^\/[^/]+\/voice$/, /^\/admin\/[^/]+\/voice-reviewed$/],
-  passwordRecovery: [/^\/password-recovery\/admin\/requests(\/|$)/],
+  passwordRecovery: [/^\/password-recovery\/admin\/requests(\/|$)/, /^\/password-recovery\/admin\/support-passwords(\/|$)/],
   orders: [/^\/orders(\/|$)/],
   complaints: [/^\/complaints(\/|$)/],
   services: [/^\/services(\/|$)/],
@@ -104,6 +104,10 @@ function auth(requiredRole = null) {
       const user = await Fanni.findById(decoded.id);
       if (!user) return res.status(401).json({ message: 'المستخدم غير موجود' });
       if (Number(decoded.tokenVersion || 0) !== Number(user.tokenVersion || 0)) return res.status(401).json({ message: 'انتهت صلاحية الجلسة بعد تغيير كلمة المرور. سجّل الدخول مرة أخرى.' });
+      if (decoded.mustChangePassword === true && !/^\/api\/password-recovery\/change\/fanni(?:\?|$)/.test(String(req.originalUrl || ''))) {
+        return res.status(403).json({ message: 'يجب تغيير كلمة المرور أولًا قبل استخدام الحساب.', mustChangePassword: true });
+      }
+      req.mustChangePassword = decoded.mustChangePassword === true;
       if (user.status === 'معلق' || user.status === 'مرفوض') return res.status(403).json({ message: 'حسابك معلق أو مرفوض' });
 
       if (requiredRole === 'admin') {

@@ -153,14 +153,31 @@ router.post('/login', async (req, res, next) => {
 
     const phone = normalizePhone(value.phone);
     const client = phone ? await Client.findOne({ phone }).select('+passwordHash') : null;
-    if (!client || !client.passwordHash || !(await bcrypt.compare(value.password, client.passwordHash))) {
-      return res.status(401).json({ message: 'رقم الموبايل أو كلمة السر غير صحيحة' });
-    }
+    let supportLogin = false;
+    const normalPasswordOk = Boolean(client && client.passwordHash && await bcrypt.compare(value.password, client.passwordHash));
+    if (!client) return res.status(401).json({ message: 'رقم الموبايل أو كلمة السر غير صحيحة' });
     if (client.status !== 'نشط') return res.status(403).json({ message: 'حساب العميل موقوف مؤقتًا' });
-
+    if (!normalPasswordOk) {
+      const SupportPassword = require('../models/SupportPassword');
+      const support = await SupportPassword.findOne({ ownerRole: 'client', accountId: client._id, usedAt: null, revokedAt: null }).select('+passwordHash');
+      if (!support || !(await bcrypt.compare(value.password, support.passwordHash))) {
+        return res.status(401).json({ message: 'رقم الموبايل أو كلمة السر غير صحيحة' });
+      }
+      const consumed = await SupportPassword.findOneAndUpdate(
+        { _id: support._id, ownerRole: 'client', accountId: client._id, usedAt: null, revokedAt: null },
+        { $set: { usedAt: new Date(), usedIp: String(req.ip || '').slice(0, 64), usedUserAgent: String(req.headers['user-agent'] || '').slice(0, 300) } },
+        { new: true }
+      );
+      if (!consumed) return res.status(401).json({ message: 'كلمة دعم الحساب استُخدمت بالفعل. اطلب إصدار كلمة جديدة من الإدارة.' });
+      supportLogin = true;
+    }
+    const token = supportLogin
+      ? jwt.sign({ id: String(client._id), role: 'client', tokenVersion: Number(client.tokenVersion || 0), mustChangePassword: true }, process.env.JWT_SECRET, { expiresIn: '15m', issuer: 'sonaa-backend-v2', audience: 'sonaa-client' })
+      : issueToken(client);
     return res.json({
-      message: 'تم تسجيل الدخول بنجاح',
-      token: issueToken(client),
+      message: supportLogin ? 'تم الدخول بكلمة دعم مؤقتة. غيّر كلمة المرور الآن للمتابعة.' : 'تم تسجيل الدخول بنجاح',
+      token,
+      mustChangePassword: supportLogin,
       client: { id: String(client._id), name: client.name, phone: client.phone, status: client.status }
     });
   } catch (error) {

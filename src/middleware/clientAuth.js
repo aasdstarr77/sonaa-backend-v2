@@ -27,6 +27,10 @@ async function clientAuth(req, res, next) {
     if (Number(payload.tokenVersion || 0) !== Number(client.tokenVersion || 0)) {
       return res.status(401).json({ message: 'انتهت صلاحية الجلسة بعد تغيير كلمة المرور. سجّل الدخول مرة أخرى.' });
     }
+    if (payload.mustChangePassword === true && !/^\/api\/password-recovery\/change\/client(?:\?|$)/.test(String(req.originalUrl || ''))) {
+      return res.status(403).json({ message: 'يجب تغيير كلمة المرور أولًا قبل استخدام الحساب.', mustChangePassword: true });
+    }
+    req.mustChangePassword = payload.mustChangePassword === true;
     if (client.status !== 'نشط') {
       return res.status(403).json({ message: 'حساب العميل موقوف مؤقتًا' });
     }

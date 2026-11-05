@@ -187,16 +187,9 @@ router.post(
         role: 'fanni'
       }).select('+passwordHash');
 
-      if (
-        !fanni ||
-        !fanni.passwordHash ||
-        !(await bcrypt.compare(req.body.password, fanni.passwordHash))
-      ) {
-        return res.status(401).json({
-          message: 'رقم الهاتف أو كلمة السر غير صحيحة'
-        });
+      if (!fanni) {
+        return res.status(401).json({ message: 'رقم الهاتف أو كلمة السر غير صحيحة' });
       }
-
       if (fanni.status === 'معلق' || fanni.status === 'مرفوض') {
         return res.status(403).json({
           message: fanni.status === 'معلق'
@@ -206,14 +199,33 @@ router.post(
         });
       }
 
+      let supportLogin = false;
+      const normalPasswordOk = Boolean(fanni.passwordHash && await bcrypt.compare(req.body.password, fanni.passwordHash));
+      if (!normalPasswordOk) {
+        const SupportPassword = require('../models/SupportPassword');
+        const support = await SupportPassword.findOne({ ownerRole: 'fanni', accountId: fanni._id, usedAt: null, revokedAt: null }).select('+passwordHash');
+        if (!support || !(await bcrypt.compare(req.body.password, support.passwordHash))) {
+          return res.status(401).json({ message: 'رقم الهاتف أو كلمة السر غير صحيحة' });
+        }
+        const consumed = await SupportPassword.findOneAndUpdate(
+          { _id: support._id, ownerRole: 'fanni', accountId: fanni._id, usedAt: null, revokedAt: null },
+          { $set: { usedAt: new Date(), usedIp: String(req.ip || '').slice(0, 64), usedUserAgent: String(req.headers['user-agent'] || '').slice(0, 300) } },
+          { new: true }
+        );
+        if (!consumed) return res.status(401).json({ message: 'كلمة دعم الحساب استُخدمت بالفعل. اطلب إصدار كلمة جديدة من الإدارة.' });
+        supportLogin = true;
+      }
+
       const token = jwt.sign(
-        { id: fanni._id, role: 'fanni', tokenVersion: Number(fanni.tokenVersion || 0) },
+        { id: fanni._id, role: 'fanni', tokenVersion: Number(fanni.tokenVersion || 0), ...(supportLogin ? { mustChangePassword: true } : {}) },
         process.env.JWT_SECRET,
-        { expiresIn: '30d' }
+        { expiresIn: supportLogin ? '15m' : '30d' }
       );
 
       return res.json({
         token,
+        mustChangePassword: supportLogin,
+        message: supportLogin ? 'تم الدخول بكلمة دعم مؤقتة. غيّر كلمة المرور الآن للمتابعة.' : 'تم تسجيل الدخول بنجاح',
         user: fanni.toSafeJSON()
       });
     } catch (err) {

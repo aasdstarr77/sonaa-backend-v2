@@ -51,6 +51,13 @@ async function run() {
       assert.equal(canAccessAdmin({ role: 'admin', phone: '01012345679', adminPermissions: { orders: { read: false, write: false } } }, { path: '/orders', method: 'GET' }), true, 'legacy full matrices must not override role defaults');
       assert.equal(canAccessAdmin({ role: 'fanni', adminRole: 'مشرف', adminPermissions: { orders: { read: true, write: false } } }, { path: '/api/admin/orders', method: 'GET' }), true);
       assert.equal(canAccessAdmin({ role: 'admin', phone: '01012345679' }, { path: '/settings', method: 'GET' }), false);
+      const manager = { role: 'fanni', adminRole: 'مدير' };
+      const readOnlySupport = { role: 'fanni', adminRole: 'قراءة فقط' };
+      assert.equal(canAccessAdmin(manager, { path: '/password-recovery/admin/support-passwords', method: 'GET' }), true);
+      assert.equal(canAccessAdmin(manager, { path: '/password-recovery/admin/support-passwords', method: 'POST' }), true);
+      assert.equal(canAccessAdmin(readOnlySupport, { path: '/password-recovery/admin/support-passwords', method: 'GET' }), true);
+      assert.equal(canAccessAdmin(readOnlySupport, { path: '/password-recovery/admin/support-passwords', method: 'POST' }), false);
+      assert.equal(canAccessAdmin({ role: 'fanni', adminRole: 'مدير', adminPermissions: { __customOverrides: true, passwordRecovery: { read: true, write: false } } }, { path: '/password-recovery/admin/support-passwords', method: 'POST' }), false);
     });
 
     await test('role defaults are restored and manager can publish orders and moderate offers', async () => {
@@ -541,6 +548,29 @@ async function run() {
         assert.ok(queue.body.requests.some(item => String(item._id) === String(fanni._id)));
       });
 
+      const issuedFanniSupport = await request(app).post('/api/password-recovery/admin/support-passwords')
+        .set('Authorization', 'Bearer ' + adminToken)
+        .send({ role: 'fanni', accountId: String(fanni._id) });
+      assert.equal(issuedFanniSupport.status, 201);
+      assert.ok(issuedFanniSupport.body.supportPassword);
+      const fanniSupportLogin = await request(app).post('/api/fanni/login')
+        .send({ phone: '01012345680', password: issuedFanniSupport.body.supportPassword });
+      assert.equal(fanniSupportLogin.status, 200);
+      assert.equal(fanniSupportLogin.body.mustChangePassword, true);
+      const blockedFanniSession = await request(app).get('/api/fanni/me')
+        .set('Authorization', 'Bearer ' + fanniSupportLogin.body.token);
+      assert.equal(blockedFanniSession.status, 403);
+      const changedFanniSupportPassword = await request(app).post('/api/password-recovery/change/fanni')
+        .set('Authorization', 'Bearer ' + fanniSupportLogin.body.token)
+        .send({ newPassword: 'FanniAfterSupport123', confirmPassword: 'FanniAfterSupport123' });
+      assert.equal(changedFanniSupportPassword.status, 200);
+      const reusedFanniSupport = await request(app).post('/api/fanni/login')
+        .send({ phone: '01012345680', password: issuedFanniSupport.body.supportPassword });
+      assert.equal(reusedFanniSupport.status, 401);
+      const activeFanniAfterSupport = await request(app).get('/api/fanni/me')
+        .set('Authorization', 'Bearer ' + changedFanniSupportPassword.body.token);
+      assert.equal(activeFanniAfterSupport.status, 200);
+
       const oldClientSessionBeforeAdminReset = clientToken;
       const clientAdminReset = await request(app).patch('/api/admin/clients/01012345678/password')
         .set('Authorization', 'Bearer ' + adminToken)
@@ -551,6 +581,48 @@ async function run() {
       const clientLoginAfterAdminReset = await request(app).post('/api/client/login').send({ phone: '01012345678', password: 'AdminResetPass123' });
       assert.equal(clientLoginAfterAdminReset.status, 200);
       clientToken = clientLoginAfterAdminReset.body.token;
+
+      const issuedClientSupport = await request(app).post('/api/password-recovery/admin/support-passwords')
+        .set('Authorization', 'Bearer ' + adminToken)
+        .send({ role: 'client', accountId: String(clientId) });
+      assert.equal(issuedClientSupport.status, 201);
+      assert.ok(issuedClientSupport.body.supportPassword);
+      const issuedAdminAsFanni = await request(app).post('/api/password-recovery/admin/support-passwords')
+        .set('Authorization', 'Bearer ' + adminToken)
+        .send({ role: 'fanni', accountId: String(admin._id) });
+      assert.equal(issuedAdminAsFanni.status, 404, 'admin accounts must never receive technician support passwords');
+      const reissuedClientSupport = await request(app).post('/api/password-recovery/admin/support-passwords')
+        .set('Authorization', 'Bearer ' + adminToken)
+        .send({ role: 'client', accountId: String(clientId) });
+      assert.equal(reissuedClientSupport.status, 201);
+      const staleSupportLogin = await request(app).post('/api/client/login')
+        .send({ phone: '01012345678', password: issuedClientSupport.body.supportPassword });
+      assert.equal(staleSupportLogin.status, 401, 'issuing a replacement must revoke the previous unused password');
+      const revealedClientSupport = await request(app).get('/api/password-recovery/admin/support-passwords?role=client&accountId=' + clientId)
+        .set('Authorization', 'Bearer ' + adminToken);
+      assert.equal(revealedClientSupport.status, 200);
+      const revealedSecret = await request(app).get('/api/password-recovery/admin/support-passwords/' + revealedClientSupport.body.id + '/reveal')
+        .set('Authorization', 'Bearer ' + adminToken);
+      assert.equal(revealedSecret.status, 200);
+      assert.equal(revealedSecret.body.supportPassword, reissuedClientSupport.body.supportPassword);
+      const clientSupportLogin = await request(app).post('/api/client/login')
+        .send({ phone: '01012345678', password: reissuedClientSupport.body.supportPassword });
+      assert.equal(clientSupportLogin.status, 200);
+      assert.equal(clientSupportLogin.body.mustChangePassword, true);
+      const blockedClientSession = await request(app).get('/api/client/me')
+        .set('Authorization', 'Bearer ' + clientSupportLogin.body.token);
+      assert.equal(blockedClientSession.status, 403);
+      const changedClientSupportPassword = await request(app).post('/api/password-recovery/change/client')
+        .set('Authorization', 'Bearer ' + clientSupportLogin.body.token)
+        .send({ newPassword: 'ClientAfterSupport123', confirmPassword: 'ClientAfterSupport123' });
+      assert.equal(changedClientSupportPassword.status, 200);
+      const reusedClientSupport = await request(app).post('/api/client/login')
+        .send({ phone: '01012345678', password: issuedClientSupport.body.supportPassword });
+      assert.equal(reusedClientSupport.status, 401);
+      const activeClientAfterSupport = await request(app).get('/api/client/me')
+        .set('Authorization', 'Bearer ' + changedClientSupportPassword.body.token);
+      assert.equal(activeClientAfterSupport.status, 200);
+      clientToken = changedClientSupportPassword.body.token;
 
       const opened = await request(app).post('/api/password-recovery/request')
         .send({ role: 'client', phone: '01012345678' });
