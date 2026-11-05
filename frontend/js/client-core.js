@@ -157,7 +157,8 @@ const API={
     try{data=raw?JSON.parse(raw):{};}catch{data={};}
     log('استجابة الطلب:',response.status,data);
     if(!response.ok){
-      const serverMessage=response.status===404||response.status>=500?'تعذر تنفيذ طلبك حاليًا. حاول مرة أخرى.':(typeof data.message==='string'&&data.message.trim()?data.message.trim():'');
+      const isMaintenance=response.status===503&&data.code==='MAINTENANCE_MODE';
+      const serverMessage=isMaintenance?(typeof data.message==='string'&&data.message.trim()?data.message.trim():'الموقع تحت الصيانة مؤقتًا. سنعود للعمل قريبًا.'):(response.status===404||response.status>=500?'تعذر تنفيذ طلبك حاليًا. حاول مرة أخرى.':(typeof data.message==='string'&&data.message.trim()?data.message.trim():''));
       const error=new Error(serverMessage||(response.status===404?'لم نتمكن من العثور على البيانات المطلوبة.':'حصلت مشكلة أثناء تنفيذ الطلب. حاول مرة أخرى.'));
       error.status=response.status;
       error.details=Array.isArray(data.details)?data.details:[];
