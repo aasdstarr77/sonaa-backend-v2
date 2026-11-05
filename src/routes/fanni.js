@@ -304,10 +304,13 @@ router.patch('/me', auth(), requireFanni, validate(profileUpdateSchema), async (
       dedupeKey: 'admin-fanni-profile-edit:' + String(updatedFanni._id) + ':' + String(requestedAt.getTime())
     })).catch(err => console.error('Could not notify admins about technician profile edit:', err.message));
 
+    // Return a compact acknowledgement only. Serializing the full technician document
+    // (including its historical decisions) made the self-service request response unnecessarily heavy.
     return res.set('Cache-Control', 'no-store').json({
       message: 'تم إرسال طلب تعديل بياناتك للإدارة. بيانات حسابك الحالية ستظل كما هي لحين الموافقة.',
-      user: updatedFanni.toSafeJSON(),
-      pendingProfileChange: updatedFanni.pendingProfileChange
+      requestId: String(updatedFanni._id),
+      changedFields,
+      requestedAt
     });
   } catch (err) {
     if (err && err.code === 11000) return res.status(409).json({ message: 'رقم الهاتف مسجل بالفعل في حساب آخر' });
