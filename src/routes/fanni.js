@@ -310,7 +310,14 @@ router.patch('/me', auth(), requireFanni, validate(profileUpdateSchema), async (
       message: 'تم إرسال طلب تعديل بياناتك للإدارة. بيانات حسابك الحالية ستظل كما هي لحين الموافقة.',
       requestId: String(updatedFanni._id),
       changedFields,
-      requestedAt
+      requestedAt,
+      pendingProfileChange: {
+        requestedAt,
+        changedFields,
+        phone,
+        specialties,
+        areas
+      }
     });
   } catch (err) {
     if (err && err.code === 11000) return res.status(409).json({ message: 'رقم الهاتف مسجل بالفعل في حساب آخر' });
