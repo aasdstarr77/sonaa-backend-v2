@@ -84,34 +84,41 @@ async function saveFanniLimit(id){const el=document.getElementById('limit-'+id);
 async function saveFanniProfileControls(id){const scoreEl=document.getElementById('trust-score-'+id),verifiedEl=document.getElementById('verified-'+id),featuredEl=document.getElementById('featured-'+id),untilEl=document.getElementById('featured-until-'+id);if(!scoreEl||!verifiedEl||!featuredEl||!untilEl)return showToast('حقول الثقة والظهور غير مكتملة','error');const raw=String(scoreEl.value||'').trim(),trustScore=Number(raw);if(raw===''||!Number.isInteger(trustScore)||trustScore<0||trustScore>100)return showToast('درجة الثقة لازم تكون رقمًا صحيحًا من 0 إلى 100','error');const isVerified=verifiedEl.checked,isFeatured=featuredEl.checked,featuredUntil=String(untilEl.value||'').trim()||null;if(!confirm('حفظ درجة الثقة وحالة التحقق والظهور لهذا الفني؟'))return;try{const result=await tryApi(['/api/admin/fannis/'+encodeURIComponent(id)+'/profile-controls'],{method:'PATCH',body:JSON.stringify({trustScore,isVerified,isFeatured,featuredUntil})});showToast(result.message||'تم حفظ إعدادات الثقة والظهور');await loadAll();}catch(e){showToast(e.message||'تعذر حفظ إعدادات الثقة والظهور','error');}}
 async function loadAdminUsers(){state.adminUsersLoading=true;if(state.tab==='roles')render();try{const data=await tryApi(['/api/admin/admin-users'],{method:'GET'});state.adminUsers=extractList(data,['users','items']);}catch(e){state.adminUsers=[];showToast(e.message||'تعذر تحميل المناصب','error');}finally{state.adminUsersLoading=false;if(state.tab==='roles')render();}}
 
-// Direct admin-side technician editor. Technician self-service remains on /api/fanni/me.
+// Admin-only profile editor: use the same official catalogs as technician registration.
 window.openFanniProfileEditor=async function(id){
  id=String(id||'').trim();if(!id)return showToast('معرّف الفني غير موجود','error');
  if(typeof canWriteTab==='function'&&!canWriteTab('fannis'))return showToast('لا تملك صلاحية تعديل بيانات الفنيين','error');
- const previous=document.getElementById('admin-fanni-profile-modal');if(previous)previous.remove();
+ const old=document.getElementById('admin-fanni-profile-modal');if(old)old.remove();
  const modal=document.createElement('div');modal.id='admin-fanni-profile-modal';modal.className='fixed inset-0 z-[190] flex items-center justify-center bg-slate-950/60 p-3';
- modal.innerHTML='<section dir="rtl" class="w-full max-w-xl max-h-[92vh] overflow-y-auto rounded-2xl border border-blue-100 bg-white p-4 shadow-2xl"><div class="flex items-center justify-between gap-3 border-b pb-3"><div><h2 class="text-base font-black text-slate-900">تعديل بيانات الفني من الإدارة</h2><p class="mt-1 text-xs text-slate-500">حفظ مباشر على حساب الفني دون إرسال طلب مراجعة</p></div><button type="button" id="admin-fanni-edit-close" class="rounded-lg bg-slate-100 px-3 py-2 text-sm font-black">✕</button></div><div id="admin-fanni-edit-status" class="py-4 text-sm font-bold text-slate-500">جاري تحميل بيانات الفني...</div><form id="admin-fanni-edit-form" class="hidden space-y-3 pt-3"><label class="block text-xs font-black">رقم الهاتف<input id="admin-fanni-edit-phone" class="field mt-1" inputmode="numeric" maxlength="11" required></label><label class="block text-xs font-black">التخصصات <span class="font-normal text-slate-500">(كل تخصص في سطر أو افصل بينها بفاصلة)</span><textarea id="admin-fanni-edit-specialties" class="field mt-1" rows="4" required></textarea></label><label class="block text-xs font-black">مناطق العمل <span class="font-normal text-slate-500">(كل منطقة في سطر أو افصل بينها بفاصلة)</span><textarea id="admin-fanni-edit-areas" class="field mt-1" rows="4" required></textarea></label><p class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-bold leading-6 text-amber-900">سيتم حفظ البيانات مباشرة من لوحة الإدارة. يجب أن تكون التخصصات والمناطق من القوائم المعتمدة.</p><div class="flex gap-2"><button id="admin-fanni-edit-save" type="submit" class="primary-pill pill-btn flex-1">حفظ التعديلات</button><button type="button" id="admin-fanni-edit-cancel" class="soft-btn pill-btn">إلغاء</button></div></form></section>';
- document.body.appendChild(modal);const close=()=>modal.remove();
- modal.querySelector('#admin-fanni-edit-close').addEventListener('click',close);modal.querySelector('#admin-fanni-edit-cancel').addEventListener('click',close);modal.addEventListener('click',e=>{if(e.target===modal)close()});
- const status=modal.querySelector('#admin-fanni-edit-status'),form=modal.querySelector('#admin-fanni-edit-form');
- const splitList=value=>[...new Set(String(value||'').split(/[،,\n؛;]/).map(x=>x.trim()).filter(Boolean))];
+ modal.innerHTML='<section dir="rtl" class="w-full max-w-2xl max-h-[94vh] overflow-y-auto rounded-2xl bg-white p-4 shadow-2xl"><div class="flex items-center justify-between border-b pb-3"><div><h2 class="font-black">تعديل بيانات الفني من الإدارة</h2><p class="mt-1 text-xs text-slate-500">اختار من قوائم المناطق والخدمات المعتمدة</p></div><button type="button" data-close class="rounded-lg bg-slate-100 px-3 py-2">✕</button></div><div id="admin-fanni-editor-body" class="py-4 text-sm text-slate-500">جاري تحميل البيانات والقوائم...</div></section>';
+ document.body.appendChild(modal);const close=()=>modal.remove();modal.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',close));modal.addEventListener('click',e=>{if(e.target===modal)close();});
+ const body=modal.querySelector('#admin-fanni-editor-body');
  try{
-  const data=await tryApi(['/api/admin/fannis/'+encodeURIComponent(id)+'/profile']);const f=data.fanni||data;
-  if(!f||(!f._id&&!f.phone))throw new Error('لم يتم العثور على بيانات الفني.');
-  modal.querySelector('#admin-fanni-edit-phone').value=String(f.phone||'');modal.querySelector('#admin-fanni-edit-specialties').value=(f.specialties||[]).join('\n');modal.querySelector('#admin-fanni-edit-areas').value=(f.areas||[]).join('\n');
-  status.remove();form.classList.remove('hidden');
-  form.addEventListener('submit',async e=>{
-   e.preventDefault();const phone=String(modal.querySelector('#admin-fanni-edit-phone').value||'').replace(/[^0-9٠-٩۰-۹]/g,'').replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
-   const specialties=splitList(modal.querySelector('#admin-fanni-edit-specialties').value),areas=splitList(modal.querySelector('#admin-fanni-edit-areas').value);
-   if(!/^01[0-9]{9}$/.test(phone))return showToast('رقم الهاتف لازم يكون 11 رقمًا ويبدأ بـ 01','error');if(!specialties.length||!areas.length)return showToast('أدخل تخصصًا واحدًا ومنطقة عمل واحدة على الأقل','error');
-   const save=modal.querySelector('#admin-fanni-edit-save');save.disabled=true;save.textContent='جاري الحفظ...';
+  const results=await Promise.all([tryApi(['/api/admin/fannis/'+encodeURIComponent(id)+'/profile']),tryApi(['/api/areas']),tryApi(['/api/services'])]);
+  const f=results[0].fanni||results[0],areas=Array.isArray(results[1].areas)?results[1].areas:[],cats=Array.isArray(results[2].categories)?results[2].categories:[];
+  if(!f||!f._id||!areas.length||!cats.length)throw new Error('تعذر تحميل بيانات الفني أو القوائم المعتمدة.');
+  const esc=escHtml,chosenAreas=new Set(f.areas||[]),chosenServices=new Set(f.specialties||[]);
+  const areaOptions=areas.map(a=>'<label class="flex items-center gap-2 rounded-lg border p-2 text-[11px]"><input type="checkbox" name="admin-fanni-area" value="'+esc(a)+'" '+(chosenAreas.has(a)?'checked':'')+'><span>'+esc(a)+'</span></label>').join('');
+  const serviceOptions=cats.map(cat=>'<details class="mb-2 rounded-xl border overflow-hidden"><summary class="cursor-pointer bg-slate-50 p-3 text-xs font-black">'+esc(cat.emoji||'')+' '+esc(cat.label)+' <span class="text-slate-500">('+cat.services.filter(s=>chosenServices.has(s)).length+' مختار)</span></summary><div class="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3">'+cat.services.map(s=>'<label class="flex items-center gap-2 rounded-lg border p-2 text-[11px]"><input type="checkbox" name="admin-fanni-service" value="'+esc(s)+'" '+(chosenServices.has(s)?'checked':'')+'><span>'+esc(s)+'</span></label>').join('')+'</div></details>').join('');
+  body.innerHTML='<form id="admin-fanni-edit-form" class="space-y-4"><label class="block text-xs font-black">رقم الهاتف<input id="admin-fanni-edit-phone" class="field mt-1" inputmode="numeric" maxlength="11" required value="'+esc(f.phone||'')+'"></label><section class="rounded-xl border p-3"><div class="mb-2 text-xs font-black">مناطق العمل * — اختر حتى 30 منطقة</div><input id="admin-fanni-area-search" class="field mb-2" placeholder="ابحث عن منطقة..."><div id="admin-fanni-area-options" class="grid grid-cols-2 gap-2 max-h-56 overflow-y-auto">'+areaOptions+'</div></section><section class="rounded-xl border p-3"><div class="mb-2 text-xs font-black">الخدمات والتخصصات * — اختر حتى 20 خدمة</div>'+serviceOptions+'</section><div class="flex gap-2"><button id="admin-fanni-edit-save" type="submit" class="primary-pill pill-btn flex-1">حفظ التعديلات</button><button type="button" data-close class="soft-btn pill-btn">إلغاء</button></div></form>';
+  const search=body.querySelector('#admin-fanni-area-search');search.addEventListener('input',()=>{const q=search.value.trim().toLocaleLowerCase('ar');body.querySelectorAll('#admin-fanni-area-options label').forEach(label=>{label.hidden=!label.textContent.toLocaleLowerCase('ar').includes(q);});});
+  body.querySelector('#admin-fanni-edit-form').addEventListener('submit',async e=>{
+   e.preventDefault();const phone=normalizePhoneInput(body.querySelector('#admin-fanni-edit-phone').value);
+   const selectedAreas=[...body.querySelectorAll('input[name="admin-fanni-area"]:checked')].map(x=>x.value);
+   const specialties=[...body.querySelectorAll('input[name="admin-fanni-service"]:checked')].map(x=>x.value);
+   if(!/^01[0-9]{9}$/.test(phone))return showToast('رقم الهاتف لازم يكون 11 رقمًا ويبدأ بـ 01','error');
+   if(!selectedAreas.length||selectedAreas.length>30)return showToast('اختار من منطقة إلى 30 منطقة من القائمة','error');
+   if(!specialties.length||specialties.length>20)return showToast('اختار من خدمة إلى 20 خدمة من القائمة','error');
+   const save=body.querySelector('#admin-fanni-edit-save');save.disabled=true;save.textContent='جاري الحفظ...';
    try{
-    const result=await tryApi(['/api/admin/fannis/'+encodeURIComponent(id)+'/profile'],{method:'PATCH',body:JSON.stringify({phone,specialties,areas})});
+    const result=await tryApi(['/api/admin/fannis/'+encodeURIComponent(id)+'/profile'],{method:'PATCH',body:JSON.stringify({phone,specialties,areas:selectedAreas})});
     const verify=await tryApi(['/api/admin/fannis/'+encodeURIComponent(id)+'/profile']),saved=verify.fanni||verify;
-    if(String(saved.phone)!==phone||JSON.stringify([...(saved.specialties||[])].sort())!==JSON.stringify([...specialties].sort())||JSON.stringify([...(saved.areas||[])].sort())!==JSON.stringify([...areas].sort()))throw new Error('الحفظ لم يتأكد: البيانات المسترجعة لا تطابق التعديلات.');
-    showToast(result.message||'تم حفظ بيانات الفني مباشرة من الإدارة');close();if(typeof loadAll==='function')await loadAll();
-   }catch(error){showToast(error.message||'تعذر حفظ بيانات الفني','error');}finally{if(save.isConnected){save.disabled=false;save.textContent='حفظ التعديلات';}}
+    const same=(a,b)=>JSON.stringify([...a].sort())===JSON.stringify([...b].sort());
+    if(String(saved.phone)!==phone||!same(saved.specialties||[],specialties)||!same(saved.areas||[],selectedAreas))throw new Error('الحفظ لم يتأكد: البيانات المسترجعة لا تطابق التعديلات.');
+    close();showToast(result.message||'تم حفظ بيانات الفني مباشرة من الإدارة');if(typeof loadAll==='function')await loadAll();
+   }catch(error){showToast(error.message||'تعذر حفظ بيانات الفني','error');}
+   finally{if(save.isConnected){save.disabled=false;save.textContent='حفظ التعديلات';}}
   });
- }catch(error){status.className='py-4 text-sm font-bold text-red-700';status.textContent=error.message||'تعذر تحميل بيانات الفني';}
+ }catch(error){body.className='py-4 text-sm font-bold text-red-700';body.textContent=error.message||'تعذر تحميل بيانات الفني والقوائم.';}
 };
 

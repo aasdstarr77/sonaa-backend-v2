@@ -292,7 +292,7 @@ function renderContent(){
          <button type="button" onclick="toggleEditSpecialtyCategory(this.dataset.category)" data-category="${esc(cat.label)}" aria-expanded="${isOpen}" aria-controls="${categoryId}" class="flex w-full items-center justify-between gap-3 bg-slate-50 p-3 text-right">
           <span><span class="block text-[12px] font-extrabold">${esc(cat.emoji)} ${esc(cat.label)}</span><span class="mt-1 block text-[10px] text-slate-500">${selectedCount?'تم اختيار '+selectedCount+' خدمة':'اضغط لعرض الخدمات'}</span></span><span class="text-blue-700 font-black">${isOpen?'−':'+'}</span>
          </button>
-         ${isOpen?`<div id="${categoryId}" class="fanni-specialty-options grid grid-cols-3 gap-2 max-[380px]:grid-cols-2 border-t p-3">${cat.services.map(s=>`<label class="service-chip ${state.editSpecialties.includes(s)?'selected':''}"><input type="checkbox" data-specialty="${esc(s)}" ${state.editSpecialties.includes(s)?'checked':''} onchange="toggleEditSpecialty(this.dataset.specialty)"><span class="service-icon" aria-hidden="true">${serviceIconFor(s)}</span><span>${esc(s)}</span></label>`).join('')}</div>`:''}
+         ${isOpen?`<div id="${categoryId}" class="fanni-specialty-options grid grid-cols-3 gap-2 max-[380px]:grid-cols-2 border-t p-3">${cat.services.map(s=>`<button type="button" data-specialty="${esc(s)}" aria-pressed="${state.editSpecialties.includes(s)}" onclick="event.preventDefault();event.stopPropagation();toggleEditSpecialty(this.dataset.specialty)" class="service-chip ${state.editSpecialties.includes(s)?'selected':''}"><span class="service-icon" aria-hidden="true">${serviceIconFor(s)}</span><span>${esc(s)}</span></button>`).join('')}</div>`:''}
         </section>`;
        }).join('')}
       </div>
