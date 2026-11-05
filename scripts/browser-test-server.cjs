@@ -7,6 +7,7 @@ process.env.ADMIN_EMAIL = 'admin.smoke@example.com';
 process.env.ADMIN_PASSWORD = 'AdminSmokePass123';
 process.env.ADMIN_NAME = 'إدارة اختبار المتصفح';
 process.env.ADMIN_SETUP_SECRET = 'sonaa-browser-setup-secret-at-least-32-chars';
+process.env.ADMIN_PANEL_PATH = '/admin-smoke-panel-20261105';
 process.env.ALLOWED_ORIGINS = 'http://127.0.0.1:4173';
 process.env.PORT = process.env.PORT || '4173';
 

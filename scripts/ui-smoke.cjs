@@ -7,7 +7,7 @@ const pages = [
   { path: '/index.html', name: 'home' },
   { path: '/client.html', name: 'client' },
   { path: '/fanni.html', name: 'technician' },
-  { path: '/admin.html', name: 'admin' },
+  { path: '/admin-smoke-panel-20261105', name: 'admin' },
   { path: '/password.html?role=client', name: 'password' },
   { path: '/support.html', name: 'support' },
   { path: '/admin-setup.html', name: 'admin-setup' }
@@ -100,6 +100,13 @@ function apiResponse(pathname) {
                 await page.locator('#fanniLoginPassword').fill('FanniSmokePass123');
                 await page.getByRole('button', { name: 'دخول إلى حسابي' }).click();
                 await page.waitForFunction(() => !!localStorage.getItem('fanni_token_v4'), { timeout: 10000 });
+                await page.evaluate(() => setTab('profile'));
+                await page.locator('button[onclick="beginEditProfile()"]').waitFor({ state: 'visible', timeout: 5000 });
+                await page.locator('button[onclick="beginEditProfile()"]').click();
+                await page.locator('#fanniEditPhone').fill('01012345672');
+                await page.locator('button[onclick="saveProfileChanges()"]').click();
+                await page.locator('button[onclick="beginEditProfile()"]').waitFor({ state: 'visible', timeout: 10000 });
+                await page.locator('#toast').getByText(/تم إرسال طلب تعديل بيانات/).waitFor({ state: 'visible', timeout: 3000 });
               }
             } else if (target.name === 'admin') {
               await page.locator('#login-btn').click();

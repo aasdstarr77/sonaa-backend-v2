@@ -132,21 +132,23 @@ async function saveProfileChanges(){
  if(!Array.isArray(state.editSpecialties)||!state.editSpecialties.length){state.error='اختار تخصصًا واحدًا على الأقل';render();return;}
  const areas=[...new Set((state.editAreas||[]).filter(Boolean))];
  if(!areas.length){state.error='اختار منطقة عمل واحدة على الأقل من القائمة';render();return;}
- state.editSaving=true;state.error='';state.success='';render();
- toast('جاري إرسال طلب تعديل البيانات للإدارة...','pending');
+ state.editSaving=true;state.error='';state.success='';
  try{
+  render();
+  toast('جاري إرسال طلب تعديل البيانات للإدارة...','pending');
   const result=await API.updateProfile({phone,specialties:state.editSpecialties,areas});
   const updated=extractUser(result)||result?.data||result?.fanni||null;
   if(!updated||typeof updated!=='object')throw new Error(result?.message||'وصل رد غير مكتمل من الخادم. حاول تحديث الصفحة.');
   currentUser={...(currentUser||{}),...updated};setAuth(getToken(),currentUser);
-  state.editProfileMode=false;state.editSaving=false;state.error='';state.success='';
+  state.editProfileMode=false;state.error='';state.success='';
   render();
   toast(result.message||'تم إرسال طلب تعديل البيانات للإدارة للمراجعة');
  }catch(e){
-  state.editSaving=false;
   state.error=e.message||'تعذر إرسال طلب تعديل البيانات';
-  render();
   toast(state.error,'error');
+ }finally{
+  state.editSaving=false;
+  if(state.editProfileMode)render();
  }
 }
 
