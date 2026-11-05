@@ -6,6 +6,14 @@ const PushToken = require('../models/PushToken');
 const Fanni = require('../models/Fanni');
 const { sendWebPushNotification } = require('./webPush');
 
+// Bound all external notification-provider requests so a slow provider cannot
+// stall an API action or keep a serverless invocation open indefinitely.
+function notificationFetch(url, options = {}) {
+  const signal = typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
+    ? AbortSignal.timeout(4000) : undefined;
+  return globalThis.notificationFetch(url, { ...options, ...(signal ? { signal } : {}) });
+}
+
 function channelFor(type) {
   if (['order_new', 'new_order', 'admin_new_order'].includes(type)) return 'order_new';
   if (['fanni_register', 'new_fanni', 'admin_new_technician'].includes(type)) return 'fanni_register';
@@ -29,7 +37,7 @@ async function firebaseAccessToken(serviceAccount) {
   const signer = crypto.createSign('RSA-SHA256');
   signer.update(unsigned);
   const assertion = unsigned + '.' + signer.sign(serviceAccount.private_key, 'base64url');
-  const response = await fetch('https://oauth2.googleapis.com/token', {
+  const response = await notificationFetch('https://oauth2.googleapis.com/token', {
     method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion })
   });
@@ -50,7 +58,7 @@ async function sendFirebasePushNotifications(devices, payload) {
     destination: destinationFor(type)
   };
   await Promise.all(devices.map(async device => {
-    const response = await fetch(endpoint, {
+    const response = await notificationFetch(endpoint, {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: {
@@ -78,7 +86,7 @@ async function sendPushNotification({ recipientRole, recipientId, title, message
       }));
       for (let start = 0; start < messages.length; start += 100) {
         const batch = messages.slice(start, start + 100);
-        const response = await fetch('https://exp.host/--/api/v2/push/send', {
+        const response = await notificationFetch('https://exp.host/--/api/v2/push/send', {
           method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
           body: JSON.stringify(batch)
         });
