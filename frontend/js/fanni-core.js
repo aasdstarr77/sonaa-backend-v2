@@ -564,3 +564,26 @@ async function acceptTechnicianGuidelines(){try{const result=await API.acceptGui
 async function sendFanniQuickReply(sn,offerId,reply){try{await API.sendChat(sn,reply,offerId);await refreshFanniChatsSilently();toast('تم إرسال الرد.');}catch(e){toast(e.message||'تعذر إرسال الرد.','error');}}
 async function sendFanniChat(sn,offerId){const el=document.getElementById('fanni-chat-'+sn);const text=String(el?.value||'').trim();if(!text)return toast('اكتب الرسالة أولًا.','error');try{await API.sendChat(sn,text,offerId);if(el)el.value='';await refreshFanniChatsSilently();toast('تم إرسال الرسالة.');}catch(e){toast(e.message||'تعذر إرسال الرسالة.','error');}}
 async function requestFanniPriceChange(sn){const price=Number(document.getElementById('price-change-'+sn)?.value);const reason=String(document.getElementById('price-reason-'+sn)?.value||'').trim();const offer=[...state.myOffers,...state.completedOffers].find(o=>String(o.orderSn||o.sn||o.order?.sn||'').toUpperCase()===String(sn||'').toUpperCase());const currentPrice=Number(offer?.client?.acceptedOfferPrice??offer?.acceptedOfferPrice??offer?.priceNum??offer?.price);if(!Number.isFinite(currentPrice))return toast('تعذر تحديد السعر الحالي؛ حدّث البيانات وحاول مرة أخرى.','error');if(!Number.isFinite(price)||price<=currentPrice||price<=0)return toast('السعر الجديد لازم يكون أعلى من السعر الحالي ('+currentPrice+' جنيه).','error');if(reason.length<5)return toast('اكتب سببًا واضحًا للتعديل.','error');try{const r=await API.requestPriceChange(sn,price,reason);toast(r.message||'تم إرسال طلب تعديل السعر.');await loadMyOffers();}catch(e){toast(e.message||'تعذر طلب تعديل السعر.','error');}}
+async function saveProfileChanges() {
+  state.editSaving = true;
+  state.error = '';
+  render();
+
+  try {
+    const payload = {
+      phone: state.editPhone,
+      areas: state.editAreas,
+      specialties: state.editSpecialties
+    };
+    const updatedUser = await API.updateProfile(payload);
+    setAuth(getToken(), updatedUser);
+    currentUser = updatedUser;
+    state.editProfileMode = false;
+    toast('تم حفظ التعديلات بنجاح');
+  } catch (e) {
+    state.error = e.message || 'تعذر حفظ التعديلات';
+  } finally {
+    state.editSaving = false;
+    render();
+  }
+}
