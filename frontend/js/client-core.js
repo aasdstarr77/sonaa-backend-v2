@@ -136,13 +136,23 @@ const API={
   },
   async request(url,options={}){
     let response;
+    let raw;
+    const timeoutMs=Number(options.timeoutMs)||20000;
+    const requestOptions={...options};
+    delete requestOptions.timeoutMs;
+    const controller=typeof AbortController!=='undefined'?new AbortController():null;
+    let timeoutId=null;
+    if(controller)timeoutId=setTimeout(()=>controller.abort(),timeoutMs);
     try{
-      response=await fetch(url,{...options,credentials:'same-origin',headers:{...(options.headers||{})}});
+      response=await fetch(url,{...requestOptions,credentials:'same-origin',headers:{...(options.headers||{})},...(controller?{signal:controller.signal}:{})});
+      raw=await response.text();
     }catch(error){
       log('تعذر إتمام الطلب:',error);
+      if(controller&&controller.signal.aborted)throw new Error('انتهت مهلة الاتصال بالخادم. تأكد من حالة العملية قبل إعادة المحاولة.');
       throw new Error('تعذر الاتصال. تأكد من اتصال الإنترنت وحاول مرة أخرى.');
+    }finally{
+      if(timeoutId!==null)clearTimeout(timeoutId);
     }
-    const raw=await response.text();
     let data={};
     try{data=raw?JSON.parse(raw):{};}catch{data={};}
     log('استجابة الطلب:',response.status,data);

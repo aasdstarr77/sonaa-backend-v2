@@ -331,5 +331,14 @@ async function refreshFanniChatMessagesSilently(){
 setInterval(refreshFanniChatsSilently,3000);
 setInterval(refreshFanniChatMessagesSilently,2000);
 
+document.addEventListener('focusout',function(){
+ setTimeout(function(){
+  if(!fanniLiveRenderPending||document.hidden||!liveFanniCanRender())return;
+  fanniLiveRenderPending=false;
+  const scrollY=window.scrollY||window.pageYOffset||0;
+  render();
+  window.scrollTo({top:scrollY,left:0,behavior:'instant'});
+ },0);
+});
 
 start();

@@ -31,14 +31,23 @@
           const url = location.hostname.includes('sonaa-backend-v2') && location.hostname.endsWith('vercel.app')
             ? path
             : 'https://sonaa-backend-v2.vercel.app' + path;
-          const response = await fetch(url, {
-            method: 'GET',
-            headers: { Authorization: 'Bearer ' + currentToken, Accept: 'application/json' },
-            cache: 'no-store',
-            credentials: 'omit'
-          });
-          if (!response.ok) return;
-          const data = await response.json();
+          const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+          const timeoutId = controller ? setTimeout(function () { controller.abort(); }, 8000) : null;
+          let response;
+          let data;
+          try {
+            response = await fetch(url, {
+              method: 'GET',
+              headers: { Authorization: 'Bearer ' + currentToken, Accept: 'application/json' },
+              cache: 'no-store',
+              credentials: 'omit',
+              ...(controller ? { signal: controller.signal } : {})
+            });
+            if (!response.ok) return;
+            data = await response.json();
+          } finally {
+            if (timeoutId !== null) clearTimeout(timeoutId);
+          }
           if (!Array.isArray(data.recoveries)) return;
           const badge = document.getElementById('sonaa-recovery-count');
           if (!badge) return;

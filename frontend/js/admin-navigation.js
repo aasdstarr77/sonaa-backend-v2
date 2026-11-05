@@ -35,11 +35,12 @@ async function refreshCurrentTab(){if(state.tab==='profileEdits')await loadFanni
 const ADMIN_BASE_REFRESH_TABS=new Set(['dashboard','stats','fannis','pending','disabled','levels','profileEdits','orders','offers','topups','complaints','support','clients']);
 let adminRefreshPromise=null;
 let adminLastRefreshAt=0;
+let adminRefreshDeferred=false;
 async function refreshAllAdminData(force=false){
  if(!getToken()||document.visibilityState==='hidden')return;
  if(adminRefreshPromise)return adminRefreshPromise;
  const focused=document.activeElement;
- if(focused&&/^(INPUT|TEXTAREA|SELECT)$/.test(focused.tagName||''))return;
+ if(focused&&/^(INPUT|TEXTAREA|SELECT)$/.test(focused.tagName||'')){adminRefreshDeferred=true;return;}
  if(!force&&Date.now()-adminLastRefreshAt<45000)return;
  adminLastRefreshAt=Date.now();
  adminRefreshPromise=(async()=>{
@@ -54,6 +55,14 @@ if(!window.__sonaaAdminRefreshLoop){
  window.setInterval(()=>{void refreshAllAdminData(false);},60000);
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refreshAllAdminData(false);});
  window.addEventListener('focus',()=>{void refreshAllAdminData(false);});
+ document.addEventListener('focusout',()=>{
+  window.setTimeout(()=>{
+   const active=document.activeElement;
+   if(!adminRefreshDeferred||document.hidden||(active&&/^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName||'')))return;
+   adminRefreshDeferred=false;
+   void refreshAllAdminData(true);
+  },0);
+ });
 }
 async function handleGlobalRefresh(){const button=document.getElementById('global-refresh');if(button?.disabled)return;if(button){button.disabled=true;button.classList.add('is-refreshing');}try{await refreshAllAdminData(true);showToast('تم تحديث جميع قوائم الإدارة','success');}catch(error){showToast(error.message||'تعذر تحديث البيانات','error');}finally{if(button){button.disabled=false;button.classList.remove('is-refreshing');}}}
 document.getElementById('global-refresh')?.addEventListener('click', handleGlobalRefresh);
