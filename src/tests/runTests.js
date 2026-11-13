@@ -75,6 +75,8 @@ async function run() {
       assert.equal(defaultAdminPermissions('مشرف').store.read, true);
       assert.equal(defaultAdminPermissions('مشرف').store.write, false);
       assert.equal(defaultAdminPermissions('مدير').store.write, true);
+      assert.equal(canAccessAdmin({ role: 'fanni', adminRole: 'مدير' }, { path: '/store/products', method: 'POST' }), true);
+      assert.equal(canAccessAdmin({ role: 'fanni', adminRole: 'قراءة فقط' }, { path: '/store/products', method: 'POST' }), false);
       assert.equal(defaultAdminPermissions('مشرف').settings.write, false);
       assert.equal(defaultAdminPermissions('مشرف أول').services.write, true);
       assert.equal(canAccessAdmin({ role: 'fanni', adminRole: 'مدير' }, { path: '/fanni-profile-edits', method: 'GET' }), true);
@@ -567,8 +569,9 @@ async function run() {
       assert.ok(adminNotice, 'administration must receive a notification for the purchase transaction');
       const statusUpdate = await request(app).patch('/api/admin/store/orders/' + order._id)
         .set('Authorization', 'Bearer ' + adminToken)
-        .send({ status: 'تم التواصل', adminNote: 'تم التواصل مع العميل' });
+        .send({ status: 'تم التواصل', paymentMethod: 'عند الاستلام', adminNote: 'تم التواصل مع العميل' });
       assert.equal(statusUpdate.status, 200);
+      assert.equal(statusUpdate.body.order.paymentMethod, 'عند الاستلام');
       const buyerNotice = await Notification.findOne({ recipientRole: 'client', recipientId: client._id, type: 'store_order_update' });
       assert.ok(buyerNotice, 'buyer must receive a notification when the order status changes');
     });
