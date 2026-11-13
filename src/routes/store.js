@@ -23,6 +23,8 @@ router.get('/products', async (req, res, next) => {
 });
 
 async function submitOrder(req, res, next, role) {
+  let reservedProductId = null;
+  let reservedQuantity = 0;
   try {
     const { error, value } = orderSchema.validate(req.body || {}, { abortEarly: false });
     if (error) return res.status(400).json({ message: 'راجع بيانات طلب الشراء.' });
@@ -47,7 +49,10 @@ async function submitOrder(req, res, next, role) {
       id: String(order._id), productName: order.productName, quantity: order.quantity,
       total: order.total, status: order.status, createdAt: order.createdAt
     } });
-  } catch (error) { return next(error); }
+  } catch (error) {
+    if (reservedProductId && reservedQuantity) await StoreProduct.updateOne({ _id: reservedProductId }, { $inc: { stock: reservedQuantity } }).catch(() => {});
+    return next(error);
+  }
 }
 
 router.post('/client/orders', clientAuth, (req, res, next) => submitOrder(req, res, next, 'client'));
