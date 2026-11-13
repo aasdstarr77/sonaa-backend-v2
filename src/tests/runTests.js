@@ -574,6 +574,10 @@ async function run() {
       assert.equal(statusUpdate.body.order.paymentMethod, 'عند الاستلام');
       const buyerNotice = await Notification.findOne({ recipientRole: 'client', recipientId: client._id, type: 'store_order_update' });
       assert.ok(buyerNotice, 'buyer must receive a notification when the order status changes');
+      const cancelOrder = await request(app).patch('/api/admin/store/orders/' + order._id)
+        .set('Authorization', 'Bearer ' + adminToken).send({ status: 'ملغي', paymentMethod: 'غير محدد' });
+      assert.equal(cancelOrder.status, 200);
+      assert.equal((await StoreProduct.findById(productId)).stock, 3, 'cancelling an unconfirmed purchase must release reserved stock');
     });
 
     await test('admin technician trust and visibility controls save their decision history', async () => {
