@@ -9,6 +9,7 @@ const storeOrderSchema = new mongoose.Schema({
   subscriptionDuration: { type: String, trim: true, maxlength: 60, default: '' },
   unitPrice: { type: Number, required: true, min: 0 },
   quantity: { type: Number, required: true, min: 1, max: 1000 },
+  stockReserved: { type: Boolean, default: false },
   total: { type: Number, required: true, min: 0 },
   buyerRole: { type: String, enum: ['client', 'fanni'], required: true, index: true },
   buyerId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
