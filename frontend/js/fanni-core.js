@@ -395,7 +395,7 @@ function performFanniLogout(){
  toast('تم تسجيل الخروج');
 }
 
-const TECHNICIAN_TAB_DEFINITIONS=[{id:'available',label:'طلبات متاحة'},{id:'myOffers',label:'طلبات جارية'},{id:'completed',label:'المهام المكتملة'},{id:'wallet',label:'محفظتي'}];
+const TECHNICIAN_TAB_DEFINITIONS=[{id:'available',label:'طلبات متاحة'},{id:'myOffers',label:'طلبات جارية'},{id:'completed',label:'المهام المكتملة'},{id:'wallet',label:'محفظتي'},{id:'store',label:'المتجر'}];
 function setTab(tab){
  state.tab=tab;
  state.error='';
@@ -407,6 +407,7 @@ function setTab(tab){
 if(tab==='myOffers'||tab==='completed')loadMyOffers();
  if(tab==='wallet'){loadWalletHistory();loadWalletTransferNumbers();}
  if(tab==='profile')loadProfile();
+ if(tab==='store'&&getToken())loadStoreForRole('fanni');
 }
 
 function toggleSpecialtyCategory(label){
