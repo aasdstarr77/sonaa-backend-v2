@@ -396,7 +396,7 @@ function performFanniLogout(){
  toast('تم تسجيل الخروج');
 }
 
-const TECHNICIAN_TAB_DEFINITIONS=[{id:'available',label:'طلبات متاحة'},{id:'myOffers',label:'طلبات جارية'},{id:'completed',label:'المهام المكتملة'},{id:'wallet',label:'محفظتي'},{id:'store',label:'المتجر'}];
+const TECHNICIAN_TAB_DEFINITIONS=[{id:'available',label:'طلبات متاحة'},{id:'myOffers',label:'طلبات جارية'},{id:'completed',label:'المهام المكتملة'},{id:'wallet',label:'محفظتي'},{id:'store',label:'الاشتراكات والمتجر'}];
 function setTab(tab){
  state.tab=tab;
  state.error='';
