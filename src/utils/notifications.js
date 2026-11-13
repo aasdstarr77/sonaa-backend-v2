@@ -24,6 +24,7 @@ function channelFor(type) {
   return 'support';
 }
 function destinationFor(type) {
+  if (type === 'admin_store_order') return 'storeOrders';
   return ({ order_new: 'orders', fanni_register: 'technicians', client_register: 'clients',
     password_reset: 'clients', support: 'complaints', wallet_charge: 'technicians' })[channelFor(type)];
 }
