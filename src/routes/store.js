@@ -30,7 +30,12 @@ async function submitOrder(req, res, next, role) {
     if (error) return res.status(400).json({ message: 'راجع بيانات طلب الشراء.' });
     const product = await StoreProduct.findOne({ _id: value.productId, isActive: true });
     if (!product) return res.status(404).json({ message: 'المنتج غير متاح حاليًا.' });
-    if (product.stock !== null) {\n      const reserved = await StoreProduct.findOneAndUpdate({ _id: product._id, isActive: true, stock: { $gte: value.quantity } }, { $inc: { stock: -value.quantity } }, { new: true });\n      if (!reserved) return res.status(409).json({ message: 'الكمية المطلوبة غير متاحة حاليًا.' });\n      reservedProductId = product._id;\n      reservedQuantity = value.quantity;\n    }
+    if (product.stock !== null) {
+      const reserved = await StoreProduct.findOneAndUpdate({ _id: product._id, isActive: true, stock: { $gte: value.quantity } }, { $inc: { stock: -value.quantity } }, { new: true });
+      if (!reserved) return res.status(409).json({ message: 'الكمية المطلوبة غير متاحة حاليًا.' });
+      reservedProductId = product._id;
+      reservedQuantity = value.quantity;
+    }
     const buyer = role === 'client' ? req.client : req.user;
     if (!buyer || !buyer._id) return res.status(401).json({ message: 'سجّل الدخول لإرسال طلب الشراء.' });
     const total = Math.round((Number(product.price) * value.quantity + Number.EPSILON) * 100) / 100;
