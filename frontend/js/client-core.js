@@ -300,7 +300,7 @@ let state={
   servicesLoading:true,servicesError:'',servicesLoaded:false,publicContent:{siteName:'صُنّاع',maintenance:false,maintenanceMessage:'',announcement:'',faqs:[]},
   
 };
-const CLIENT_TAB_DEFINITIONS=[{id:'new',label:'طلب جديد'},{id:'orders',label:'طلباتي'},{id:'store',label:'المتجر'},{id:'complaint',label:'شكوى'}];
+const CLIENT_TAB_DEFINITIONS=[{id:'new',label:'طلب جديد'},{id:'orders',label:'طلباتي'},{id:'store',label:'الاشتراكات والمتجر'},{id:'complaint',label:'شكوى'}];
 if(window.IS_EDITOR_PREVIEW){
   const previewTab=window.PREVIEW_REQUESTED_TAB||'login';
   if(previewTab==='register'){
