@@ -25,6 +25,7 @@ resetMaintenanceCache();
 const orderRouter = require('./routes/order');
 const fanniRouter = require('./routes/fanni');
 const adminRouter = require('./routes/admin');
+const storeRouter = require('./routes/store');
 const publicRouter = require('./routes/public');
 const clientRouter = require('./routes/client');
 const complaintRouter = require('./routes/Complaint');
@@ -384,6 +385,8 @@ app.use('/api/technicians', fanniRouter);
 
 // مسار عروض الفني.
 app.use('/api/fanni/orders', orderRouter);
+
+app.use('/api/store', storeRouter);
 
 app.use('/api/admin', adminRouter);
 app.use('/api/admins', adminRouter);
