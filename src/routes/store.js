@@ -28,6 +28,9 @@ async function submitOrder(req, res, next, role) {
   try {
     const { error, value } = orderSchema.validate(req.body || {}, { abortEarly: false });
     if (error) return res.status(400).json({ message: 'راجع بيانات طلب الشراء.' });
+    if (role === 'fanni' && req.user?.role !== 'fanni') return res.status(403).json({ message: 'الشراء متاح لحسابات الفنيين فقط.' });
+    const buyer = role === 'client' ? req.client : req.user;
+    if (!buyer || !buyer._id) return res.status(401).json({ message: 'سجّل الدخول لإرسال طلب الشراء.' });
     const product = await StoreProduct.findOne({ _id: value.productId, isActive: true });
     if (!product) return res.status(404).json({ message: 'المنتج غير متاح حاليًا.' });
     if (product.stock !== null) {
@@ -36,8 +39,6 @@ async function submitOrder(req, res, next, role) {
       reservedProductId = product._id;
       reservedQuantity = value.quantity;
     }
-    const buyer = role === 'client' ? req.client : req.user;
-    if (!buyer || !buyer._id) return res.status(401).json({ message: 'سجّل الدخول لإرسال طلب الشراء.' });
     const total = Math.round((Number(product.price) * value.quantity + Number.EPSILON) * 100) / 100;
     const order = await StoreOrder.create({
       product: product._id, productName: product.name, unitPrice: product.price,
