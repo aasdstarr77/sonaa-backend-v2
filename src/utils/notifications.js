@@ -15,7 +15,7 @@ function notificationFetch(url, options = {}) {
 }
 
 function channelFor(type) {
-  if (['order_new', 'new_order', 'admin_new_order'].includes(type)) return 'order_new';
+  if (['order_new', 'new_order', 'admin_new_order', 'admin_store_order'].includes(type)) return 'order_new';
   if (['fanni_register', 'new_fanni', 'admin_new_technician'].includes(type)) return 'fanni_register';
   if (['client_register', 'new_client', 'admin_new_client'].includes(type)) return 'client_register';
   if (['password_reset', 'admin_password_recovery'].includes(type)) return 'password_reset';
