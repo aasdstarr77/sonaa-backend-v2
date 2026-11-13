@@ -7,7 +7,7 @@ const ADMIN_LAYOUT_SECTIONS = {
   clients: ['clients', 'orders'],
   technicians: ['fannis', 'pending', 'profileEdits', 'disabled', 'levels', 'offers', 'wallets', 'topups'],
   'service-management': ['services', 'regions'],
-  'customer-operations': ['complaints', 'support', 'notifications', 'content'],
+  'customer-operations': ['complaints', 'support', 'notifications', 'content', 'store', 'storeOrders'],
   'platform-admin': ['pricing', 'reports', 'pageVisits', 'security', 'settings', 'roles']
 };
 const ADMIN_LAYOUT_TABS = Object.values(ADMIN_LAYOUT_SECTIONS).flat();

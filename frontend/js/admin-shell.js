@@ -120,6 +120,8 @@ function renderCurrentTab(){
     case 'pageVisits': return renderPageVisits();
     case 'support': return renderSupport();
     case 'content': return renderContent();
+    case 'store': return renderStore();
+    case 'storeOrders': return renderStoreOrders();
     case 'clients': return renderClients();
     case 'stats': return renderStats();
     default: return renderFannis();

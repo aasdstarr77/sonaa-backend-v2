@@ -17,7 +17,9 @@ const Order = require('../models/Order');
 const Rating = require('../models/Rating');
 const Complaint = require('../models/Complaint');
 const WalletTransaction = require('../models/WalletTransaction');
-const { createNotification } = require('../utils/notifications');
+const StoreProduct = require('../models/StoreProduct');
+const StoreOrder = require('../models/StoreOrder');
+const { createNotification, notifyAdmins } = require('../utils/notifications');
 const Service = require('../models/Service');
 const Region = require('../models/Region');
 const { AREA_OPTIONS } = require('../config/areas');
@@ -79,6 +81,7 @@ const createAdminUsersRouter = require('./admin/users');
 const createAdminClientsRouter = require('./admin/clients');
 const createAdminWalletRouter = require('./admin/wallet');
 const createAdminFanniManagementRouter = require('./admin/fanniManagement');
+const createAdminStoreRouter = require('./admin/store');
 
 const ADMIN_TOKEN_EXPIRY = '1d';
 const CON_ADMIN_TOKEN_EXPIRY = '30d';
@@ -329,6 +332,8 @@ router.use(createAdminWalletRouter({
   createNotification, MAX_LIST_LIMIT
 }));
 
+router.use(createAdminStoreRouter({ auth, Joi, StoreProduct, StoreOrder, notifyAdmins, createNotification, writeAdminAudit }));
+
 router.delete('/clients/:phone/account', auth('admin'), async (req, res, next) => {
   try {
     const phone = normalizePhone(String(req.params.phone || '').trim());
@@ -422,7 +427,7 @@ const ADMIN_LAYOUT_SECTIONS = {
   clients: ['clients', 'orders'],
   technicians: ['fannis', 'pending', 'profileEdits', 'disabled', 'levels', 'offers', 'wallets', 'topups'],
   'service-management': ['services', 'regions'],
-  'customer-operations': ['complaints', 'support', 'notifications', 'content'],
+  'customer-operations': ['complaints', 'support', 'notifications', 'content', 'store', 'storeOrders'],
   'platform-admin': ['pricing', 'reports', 'pageVisits', 'security', 'settings', 'roles']
 };
 const ADMIN_LAYOUT_TABS = Object.values(ADMIN_LAYOUT_SECTIONS).flat();

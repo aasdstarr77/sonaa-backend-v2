@@ -309,6 +309,7 @@ ${state.tracked.acceptedOfferId && String(state.tracked.acceptedOfferId)===offer
         ${Array.isArray(state.tracked.ratings)&&state.tracked.ratings.length ? '<div class="mt-4 rounded-xl border border-slate-200 p-4"><h4 class="font-extrabold text-[13px]">التقييمات المتبادلة</h4>'+state.tracked.ratings.map(r=>'<div class="mt-3 border-t border-slate-100 pt-3"><p class="text-[12px] font-extrabold">'+(r.reviewerRole==='client'?'تقييم العميل للفني':'تقييم الفني للعميل')+' — '+('★'.repeat(Math.max(0,Math.min(5,Number(r.stars)||0))))+' '+(Number(r.stars)||0)+'/5</p>'+(r.comment?'<p class="mt-1 text-[12px] leading-5 text-slate-600">'+escHtml(r.comment)+'</p>':'')+'</div>').join('')+'</div>' : ''}
       </div>`:''}
     </div>`:''}
+    ${state.tab==='store'?renderStoreCatalog('client'):''}
     ${state.tab==='complaint'?`
     <div class="mt-4 animate-fade">
       <div class="panel p-4 sm:p-5">
