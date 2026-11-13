@@ -8,7 +8,7 @@ function setTab(t,scrollTarget='content',fromBack=false){
   state.filter='الكل';
  }
  state.tab=t;state.pageMode='section';state.dropdowns={};state.pendingActions={};render();
- if(t==='profileEdits')loadFanniProfileEdits();else if(t==='orders')loadOrders();else if(t==='roles')loadAdminUsers();else if(t==='complaints')loadComplaints();else if(t==='services')loadServices();else if(t==='regions')loadRegions();else if(t==='pricing')loadPricing();else if(t==='settings')loadSettings();else if(t==='security')loadAuditLogs();else if(t==='pageVisits')loadPageVisits();else if(t==='notifications')loadNotificationHistory();else if(t==='support')loadSupportViolations();else if(t==='content')loadContent();else if(t==='topups')applyTopupFilter();else if(t==='clients')loadClients();else if(t==='wallets')render();else applyFilter();
+ if(t==='profileEdits')loadFanniProfileEdits();else if(t==='orders')loadOrders();else if(t==='roles')loadAdminUsers();else if(t==='complaints')loadComplaints();else if(t==='services')loadServices();else if(t==='regions')loadRegions();else if(t==='pricing')loadPricing();else if(t==='settings')loadSettings();else if(t==='security')loadAuditLogs();else if(t==='pageVisits')loadPageVisits();else if(t==='notifications')loadNotificationHistory();else if(t==='support')loadSupportViolations();else if(t==='content')loadContent();else if(t==='topups')applyTopupFilter();else if(t==='clients')loadClients();else if(t==='store')loadStoreProducts();else if(t==='storeOrders')loadStoreOrders();else if(t==='wallets')render();else applyFilter();
 }
 function goBack(){
  if(ADMIN_TAB_HISTORY.length){const previous=ADMIN_TAB_HISTORY.pop();setTab(previous,'back',true);return;}
