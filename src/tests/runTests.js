@@ -72,6 +72,9 @@ async function run() {
       assert.equal(canAccessAdmin({ role: 'fanni', adminRole: 'مدير', adminPermissions: { __customOverrides: true, publishOrders: { read: true, write: false } } }, { path: '/admin/SN123456/publish', method: 'POST' }), false, 'a custom override must revoke publishing without changing order permissions');
       assert.equal(canAccessAdmin(manager, { path: '/offers/SN123456/0/reject', method: 'POST' }), true);
       assert.equal(defaultAdminPermissions('مشرف').orders.write, true);
+      assert.equal(defaultAdminPermissions('مشرف').store.read, true);
+      assert.equal(defaultAdminPermissions('مشرف').store.write, false);
+      assert.equal(defaultAdminPermissions('مدير').store.write, true);
       assert.equal(defaultAdminPermissions('مشرف').settings.write, false);
       assert.equal(defaultAdminPermissions('مشرف أول').services.write, true);
       assert.equal(canAccessAdmin({ role: 'fanni', adminRole: 'مدير' }, { path: '/fanni-profile-edits', method: 'GET' }), true);
