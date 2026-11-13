@@ -9,13 +9,18 @@ function createAdminStoreRouter({ auth, Joi, StoreProduct, StoreOrder, notifyAdm
     description: Joi.string().trim().max(2000).allow('').default(''),
     details: Joi.string().trim().max(5000).allow('').default(''),
     price: Joi.number().min(0).max(100000000).required(),
+    originalPrice: Joi.number().min(0).max(100000000).allow(null).default(null),
+    offerText: Joi.string().trim().max(200).allow('').default(''),
+    type: Joi.string().valid('product', 'subscription').default('product'),
+    subscriptionDuration: Joi.string().trim().max(60).allow('').default(''),
     imageUrl: Joi.string().uri({ scheme: ['http', 'https'] }).max(1000).allow('').default(''),
     isActive: Joi.boolean().default(true),
     stock: Joi.number().integer().min(0).allow(null).default(null)
   }).unknown(false);
   const statusSchema = Joi.object({
     status: Joi.string().valid('تم التواصل', 'قيد التجهيز', 'مكتمل', 'ملغي').required(),
-    adminNote: Joi.string().trim().max(1000).allow('').default('')
+    adminNote: Joi.string().trim().max(1000).allow('').default(''),
+    paymentMethod: Joi.string().valid('غير محدد', 'عند الاستلام', 'تحويل').default('غير محدد')
   }).unknown(false);
 
   router.get('/store/products', auth('admin'), async (req, res, next) => {
@@ -68,13 +73,14 @@ function createAdminStoreRouter({ auth, Joi, StoreProduct, StoreOrder, notifyAdm
       if (!order) return res.status(404).json({ message: 'المعاملة غير موجودة.' });
       order.status = checked.value.status;
       order.adminNote = checked.value.adminNote;
+      order.paymentMethod = checked.value.paymentMethod;
       order.statusHistory.push({ status: order.status, note: order.adminNote, by: req.user?.name || 'الإدارة', at: new Date() });
       await order.save();
       await writeAdminAudit(req, 'تحديث حالة طلب متجر', 'store-orders', String(order._id), order.status);
       await createNotification({
         recipientRole: order.buyerRole, recipientId: order.buyerId,
         type: 'store_order_update', title: 'تحديث طلب المتجر',
-        message: 'طلب ' + order.productName + ': ' + order.status + (order.adminNote ? ' — ' + order.adminNote : ''),
+        message: 'طلب ' + order.productName + ': ' + order.status + '، الدفع: ' + order.paymentMethod + (order.adminNote ? ' — ' + order.adminNote : ''),
         link: order.buyerRole === 'client' ? '/client?tab=store' : '/fanni?tab=store'
       });
       return res.json({ message: 'تم تحديث حالة الطلب وإرسال إشعار لصاحبه.', order });
