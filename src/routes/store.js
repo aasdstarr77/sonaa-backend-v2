@@ -42,7 +42,7 @@ async function submitOrder(req, res, next, role) {
     const total = Math.round((Number(product.price) * value.quantity + Number.EPSILON) * 100) / 100;
     const order = await StoreOrder.create({
       product: product._id, productName: product.name, productType: product.type || 'product', subscriptionDuration: product.subscriptionDuration || '', unitPrice: product.price,
-      quantity: value.quantity, total, buyerRole: role, buyerId: buyer._id,
+      quantity: value.quantity, stockReserved: Boolean(reservedProductId), total, buyerRole: role, buyerId: buyer._id,
       buyerName: buyer.name || 'مستخدم', buyerPhone: buyer.phone || '',
       buyerNote: value.note, statusHistory: [{ status: 'جديد', note: 'تم استلام طلب الشراء', by: buyer.name || 'المستخدم' }]
     });
