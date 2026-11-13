@@ -71,6 +71,11 @@ function createAdminStoreRouter({ auth, Joi, StoreProduct, StoreOrder, notifyAdm
       if (checked.error) return res.status(400).json({ message: 'حالة المعاملة غير صالحة.' });
       const order = await StoreOrder.findById(req.params.id);
       if (!order) return res.status(404).json({ message: 'المعاملة غير موجودة.' });
+      if (order.status === 'ملغي' && checked.value.status !== 'ملغي') return res.status(409).json({ message: 'الطلب الملغي لا يمكن إعادة فتحه؛ سجّل طلبًا جديدًا عند الحاجة.' });
+      if (checked.value.status === 'ملغي' && order.status !== 'ملغي' && order.stockReserved) {
+        await StoreProduct.updateOne({ _id: order.product }, { $inc: { stock: order.quantity } });
+        order.stockReserved = false;
+      }
       order.status = checked.value.status;
       order.adminNote = checked.value.adminNote;
       order.paymentMethod = checked.value.paymentMethod;
