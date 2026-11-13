@@ -532,7 +532,45 @@ async function run() {
       const activeFanniSession = await request(app).get('/api/fanni/me').set('Authorization', 'Bearer ' + fanniNewLogin.body.token);
       assert.equal(activeFanniSession.status, 200);
 
-      await test('admin technician trust and visibility controls save their decision history', async () => {
+      await test('store catalog accepts client purchase requests and notifies administration', async () => {
+      const jwt = require('jsonwebtoken');
+      const Client = require('../models/Client');
+      const StoreProduct = require('../models/StoreProduct');
+      const StoreOrder = require('../models/StoreOrder');
+      const Notification = require('../models/Notification');
+      const client = await Client.findById(clientId);
+      assert.ok(client && client.status === 'نشط');
+      const freshClientToken = jwt.sign({
+        id: String(client._id), role: 'client', tokenVersion: Number(client.tokenVersion || 0)
+      }, process.env.JWT_SECRET, { expiresIn: '1h' });
+      const productResponse = await request(app).post('/api/admin/store/products')
+        .set('Authorization', 'Bearer ' + adminToken)
+        .send({ name: 'منتج اختبار المتجر', description: 'وصف', details: 'تفاصيل', price: 125, imageUrl: '', isActive: true, stock: 3 });
+      assert.equal(productResponse.status, 201);
+      const productId = productResponse.body.product._id;
+      const catalog = await request(app).get('/api/store/products');
+      assert.equal(catalog.status, 200);
+      assert.ok(catalog.body.products.some(item => String(item._id) === String(productId)));
+      const purchase = await request(app).post('/api/store/client/orders')
+        .set('Authorization', 'Bearer ' + freshClientToken)
+        .send({ productId, quantity: 2, note: 'اختبار شراء' });
+      assert.equal(purchase.status, 201);
+      assert.equal(purchase.body.order.total, 250);
+      const savedProduct = await StoreProduct.findById(productId);
+      assert.equal(savedProduct.stock, 1, 'available stock must be reserved atomically');
+      const order = await StoreOrder.findById(purchase.body.order.id);
+      assert.equal(order.buyerRole, 'client');
+      const adminNotice = await Notification.findOne({ recipientRole: 'admin', type: 'admin_store_order' });
+      assert.ok(adminNotice, 'administration must receive a notification for the purchase transaction');
+      const statusUpdate = await request(app).patch('/api/admin/store/orders/' + order._id)
+        .set('Authorization', 'Bearer ' + adminToken)
+        .send({ status: 'تم التواصل', adminNote: 'تم التواصل مع العميل' });
+      assert.equal(statusUpdate.status, 200);
+      const buyerNotice = await Notification.findOne({ recipientRole: 'client', recipientId: client._id, type: 'store_order_update' });
+      assert.ok(buyerNotice, 'buyer must receive a notification when the order status changes');
+    });
+
+    await test('admin technician trust and visibility controls save their decision history', async () => {
         const response = await request(app).patch('/api/admin/fannis/' + fanni._id + '/profile-controls')
           .set('Authorization', 'Bearer ' + adminToken)
           .send({
